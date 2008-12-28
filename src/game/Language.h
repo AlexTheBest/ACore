@@ -170,7 +170,9 @@ enum TrinityStrings
     LANG_SOUND_NOT_EXIST                = 170,
     LANG_TELEPORTED_TO_BY_CONSOLE       = 171,
     LANG_CONSOLE_COMMAND                = 172,
-    // Room for more level 1              173-199 not used
+    LANG_YOU_CHANGE_RUNIC_POWER         = 173,
+    LANG_YOURS_RUNIC_POWER_CHANGED      = 174,
+    // Room for more level 1              175-199 not used
 
     // level 2 chat
     LANG_NO_SELECTION                   = 200,
@@ -328,6 +330,8 @@ enum TrinityStrings
     LANG_CREATURE_NOT_FOLLOW_YOU_NOW    = 342,
     LANG_CREATURE_NON_TAMEABLE          = 343,
     LANG_YOU_ALREADY_HAVE_PET           = 344,
+    LANG_CUSTOMIZE_PLAYER               = 345,
+    LANG_CUSTOMIZE_PLAYER_GUID          = 346,
     // Room for more level 2              345-399 not used
 
     // level 3 chat
@@ -642,11 +646,10 @@ enum TrinityStrings
 
     LANG_BG_QUEUE_ANNOUNCE_SELF         = 711,
     LANG_BG_QUEUE_ANNOUNCE_WORLD        = 712,
-
-
     LANG_YOUR_ARENA_LEVEL_REQ_ERROR     = 713,
-//    LANG_HIS_ARENA_LEVEL_REQ_ERROR      = 714, an opcode exists for this
+//                                      = 714, not used
     LANG_YOUR_BG_LEVEL_REQ_ERROR        = 715,
+
 //    LANG_YOUR_ARENA_TEAM_FULL           = 716, an opcode exists for this
 
     LANG_BG_AV_ALLY                     = 717,
@@ -711,6 +714,31 @@ enum TrinityStrings
     LANG_CANNOT_SUMMON_TO_BG            = 1136, // "You cannot summon players to a battleground or arena map."
     LANG_CANNOT_GO_TO_BG_GM             = 1137, // "You must be in GM mode to teleport to a player in a battleground."
     LANG_CANNOT_GO_TO_BG_FROM_BG        = 1138, // "You cannot teleport to a battleground from another battleground. Please leave the current battleground first."
+
+//                                      = 716, not used
+    LANG_BG_STARTED_ANNOUNCE_WORLD      = 717,
+    LANG_ARENA_QUEUE_ANNOUNCE_WORLD_JOIN= 718,
+    LANG_ARENA_QUEUE_ANNOUNCE_WORLD_EXIT= 719,
+
+    /*LANG_BG_GROUP_TOO_LARGE             = 720,              // "Your group is too large for this battleground. Please regroup to join."
+    LANG_ARENA_GROUP_TOO_LARGE          = 721,              // "Your group is too large for this arena. Please regroup to join."
+    LANG_ARENA_YOUR_TEAM_ONLY           = 722,              // "Your group has members not in your arena team. Please regroup to join."
+    LANG_ARENA_NOT_ENOUGH_PLAYERS       = 723,              // "Your group does not have enough players to join this match."
+    LANG_ARENA_GOLD_WINS                = 724,              // "The Gold Team wins!"
+    LANG_ARENA_GREEN_WINS               = 725,              // "The Green Team wins!"
+    LANG_BATTLEGROUND_PREMATURE_FINISH_WARNING = 726,       // The battleground will end soon, because there aren't enough players. Get more ppl or win already!
+    LANG_BG_GROUP_OFFLINE_MEMBER        = 727,              // "Your group has an offline member. Please remove him before joining."
+    LANG_BG_GROUP_MIXED_FACTION         = 728,              // "Your group has players from the opposing faction. You can't join the battleground as a group."
+    LANG_BG_GROUP_MIXED_LEVELS          = 729,              // "Your group has players from different battleground brakets. You can't join as group."
+    LANG_BG_GROUP_MEMBER_ALREADY_IN_QUEUE = 730,            // "Someone in your party is already in this battleground queue. (S)he must leave it before joining as group."
+    LANG_BG_GROUP_MEMBER_DESERTER       = 731,              // "Someone in your party is Deserter. You can't join as group."
+    LANG_BG_GROUP_MEMBER_NO_FREE_QUEUE_SLOTS = 732,         // "Someone in your party is already in three battleground queues. You cannot join as group."
+
+    LANG_CANNOT_TELE_TO_BG              = 733,              // "You cannot teleport to a battleground or arena map."
+    LANG_CANNOT_SUMMON_TO_BG            = 734,              // "You cannot summon players to a battleground or arena map."
+    LANG_CANNOT_GO_TO_BG_GM             = 735,              // "You must be in GM mode to teleport to a player in a battleground."
+    LANG_CANNOT_GO_TO_BG_FROM_BG        = 736,              // "You cannot teleport to a battleground from another battleground. Please leave the current battleground first."*/
+    // Room for batleground/arena strings 737-799 not used
 
     // in game strings
     LANG_PET_INVALID_NAME               = 800,
