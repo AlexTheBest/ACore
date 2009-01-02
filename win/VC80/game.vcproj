@@ -52,7 +52,6 @@
 				MinimalRebuild="false"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
-				FloatingPointModel="2"
 				RuntimeTypeInfo="true"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderFile=".\game__$(PlatformName)_$(ConfigurationName)\game.pch"
@@ -126,7 +125,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/MP"
+				AdditionalOptions="/MP /bigobj"
 				Optimization="0"
 				AdditionalIncludeDirectories="..\..\dep\include;..\..\src\framework;..\..\src\shared;..\..\src\shared\vmap;..\..\dep\ACE_wrappers"
 				PreprocessorDefinitions="WIN32;_DEBUG;MANGOS_DEBUG;_LIB;"
@@ -134,7 +133,6 @@
 				MinimalRebuild="false"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
-				FloatingPointModel="2"
 				RuntimeTypeInfo="true"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderFile=".\game__$(PlatformName)_$(ConfigurationName)\game.pch"
@@ -215,7 +213,6 @@
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				EnableEnhancedInstructionSet="1"
-				FloatingPointModel="2"
 				RuntimeTypeInfo="true"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderFile=".\game__$(PlatformName)_$(ConfigurationName)\game.pch"
@@ -289,7 +286,7 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalOptions="/MP"
+				AdditionalOptions="/MP /bigobj"
 				InlineFunctionExpansion="1"
 				AdditionalIncludeDirectories="..\..\dep\include;..\..\src\framework;..\..\src\shared;..\..\src\shared\vmap;..\..\dep\ACE_wrappers"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB;"
@@ -297,7 +294,6 @@
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
 				EnableEnhancedInstructionSet="0"
-				FloatingPointModel="2"
 				RuntimeTypeInfo="true"
 				UsePrecompiledHeader="0"
 				PrecompiledHeaderFile=".\game__$(PlatformName)_$(ConfigurationName)\game.pch"
@@ -356,6 +352,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\game\AccountMgr.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\AchievementMgr.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\AchievementMgr.h"
 				>
 			</File>
 			<File
@@ -456,6 +460,10 @@
 			</File>
 			<File
 				RelativePath="..\..\src\game\BattleGroundWS.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\CalendarHandler.cpp"
 				>
 			</File>
 			<File
@@ -622,14 +630,6 @@
 				RelativePath="..\..\src\game\MapManager.h"
 				>
 			</File>
-			<File
-				RelativePath="..\..\src\game\MapReference.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\game\MapRefManager.h"
-				>
-			</File>				
 			<File
 				RelativePath="..\..\src\game\MiscHandler.cpp"
 				>
@@ -892,6 +892,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\game\Bag.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\Calendar.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\Calendar.h"
 				>
 			</File>
 			<File
@@ -1255,6 +1263,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\..\src\game\Vehicle.cpp"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\Vehicle.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\src\game\WaypointMovementGenerator.cpp"
 				>
 			</File>
@@ -1358,14 +1374,6 @@
 				RelativePath="..\..\src\game\PlayerDump.h"
 				>
 			</File>
-			<File
-				RelativePath="..\..\src\game\tools.cpp"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\game\Tools.h"
-				>
-			</File>
 		</Filter>
 		<Filter
 			Name="References"
@@ -1400,6 +1408,14 @@
 			</File>
 			<File
 				RelativePath="..\..\src\game\HostilRefManager.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\MapReference.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\game\MapRefManager.h"
 				>
 			</File>
 			<File
