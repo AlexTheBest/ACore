@@ -54,17 +54,8 @@
 #include "InstanceData.h"
 
 //reload commands
-bool ChatHandler::HandleReloadCommand(const char* arg)
-{
-    // this is error catcher for wrong table name in .reload commands
-    PSendSysMessage("Db table with name starting from '%s' not found and can't be reloaded.",arg);
-    SetSentErrorMessage(true);
-    return false;
-}
-
 bool ChatHandler::HandleReloadAllCommand(const char*)
 {
-    HandleReloadAreaTriggerTeleportCommand("");
     HandleReloadSkillFishingBaseLevelCommand("");
 
     HandleReloadAllAreaCommand("");
@@ -296,6 +287,15 @@ bool ChatHandler::HandleReloadLootTemplatesItemCommand(const char*)
     LoadLootTemplates_Item();
     LootTemplates_Item.CheckLootRefs();
     SendGlobalGMSysMessage("DB table `item_loot_template` reloaded.");
+    return true;
+}
+
+bool ChatHandler::HandleReloadLootTemplatesMillingCommand(const char*)
+{
+    sLog.outString( "Re-Loading Loot Tables... (`milling_loot_template`)" );
+    LoadLootTemplates_Milling();
+    LootTemplates_Milling.CheckLootRefs();
+    SendGlobalSysMessage("DB table `milling_loot_template` reloaded.");
     return true;
 }
 
@@ -840,19 +840,10 @@ bool ChatHandler::HandleAccountSetPasswordCommand(const char* args)
         return false;
     }
 
-    uint32 targetSecurity = accmgr.GetSecurity(targetAccountId);
-
-    /// m_session==NULL only for console
-    uint32 plSecurity = m_session ? m_session->GetSecurity() : SEC_CONSOLE;
-
     /// can set password only for target with less security
     /// This is also reject self apply in fact
-    if (targetSecurity >= plSecurity)
-    {
-        SendSysMessage (LANG_YOURS_SECURITY_IS_LOW);
-        SetSentErrorMessage (true);
+    if(HasLowerSecurityAccount (NULL,targetAccountId,true))
         return false;
-    }
 
     if (strcmp(szPassword1,szPassword2))
     {
@@ -1748,6 +1739,10 @@ bool ChatHandler::HandleLearnAllMySpellsCommand(const char* /*args*/)
         if(!spellInfo)
             continue;
 
+        // skip server-side/triggered spells
+        if(spellInfo->spellLevel==0)
+            continue;
+
         // skip wrong class/race skills
         if(!m_session->GetPlayer()->IsSpellFitByClassAndRace(spellInfo->Id))
             continue;
@@ -1755,8 +1750,6 @@ bool ChatHandler::HandleLearnAllMySpellsCommand(const char* /*args*/)
         // skip other spell families
         if( spellInfo->SpellFamilyName != family)
             continue;
-
-        //TODO: skip triggered spells
 
         // skip spells with first rank learned as talent (and all talents then also)
         uint32 first_rank = spellmgr.GetFirstSpellInChain(spellInfo->Id);
@@ -2799,7 +2792,7 @@ bool ChatHandler::HandleLookupSpellCommand(const char* args)
 
                 bool talent = (talentCost > 0);
                 bool passive = IsPassiveSpell(id);
-                bool active = target && (target->HasAura(id,0) || target->HasAura(id,1) || target->HasAura(id,2));
+                bool active = target && target->HasAura(id);
 
                 // unit32 used to prevent interpreting uint8 as char at output
                 // find rank of learned spell for learning spell, or talent rank
@@ -3820,36 +3813,6 @@ bool ChatHandler::HandleHoverCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleWaterwalkCommand(const char* args)
-{
-    if(!args)
-        return false;
-
-    Player *player = getSelectedPlayer();
-    if(!player)
-    {
-        PSendSysMessage(LANG_NO_CHAR_SELECTED);
-        SetSentErrorMessage(true);
-        return false;
-    }
-
-    if (strncmp(args, "on", 3) == 0)
-        player->SetMovement(MOVE_WATER_WALK);               // ON
-    else if (strncmp(args, "off", 4) == 0)
-        player->SetMovement(MOVE_LAND_WALK);                // OFF
-    else
-    {
-        SendSysMessage(LANG_USE_BOL);
-        return false;
-    }
-
-    PSendSysMessage(LANG_YOU_SET_WATERWALK, args, player->GetName());
-    if(needReportToTarget(player))
-        ChatHandler(player).PSendSysMessage(LANG_YOUR_WATERWALK_SET, args, GetName());
-    return true;
-
-}
-
 bool ChatHandler::HandleLevelUpCommand(const char* args)
 {
     char* px = strtok((char*)args, " ");
@@ -4465,7 +4428,7 @@ static bool HandleResetStatsOrLevelHelper(Player* player)
 
     // set UNIT_FIELD_BYTES_1 to init state but preserve m_form value
     player->SetUInt32Value(UNIT_FIELD_BYTES_1, unitfield);
-    player->SetByteValue(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_UNK3 | UNIT_BYTE2_FLAG_UNK5 );
+    player->SetByteValue(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_PVP );
     player->SetByteValue(UNIT_FIELD_BYTES_2, 3, player->m_form);
 
     player->SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
@@ -4510,6 +4473,7 @@ bool ChatHandler::HandleResetLevelCommand(const char * args)
     player->SetLevel(1);
     player->InitStatsForLevel(true);
     player->InitTaxiNodesForLevel();
+    player->InitGlyphsForLevel();
     player->InitTalentForLevel();
     player->SetUInt32Value(PLAYER_XP,0);
 
@@ -4553,6 +4517,7 @@ bool ChatHandler::HandleResetStatsCommand(const char * args)
 
     player->InitStatsForLevel(true);
     player->InitTaxiNodesForLevel();
+    player->InitGlyphsForLevel();
     player->InitTalentForLevel();
 
     return true;
@@ -6303,7 +6268,14 @@ bool ChatHandler::HandleAccountSetAddonCommand(const char* args)
             SetSentErrorMessage(true);
             return false;
         }
+
     }
+
+    // Let set addon state only for lesser (strong) security level
+    // or to self account
+    if (m_session && m_session->GetAccountId () != account_id &&
+        HasLowerSecurityAccount (NULL,account_id,true))
+        return false;
 
     int lev=atoi(szExp);                                    //get int anyway (0 if error)
     if(lev < 0)
@@ -6399,17 +6371,17 @@ bool ChatHandler::HandleSendItemsCommand(const char* args)
         }
 
         uint32 item_count = itemCountStr ? atoi(itemCountStr) : 1;
-        if(item_count < 1 || item_proto->MaxCount && item_count > item_proto->MaxCount)
+        if(item_count < 1 || item_proto->MaxCount > 0 && item_count > uint32(item_proto->MaxCount))
         {
             PSendSysMessage(LANG_COMMAND_INVALID_ITEM_COUNT, item_count,item_id);
             SetSentErrorMessage(true);
             return false;
         }
 
-        while(item_count > item_proto->Stackable)
+        while(item_count > item_proto->GetMaxStackSize())
         {
-            items.push_back(ItemPair(item_id,item_proto->Stackable));
-            item_count -= item_proto->Stackable;
+            items.push_back(ItemPair(item_id,item_proto->GetMaxStackSize()));
+            item_count -= item_proto->GetMaxStackSize();
         }
 
         items.push_back(ItemPair(item_id,item_count));
@@ -6615,30 +6587,27 @@ bool ChatHandler::HandleModifyGenderCommand(const char *args)
         return false;
     }
 
+    PlayerInfo const* info = objmgr.GetPlayerInfo(player->getRace(), player->getClass());
+    if(!info)
+        return false;
+
     char const* gender_str = (char*)args;
     int gender_len = strlen(gender_str);
 
-    uint32 displayId = player->GetNativeDisplayId();
-    char const* gender_full = NULL;
-    uint32 new_displayId = displayId;
     Gender gender;
 
-    if(!strncmp(gender_str,"male",gender_len))              // MALE
+    if(!strncmp(gender_str, "male", gender_len))            // MALE
     {
         if(player->getGender() == GENDER_MALE)
             return true;
 
-        gender_full = "male";
-        new_displayId = player->getRace() == RACE_BLOODELF ? displayId+1 : displayId-1;
         gender = GENDER_MALE;
     }
-    else if (!strncmp(gender_str,"female",gender_len))      // FEMALE
+    else if (!strncmp(gender_str, "female", gender_len))    // FEMALE
     {
         if(player->getGender() == GENDER_FEMALE)
             return true;
 
-        gender_full = "female";
-        new_displayId = player->getRace() == RACE_BLOODELF ? displayId-1 : displayId+1;
         gender = GENDER_FEMALE;
     }
     else
@@ -6650,14 +6619,19 @@ bool ChatHandler::HandleModifyGenderCommand(const char *args)
 
     // Set gender
     player->SetByteValue(UNIT_FIELD_BYTES_0, 2, gender);
+    player->SetByteValue(PLAYER_BYTES_3, 0, gender);
 
     // Change display ID
-    player->SetDisplayId(new_displayId);
-    player->SetNativeDisplayId(new_displayId);
+    player->SetDisplayId(gender ? info->displayId_f : info->displayId_m);
+    player->SetNativeDisplayId(gender ? info->displayId_f : info->displayId_m);
 
-    PSendSysMessage(LANG_YOU_CHANGE_GENDER, player->GetName(),gender_full);
+    char const* gender_full = gender ? "female" : "male";
+
+    PSendSysMessage(LANG_YOU_CHANGE_GENDER, player->GetName(), gender_full);
+
     if (needReportToTarget(player))
-        ChatHandler(player).PSendSysMessage(LANG_YOUR_GENDER_CHANGED, gender_full,GetName());
+        ChatHandler(player).PSendSysMessage(LANG_YOUR_GENDER_CHANGED, gender_full, GetName());
+
     return true;
 }
 

@@ -100,6 +100,7 @@ class TRINITY_DLL_SPEC Aura
         void HandleAuraFeatherFall(bool Apply, bool Real);
         void HandleAuraHover(bool Apply, bool Real);
         void HandleAddModifier(bool Apply, bool Real);
+        void HandleAddTargetTrigger(bool Apply, bool Real);
         void HandleAuraModStun(bool Apply, bool Real);
         void HandleModDamageDone(bool Apply, bool Real);
         void HandleAuraUntrackable(bool Apply, bool Real);
@@ -184,10 +185,12 @@ class TRINITY_DLL_SPEC Aura
         void HandleAuraGhost(bool Apply, bool Real);
         void HandleAuraAllowFlight(bool Apply, bool Real);
         void HandleModRating(bool apply, bool Real);
+        void HandleModRatingFromStat(bool apply, bool Real);
         void HandleModTargetResistance(bool apply, bool Real);
         void HandleAuraModAttackPowerPercent(bool apply, bool Real);
         void HandleAuraModRangedAttackPowerPercent(bool apply, bool Real);
         void HandleAuraModRangedAttackPowerOfStatPercent(bool apply, bool Real);
+        void HandleAuraModAttackPowerOfStatPercent(bool apply, bool Real);
         void HandleSpiritOfRedemption(bool apply, bool Real);
         void HandleModManaRegen(bool apply, bool Real);
         void HandleComprehendLanguage(bool apply, bool Real);
@@ -197,6 +200,7 @@ class TRINITY_DLL_SPEC Aura
         void HandleModSpellDamagePercentFromStat(bool apply, bool Real);
         void HandleModSpellHealingPercentFromStat(bool apply, bool Real);
         void HandleAuraModDispelResist(bool apply, bool Real);
+        void HandleAuraControlVehicle(bool apply, bool Real);
         void HandleModSpellDamagePercentFromAttackPower(bool apply, bool Real);
         void HandleModSpellHealingPercentFromAttackPower(bool apply, bool Real);
         void HandleAuraModPacifyAndSilence(bool Apply, bool Real);
@@ -209,14 +213,15 @@ class TRINITY_DLL_SPEC Aura
         void HandlePreventFleeing(bool apply, bool Real);
         void HandleManaShield(bool apply, bool Real);
         void HandleArenaPreparation(bool apply, bool Real);
+        void HandleAuraConvertRune(bool apply, bool Real);
+        void HandleAuraIncreaseBaseHealthPercent(bool Apply, bool Real);
+        void HandleNoReagentUseAura(bool Apply, bool Real);
         void HandleModAttackerSpellHitChance(bool apply, bool Real);
 
         virtual ~Aura();
 
         void SetModifier(AuraType t, int32 a, uint32 pt, int32 miscValue);
         Modifier* GetModifier() {return &m_modifier;}
-        int32 GetModifierValuePerStack() {return m_modifier.m_amount;}
-        int32 GetModifierValue() {return m_modifier.m_amount * m_stackAmount;}
         int32 GetMiscValue() {return m_spellProto->EffectMiscValue[m_effIndex];}
         int32 GetMiscBValue() {return m_spellProto->EffectMiscValueB[m_effIndex];}
 
@@ -231,9 +236,8 @@ class TRINITY_DLL_SPEC Aura
         int32 GetAuraDuration() const { return m_duration; }
         void SetAuraDuration(int32 duration) { m_duration = duration; }
         time_t GetAuraApplyTime() { return m_applyTime; }
-        void UpdateAuraDuration();
-        void SendAuraDurationForCaster(Player* caster);
-        void UpdateSlotCounterAndDuration();
+
+        SpellModifier *getAuraSpellMod() {return m_spellmod; }
 
         uint64 const& GetCasterGUID() const { return m_caster_guid; }
         Unit* GetCaster() const;
@@ -250,14 +254,35 @@ class TRINITY_DLL_SPEC Aura
 
         uint8 GetAuraSlot() const { return m_auraSlot; }
         void SetAuraSlot(uint8 slot) { m_auraSlot = slot; }
-        void UpdateAuraCharges()
+        uint8 GetAuraFlags() const { return m_auraFlags; }
+        void SetAuraFlags(uint8 flags) { m_auraFlags = flags; }
+        uint8 GetAuraLevel() const { return m_auraLevel; }
+        void SetAuraLevel(uint8 level) { m_auraLevel = level; }
+        uint8 GetAuraCharges() const { return m_procCharges; }
+        void SetAuraCharges(uint8 charges) 
         {
-            uint8 slot = GetAuraSlot();
-
-            // only aura in slot with charges and without stack limitation
-            if (slot < MAX_AURAS && m_procCharges >= 1 && GetSpellProto()->StackAmount==0)
-                SetAuraApplication(slot, m_procCharges - 1);
+            if (m_procCharges == charges)
+                return;
+            m_procCharges = charges;
+            SendAuraUpdate(false);
         }
+        bool DropAuraCharge() // return true if last charge dropped
+        { 
+            if (m_procCharges == 0)
+                return false;
+            m_procCharges--;
+            SendAuraUpdate(false);
+            return m_procCharges == 0;
+        }
+
+        void SetAura(bool remove) { m_target->SetVisibleAura(m_auraSlot, remove ? 0 : GetId()); }
+        void SendAuraUpdate(bool remove);
+
+        int8 GetStackAmount() {return m_stackAmount;}
+        int32 GetModifierValuePerStack() {return m_modifier.m_amount / m_stackAmount;}
+        void SetStackAmount(uint8 num);
+        bool modStackAmount(int32 num); // return true if last charge dropped
+        void RefreshAura();
 
         bool IsPositive() { return m_positive; }
         void SetNegative() { m_positive = false; }
@@ -285,9 +310,6 @@ class TRINITY_DLL_SPEC Aura
         void SetUpdated(bool val) { m_updated = val; }
         void SetRemoveMode(AuraRemoveMode mode) { m_removeMode = mode; }
 
-        int32 m_procCharges;
-        void SetAuraProcCharges(int32 charges) { m_procCharges = charges; }
-
         Unit* GetTriggerTarget() const;
 
         // add/remove SPELL_AURA_MOD_SHAPESHIFT (36) linked auras
@@ -300,27 +322,35 @@ class TRINITY_DLL_SPEC Aura
         void PeriodicTick();
         void PeriodicDummyTick();
 
-        int32 GetStackAmount() {return m_stackAmount;}
-        void SetStackAmount(int32 amount) {m_stackAmount=amount;}
+        uint32 const *getAuraSpellClassMask() const { return  m_spellProto->EffectSpellClassMaskA + m_effIndex * 3; }
+        bool isAffectedOnSpell(SpellEntry const *spell) const;
     protected:
         Aura(SpellEntry const* spellproto, uint32 eff, int32 *currentBasePoints, Unit *target, Unit *caster = NULL, Item* castItem = NULL);
 
         Modifier m_modifier;
         SpellModifier *m_spellmod;
-        uint32 m_effIndex;
+
         SpellEntry const *m_spellProto;
-        int32 m_currentBasePoints;                          // cache SpellEntry::EffectBasePoints and use for set custom base points
-        uint64 m_caster_guid;
         Unit* m_target;
-        int32 m_maxduration;
-        int32 m_duration;
-        int32 m_timeCla;
+        uint64 m_caster_guid;
         uint64 m_castItemGuid;                              // it is NOT safe to keep a pointer to the item because it may get deleted
         time_t m_applyTime;
 
-        AuraRemoveMode m_removeMode;
+        int32 m_currentBasePoints;                          // cache SpellEntry::EffectBasePoints and use for set custom base points
+        int32 m_maxduration;                                // Max aura duration
+        int32 m_duration;                                   // Current time
+        int32 m_timeCla;                                    // Timer for power per sec calcultion
+        int32 m_periodicTimer;                              // Timer for periodic auras
 
-        uint8 m_auraSlot;
+        AuraRemoveMode m_removeMode:8;                      // Store info for know remove aura reason
+        DiminishingGroup m_AuraDRGroup:8;                   // Diminishing
+
+        uint8 m_effIndex;                                   // Aura effect index in spell
+        uint8 m_auraSlot;                                   // Aura slot on unit (for show in client)
+        uint8 m_auraFlags;                                  // Aura info flag (for send data to client)
+        uint8 m_auraLevel;                                  // Aura level (store caster level for correct show level dep amount)
+        uint8 m_procCharges;                                // Aura charges (0 for infinite)
+        uint8 m_stackAmount;                                // Aura stack amount
 
         bool m_positive:1;
         bool m_permanent:1;
@@ -331,20 +361,11 @@ class TRINITY_DLL_SPEC Aura
         bool m_isPersistent:1;
         bool m_isDeathPersist:1;
         bool m_isRemovedOnShapeLost:1;
-        bool m_updated:1;
+        bool m_updated:1;                                   // Prevent remove aura by stack if set
         bool m_in_use:1;                                    // true while in Aura::ApplyModifier call
 
-        int32 m_periodicTimer;
-        uint32 m_PeriodicEventId;
-        DiminishingGroup m_AuraDRGroup;
-
-        int32 m_stackAmount;
     private:
         void CleanupTriggeredSpells();
-        void SetAura(uint32 slot, bool remove) { m_target->SetUInt32Value(UNIT_FIELD_AURA + slot, remove ? 0 : GetId()); }
-        void SetAuraFlag(uint32 slot, bool add);
-        void SetAuraLevel(uint32 slot, uint32 level);
-        void SetAuraApplication(uint32 slot, int8 count);
 };
 
 class TRINITY_DLL_SPEC AreaAura : public Aura

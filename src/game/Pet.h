@@ -52,16 +52,6 @@ enum HappinessState
     HAPPY   = 3
 };
 
-enum LoyaltyLevel
-{
-    REBELLIOUS  = 1,
-    UNRULY      = 2,
-    SUBMISSIVE  = 3,
-    DEPENDABLE  = 4,
-    FAITHFUL    = 5,
-    BEST_FRIEND = 6
-};
-
 enum PetSpellState
 {
     PETSPELL_UNCHANGED = 0,
@@ -78,7 +68,6 @@ enum PetSpellType
 
 struct PetSpell
 {
-    uint16 slotId;
     uint16 active;
 
     PetSpellState state : 16;
@@ -122,9 +111,6 @@ typedef std::vector<uint32> AutoSpellList;
 
 #define HAPPINESS_LEVEL_SIZE        333000
 
-extern const uint32 LevelUpLoyalty[6];
-extern const uint32 LevelStartLoyalty[6];
-
 #define ACTIVE_SPELLS_MAX           4
 
 #define OWNER_MAX_DISTANCE 100
@@ -148,7 +134,7 @@ class Pet : public Creature
 
         bool Create (uint32 guidlow, Map *map, uint32 Entry, uint32 pet_number);
         bool CreateBaseAtCreature(Creature* creature);
-        bool LoadPetFromDB( Unit* owner,uint32 petentry = 0,uint32 petnumber = 0, bool current = false );
+        bool LoadPetFromDB( Player* owner,uint32 petentry = 0,uint32 petnumber = 0, bool current = false );
         void SavePetToDB(PetSaveMode mode);
         void Remove(PetSaveMode mode, bool returnreagent = false);
         static void DeleteFromDB(uint32 guidlow);
@@ -167,14 +153,7 @@ class Pet : public Creature
 
         void RegenerateFocus();
         void LooseHappiness();
-        void TickLoyaltyChange();
-        void ModifyLoyalty(int32 addvalue);
         HappinessState GetHappinessState();
-        uint32 GetMaxLoyaltyPoints(uint32 level);
-        uint32 GetStartLoyaltyPoints(uint32 level);
-        void KillLoyaltyBonus(uint32 level);
-        uint32 GetLoyaltyLevel() { return GetByteValue(UNIT_FIELD_BYTES_1, 1); }
-        void SetLoyaltyLevel(LoyaltyLevel level);
         void GivePetXP(uint32 xp);
         void GivePetLevel(uint32 level);
         bool InitStatsForLevel(uint32 level);
@@ -194,10 +173,8 @@ class Pet : public Creature
         void UpdateAttackPowerAndDamage(bool ranged = false);
         void UpdateDamagePhysical(WeaponAttackType attType);
 
-        bool   CanTakeMoreActiveSpells(uint32 SpellIconID);
-        void   ToggleAutocast(uint32 spellid, bool apply);
-        bool   HasTPForSpell(uint32 spellid);
-        int32  GetTPForSpell(uint32 spellid);
+        bool CanTakeMoreActiveSpells(uint32 SpellIconID);
+        void ToggleAutocast(uint32 spellid, bool apply);
 
         bool HasSpell(uint32 spell) const;
         void AddTeachSpell(uint32 learned_id, uint32 source_id) { m_teachspells[learned_id] = source_id; }
@@ -213,9 +190,11 @@ class Pet : public Creature
         void _LoadSpells();
         void _SaveSpells();
 
-        bool addSpell(uint16 spell_id,uint16 active = ACT_DECIDE, PetSpellState state = PETSPELL_NEW, uint16 slot_id=0xffff, PetSpellType type = PETSPELL_NORMAL);
+        bool addSpell(uint16 spell_id,uint16 active = ACT_DECIDE, PetSpellState state = PETSPELL_NEW, PetSpellType type = PETSPELL_NORMAL);
         bool learnSpell(uint16 spell_id);
-        void removeSpell(uint16 spell_id);
+        void learnLevelupSpells();
+        bool unlearnSpell(uint16 spell_id);
+        bool removeSpell(uint16 spell_id);
         bool _removeSpell(uint16 spell_id);
 
         PetSpellMap     m_spells;
@@ -225,11 +204,10 @@ class Pet : public Creature
         void InitPetCreateSpells();
         void CheckLearning(uint32 spellid);
         uint32 resetTalentsCost() const;
+        uint8 GetMaxTalentPointsForLevel(uint32 level) { return (level >= 20) ? ((level - 16) / 4) : 0; }
+        uint8 GetFreeTalentPoints() { return GetByteValue(UNIT_FIELD_BYTES_1, 1); }
+        void SetFreeTalentPoints(uint8 points) { SetByteValue(UNIT_FIELD_BYTES_1, 1, points); }
 
-        void  SetTP(int32 TP);
-        int32 GetDispTP();
-
-        int32   m_TrainingPoints;
         uint32  m_resetTalentsCost;
         time_t  m_resetTalentsTime;
 
@@ -242,14 +220,12 @@ class Pet : public Creature
 
         bool    m_removed;                                  // prevent overwrite pet state in DB at next Pet::Update if pet already removed(saved)
     protected:
-        uint32  m_regenTimer;
         uint32  m_happinessTimer;
-        uint32  m_loyaltyTimer;
         PetType m_petType;
         int32   m_duration;                                 // time until unsummon (used mostly for summoned guardians and not used for controlled pets)
-        int32   m_loyaltyPoints;
         int32   m_bonusdamage;
         uint64  m_auraUpdateMask;
+        bool    m_loading;
 
         DeclinedName *m_declinedname;
 
