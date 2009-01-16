@@ -785,6 +785,7 @@ void Guild::Query(WorldSession *session)
     data << uint32(BorderStyle);
     data << uint32(BorderColor);
     data << uint32(BackgroundColor);
+    data << uint32(0);                                      // something new in WotLK
 
     session->SendPacket( &data );
     sLog.outDebug( "WORLD: Sent (SMSG_GUILD_QUERY_RESPONSE)" );
@@ -1212,18 +1213,19 @@ void Guild::LoadGuildBankFromDB()
 
     delete result;
 
-    //                                        0      1       2          3
-    result = CharacterDatabase.PQuery("SELECT TabId, SlotId, item_guid, item_entry FROM guild_bank_item WHERE guildid='%u' ORDER BY TabId", Id);
+    // data needs to be at first place for Item::LoadFromDB
+    //                                        0     1      2       3          4
+    result = CharacterDatabase.PQuery("SELECT data, TabId, SlotId, item_guid, item_entry FROM guild_bank_item JOIN item_instance ON item_guid = guid WHERE guildid='%u' ORDER BY TabId", Id);
     if(!result)
         return;
 
     do
     {
         Field *fields = result->Fetch();
-        uint8 TabId = fields[0].GetUInt8();
-        uint8 SlotId = fields[1].GetUInt8();
-        uint32 ItemGuid = fields[2].GetUInt32();
-        uint32 ItemEntry = fields[3].GetUInt32();
+        uint8 TabId = fields[1].GetUInt8();
+        uint8 SlotId = fields[2].GetUInt8();
+        uint32 ItemGuid = fields[3].GetUInt32();
+        uint32 ItemEntry = fields[4].GetUInt32();
 
         if (TabId >= purchased_tabs || TabId >= GUILD_BANK_MAX_TABS)
         {
@@ -1246,7 +1248,7 @@ void Guild::LoadGuildBankFromDB()
         }
 
         Item *pItem = NewItemOrBag(proto);
-        if(!pItem->LoadFromDB(ItemGuid, 0))
+        if(!pItem->LoadFromDB(ItemGuid, 0, result))
         {
             CharacterDatabase.PExecute("DELETE FROM guild_bank_item WHERE guildid='%u' AND TabId='%u' AND SlotId='%u'", Id, uint32(TabId), uint32(SlotId));
             sLog.outError("Item GUID %u not found in item_instance, deleting from Guild Bank!", ItemGuid);
@@ -1602,7 +1604,21 @@ void Guild::DisplayGuildBankLogs(WorldSession *session, uint8 TabId)
         {
             data << uint8((*itr)->LogEntry);
             data << uint64(MAKE_NEW_GUID((*itr)->PlayerGuid,0,HIGHGUID_PLAYER));
-            data << uint32((*itr)->ItemOrMoney);
+            if ((*itr)->LogEntry == GUILD_BANK_LOG_DEPOSIT_MONEY || 
+                (*itr)->LogEntry == GUILD_BANK_LOG_WITHDRAW_MONEY ||
+                (*itr)->LogEntry == GUILD_BANK_LOG_REPAIR_MONEY ||
+                (*itr)->LogEntry == GUILD_BANK_LOG_UNK1 ||
+                (*itr)->LogEntry == GUILD_BANK_LOG_UNK2)
+            {
+                data << uint32((*itr)->ItemOrMoney);
+            }
+            else
+            {
+                data << uint32((*itr)->ItemOrMoney);
+                data << uint32((*itr)->ItemStackCount);
+                if ((*itr)->LogEntry == GUILD_BANK_LOG_MOVE_ITEM || (*itr)->LogEntry == GUILD_BANK_LOG_MOVE_ITEM2)
+                    data << uint8((*itr)->DestTabId);       // moved tab
+            }
             data << uint32(time(NULL)-(*itr)->TimeStamp);
         }
         session->SendPacket(&data);
@@ -1618,10 +1634,21 @@ void Guild::DisplayGuildBankLogs(WorldSession *session, uint8 TabId)
         {
             data << uint8((*itr)->LogEntry);
             data << uint64(MAKE_NEW_GUID((*itr)->PlayerGuid,0,HIGHGUID_PLAYER));
-            data << uint32((*itr)->ItemOrMoney);
-            data << uint8((*itr)->ItemStackCount);
-            if ((*itr)->LogEntry == GUILD_BANK_LOG_MOVE_ITEM || (*itr)->LogEntry == GUILD_BANK_LOG_MOVE_ITEM2)
-                data << uint8((*itr)->DestTabId);           // moved tab
+            if ((*itr)->LogEntry == GUILD_BANK_LOG_DEPOSIT_MONEY || 
+                (*itr)->LogEntry == GUILD_BANK_LOG_WITHDRAW_MONEY ||
+                (*itr)->LogEntry == GUILD_BANK_LOG_REPAIR_MONEY ||
+                (*itr)->LogEntry == GUILD_BANK_LOG_UNK1 ||
+                (*itr)->LogEntry == GUILD_BANK_LOG_UNK2)
+            {
+                data << uint32((*itr)->ItemOrMoney);
+            }
+            else
+            {
+                data << uint32((*itr)->ItemOrMoney);
+                data << uint32((*itr)->ItemStackCount);
+                if ((*itr)->LogEntry == GUILD_BANK_LOG_MOVE_ITEM || (*itr)->LogEntry == GUILD_BANK_LOG_MOVE_ITEM2)
+                    data << uint8((*itr)->DestTabId);       // moved tab
+            }
             data << uint32(time(NULL)-(*itr)->TimeStamp);
         }
         session->SendPacket(&data);
@@ -1703,7 +1730,7 @@ void Guild::AppendDisplayGuildBankSlot( WorldPacket& data, GuildBankTab const *t
             // SuffixFactor +4
             data << (uint32) pItem->GetItemSuffixFactor();
         // +12 // ITEM_FIELD_STACK_COUNT
-        data << uint8(pItem->GetCount());
+        data << uint32(pItem->GetCount());
         data << uint32(0);                                  // +16 // Unknown value
         data << uint8(0);                                   // unknown 2.4.2
         if (uint32 Enchant0 = pItem->GetEnchantmentId(PERM_ENCHANTMENT_SLOT))

@@ -38,6 +38,7 @@
 #include "Opcodes.h"
 #include "ObjectDefines.h"
 #include "MapInstanced.h"
+#include "World.h"
 
 #include <cmath>
 
@@ -132,6 +133,9 @@ Creature*
 ObjectAccessor::GetCreatureOrPet(WorldObject const &u, uint64 guid)
 {
     if(Creature *unit = GetPet(guid))
+        return unit;
+
+    if(Creature *unit = GetVehicle(guid))
         return unit;
 
     return GetCreature(u, guid);
@@ -351,6 +355,12 @@ ObjectAccessor::GetPet(uint64 guid)
     return GetObjectInWorld(guid, (Pet*)NULL);
 }
 
+Vehicle*
+ObjectAccessor::GetVehicle(uint64 guid)
+{
+    return GetObjectInWorld(guid, (Vehicle*)NULL);
+}
+
 Corpse*
 ObjectAccessor::GetCorpseForPlayerGUID(uint64 guid)
 {
@@ -423,7 +433,7 @@ ObjectAccessor::AddCorpsesToGrid(GridPair const& gridpair,GridType& grid,Map* ma
 }
 
 Corpse*
-ObjectAccessor::ConvertCorpseForPlayer(uint64 player_guid)
+ObjectAccessor::ConvertCorpseForPlayer(uint64 player_guid, bool insignia)
 {
     Corpse *corpse = GetCorpseForPlayerGUID(player_guid);
     if(!corpse)
@@ -449,7 +459,10 @@ ObjectAccessor::ConvertCorpseForPlayer(uint64 player_guid)
 
     Corpse *bones = NULL;
     // create the bones only if the map and the grid is loaded at the corpse's location
-    if(map && !map->IsRemovalGrid(corpse->GetPositionX(), corpse->GetPositionY()))
+    // ignore bones creating option in case insignia
+    if (map && (insignia ||
+        (map->IsBattleGroundOrArena() ? sWorld.getConfig(CONFIG_DEATH_BONES_BG_OR_ARENA) : sWorld.getConfig(CONFIG_DEATH_BONES_WORLD))) &&
+        !map->IsRemovalGrid(corpse->GetPositionX(), corpse->GetPositionY()))
     {
         // Create bones, don't change Corpse
         bones = new Corpse;
@@ -602,6 +615,7 @@ template <class T> ZThread::FastMutex HashMapHolder<T>::i_lock;
 
 template class HashMapHolder<Player>;
 template class HashMapHolder<Pet>;
+template class HashMapHolder<Vehicle>;
 template class HashMapHolder<GameObject>;
 template class HashMapHolder<DynamicObject>;
 template class HashMapHolder<Creature>;
@@ -609,6 +623,7 @@ template class HashMapHolder<Corpse>;
 
 template Player* ObjectAccessor::GetObjectInWorld<Player>(uint32 mapid, float x, float y, uint64 guid, Player* /*fake*/);
 template Pet* ObjectAccessor::GetObjectInWorld<Pet>(uint32 mapid, float x, float y, uint64 guid, Pet* /*fake*/);
+template Vehicle* ObjectAccessor::GetObjectInWorld<Vehicle>(uint32 mapid, float x, float y, uint64 guid, Vehicle* /*fake*/);
 template Creature* ObjectAccessor::GetObjectInWorld<Creature>(uint32 mapid, float x, float y, uint64 guid, Creature* /*fake*/);
 template Corpse* ObjectAccessor::GetObjectInWorld<Corpse>(uint32 mapid, float x, float y, uint64 guid, Corpse* /*fake*/);
 template GameObject* ObjectAccessor::GetObjectInWorld<GameObject>(uint32 mapid, float x, float y, uint64 guid, GameObject* /*fake*/);
