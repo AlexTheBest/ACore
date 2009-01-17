@@ -29,6 +29,9 @@
 #include "BattleGroundBE.h"
 #include "BattleGroundAA.h"
 #include "BattleGroundRL.h"
+#include "BattleGroundSA.h"
+#include "BattleGroundDS.h"
+#include "BattleGroundRV.h"
 #include "SharedDefines.h"
 #include "Policies/SingletonImp.h"
 #include "MapManager.h"
@@ -243,38 +246,6 @@ void BattleGroundQueue::AddPlayer(Player *plr, GroupQueueInfo *ginfo)
 
     // add the pinfo to ginfo's list
     ginfo->Players[plr->GetGUID()]  = &info;
-/*
-    if( sWorld.getConfig(CONFIG_BATTLEGROUND_QUEUE_ANNOUNCER_ENABLE) )
-    {
-        BattleGround* bg = sBattleGroundMgr.GetBattleGround(bgTypeId);
-        char const* bgName = bg->GetName();
-
-        uint32 q_min_level = Player::GetMinLevelForBattleGroundQueueId(queue_id);
-        uint32 q_max_level = Player::GetMaxLevelForBattleGroundQueueId(queue_id);
-
-        // replace hardcoded max level by player max level for nice output
-        if(q_max_level > sWorld.getConfig(CONFIG_MAX_PLAYER_LEVEL))
-            q_max_level = sWorld.getConfig(CONFIG_MAX_PLAYER_LEVEL);
-
-        int8 MinPlayers = bg->GetMinPlayersPerTeam();
-
-        uint8 qHorde = m_QueuedPlayers[queue_id].Horde;
-        uint8 qAlliance = m_QueuedPlayers[queue_id].Alliance;
-
-        // Show queue status to player only (when joining queue)
-        if(sWorld.getConfig(CONFIG_BATTLEGROUND_QUEUE_ANNOUNCER_PLAYERONLY))
-        {
-            ChatHandler(plr).PSendSysMessage(LANG_BG_QUEUE_ANNOUNCE_SELF,
-                bgName, q_min_level, q_max_level, qAlliance, (MinPlayers > qAlliance) ? (MinPlayers - qAlliance) : 0, qHorde, (MinPlayers > qHorde) ? (MinPlayers - qHorde) : 0);
-        }
-        // System message
-        else
-        {
-            sWorld.SendWorldText(LANG_BG_QUEUE_ANNOUNCE_WORLD,
-                bgName, q_min_level, q_max_level, qAlliance, (MinPlayers > qAlliance) ? (MinPlayers - qAlliance) : 0, qHorde, (MinPlayers > qHorde) ? (MinPlayers - qHorde) : 0);
-        }
-
-    }*/
 }
 
 void BattleGroundQueue::RemovePlayer(uint64 guid, bool decreaseInvitedCount)
@@ -360,6 +331,11 @@ void BattleGroundQueue::RemovePlayer(uint64 guid, bool decreaseInvitedCount)
         // remove player queue info
         m_QueuedPlayers[queue_id].erase(itr);
         // remove group queue info if needed
+
+        //if we left BG queue(not porting) OR if arena team left queue for rated match
+        if((decreaseInvitedCount && !group->ArenaType) || (group->ArenaType && group->IsRated && group->Players.empty()))
+            AnnounceWorld(group, guid, false);
+
         if(group->Players.empty())
         {
             m_QueuedGroups[queue_id].erase(group_itr);
@@ -384,6 +360,85 @@ void BattleGroundQueue::RemovePlayer(uint64 guid, bool decreaseInvitedCount)
             }
             // then actually delete, this may delete the group as well!
             RemovePlayer(group->Players.begin()->first,decreaseInvitedCount);
+        }
+    }
+}
+
+void BattleGroundQueue::AnnounceWorld(GroupQueueInfo *ginfo, uint64 playerGUID, bool isAddedToQueue)
+{
+
+    if(ginfo->ArenaType) //if Arena
+    {
+        if( sWorld.getConfig(CONFIG_ARENA_QUEUE_ANNOUNCER_ENABLE) && ginfo->IsRated)
+        {
+            BattleGround* bg = sBattleGroundMgr.GetBattleGroundTemplate(ginfo->BgTypeId);
+            if(!bg)
+                return;
+
+            char const* bgName = bg->GetName();
+            if(isAddedToQueue)
+                sWorld.SendWorldText(LANG_ARENA_QUEUE_ANNOUNCE_WORLD_JOIN, bgName, ginfo->ArenaType, ginfo->ArenaType, ginfo->ArenaTeamRating);
+            else
+                sWorld.SendWorldText(LANG_ARENA_QUEUE_ANNOUNCE_WORLD_EXIT, bgName, ginfo->ArenaType, ginfo->ArenaType, ginfo->ArenaTeamRating);
+        }
+    }
+    else //if BG
+    {
+        if( sWorld.getConfig(CONFIG_BATTLEGROUND_QUEUE_ANNOUNCER_ENABLE) )
+        {
+            Player *plr = objmgr.GetPlayer(playerGUID);
+            if(!plr)
+                return;
+
+            BattleGround* bg = sBattleGroundMgr.GetBattleGroundTemplate(ginfo->BgTypeId);
+            if(!bg)
+                return;
+
+            uint32 queue_id = plr->GetBattleGroundQueueIdFromLevel();
+            char const* bgName = bg->GetName();
+
+            uint32 q_min_level = Player::GetMinLevelForBattleGroundQueueId(queue_id);
+            uint32 q_max_level = Player::GetMaxLevelForBattleGroundQueueId(queue_id);
+
+            // replace hardcoded max level by player max level for nice output
+            if(q_max_level > sWorld.getConfig(CONFIG_MAX_PLAYER_LEVEL))
+                q_max_level = sWorld.getConfig(CONFIG_MAX_PLAYER_LEVEL);
+
+            int8 MinPlayers = bg->GetMinPlayersPerTeam();
+
+            uint8 qHorde = 0;
+            uint8 qAlliance = 0;
+
+            uint32 bgTypeId = ginfo->BgTypeId;
+            QueuedPlayersMap::iterator itr;
+            for(itr = m_QueuedPlayers[queue_id].begin(); itr!= m_QueuedPlayers[queue_id].end(); ++itr)
+            {
+                if(itr->second.GroupInfo->BgTypeId == bgTypeId)
+                {
+                    switch(itr->second.GroupInfo->Team)
+                    {
+                        case HORDE:
+                            qHorde++; break;
+                        case ALLIANCE:
+                            qAlliance++; break;
+                        default:
+                            break;
+                    }
+                }
+            }
+
+            // Show queue status to player only (when joining queue)
+            if(sWorld.getConfig(CONFIG_BATTLEGROUND_QUEUE_ANNOUNCER_PLAYERONLY))
+            {
+                ChatHandler(plr).PSendSysMessage(LANG_BG_QUEUE_ANNOUNCE_SELF,
+                    bgName, q_min_level, q_max_level, qAlliance, MinPlayers, qHorde, MinPlayers);
+            }
+            // System message
+            else
+            {
+                sWorld.SendWorldText(LANG_BG_QUEUE_ANNOUNCE_WORLD,
+                    bgName, q_min_level, q_max_level, qAlliance, MinPlayers, qHorde, MinPlayers);
+            }
         }
     }
 }
@@ -715,6 +770,15 @@ void BattleGroundQueue::Update(uint32 bgTypeId, uint32 queue_id, uint8 arenatype
         {
             // create new battleground
             bg2 = sBattleGroundMgr.CreateNewBattleGround(bgTypeId);
+            if( sWorld.getConfig(CONFIG_BATTLEGROUND_QUEUE_ANNOUNCER_ENABLE) )
+            {
+                char const* bgName = bg2->GetName();
+                uint32 q_min_level = Player::GetMinLevelForBattleGroundQueueId(queue_id);
+                uint32 q_max_level = Player::GetMaxLevelForBattleGroundQueueId(queue_id);
+                if(q_max_level > sWorld.getConfig(CONFIG_MAX_PLAYER_LEVEL))
+                    q_max_level = sWorld.getConfig(CONFIG_MAX_PLAYER_LEVEL);
+                sWorld.SendWorldText(LANG_BG_STARTED_ANNOUNCE_WORLD, bgName, q_min_level, q_max_level);
+            }
         }
 
         if(!bg2)
@@ -1134,6 +1198,15 @@ void BattleGroundMgr::BuildBattleGroundStatusPacket(WorldPacket *data, BattleGro
         case BATTLEGROUND_RL:
             *data << uint8(8);
             break;
+        case BATTLEGROUND_SA:
+            *data << uint8(9);
+            break;
+        case BATTLEGROUND_DS:
+            *data << uint8(10);
+            break;
+        case BATTLEGROUND_RV:
+            *data << uint8(11);
+            break;
         default:                                            // unknown
             *data << uint8(0);
             break;
@@ -1267,13 +1340,16 @@ void BattleGroundMgr::BuildPvpLogDataPacket(WorldPacket *data, BattleGround *bg)
                 *data << (uint32)((BattleGroundABScore*)itr->second)->BasesDefended;        // bases defended
                 break;
             case BATTLEGROUND_EY:
-                *data << (uint32)0x00000001;                 // count of next fields
+                *data << (uint32)0x00000001;                // count of next fields
                 *data << (uint32)((BattleGroundEYScore*)itr->second)->FlagCaptures;         // flag captures
                 break;
             case BATTLEGROUND_NA:
             case BATTLEGROUND_BE:
             case BATTLEGROUND_AA:
             case BATTLEGROUND_RL:
+            case BATTLEGROUND_SA:                           // wotlk
+            case BATTLEGROUND_DS:                           // wotlk
+            case BATTLEGROUND_RV:                           // wotlk
                 *data << (int32)0;                          // 0
                 break;
             default:
@@ -1407,6 +1483,15 @@ BattleGround * BattleGroundMgr::CreateNewBattleGround(uint32 bgTypeId)
         case BATTLEGROUND_RL:
             bg = new BattleGroundRL(*(BattleGroundRL*)bg_template);
             break;
+        case BATTLEGROUND_SA:
+            bg = new BattleGroundSA(*(BattleGroundSA*)bg_template);
+            break;
+        case BATTLEGROUND_DS:
+            bg = new BattleGroundDS(*(BattleGroundDS*)bg_template);
+            break;
+        case BATTLEGROUND_RV:
+            bg = new BattleGroundRV(*(BattleGroundRV*)bg_template);
+            break;
         default:
             //bg = new BattleGround;
             return 0;
@@ -1453,6 +1538,9 @@ uint32 BattleGroundMgr::CreateBattleGround(uint32 bgTypeId, uint32 MinPlayersPer
         case BATTLEGROUND_AA: bg = new BattleGroundAA; break;
         case BATTLEGROUND_EY: bg = new BattleGroundEY; break;
         case BATTLEGROUND_RL: bg = new BattleGroundRL; break;
+        case BATTLEGROUND_SA: bg = new BattleGroundSA; break;
+        case BATTLEGROUND_DS: bg = new BattleGroundDS; break;
+        case BATTLEGROUND_RV: bg = new BattleGroundRV; break;
         default:bg = new BattleGround;   break;             // placeholder for non implemented BG
     }
 
@@ -1773,10 +1861,14 @@ uint32 BattleGroundMgr::BGQueueTypeId(uint32 bgTypeId, uint8 arenaType) const
         return BATTLEGROUND_QUEUE_AV;
     case BATTLEGROUND_EY:
         return BATTLEGROUND_QUEUE_EY;
+    case BATTLEGROUND_SA:
+        return BATTLEGROUND_QUEUE_SA;
     case BATTLEGROUND_AA:
     case BATTLEGROUND_NA:
     case BATTLEGROUND_RL:
     case BATTLEGROUND_BE:
+    case BATTLEGROUND_DS:
+    case BATTLEGROUND_RV:
         switch(arenaType)
         {
         case ARENA_TYPE_2v2:
@@ -1805,6 +1897,8 @@ uint32 BattleGroundMgr::BGTemplateId(uint32 bgQueueTypeId) const
         return BATTLEGROUND_AV;
     case BATTLEGROUND_QUEUE_EY:
         return BATTLEGROUND_EY;
+    case BATTLEGROUND_QUEUE_SA:
+        return BATTLEGROUND_SA;
     case BATTLEGROUND_QUEUE_2v2:
     case BATTLEGROUND_QUEUE_3v3:
     case BATTLEGROUND_QUEUE_5v5:

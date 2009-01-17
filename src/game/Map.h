@@ -186,7 +186,7 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         float GetVmapHeight(float x, float y, float z, bool useMaps) const;
         bool IsInWater(float x, float y, float z) const;    // does not use z pos. This is for future use
 
-        uint16 GetAreaFlag(float x, float y ) const;
+        uint16 GetAreaFlag(float x, float y, float z) const;
         uint8 GetTerrainType(float x, float y ) const;
         float GetWaterLevel(float x, float y ) const;
         bool IsUnderWater(float x, float y, float z) const;
@@ -194,14 +194,14 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         static uint32 GetAreaId(uint16 areaflag,uint32 map_id);
         static uint32 GetZoneId(uint16 areaflag,uint32 map_id);
 
-        uint32 GetAreaId(float x, float y) const
+        uint32 GetAreaId(float x, float y, float z) const
         {
-            return GetAreaId(GetAreaFlag(x,y),i_id);
+            return GetAreaId(GetAreaFlag(x,y,z),i_id);
         }
 
-        uint32 GetZoneId(float x, float y) const
+        uint32 GetZoneId(float x, float y, float z) const
         {
-            return GetZoneId(GetAreaFlag(x,y),i_id);
+            return GetZoneId(GetAreaFlag(x,y,z),i_id);
         }
 
         virtual void MoveAllCreaturesInMoveList();
@@ -225,6 +225,17 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         bool IsBattleGround() const { return i_mapEntry && i_mapEntry->IsBattleGround(); }
         bool IsBattleArena() const { return i_mapEntry && i_mapEntry->IsBattleArena(); }
         bool IsBattleGroundOrArena() const { return i_mapEntry && i_mapEntry->IsBattleGroundOrArena(); }
+        bool GetEntrancePos(int32 &mapid, float &x, float &y)
+        {
+            if(!i_mapEntry)
+                return false;
+            if(i_mapEntry->entrance_map < 0)
+                return false;
+            mapid = i_mapEntry->entrance_map;
+            x = i_mapEntry->entrance_x;
+            y = i_mapEntry->entrance_y;
+            return true;
+        }
 
         void AddObjectToRemoveList(WorldObject *obj);
         void DoDelayedMovesAndRemoves();

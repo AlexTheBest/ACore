@@ -324,7 +324,7 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
         data << pProto->ItemId;
         data << pProto->Class;
         data << pProto->SubClass;
-        data << uint32(-1);                                 // new 2.0.3, not exist in wdb cache?
+        data << int32(pProto->Unk0);                        // new 2.0.3, not exist in wdb cache?
         data << Name;
         data << uint8(0x00);                                //pProto->Name2; // blizz not send name there, just uint8(0x00); <-- \0 = empty string = empty name...
         data << uint8(0x00);                                //pProto->Name3; // blizz not send name there, just uint8(0x00);
@@ -346,14 +346,17 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
         data << pProto->RequiredCityRank;
         data << pProto->RequiredReputationFaction;
         data << pProto->RequiredReputationRank;
-        data << pProto->MaxCount;
-        data << pProto->Stackable;
+        data << int32(pProto->MaxCount);
+        data << int32(pProto->Stackable);
         data << pProto->ContainerSlots;
-        for(int i = 0; i < 10; i++)
+        data << pProto->StatsCount;                         // item stats count
+        for(int i = 0; i < pProto->StatsCount; i++)
         {
             data << pProto->ItemStat[i].ItemStatType;
             data << pProto->ItemStat[i].ItemStatValue;
         }
+        data << pProto->ScalingStatDistribution;            // scaling stats distribution
+        data << pProto->ScalingStatValue;                   // some kind of flags used to determine stat values column
         for(int i = 0; i < 5; i++)
         {
             data << pProto->Damage[i].DamageMin;
@@ -417,7 +420,7 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
         data << pProto->PageMaterial;
         data << pProto->StartQuest;
         data << pProto->LockID;
-        data << pProto->Material;
+        data << int32(pProto->Material);
         data << pProto->Sheath;
         data << pProto->RandomProperty;
         data << pProto->RandomSuffix;
@@ -437,7 +440,8 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
         data << pProto->GemProperties;
         data << pProto->RequiredDisenchantSkill;
         data << pProto->ArmorDamageModifier;
-        data << uint32(0);                                  // added in 2.4.2.8209, duration (seconds)
+        data << pProto->Duration;                           // added in 2.4.2.8209, duration (seconds)
+        data << pProto->ItemLimitCategory;                  // WotLK, ItemLimitCategory
         SendPacket( &data );
     }
     else
@@ -845,6 +849,7 @@ void WorldSession::HandleBuyBankSlotOpcode(WorldPacket& /*recvPacket*/)
     if (_player->GetMoney() < price)
         return;
 
+    _player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BUY_BANK_SLOT, slot);
     _player->SetByteValue(PLAYER_BYTES_2, 2, slot);
     _player->ModifyMoney(-int32(price));
 }
@@ -1109,10 +1114,6 @@ void WorldSession::HandleSocketOpcode(WorldPacket& recv_data)
     CHECK_PACKET_SIZE(recv_data,8*4);
 
     uint64 guids[4];
-    uint32 GemEnchants[3], OldEnchants[3];
-    Item *Gems[3];
-    bool SocketBonusActivated, SocketBonusToBeActivated;
-
     for(int i = 0; i < 4; i++)
         recv_data >> guids[i];
 
@@ -1130,6 +1131,7 @@ void WorldSession::HandleSocketOpcode(WorldPacket& recv_data)
     //this slot is excepted when applying / removing meta gem bonus
     uint8 slot = itemTarget->IsEquipped() ? itemTarget->GetSlot() : NULL_SLOT;
 
+    Item *Gems[3];
     for(int i = 0; i < 3; i++)
         Gems[i] = guids[i + 1] ? _player->GetItemByGuid(guids[i + 1]) : NULL;
 
@@ -1149,6 +1151,7 @@ void WorldSession::HandleSocketOpcode(WorldPacket& recv_data)
             return;
     }
 
+    uint32 GemEnchants[3], OldEnchants[3];
     for(int i = 0; i < 3; ++i)                              //get new and old enchantments
     {
         GemEnchants[i] = (GemProps[i]) ? GemProps[i]->spellitemenchantement : 0;
@@ -1197,7 +1200,7 @@ void WorldSession::HandleSocketOpcode(WorldPacket& recv_data)
         }
     }
 
-    SocketBonusActivated = itemTarget->GemsFitSockets();    //save state of socketbonus
+    bool SocketBonusActivated = itemTarget->GemsFitSockets();    //save state of socketbonus
     _player->ToggleMetaGemsActive(slot, false);             //turn off all metagems (except for the target item)
 
     //if a meta gem is being equipped, all information has to be written to the item before testing if the conditions for the gem are met
@@ -1219,7 +1222,7 @@ void WorldSession::HandleSocketOpcode(WorldPacket& recv_data)
     for(uint32 enchant_slot = SOCK_ENCHANTMENT_SLOT; enchant_slot < SOCK_ENCHANTMENT_SLOT+3; ++enchant_slot)
         _player->ApplyEnchantment(itemTarget,EnchantmentSlot(enchant_slot),true);
 
-    SocketBonusToBeActivated = itemTarget->GemsFitSockets();//current socketbonus state
+    bool SocketBonusToBeActivated = itemTarget->GemsFitSockets();//current socketbonus state
     if(SocketBonusActivated ^ SocketBonusToBeActivated)     //if there was a change...
     {
         _player->ApplyEnchantment(itemTarget,BONUS_ENCHANTMENT_SLOT,false);

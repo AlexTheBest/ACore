@@ -491,6 +491,7 @@ class ObjectMgr
         }
 
         AreaTrigger const* GetGoBackTrigger(uint32 Map) const;
+        AreaTrigger const* GetMapEntranceTrigger(uint32 Map) const;
 
         uint32 GetAreaTriggerScriptId(uint32 trigger_id);
 
@@ -594,9 +595,10 @@ class ObjectMgr
         void LoadNpcTextId();
         void LoadVendors();
         void LoadTrainerSpell();
-		
+
         std::string GeneratePetName(uint32 entry);
         uint32 GetBaseXP(uint32 level);
+        uint32 GetXPForLevel(uint32 level);
 
         int32 GetFishingBaseSkillLevel(uint32 entry) const
         {
@@ -811,6 +813,8 @@ class ObjectMgr
         ScriptNameMap &GetScriptNames() { return m_scriptNames; }
         const char * GetScriptName(uint32 id) { return id < m_scriptNames.size() ? m_scriptNames[id].c_str() : ""; }
         uint32 GetScriptId(const char *name);
+
+        int GetOrNewIndexForLocale(LocaleConstant loc);
     protected:
 
         // first free id for selected id type
@@ -825,6 +829,7 @@ class ObjectMgr
         uint32 m_hiCharGuid;
         uint32 m_hiCreatureGuid;
         uint32 m_hiPetGuid;
+        uint32 m_hiVehicleGuid;
         uint32 m_hiItemGuid;
         uint32 m_hiGoGuid;
         uint32 m_hiDoGuid;
@@ -881,7 +886,6 @@ class ObjectMgr
 
         typedef             std::vector<LocaleConstant> LocalForIndex;
         LocalForIndex        m_LocalForIndex;
-        int GetOrNewIndexForLocale(LocaleConstant loc);
 
         int DBCLocaleIndex;
 
@@ -899,6 +903,9 @@ class ObjectMgr
 
         void BuildPlayerLevelInfo(uint8 race, uint8 class_, uint8 level, PlayerLevelInfo* plinfo) const;
         PlayerInfo playerInfo[MAX_RACES][MAX_CLASSES];
+
+        typedef std::vector<uint32> PlayerXPperLevel;       // [level]
+        PlayerXPperLevel mPlayerXPperLevel;
 
         typedef std::map<uint32,uint32> BaseXPMap;          // [area level][base xp]
         BaseXPMap mBaseXPTable;

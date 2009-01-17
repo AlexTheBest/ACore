@@ -161,8 +161,8 @@ void MotionMaster::MoveIdle(MovementSlot slot)
 void
 MotionMaster::MoveTargetedHome()
 {
-    if(i_owner->hasUnitState(UNIT_STAT_FLEEING))
-        return;
+    //if(i_owner->hasUnitState(UNIT_STAT_FLEEING))
+    //    return;
 
     Clear(false);
 
