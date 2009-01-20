@@ -180,7 +180,7 @@ void WorldSession::HandleQuestgiverAcceptQuestOpcode( WorldPacket & recv_data )
                     bool destroyItem = true;
                     for(int i = 0; i < QUEST_OBJECTIVES_COUNT; i++)
                     {
-                        if ((qInfo->ReqItemId[i] == ((Item*)pObject)->GetEntry()) && (((Item*)pObject)->GetProto()->MaxCount != 0))
+                        if ((qInfo->ReqItemId[i] == ((Item*)pObject)->GetEntry()) && (((Item*)pObject)->GetProto()->MaxCount > 0))
                         {
                             destroyItem = false;
                             break;
@@ -450,12 +450,6 @@ void WorldSession::HandleQuestPushToParty(WorldPacket& recvPacket)
                         continue;
 
                     _player->SendPushToPartyResponse(pPlayer, QUEST_PARTY_MSG_SHARING_QUEST);
-
-                    if( _player->GetDistance( pPlayer ) > 10 )
-                    {
-                        _player->SendPushToPartyResponse( pPlayer, QUEST_PARTY_MSG_TOO_FAR );
-                        continue;
-                    }
 
                     if( !pPlayer->SatisfyQuestStatus( pQuest, false ) )
                     {

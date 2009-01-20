@@ -116,6 +116,7 @@ ObjectMgr::ObjectMgr()
     m_hiCharGuid        = 1;
     m_hiCreatureGuid    = 1;
     m_hiPetGuid         = 1;
+    m_hiVehicleGuid     = 1;
     m_hiItemGuid        = 1;
     m_hiGoGuid          = 1;
     m_hiDoGuid          = 1;
@@ -1003,8 +1004,47 @@ void ObjectMgr::LoadEquipmentTemplates()
 {
     sEquipmentStorage.Load();
 
+    for(uint32 i=0; i< sEquipmentStorage.MaxEntry; ++i)
+    {
+        EquipmentInfo const* eqInfo = sEquipmentStorage.LookupEntry<EquipmentInfo>(i);
+
+        if(!eqInfo)
+            continue;
+
+        for(uint8 j=0; j<3; j++)
+        {
+            if(!eqInfo->equipentry[j])
+               continue;
+
+            ItemEntry const *dbcitem = sItemStore.LookupEntry(eqInfo->equipentry[j]);
+
+            if(!dbcitem)
+            {
+                sLog.outErrorDb("Unknown item (entry=%u) in creature_equip_template.equipentry%u for entry = %u, forced to 0.", eqInfo->equipentry[j], j+1, i);
+                const_cast<EquipmentInfo*>(eqInfo)->equipentry[j] = 0;
+                continue;
+            }
+
+            if(dbcitem->InventoryType != INVTYPE_WEAPON &&
+                    dbcitem->InventoryType != INVTYPE_SHIELD &&
+                    dbcitem->InventoryType != INVTYPE_RANGED &&
+                    dbcitem->InventoryType != INVTYPE_2HWEAPON &&
+                    dbcitem->InventoryType != INVTYPE_WEAPONMAINHAND &&
+                    dbcitem->InventoryType != INVTYPE_WEAPONOFFHAND &&
+                    dbcitem->InventoryType != INVTYPE_HOLDABLE &&
+                    dbcitem->InventoryType != INVTYPE_THROWN &&
+                    dbcitem->InventoryType != INVTYPE_RANGEDRIGHT)
+            {
+                sLog.outErrorDb("Item (entry=%u) in creature_equip_template.equipentry%u for entry = %u is not equipable in a hand, forced to 0.", eqInfo->equipentry[j], j+1, i);
+                const_cast<EquipmentInfo*>(eqInfo)->equipentry[j] = 0;
+            }
+        }
+    }
     sLog.outString( ">> Loaded %u equipment template", sEquipmentStorage.RecordCount );
     sLog.outString();
+
+    // This DBC is currently only used for item templates and creature equipments checks.
+    sItemStore.Clear();
 }
 
 CreatureModelInfo const* ObjectMgr::GetCreatureModelInfo(uint32 modelid)
@@ -1653,6 +1693,32 @@ void ObjectMgr::LoadItemPrototypes()
 
         if(dbcitem)
         {
+            if(proto->Class != dbcitem->Class)
+            {
+                sLog.outErrorDb("Item (Entry: %u) not correct class %u, must be %u (still using DB value).",i,proto->Class,dbcitem->Class);
+                // It safe let use Class from DB
+            }
+            /* disabled: have some strange wrong cases for Subclass values.
+               for enable also uncomment Subclass field in ItemEntry structure and in Itemfmt[]
+            if(proto->SubClass != dbcitem->SubClass)
+            {
+                sLog.outErrorDb("Item (Entry: %u) not correct (Class: %u, Sub: %u) pair, must be (Class: %u, Sub: %u) (still using DB value).",i,proto->Class,proto->SubClass,dbcitem->Class,dbcitem->SubClass);
+                // It safe let use Subclass from DB
+            }
+            */
+
+            if(proto->Unk0 != dbcitem->Unk0)
+            {
+                sLog.outErrorDb("Item (Entry: %u) not correct %i Unk0, must be %i (still using DB value).",i,proto->Unk0,dbcitem->Unk0);
+                // It safe let use Unk0 from DB
+            }
+
+            if(proto->Material != dbcitem->Material)
+            {
+                sLog.outErrorDb("Item (Entry: %u) not correct %i material, must be %i (still using DB value).",i,proto->Material,dbcitem->Material);
+                // It safe let use Material from DB
+            }
+
             if(proto->InventoryType != dbcitem->InventoryType)
             {
                 sLog.outErrorDb("Item (Entry: %u) not correct %u inventory type, must be %u (still using DB value).",i,proto->InventoryType,dbcitem->InventoryType);
@@ -1678,7 +1744,7 @@ void ObjectMgr::LoadItemPrototypes()
         if(proto->Class >= MAX_ITEM_CLASS)
         {
             sLog.outErrorDb("Item (Entry: %u) has wrong Class value (%u)",i,proto->Class);
-            const_cast<ItemPrototype*>(proto)->Class = ITEM_CLASS_JUNK;
+            const_cast<ItemPrototype*>(proto)->Class = ITEM_CLASS_MISC;
         }
 
         if(proto->SubClass >= MaxItemSubclassValues[proto->Class])
@@ -1711,14 +1777,30 @@ void ObjectMgr::LoadItemPrototypes()
             const_cast<ItemPrototype*>(proto)->RequiredSkill = 0;
         }
 
-        if(!(proto->AllowableClass & CLASSMASK_ALL_PLAYABLE))
         {
-            sLog.outErrorDb("Item (Entry: %u) not have in `AllowableClass` any playable classes (%u) and can't be equipped.",i,proto->AllowableClass);
-        }
 
-        if(!(proto->AllowableRace & RACEMASK_ALL_PLAYABLE))
-        {
-            sLog.outErrorDb("Item (Entry: %u) not have in `AllowableRace` any playable races (%u) and can't be equipped.",i,proto->AllowableRace);
+            // can be used in equip slot, as page read use in inventory, or spell casting at use
+            bool req = proto->InventoryType!=INVTYPE_NON_EQUIP || proto->PageText;
+            if(!req)
+            {
+                for (int j = 0; j < 5; ++j)
+                {
+                    if(proto->Spells[j].SpellId)
+                    {
+                        req = true;
+                        break;
+                    }
+                }
+            }
+
+            if(req)
+            {
+                if(!(proto->AllowableClass & CLASSMASK_ALL_PLAYABLE))
+                    sLog.outErrorDb("Item (Entry: %u) not have in `AllowableClass` any playable classes (%u) and can't be equipped or use.",i,proto->AllowableClass);
+
+                if(!(proto->AllowableRace & RACEMASK_ALL_PLAYABLE))
+                    sLog.outErrorDb("Item (Entry: %u) not have in `AllowableRace` any playable races (%u) and can't be equipped or use.",i,proto->AllowableRace);
+            }
         }
 
         if(proto->RequiredSpell && !sSpellStore.LookupEntry(proto->RequiredSpell))
@@ -1744,10 +1826,21 @@ void ObjectMgr::LoadItemPrototypes()
         else if(proto->RequiredReputationRank > MIN_REPUTATION_RANK)
             sLog.outErrorDb("Item (Entry: %u) has RequiredReputationFaction ==0 but RequiredReputationRank > 0, rank setting is useless.",i);
 
+        if(proto->MaxCount < -1)
+        {
+            sLog.outErrorDb("Item (Entry: %u) has too large negative in maxcount (%i), replace by value (-1) no storing limits.",i,proto->MaxCount);
+            const_cast<ItemPrototype*>(proto)->MaxCount = -1;
+        }
+
         if(proto->Stackable==0)
         {
-            sLog.outErrorDb("Item (Entry: %u) has wrong value in stackable (%u), replace by default 1.",i,proto->Stackable);
+            sLog.outErrorDb("Item (Entry: %u) has wrong value in stackable (%i), replace by default 1.",i,proto->Stackable);
             const_cast<ItemPrototype*>(proto)->Stackable = 1;
+        }
+        else if(proto->Stackable < -1)
+        {
+            sLog.outErrorDb("Item (Entry: %u) has too large negative in stackable (%i), replace by value (-1) no stacking limits.",i,proto->Stackable);
+            const_cast<ItemPrototype*>(proto)->Stackable = -1;
         }
         else if(proto->Stackable > 255)
         {
@@ -1775,7 +1868,7 @@ void ObjectMgr::LoadItemPrototypes()
         }
 
         // special format
-        if(proto->Spells[0].SpellId == SPELL_ID_GENERIC_LEARN)
+        if((proto->Spells[0].SpellId == SPELL_ID_GENERIC_LEARN) || (proto->Spells[0].SpellId == SPELL_ID_GENERIC_LEARN_PET))
         {
             // spell_1
             if(proto->Spells[0].SpellTrigger != ITEM_SPELLTRIGGER_ON_USE)
@@ -1812,7 +1905,7 @@ void ObjectMgr::LoadItemPrototypes()
                     const_cast<ItemPrototype*>(proto)->Spells[1].SpellTrigger = ITEM_SPELLTRIGGER_ON_USE;
                 }
                 // allowed only in special format
-                else if(proto->Spells[1].SpellId==SPELL_ID_GENERIC_LEARN)
+                else if((proto->Spells[1].SpellId==SPELL_ID_GENERIC_LEARN) || (proto->Spells[1].SpellId==SPELL_ID_GENERIC_LEARN_PET))
                 {
                     sLog.outErrorDb("Item (Entry: %u) has broken spell in spellid_%d (%u)",i,1+1,proto->Spells[1].SpellId);
                     const_cast<ItemPrototype*>(proto)->Spells[0].SpellId = 0;
@@ -1858,7 +1951,7 @@ void ObjectMgr::LoadItemPrototypes()
                         const_cast<ItemPrototype*>(proto)->Spells[j].SpellId = 0;
                     }
                     // allowed only in special format
-                    else if(proto->Spells[j].SpellId==SPELL_ID_GENERIC_LEARN)
+                    else if((proto->Spells[j].SpellId==SPELL_ID_GENERIC_LEARN) || (proto->Spells[j].SpellId==SPELL_ID_GENERIC_LEARN_PET))
                     {
                         sLog.outErrorDb("Item (Entry: %u) has broken spell in spellid_%d (%u)",i,j+1,proto->Spells[j].SpellId);
                         const_cast<ItemPrototype*>(proto)->Spells[j].SpellId = 0;
@@ -1927,14 +2020,12 @@ void ObjectMgr::LoadItemPrototypes()
             const_cast<ItemPrototype*>(proto)->FoodType = 0;
         }
     }
-
-    // this DBC used currently only for check item templates in DB.
-    sItemStore.Clear();
 }
 
 void ObjectMgr::LoadAuctionItems()
 {
-    QueryResult *result = CharacterDatabase.Query( "SELECT itemguid,item_template FROM auctionhouse" );
+    // data needs to be at first place for Item::LoadFromDB
+    QueryResult *result = CharacterDatabase.Query( "SELECT data,itemguid,item_template FROM auctionhouse JOIN item_instance ON itemguid = guid" );
 
     if( !result )
         return;
@@ -1949,8 +2040,8 @@ void ObjectMgr::LoadAuctionItems()
         bar.step();
 
         fields = result->Fetch();
-        uint32 item_guid        = fields[0].GetUInt32();
-        uint32 item_template    = fields[1].GetUInt32();
+        uint32 item_guid        = fields[1].GetUInt32();
+        uint32 item_template    = fields[2].GetUInt32();
 
         ItemPrototype const *proto = GetItemPrototype(item_template);
 
@@ -1962,7 +2053,7 @@ void ObjectMgr::LoadAuctionItems()
 
         Item *item = NewItemOrBag(proto);
 
-        if(!item->LoadFromDB(item_guid,0))
+        if(!item->LoadFromDB(item_guid,0, result))
         {
             delete item;
             continue;
@@ -2260,7 +2351,7 @@ void ObjectMgr::LoadPlayerInfo()
         if(sWorld.getConfig(CONFIG_START_ALL_SPELLS))
             result = WorldDatabase.Query("SELECT race, class, Spell, Active FROM playercreateinfo_spell_custom");
         else
-            result = WorldDatabase.Query("SELECT race, class, Spell, Active FROM playercreateinfo_spell");
+            result = WorldDatabase.Query("SELECT race, class, Spell FROM playercreateinfo_spell");
 
         uint32 count = 0;
 
@@ -2295,7 +2386,7 @@ void ObjectMgr::LoadPlayerInfo()
                 }
 
                 PlayerInfo* pInfo = &playerInfo[current_race][current_class];
-                pInfo->spell.push_back(CreateSpellPair(fields[2].GetUInt16(), fields[3].GetUInt8()));
+                pInfo->spell.push_back(fields[2].GetUInt32());
 
                 bar.step();
                 ++count;
@@ -2565,6 +2656,67 @@ void ObjectMgr::LoadPlayerInfo()
                     pInfo->levelInfo[level] = pInfo->levelInfo[level-1];
                 }
             }
+        }
+    }
+
+    // Loading xp per level data
+    {
+        mPlayerXPperLevel.resize(sWorld.getConfig(CONFIG_MAX_PLAYER_LEVEL));
+        for (uint32 level = 0; level < sWorld.getConfig(CONFIG_MAX_PLAYER_LEVEL); ++level)
+            mPlayerXPperLevel[level] = 0;
+
+        //                                                 0    1
+        QueryResult *result  = WorldDatabase.Query("SELECT lvl, xp_for_next_level FROM player_xp_for_level");
+
+        uint32 count = 0;
+
+        if (!result)
+        {
+            barGoLink bar( 1 );
+
+            sLog.outString();
+            sLog.outString( ">> Loaded %u xp for level definitions", count );
+            sLog.outErrorDb( "Error loading `player_xp_for_level` table or empty table.");
+            exit(1);
+        }
+
+        barGoLink bar( result->GetRowCount() );
+
+        do
+        {
+            Field* fields = result->Fetch();
+
+            uint32 current_level = fields[0].GetUInt32();
+            uint32 current_xp    = fields[1].GetUInt32();
+
+            if(current_level >= sWorld.getConfig(CONFIG_MAX_PLAYER_LEVEL))
+            {
+                if(current_level > STRONG_MAX_LEVEL)        // hardcoded level maximum
+                    sLog.outErrorDb("Wrong (> %u) level %u in `player_xp_for_level` table, ignoring.", STRONG_MAX_LEVEL,current_level);
+                else
+                    sLog.outDetail("Unused (> MaxPlayerLevel in mangosd.conf) level %u in `player_xp_for_levels` table, ignoring.",current_level);
+                continue;
+            }
+            //PlayerXPperLevel
+            mPlayerXPperLevel[current_level] = current_xp;
+            bar.step();
+            ++count;
+        }
+        while (result->NextRow());
+
+        delete result;
+
+        sLog.outString();
+        sLog.outString( ">> Loaded %u xp for level definitions", count );
+    }
+
+    // fill level gaps
+    for (uint32 level = 1; level < sWorld.getConfig(CONFIG_MAX_PLAYER_LEVEL); ++level)
+    {
+        if( mPlayerXPperLevel[level] == 0)
+        {
+            sLog.outErrorDb("Level %i does not have XP for level data. Using data of level [%i] + 100.",level+1, level);
+            mPlayerXPperLevel[level] = mPlayerXPperLevel[level-1]+100;
         }
     }
 }
@@ -2919,31 +3071,31 @@ void ObjectMgr::LoadQuests()
     QueryResult *result = WorldDatabase.Query("SELECT entry, Method, ZoneOrSort, SkillOrClass, MinLevel, QuestLevel, Type, RequiredRaces, RequiredSkillValue,"
     //   9                    10                 11                     12                   13                     14                   15                16
         "RepObjectiveFaction, RepObjectiveValue, RequiredMinRepFaction, RequiredMinRepValue, RequiredMaxRepFaction, RequiredMaxRepValue, SuggestedPlayers, LimitTime,"
-    //   17          18            19           20           21           22              23                24         25            26
-        "QuestFlags, SpecialFlags, CharTitleId, PrevQuestId, NextQuestId, ExclusiveGroup, NextQuestInChain, SrcItemId, SrcItemCount, SrcSpell,"
-    //   27     28       29          30               31                32       33              34              35              36
+    //   17          18            19           20            21            22           23           24              25                26         27            28
+        "QuestFlags, SpecialFlags, CharTitleId, PlayersSlain, BonusTalents, PrevQuestId, NextQuestId, ExclusiveGroup, NextQuestInChain, SrcItemId, SrcItemCount, SrcSpell,"
+    //   29     30       31          32               33                34       35              36              37              38
         "Title, Details, Objectives, OfferRewardText, RequestItemsText, EndText, ObjectiveText1, ObjectiveText2, ObjectiveText3, ObjectiveText4,"
-    //   37          38          39          40          41             42             43             44
+    //   39          40          41          42          43             44             45             46
         "ReqItemId1, ReqItemId2, ReqItemId3, ReqItemId4, ReqItemCount1, ReqItemCount2, ReqItemCount3, ReqItemCount4,"
-    //   45            46            47            48            49               50               51               52               53             54             54             55
+    //   47            48            49            50            51               52               53               54               55             56             57             58
         "ReqSourceId1, ReqSourceId2, ReqSourceId3, ReqSourceId4, ReqSourceCount1, ReqSourceCount2, ReqSourceCount3, ReqSourceCount4, ReqSourceRef1, ReqSourceRef2, ReqSourceRef3, ReqSourceRef4,"
-    //   57                  58                  59                  60                  61                     62                     63                     64
+    //   59                  60                  61                  62                  63                     64                     65                     66
         "ReqCreatureOrGOId1, ReqCreatureOrGOId2, ReqCreatureOrGOId3, ReqCreatureOrGOId4, ReqCreatureOrGOCount1, ReqCreatureOrGOCount2, ReqCreatureOrGOCount3, ReqCreatureOrGOCount4,"
-    //   65             66             67             68
+    //   67             68             69             70
         "ReqSpellCast1, ReqSpellCast2, ReqSpellCast3, ReqSpellCast4,"
-    //   69                70                71                72                73                74
+    //   71                72                73                74                75                76
         "RewChoiceItemId1, RewChoiceItemId2, RewChoiceItemId3, RewChoiceItemId4, RewChoiceItemId5, RewChoiceItemId6,"
-    //   75                   76                   77                   78                   79                   80
+    //   77                   78                   79                   80                   81                   82
         "RewChoiceItemCount1, RewChoiceItemCount2, RewChoiceItemCount3, RewChoiceItemCount4, RewChoiceItemCount5, RewChoiceItemCount6,"
-    //   81          82          83          84          85             86             87             88
+    //   83          84          85          86          87             88             89             90
         "RewItemId1, RewItemId2, RewItemId3, RewItemId4, RewItemCount1, RewItemCount2, RewItemCount3, RewItemCount4,"
-    //   89              90              91              92              93              94            95            96            97            98
+    //   91              92              93              94              95              96            97            98            99            100
         "RewRepFaction1, RewRepFaction2, RewRepFaction3, RewRepFaction4, RewRepFaction5, RewRepValue1, RewRepValue2, RewRepValue3, RewRepValue4, RewRepValue5,"
-    //   99                 100            101               102       103           104                105               106         107     108    109
+    //   101                102            103               104       105           106                107               108         109     110     111
         "RewHonorableKills, RewOrReqMoney, RewMoneyMaxLevel, RewSpell, RewSpellCast, RewMailTemplateId, RewMailDelaySecs, PointMapId, PointX, PointY, PointOpt,"
-    //   110            111            112           113              114            115                116                117                118             119
+    //   112            113            114            115           116              117            118                119                120                121
         "DetailsEmote1, DetailsEmote2, DetailsEmote3, DetailsEmote4,IncompleteEmote, CompleteEmote, OfferRewardEmote1, OfferRewardEmote2, OfferRewardEmote3, OfferRewardEmote4,"
-    //   120            121
+    //   122          123
         "StartScript, CompleteScript"
         " FROM quest_template");
     if(result == NULL)
@@ -4776,17 +4928,19 @@ uint16 ObjectMgr::GetTaxiMount( uint32 id, uint32 team )
     TaxiNodesEntry const* node = sTaxiNodesStore.LookupEntry(id);
     if(node)
     {
-        if (team == ALLIANCE) mount_entry = node->alliance_mount_type;
-        else mount_entry = node->horde_mount_type;
-
-        CreatureInfo const *cinfo = GetCreatureTemplate(mount_entry);
-        if (cinfo)
+        if (team == ALLIANCE)
         {
-            if(! (mount_id = cinfo->GetRandomValidModelId()))
-            {
-                sLog.outErrorDb("No displayid found for the taxi mount with the entry %u! Can't load it!", mount_entry);
-                return false;
-            }
+            mount_entry = node->MountCreatureID[1];
+            CreatureInfo const *ci = GetCreatureTemplate(mount_entry);
+            if(ci)
+                mount_id = ci->Modelid1;
+        }
+        if (team == HORDE)
+        {
+            mount_entry = node->MountCreatureID[0];
+            CreatureInfo const *ci = GetCreatureTemplate(mount_entry);
+            if(ci)
+                mount_id = ci->Modelid3;
         }
     }
 
@@ -4914,7 +5068,7 @@ void ObjectMgr::LoadGraveyardZones()
 WorldSafeLocsEntry const *ObjectMgr::GetClosestGraveYard(float x, float y, float z, uint32 MapId, uint32 team)
 {
     // search for zone associated closest graveyard
-    uint32 zoneId = MapManager::Instance().GetZoneId(MapId,x,y);
+    uint32 zoneId = MapManager::Instance().GetZoneId(MapId,x,y,z);
 
     // Simulate std. algorithm:
     //   found some graveyard associated to (ghost_zone,ghost_map)
@@ -5242,6 +5396,9 @@ void ObjectMgr::LoadAreaTriggerTeleports()
     sLog.outString( ">> Loaded %u area trigger teleport definitions", count );
 }
 
+/*
+ * Searches for the areatrigger which teleports players out of the given map
+ */
 AreaTrigger const* ObjectMgr::GetGoBackTrigger(uint32 Map) const
 {
     const MapEntry *mapEntry = sMapStore.LookupEntry(Map);
@@ -5252,6 +5409,23 @@ AreaTrigger const* ObjectMgr::GetGoBackTrigger(uint32 Map) const
         {
             AreaTriggerEntry const* atEntry = sAreaTriggerStore.LookupEntry(itr->first);
             if(atEntry && atEntry->mapid == Map)
+                return &itr->second;
+        }
+    }
+    return NULL;
+}
+
+/**
+ * Searches for the areatrigger which teleports players to the given map
+ */
+AreaTrigger const* ObjectMgr::GetMapEntranceTrigger(uint32 Map) const
+{
+    for (AreaTriggerMap::const_iterator itr = mAreaTriggers.begin(); itr != mAreaTriggers.end(); ++itr)
+    {
+        if(itr->second.target_mapId == Map)
+        {
+            AreaTriggerEntry const* atEntry = sAreaTriggerStore.LookupEntry(itr->first);
+            if(atEntry)
                 return &itr->second;
         }
     }
@@ -5276,6 +5450,8 @@ void ObjectMgr::SetHighestGuids()
 
     // pet guids are not saved to DB, set to 0 (pet guid != pet id)
     m_hiPetGuid = 0;
+    // same for vehicles
+    m_hiVehicleGuid = 0;
 
     result = CharacterDatabase.Query( "SELECT MAX(guid) FROM item_instance" );
     if( result )
@@ -5429,6 +5605,14 @@ uint32 ObjectMgr::GenerateLowGuid(HighGuid guidhigh)
                 World::StopNow(ERROR_EXIT_CODE);
             }
             return m_hiPetGuid++;
+        case HIGHGUID_VEHICLE:
+            ++m_hiVehicleGuid;
+            if(m_hiVehicleGuid>=0x00FFFFFF)
+            {
+                sLog.outError("Vehicle guid overflow!! Can't continue, shutting down server. ");
+                World::StopNow(ERROR_EXIT_CODE);
+            }
+            return m_hiVehicleGuid++;
         case HIGHGUID_PLAYER:
             if(m_hiCharGuid>=0xFFFFFFFE)
             {
@@ -5760,6 +5944,13 @@ void ObjectMgr::LoadExplorationBaseXP()
 uint32 ObjectMgr::GetBaseXP(uint32 level)
 {
     return mBaseXPTable[level] ? mBaseXPTable[level] : 0;
+}
+
+uint32 ObjectMgr::GetXPForLevel(uint32 level)
+{
+    if (level < mPlayerXPperLevel.size())
+        return mPlayerXPperLevel[level];
+    return 0;
 }
 
 void ObjectMgr::LoadPetNames()
@@ -6767,7 +6958,7 @@ bool PlayerCondition::Meets(Player const * player) const
         {
             Unit::AuraMap const& auras = player->GetAuras();
             for(Unit::AuraMap::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
-                if((itr->second->GetSpellProto()->Attributes & 0x1000010) && itr->second->GetSpellProto()->SpellVisual==3580)
+                if((itr->second->GetSpellProto()->Attributes & 0x1000010) && itr->second->GetSpellProto()->SpellVisual[0]==3580)
                     return true;
             return false;
         }
@@ -6944,7 +7135,7 @@ SkillRangeType GetSkillRangeType(SkillLineEntry const *pSkill, bool racial)
                 return SKILL_RANGE_MONO;
         case SKILL_CATEGORY_ARMOR:
         case SKILL_CATEGORY_CLASS:
-            if(pSkill->id != SKILL_POISONS && pSkill->id != SKILL_LOCKPICKING)
+            if(pSkill->id != SKILL_LOCKPICKING)
                 return SKILL_RANGE_MONO;
             else
                 return SKILL_RANGE_LEVEL;
@@ -6959,7 +7150,7 @@ SkillRangeType GetSkillRangeType(SkillLineEntry const *pSkill, bool racial)
                 return SKILL_RANGE_MONO;
         default:
         case SKILL_CATEGORY_ATTRIBUTES:                     //not found in dbc
-        case SKILL_CATEGORY_NOT_DISPLAYED:                  //only GENEREC(DND)
+        case SKILL_CATEGORY_GENERIC:                        //only GENERIC(DND)
             return SKILL_RANGE_NONE;
     }
 }
@@ -7170,6 +7361,19 @@ void ObjectMgr::LoadTrainerSpell()
         if(!pTrainerSpell->reqlevel)
             pTrainerSpell->reqlevel = spellinfo->spellLevel;
 
+        // calculate learned spell for profession case when stored cast-spell
+        pTrainerSpell->learned_spell = spell;
+        for(int i = 0; i <3; ++i)
+        {
+            if(spellinfo->Effect[i]!=SPELL_EFFECT_LEARN_SPELL)
+                continue;
+
+            if(SpellMgr::IsProfessionOrRidingSpell(spellinfo->EffectTriggerSpell[i]))
+            {
+                pTrainerSpell->learned_spell = spellinfo->EffectTriggerSpell[i];
+                break;
+            }
+        }
 
         TrainerSpellData& data = m_mCacheTrainerSpellMap[entry];
 
