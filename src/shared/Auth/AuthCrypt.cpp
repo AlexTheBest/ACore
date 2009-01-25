@@ -50,9 +50,8 @@ void AuthCrypt::DecryptRecv(uint8 *data, size_t len)
 void AuthCrypt::EncryptSend(uint8 *data, size_t len)
 {
     if (!_initialized) return;
-    if (len < CRYPTED_SEND_LEN) return;
 
-    for (size_t t = 0; t < CRYPTED_SEND_LEN; t++)
+    for (size_t t = 0; t < len; t++)
     {
         _send_i %= _key.size();
         uint8 x = (data[t] ^ _key[_send_i]) + _send_j;
@@ -67,7 +66,7 @@ void AuthCrypt::SetKey(BigNumber *bn)
     GenerateKey(key, bn);
     _key.resize(SHA_DIGEST_LENGTH);
     std::copy(key, key + SHA_DIGEST_LENGTH, _key.begin());
-    delete key;
+    delete[] key;
 }
 
 AuthCrypt::~AuthCrypt()
