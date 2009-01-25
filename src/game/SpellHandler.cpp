@@ -38,15 +38,17 @@
 void WorldSession::HandleUseItemOpcode(WorldPacket& recvPacket)
 {
     // TODO: add targets.read() check
-    CHECK_PACKET_SIZE(recvPacket,1+1+1+1+8);
+    CHECK_PACKET_SIZE(recvPacket,1+1+1+4+8+4+1);
 
     Player* pUser = _player;
     uint8 bagIndex, slot;
-    uint8 spell_count;                                      // number of spells at item, not used
+    uint8 unk_flags;                                        // flags (if 0x02 - some additional data are received)
     uint8 cast_count;                                       // next cast if exists (single or not)
     uint64 item_guid;
+    uint32 glyphIndex;                                      // something to do with glyphs?
+    uint32 spellid;                                         // casted spell id
 
-    recvPacket >> bagIndex >> slot >> spell_count >> cast_count >> item_guid;
+    recvPacket >> bagIndex >> slot >> cast_count >> spellid >> item_guid >> glyphIndex >> unk_flags;
 
     Item *pItem = pUser->GetItemByPos(bagIndex, slot);
     if(!pItem)
@@ -61,7 +63,7 @@ void WorldSession::HandleUseItemOpcode(WorldPacket& recvPacket)
         return;
     }
 
-    sLog.outDetail("WORLD: CMSG_USE_ITEM packet, bagIndex: %u, slot: %u, spell_count: %u , cast_count: %u, Item: %u, data length = %i", bagIndex, slot, spell_count, cast_count, pItem->GetEntry(), recvPacket.size());
+    sLog.outDetail("WORLD: CMSG_USE_ITEM packet, bagIndex: %u, slot: %u, cast_count: %u, spellid: %u, Item: %u, glyphIndex: %u, unk_flags: %u, data length = %i", bagIndex, slot, cast_count, spellid, pItem->GetEntry(), glyphIndex, unk_flags, recvPacket.size());
 
     ItemPrototype const *proto = pItem->GetProto();
     if(!proto)
@@ -126,57 +128,7 @@ void WorldSession::HandleUseItemOpcode(WorldPacket& recvPacket)
     if(!Script->ItemUse(pUser,pItem,targets))
     {
         // no script or script not process request by self
-
-        // special learning case
-        if(pItem->GetProto()->Spells[0].SpellId==SPELL_ID_GENERIC_LEARN)
-        {
-            uint32 learning_spell_id = pItem->GetProto()->Spells[1].SpellId;
-
-            SpellEntry const *spellInfo = sSpellStore.LookupEntry(SPELL_ID_GENERIC_LEARN);
-            if(!spellInfo)
-            {
-                sLog.outError("Item (Entry: %u) in have wrong spell id %u, ignoring ",proto->ItemId, SPELL_ID_GENERIC_LEARN);
-                pUser->SendEquipError(EQUIP_ERR_NONE,pItem,NULL);
-                return;
-            }
-
-            Spell *spell = new Spell(pUser, spellInfo, false);
-            spell->m_CastItem = pItem;
-            spell->m_cast_count = cast_count;               //set count of casts
-            spell->m_currentBasePoints[0] = learning_spell_id;
-            spell->prepare(&targets);
-            return;
-        }
-
-        // use triggered flag only for items with many spell casts and for not first cast
-        int count = 0;
-
-        for(int i = 0; i < 5; ++i)
-        {
-            _Spell const& spellData = pItem->GetProto()->Spells[i];
-
-            // no spell
-            if(!spellData.SpellId)
-                continue;
-
-            // wrong triggering type
-            if( spellData.SpellTrigger != ITEM_SPELLTRIGGER_ON_USE && spellData.SpellTrigger != ITEM_SPELLTRIGGER_ON_NO_DELAY_USE)
-                continue;
-
-            SpellEntry const *spellInfo = sSpellStore.LookupEntry(spellData.SpellId);
-            if(!spellInfo)
-            {
-                sLog.outError("Item (Entry: %u) in have wrong spell id %u, ignoring ",proto->ItemId, spellData.SpellId);
-                continue;
-            }
-
-            Spell *spell = new Spell(pUser, spellInfo, (count > 0));
-            spell->m_CastItem = pItem;
-            spell->m_cast_count = cast_count;               //set count of casts
-            spell->prepare(&targets);
-
-            ++count;
-        }
+        pUser->CastItemUseSpell(pItem,targets,cast_count,glyphIndex);
     }
 }
 
@@ -227,7 +179,7 @@ void WorldSession::HandleOpenItemOpcode(WorldPacket& recvPacket)
         }
 
         // required picklocking
-        if(lockInfo->requiredlockskill || lockInfo->requiredminingskill)
+        if(lockInfo->Skill[1] || lockInfo->Skill[0])
         {
             pUser->SendEquipError(EQUIP_ERR_ITEM_LOCKED, pItem, NULL );
             return;
@@ -281,17 +233,28 @@ void WorldSession::HandleGameObjectUseOpcode( WorldPacket & recv_data )
     obj->Use(_player);
 }
 
+void WorldSession::HandleGameobjectReportUse(WorldPacket& recvPacket)
+{
+    CHECK_PACKET_SIZE(recvPacket,8);
+
+    uint64 guid;
+    recvPacket >> guid;
+
+    sLog.outDebug( "WORLD: Recvd CMSG_GAMEOBJ_REPORT_USE Message [in game guid: %u]", GUID_LOPART(guid));
+}
+
 void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
 {
-    CHECK_PACKET_SIZE(recvPacket,4+1+2);
+    CHECK_PACKET_SIZE(recvPacket,1+4+1);
 
     uint32 spellId;
-    uint8  cast_count;
-    recvPacket >> spellId;
+    uint8  cast_count, unk_flags;
     recvPacket >> cast_count;
+    recvPacket >> spellId;
+    recvPacket >> unk_flags;                                // flags (if 0x02 - some additional data are received)
 
-    sLog.outDebug("WORLD: got cast spell packet, spellId - %u, cast_count: %u data length = %i",
-        spellId, cast_count, recvPacket.size());
+    sLog.outDebug("WORLD: got cast spell packet, spellId - %u, cast_count: %u, unk_flags %u, data length = %i",
+        spellId, cast_count, unk_flags, recvPacket.size());
 
     SpellEntry const *spellInfo = sSpellStore.LookupEntry(spellId );
 
@@ -301,8 +264,8 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
         return;
     }
 
-    // not have spell or spell passive and not casted by client
-    if ( !_player->HasSpell (spellId) || IsPassiveSpell(spellId) )
+    // not have spell in spellbook or spell passive and not casted by client
+    if ( !_player->HasActiveSpell (spellId) || IsPassiveSpell(spellId) )
     {
         //cheater? kick? ban?
         return;
@@ -334,9 +297,12 @@ void WorldSession::HandleCastSpellOpcode(WorldPacket& recvPacket)
 
 void WorldSession::HandleCancelCastOpcode(WorldPacket& recvPacket)
 {
-    CHECK_PACKET_SIZE(recvPacket,4);
+    CHECK_PACKET_SIZE(recvPacket,5);
 
+    // increments with every CANCEL packet, don't use for now
+    uint8 counter;
     uint32 spellId;
+    recvPacket >> counter;
     recvPacket >> spellId;
 
     //FIXME: hack, ignore unexpected client cancel Deadly Throw cast
@@ -420,7 +386,7 @@ void WorldSession::HandlePetCancelAuraOpcode( WorldPacket& recvPacket)
         return;
     }
 
-    Creature* pet=ObjectAccessor::GetCreatureOrPet(*_player,guid);
+    Creature* pet=ObjectAccessor::GetCreatureOrPetOrVehicle(*_player,guid);
 
     if(!pet)
     {
