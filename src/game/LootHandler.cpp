@@ -154,6 +154,7 @@ void WorldSession::HandleAutostoreLootItemOpcode( WorldPacket & recv_data )
         --loot->unlootedCount;
 
         player->SendNewItem(newitem, uint32(item->count), false, false, true);
+        player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_ITEM, item->itemid, item->count);
     }
     else
         player->SendEquipError( msg, NULL, NULL );
@@ -326,7 +327,7 @@ void WorldSession::DoLootRelease( uint64 lguid )
                             int32 ReqValue = 175;
                             LockEntry const *lockInfo = sLockStore.LookupEntry(go->GetGOInfo()->chest.lockId);
                             if(lockInfo)
-                                ReqValue = lockInfo->requiredminingskill;
+                                ReqValue = lockInfo->Skill[0];
                             float skill = float(player->GetSkillValue(SKILL_MINING))/(ReqValue+25);
                             double chance = pow(0.8*chance_rate,4*(1/double(max_amount))*double(uses));
                             if(roll_chance_f(100*chance+skill))
@@ -383,14 +384,22 @@ void WorldSession::DoLootRelease( uint64 lguid )
         Item *pItem = player->GetItemByGuid(lguid );
         if(!pItem)
             return;
-        if( (pItem->GetProto()->BagFamily & BAG_FAMILY_MASK_MINING_SUPP) &&
-            pItem->GetProto()->Class == ITEM_CLASS_TRADE_GOODS &&
-            pItem->GetCount() >= 5)
+
+        ItemPrototype const* proto = pItem->GetProto();
+
+        // destroy only 5 items from stack in case prospecting and milling
+        if( (proto->BagFamily & (BAG_FAMILY_MASK_MINING_SUPP|BAG_FAMILY_MASK_HERBS)) &&
+            proto->Class == ITEM_CLASS_TRADE_GOODS)
         {
             pItem->m_lootGenerated = false;
             pItem->loot.clear();
 
-            uint32 count = 5;
+            uint32 count = pItem->GetCount();
+
+            // >=5 checked in spell code, but will work for cheating cases also with removing from another stacks.
+            if(count > 5)
+                count = 5;
+
             player->DestroyItemCount(pItem, count, true);
         }
         else
@@ -495,6 +504,7 @@ void WorldSession::HandleLootMasterGiveOpcode( WorldPacket & recv_data )
     // not move item from loot to target inventory
     Item * newitem = target->StoreNewItem( dest, item.itemid, true, item.randomPropertyId );
     target->SendNewItem(newitem, uint32(item.count), false, false, true );
+    target->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_LOOT_ITEM, item.itemid, item.count);
 
     // mark as looted
     item.count=0;

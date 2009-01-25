@@ -100,7 +100,8 @@ struct InstanceTemplate
     uint32 levelMin;
     uint32 levelMax;
     uint32 maxPlayers;
-    uint32 reset_delay;
+    uint32 maxPlayersHeroic;
+    uint32 reset_delay;                                 // FIX ME: now exist normal/heroic raids with possible different time of reset.
     float startLocX;
     float startLocY;
     float startLocZ;
@@ -134,13 +135,11 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
 
         // currently unused for normal maps
         bool CanUnload(uint32 diff)
-        { 
-            if(!m_unloadTimer) 
-                return false;
-            if(m_unloadTimer <= diff) 
-                return true; 
-            m_unloadTimer -= diff; 
-            return false; 
+        {
+            if(!m_unloadTimer) return false;
+            if(m_unloadTimer <= diff) return true;
+            m_unloadTimer -= diff;
+            return false;
         }
 
         virtual bool Add(Player *);
@@ -160,7 +159,7 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
 
         template<class LOCK_TYPE, class T, class CONTAINER> void Visit(const CellLock<LOCK_TYPE> &cell, TypeContainerVisitor<T, CONTAINER> &visitor);
 
-        inline bool IsRemovalGrid(float x, float y) const
+        bool IsRemovalGrid(float x, float y) const
         {
             GridPair p = Trinity::ComputeGridPair(x, y);
             return( !getNGrid(p.x_coord, p.y_coord) || getNGrid(p.x_coord, p.y_coord)->GetGridState() == GRID_STATE_REMOVAL );
@@ -194,7 +193,7 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         float GetVmapHeight(float x, float y, float z, bool useMaps) const;
         bool IsInWater(float x, float y, float z) const;    // does not use z pos. This is for future use
 
-        uint16 GetAreaFlag(float x, float y ) const;
+        uint16 GetAreaFlag(float x, float y, float z) const;
         uint8 GetTerrainType(float x, float y ) const;
         float GetWaterLevel(float x, float y ) const;
         bool IsUnderWater(float x, float y, float z) const;
@@ -202,14 +201,14 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         static uint32 GetAreaId(uint16 areaflag,uint32 map_id);
         static uint32 GetZoneId(uint16 areaflag,uint32 map_id);
 
-        uint32 GetAreaId(float x, float y) const
+        uint32 GetAreaId(float x, float y, float z) const
         {
-            return GetAreaId(GetAreaFlag(x,y),i_id);
+            return GetAreaId(GetAreaFlag(x,y,z),i_id);
         }
 
-        uint32 GetZoneId(float x, float y) const
+        uint32 GetZoneId(float x, float y, float z) const
         {
-            return GetZoneId(GetAreaFlag(x,y),i_id);
+            return GetZoneId(GetAreaFlag(x,y,z),i_id);
         }
 
         virtual void MoveAllCreaturesInMoveList();
@@ -233,6 +232,17 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         bool IsBattleGround() const { return i_mapEntry && i_mapEntry->IsBattleGround(); }
         bool IsBattleArena() const { return i_mapEntry && i_mapEntry->IsBattleArena(); }
         bool IsBattleGroundOrArena() const { return i_mapEntry && i_mapEntry->IsBattleGroundOrArena(); }
+        bool GetEntrancePos(int32 &mapid, float &x, float &y)
+        {
+            if(!i_mapEntry)
+                return false;
+            if(i_mapEntry->entrance_map < 0)
+                return false;
+            mapid = i_mapEntry->entrance_map;
+            x = i_mapEntry->entrance_x;
+            y = i_mapEntry->entrance_y;
+            return true;
+        }
 
         void AddObjectToRemoveList(WorldObject *obj);
         void DoDelayedMovesAndRemoves();
@@ -304,7 +314,7 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         bool isGridObjectDataLoaded(uint32 x, uint32 y) const { return getNGrid(x,y)->isGridObjectDataLoaded(); }
         void setGridObjectDataLoaded(bool pLoaded, uint32 x, uint32 y) { getNGrid(x,y)->setGridObjectDataLoaded(pLoaded); }
 
-        inline void setNGrid(NGridType* grid, uint32 x, uint32 y);
+        void setNGrid(NGridType* grid, uint32 x, uint32 y);
 
         void UpdateActiveCells(const float &x, const float &y, const uint32 &t_diff);
     protected:
@@ -375,6 +385,7 @@ class TRINITY_DLL_SPEC InstanceMap : public Map
         bool CanEnter(Player* player);
         void SendResetWarnings(uint32 timeLeft) const;
         void SetResetSchedule(bool on);
+        uint32 GetMaxPlayers() const;
     private:
         bool m_resetAfterUnload;
         bool m_unloadWhenEmpty;

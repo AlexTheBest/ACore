@@ -143,7 +143,7 @@ struct TRINITY_DLL_DECL boss_nalorakkAI : public ScriptedAI
         Berserk_Timer = 600000;
 
         inBearForm = false;
-        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY + 1, 5122);
+        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 1, 5122);
     }
 
     void SendAttacker(Unit* target)
@@ -361,7 +361,7 @@ struct TRINITY_DLL_DECL boss_nalorakkAI : public ScriptedAI
         {
             if(inBearForm)
             {
-                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY + 1, 5122);
+                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 1, 5122);
                 DoYell(YELL_SHIFTEDTOTROLL, LANG_UNIVERSAL, NULL);
                 DoPlaySoundToSet(m_creature, SOUND_YELL_TOTROLL);
                 m_creature->RemoveAurasDueToSpell(SPELL_BEARFORM);
@@ -373,7 +373,7 @@ struct TRINITY_DLL_DECL boss_nalorakkAI : public ScriptedAI
             }
             else
             {
-                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY + 1, 0);
+                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 1, 0);
                 DoYell(YELL_SHIFTEDTOBEAR, LANG_UNIVERSAL, NULL);
                 DoPlaySoundToSet(m_creature, SOUND_YELL_TOBEAR);
                 DoCast(m_creature, SPELL_BEARFORM, true);
