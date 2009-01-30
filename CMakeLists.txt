@@ -38,7 +38,7 @@ EXECUTE_PROCESS(
         OUTPUT_VARIABLE HG_REVISION
 )
 
-message("* Trinity Core revision: ${HG_REVISION}")
+message("* TrinityCore & MaNGOS revision: ${HG_REVISION}")
 
 IF (PREFIX)
     SET(CMAKE_INSTALL_PREFIX ${PREFIX})
@@ -53,7 +53,7 @@ endif(CONF_DIR)
 message("* Will install to: ${CMAKE_INSTALL_PREFIX}")
 message("* With config dir at: ${CONF_DIR}")
 
-SET(LIBSDIR "/usr/lib /usr/local/lib /lib")
+SET(LIBSDIR ${CMAKE_INSTALL_PREFIX}/lib)
 FIND_LIBRARY(SSLLIB NAMES ssl DOC "SSL library")
 FIND_LIBRARY(ZLIB z "Zlib library")
 
