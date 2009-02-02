@@ -71,9 +71,6 @@ class ChatHandler
         std::string PGetParseString(int32 entry, ...);
 
         int ParseCommands(const char* text);
-
-        virtual char const* GetName() const;
-		
     protected:
         explicit ChatHandler() : m_session(NULL) {}      // for CLI subclass
 
@@ -81,6 +78,8 @@ class ChatHandler
 
         virtual bool isAvailable(ChatCommand const& cmd) const;
         virtual bool needReportToTarget(Player* chr) const;
+        bool HasLowerSecurity(Player* target, uint64 guid, bool strong = false);
+        bool HasLowerSecurityAccount(WorldSession* target, uint32 account, bool strong = false);
 
         void SendGlobalSysMessage(const char *str);
         void SendGlobalGMSysMessage(const char *str);
@@ -166,6 +165,7 @@ class ChatHandler
         bool HandleModifyHPCommand(const char* args);
         bool HandleModifyManaCommand(const char* args);
         bool HandleModifyRageCommand(const char* args);
+        bool HandleModifyRunicPowerCommand(const char* args);
         bool HandleModifyEnergyCommand(const char* args);
         bool HandleModifyMoneyCommand(const char* args);
         bool HandleModifyASpeedCommand(const char* args);
@@ -182,6 +182,7 @@ class ChatHandler
         bool HandleModifyHonorCommand (const char* args);
         bool HandleModifyRepCommand(const char* args);
         bool HandleModifyArenaCommand(const char* args);
+        bool HandleModifyPhaseCommand(const char* args);
         bool HandleModifyGenderCommand(const char* args);
 
         bool HandleNpcAddCommand(const char* args);
@@ -197,6 +198,7 @@ class ChatHandler
         bool HandleNpcSayCommand(const char* args);
         bool HandleNpcSetModelCommand(const char* args);
         bool HandleNpcSetMoveTypeCommand(const char* args);
+        bool HandleNpcSetPhaseCommand(const char* args);
         bool HandleNpcSpawnDistCommand(const char* args);
         bool HandleNpcSpawnTimeCommand(const char* args);
         bool HandleNpcTameCommand(const char* args);
@@ -206,7 +208,6 @@ class ChatHandler
         bool HandleNpcYellCommand(const char* args);
 		bool HandleNpcAddFormationCommand(const char* args);
 
-        bool HandleReloadCommand(const char* args);
         bool HandleReloadAllCommand(const char* args);
         bool HandleReloadAllAreaCommand(const char* args);
         bool HandleReloadAllItemCommand(const char* args);
@@ -237,11 +238,13 @@ class ChatHandler
         bool HandleReloadLootTemplatesFishingCommand(const char* args);
         bool HandleReloadLootTemplatesGameobjectCommand(const char* args);
         bool HandleReloadLootTemplatesItemCommand(const char* args);
+        bool HandleReloadLootTemplatesMillingCommand(const char* args);
         bool HandleReloadLootTemplatesPickpocketingCommand(const char* args);
         bool HandleReloadLootTemplatesProspectingCommand(const char* args);
         bool HandleReloadLootTemplatesReferenceCommand(const char* args);
         bool HandleReloadLootTemplatesQuestMailCommand(const char* args);
         bool HandleReloadLootTemplatesSkinningCommand(const char* args);
+        bool HandleReloadLootTemplatesSpellCommand(const char* args);
         bool HandleReloadTrinityStringCommand(const char* args);
         bool HandleReloadNpcGossipCommand(const char* args);
         bool HandleReloadNpcOptionCommand(const char* args);
@@ -260,6 +263,7 @@ class ChatHandler
         bool HandleReloadSpellElixirCommand(const char* args);
         bool HandleReloadSpellLearnSpellCommand(const char* args);
         bool HandleReloadSpellProcEventCommand(const char* args);
+        bool HandleReloadSpellBonusesCommand(const char* args);
         bool HandleReloadSpellScriptTargetCommand(const char* args);
         bool HandleReloadSpellScriptsCommand(const char* args);
         bool HandleReloadSpellTargetPositionCommand(const char* args);
@@ -321,6 +325,7 @@ class ChatHandler
         bool HandleTargetObjectCommand(const char* args);
         bool HandleDelObjectCommand(const char* args);
         bool HandleMoveObjectCommand(const char* args);
+        bool HandleGOPhaseCommand(const char* args);
         bool HandleTurnObjectCommand(const char* args);
         bool HandleObjectStateCommand(const char* args);
         bool HandlePInfoCommand(const char* args);
@@ -452,6 +457,7 @@ class ChatHandler
         bool HandleSendChannelNotifyCommand(const char* args);
         bool HandleSendChatMsgCommand(const char* args);
         bool HandleRenameCommand(const char * args);
+        bool HandleCustomizeCommand(const char * args);
         bool HandleLoadPDumpCommand(const char *args);
         bool HandleWritePDumpCommand(const char *args);
         bool HandleCastCommand(const char *args);
@@ -488,15 +494,25 @@ class ChatHandler
         bool HandleUnPossessCommand(const char* args);
         bool HandleBindSightCommand(const char* args);
         bool HandleUnbindSightCommand(const char* args);
+        bool HandleSpawnVehicle(const char * args);
+        bool HandleSendLargePacketCommand(const char * args);
 
         Player*   getSelectedPlayer();
         Creature* getSelectedCreature();
         Unit*     getSelectedUnit();
+
         char*     extractKeyFromLink(char* text, char const* linkType, char** something1 = NULL);
         char*     extractKeyFromLink(char* text, char const* const* linkTypes, int* found_idx, char** something1 = NULL);
+
         uint32    extractSpellIdFromLink(char* text);
+        uint64    extractGuidFromLink(char* text);
         GameTele const* extractGameTeleFromLink(char* text);
         bool GetPlayerGroupAndGUIDByName(const char* cname, Player* &plr, Group* &group, uint64 &guid, bool offline = false);
+        std::string extractPlayerNameFromLink(char* text);
+
+        std::string playerLink(std::string const& name) const { return m_session ? "|cffffffff|Hplayer:"+name+"|h["+name+"]|h|r" : name; }
+        virtual std::string GetNameLink() const { return GetNameLink(m_session->GetPlayer()); }
+        std::string GetNameLink(Player* chr) const { return playerLink(chr->GetName()); }
 
         GameObject* GetObjectGlobalyWithGuidOrNearWithDbGuid(uint32 lowguid,uint32 entry);
 
@@ -523,11 +539,11 @@ class CliHandler : public ChatHandler
         typedef void Print(char const*);
         explicit CliHandler(Print* zprint) : m_print(zprint) {}
 
-		// overwrite functions
-		const char *GetTrinityString(int32 entry) const;
-		bool isAvailable(ChatCommand const& cmd) const;
-		void SendSysMessage(const char *str);
-        char const* GetName() const;
+        // overwrite functions
+        const char *GetTrinityString(int32 entry) const;
+        bool isAvailable(ChatCommand const& cmd) const;
+        void SendSysMessage(const char *str);
+        std::string GetNameLink() const;
         bool needReportToTarget(Player* chr) const;
 
     private:
