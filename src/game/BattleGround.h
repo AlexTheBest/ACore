@@ -132,8 +132,6 @@ struct BattleGroundObjectInfo
     uint32      spellid;
 };
 
-#define MAX_QUEUED_PLAYERS_MAP 7
-
 enum BattleGroundTypeId
 {
     BATTLEGROUND_AV     = 1,
@@ -143,7 +141,10 @@ enum BattleGroundTypeId
     BATTLEGROUND_BE     = 5,
     BATTLEGROUND_AA     = 6,
     BATTLEGROUND_EY     = 7,
-    BATTLEGROUND_RL     = 8
+    BATTLEGROUND_RL     = 8,
+    BATTLEGROUND_SA     = 9,
+    BATTLEGROUND_DS     = 10,
+    BATTLEGROUND_RV     = 11
 };
 
 // handle the queue types and bg types separately to enable joining queue for different sized arenas at the same time
@@ -153,9 +154,10 @@ enum BattleGroundQueueTypeId
     BATTLEGROUND_QUEUE_WS     = 2,
     BATTLEGROUND_QUEUE_AB     = 3,
     BATTLEGROUND_QUEUE_EY     = 4,
-    BATTLEGROUND_QUEUE_2v2     = 5,
-    BATTLEGROUND_QUEUE_3v3     = 6,
-    BATTLEGROUND_QUEUE_5v5     = 7,
+    BATTLEGROUND_QUEUE_SA     = 5,
+    BATTLEGROUND_QUEUE_2v2    = 6,
+    BATTLEGROUND_QUEUE_3v3    = 7,
+    BATTLEGROUND_QUEUE_5v5    = 8,
 };
 
 enum ScoreType
@@ -262,7 +264,7 @@ class BattleGround
         BattleGround();
         /*BattleGround(const BattleGround& bg);*/
         virtual ~BattleGround();
-        virtual void Update(time_t diff);                   // must be implemented in BG subclass of BG specific update code, but must in begginning call parent version
+        virtual void Update(uint32 diff);                   // must be implemented in BG subclass of BG specific update code, but must in begginning call parent version
         virtual bool SetupBattleGround()                    // must be implemented in BG subclass
         {
             return true;
