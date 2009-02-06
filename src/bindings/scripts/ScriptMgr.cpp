@@ -211,6 +211,9 @@ extern void AddSC_blasted_lands();
 //Bloodmyst Isle
 extern void AddSC_bloodmyst_isle();
 
+//Borean Tundra
+extern void AddSC_borean_tundra();
+
 //Burning steppes
 extern void AddSC_burning_steppes();
 
@@ -391,12 +394,12 @@ extern void AddSC_boss_patchwerk();
 extern void AddSC_boss_razuvious();
 extern void AddSC_boss_highlord_mograine();
 extern void AddSC_boss_kelthuzad();
-extern void AddSC_boss_faerlina();
 extern void AddSC_boss_loatheb();
 extern void AddSC_boss_noth();
 extern void AddSC_boss_gluth();
 extern void AddSC_boss_sapphiron();
 extern void AddSC_boss_four_horsemen();
+extern void AddSC_boss_faerlina();
 
 //Netherstorm
 extern void AddSC_netherstorm();
@@ -1417,6 +1420,9 @@ void ScriptsInit()
 
     //Bloodmyst Isle
     AddSC_bloodmyst_isle();
+	
+    //Borean Tundra
+    AddSC_borean_tundra();
 
     //Burning steppes
     AddSC_burning_steppes();
@@ -1592,12 +1598,12 @@ void ScriptsInit()
 
     //Naxxramas
     AddSC_boss_anubrekhan();
+	AddSC_boss_faerlina();
     AddSC_boss_maexxna();
     AddSC_boss_patchwerk();
     AddSC_boss_razuvious();
-    AddSC_boss_highlord_mograine();
-    AddSC_boss_kelthuzad();
-    AddSC_boss_faerlina();
+    AddSC_boss_highlord_mograine();    
+    AddSC_boss_kelthuzad();    
     AddSC_boss_loatheb();
     AddSC_boss_noth();
     AddSC_boss_gluth();

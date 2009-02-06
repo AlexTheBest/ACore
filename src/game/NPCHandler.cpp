@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -166,17 +166,17 @@ void WorldSession::SendTrainerList( uint64 guid, const std::string& strTitle )
     {
         TrainerSpell const* tSpell = *itr;
 
-        if(!_player->IsSpellFitByClassAndRace(tSpell->spell))
+        if(!_player->IsSpellFitByClassAndRace(tSpell->learned_spell))
             continue;
 
         ++count;
 
-        bool primary_prof_first_rank = spellmgr.IsPrimaryProfessionFirstRankSpell(tSpell->spell);
+        bool primary_prof_first_rank = spellmgr.IsPrimaryProfessionFirstRankSpell(tSpell->learned_spell);
 
-        SpellChainNode const* chain_node = spellmgr.GetSpellChainNode(tSpell->spell);
+        SpellChainNode const* chain_node = spellmgr.GetSpellChainNode(tSpell->learned_spell);
         uint32 req_spell = spellmgr.GetSpellRequired(tSpell->spell);
 
-        data << uint32(tSpell->spell);
+        data << uint32(tSpell->spell);                      // learned spell (or cast-spell in profession case)
         data << uint8(_player->GetTrainerSpellState(tSpell));
         data << uint32(floor(tSpell->spellcost * fDiscountMod));
 
@@ -241,6 +241,8 @@ void WorldSession::HandleTrainerBuySpellOpcode( WorldPacket & recv_data )
     if(_player->GetMoney() < nSpellCost )
         return;
 
+    _player->ModifyMoney( -int32(nSpellCost) );
+
     WorldPacket data(SMSG_PLAY_SPELL_VISUAL, 12);           // visual effect on trainer
     data << uint64(guid) << uint32(0xB3);
     SendPacket(&data);
@@ -249,13 +251,15 @@ void WorldSession::HandleTrainerBuySpellOpcode( WorldPacket & recv_data )
     data << uint64(_player->GetGUID()) << uint32(0x016A);
     SendPacket(&data);
 
-    _player->ModifyMoney( -int32(nSpellCost) );
-
-    // learn explicitly to prevent lost money at lags, learning spell will be only show spell animation
-    _player->learnSpell(trainer_spell->spell);
+    // learn explicitly or cast explicitly
+    if(trainer_spell->IsCastable ())
+        //FIXME: prof. spell entry in trainer list not marked gray until list re-open.
+        _player->CastSpell(_player,trainer_spell->spell,true);
+    else
+        _player->learnSpell(spellId,false);
 
     data.Initialize(SMSG_TRAINER_BUY_SUCCEEDED, 12);
-    data << uint64(guid) << uint32(spellId);
+    data << uint64(guid) << uint32(trainer_spell->spell);
     SendPacket(&data);
 }
 
@@ -528,13 +532,12 @@ void WorldSession::SendStablePet(uint64 guid )
         data << uint32(pet->GetEntry());
         data << uint32(pet->getLevel());
         data << pet->GetName();                             // petname
-        data << uint32(pet->GetLoyaltyLevel());             // loyalty
-        data << uint8(0x01);                                // client slot 1 == current pet (0)
+        data << uint8(0x01);                                // flags?, client slot 1 == current pet (0)
         ++num;
     }
 
-    //                                                     0      1     2   3      4      5        6
-    QueryResult* result = CharacterDatabase.PQuery("SELECT owner, slot, id, entry, level, loyalty, name FROM character_pet WHERE owner = '%u' AND slot > 0 AND slot < 3",_player->GetGUIDLow());
+    //                                                     0      1     2   3      4      5
+    QueryResult* result = CharacterDatabase.PQuery("SELECT owner, slot, id, entry, level, name FROM character_pet WHERE owner = '%u' AND slot > 0 AND slot < 5",_player->GetGUIDLow());
 
     if(result)
     {
@@ -545,8 +548,7 @@ void WorldSession::SendStablePet(uint64 guid )
             data << uint32(fields[2].GetUInt32());          // petnumber
             data << uint32(fields[3].GetUInt32());          // creature entry
             data << uint32(fields[4].GetUInt32());          // level
-            data << fields[6].GetString();                  // name
-            data << uint32(fields[5].GetUInt32());          // loyalty
+            data << fields[5].GetString();                  // name
             data << uint8(fields[1].GetUInt32()+1);         // slot
 
             ++num;
@@ -596,7 +598,7 @@ void WorldSession::HandleStablePet( WorldPacket & recv_data )
 
     uint32 free_slot = 1;
 
-    QueryResult *result = CharacterDatabase.PQuery("SELECT owner,slot,id FROM character_pet WHERE owner = '%u'  AND slot > 0 AND slot < 3 ORDER BY slot ",_player->GetGUIDLow());
+    QueryResult *result = CharacterDatabase.PQuery("SELECT owner,slot,id FROM character_pet WHERE owner = '%u'  AND slot > 0 AND slot < 5 ORDER BY slot ",_player->GetGUIDLow());
     if(result)
     {
         do
@@ -660,7 +662,7 @@ void WorldSession::HandleUnstablePet( WorldPacket & recv_data )
 
     Pet *newpet = NULL;
 
-    QueryResult *result = CharacterDatabase.PQuery("SELECT entry FROM character_pet WHERE owner = '%u' AND id = '%u' AND slot > 0 AND slot < 3",_player->GetGUIDLow(),petnumber);
+    QueryResult *result = CharacterDatabase.PQuery("SELECT entry FROM character_pet WHERE owner = '%u' AND id = '%u' AND slot > 0 AND slot < 5",_player->GetGUIDLow(),petnumber);
     if(result)
     {
         Field *fields = result->Fetch();
@@ -704,7 +706,7 @@ void WorldSession::HandleBuyStableSlot( WorldPacket & recv_data )
 
     WorldPacket data(SMSG_STABLE_RESULT, 200);
 
-    if(GetPlayer()->m_stableSlots < 2)                      // max slots amount = 2
+    if(GetPlayer()->m_stableSlots < 4)                      // max slots amount = 4
     {
         StableSlotPricesEntry const *SlotPrice = sStableSlotPricesStore.LookupEntry(GetPlayer()->m_stableSlots+1);
         if(_player->GetMoney() >= SlotPrice->Price)

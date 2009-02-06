@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -202,7 +202,7 @@ bool OutdoorPvPSI::HandleDropFlag(Player *plr, uint32 spellId)
                         Map * map = MapManager::Instance().GetMap(plr->GetMapId(), plr);
                         if(!map)
                             return true;
-                        if(!go->Create(objmgr.GenerateLowGuid(HIGHGUID_GAMEOBJECT),SI_SILITHYST_MOUND, map,plr->GetPositionX(),plr->GetPositionY(),plr->GetPositionZ(),plr->GetOrientation(),0,0,0,0,100,1))
+                        if(!go->Create(objmgr.GenerateLowGuid(HIGHGUID_GAMEOBJECT),SI_SILITHYST_MOUND, map, plr->GetPhaseMask(), plr->GetPositionX(),plr->GetPositionY(),plr->GetPositionZ(),plr->GetOrientation(),0,0,0,0,100,1))
                         {
                             delete go;
                         }
@@ -228,7 +228,7 @@ bool OutdoorPvPSI::HandleDropFlag(Player *plr, uint32 spellId)
                         Map * map = MapManager::Instance().GetMap(plr->GetMapId(), plr);
                         if(!map)
                             return true;
-                        if(!go->Create(objmgr.GenerateLowGuid(HIGHGUID_GAMEOBJECT),SI_SILITHYST_MOUND, map ,plr->GetPositionX(),plr->GetPositionY(),plr->GetPositionZ(),plr->GetOrientation(),0,0,0,0,100,1))
+                        if(!go->Create(objmgr.GenerateLowGuid(HIGHGUID_GAMEOBJECT),SI_SILITHYST_MOUND, map, plr->GetPhaseMask() ,plr->GetPositionX(),plr->GetPositionY(),plr->GetPositionZ(),plr->GetOrientation(),0,0,0,0,100,1))
                         {
                             delete go;
                         }

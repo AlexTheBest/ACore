@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -754,5 +754,25 @@ void WorldSession::HandleAuctionListItems( WorldPacket & recv_data )
     data.put<uint32>(0, count);
     data << (uint32) totalcount;
     data << (uint32) 300;                                   // unk 2.3.0 const?
+    SendPacket(&data);
+}
+
+void WorldSession::HandleAuctionListPendingSales( WorldPacket & recv_data )
+{
+    sLog.outDebug("CMSG_AUCTION_LIST_PENDING_SALES");
+    recv_data.hexlike();
+
+    uint32 count = 0;
+
+    WorldPacket data(SMSG_AUCTION_LIST_PENDING_SALES, 4);
+    data << uint32(count);                                  // count
+    /*for(uint32 i = 0; i < count; ++i)
+    {
+        data << "";                                         // string
+        data << "";                                         // string
+        data << uint32(0);
+        data << uint32(0);
+        data << float(0);
+    }*/
     SendPacket(&data);
 }
