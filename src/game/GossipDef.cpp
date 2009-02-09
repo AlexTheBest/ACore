@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -127,7 +127,7 @@ bool PlayerMenu::GossipOptionCoded( unsigned int Selection )
 void PlayerMenu::SendGossipMenu( uint32 TitleTextId, uint64 npcGUID )
 {
     WorldPacket data( SMSG_GOSSIP_MESSAGE, (100) );         // guess size
-    data << npcGUID;
+    data << uint64(npcGUID);
     data << uint32(0);                                      // new 2.4.0
     data << uint32( TitleTextId );
     data << uint32( mGossipMenu.MenuItemCount() );          // max count 0x0F
@@ -417,10 +417,14 @@ void PlayerMenu::SendQuestGiverQuestDetails( Quest const *pQuest, uint64 npcGUID
     }
 
     data << uint64(npcGUID);
+    data << uint64(0);                                      // wotlk, something todo with quest sharing?
     data << uint32(pQuest->GetQuestId());
-    data << Title << Details << Objectives;
+    data << Title;
+    data << Details;
+    data << Objectives;
     data << uint32(ActivateAccept);
     data << uint32(pQuest->GetSuggestedPlayers());
+    data << uint8(0);                                       // new wotlk
 
     if (pQuest->HasFlag(QUEST_FLAGS_HIDDEN_REWARDS))
     {
@@ -466,6 +470,7 @@ void PlayerMenu::SendQuestGiverQuestDetails( Quest const *pQuest, uint64 npcGUID
     data << uint32(pQuest->GetRewSpell());                  // reward spell, this spell will display (icon) (casted if RewSpellCast==0)
     data << uint32(pQuest->GetRewSpellCast());              // casted spell
     data << uint32(pQuest->GetCharTitleId());               // CharTitleId, new 2.4.0, player gets this title (id from CharTitles)
+    data << uint32(pQuest->GetBonusTalents());              // bonus talents
 
     data << uint32(QUEST_EMOTE_COUNT);
     for (uint32 i=0; i < QUEST_EMOTE_COUNT; i++)
@@ -542,6 +547,8 @@ void PlayerMenu::SendQuestQueryResponse( Quest const *pQuest )
     data << uint32(pQuest->GetSrcItemId());
     data << uint32(pQuest->GetFlags() & 0xFFFF);
     data << uint32(pQuest->GetCharTitleId());               // CharTitleId, new 2.4.0, player gets this title (id from CharTitles)
+    data << uint32(pQuest->GetPlayersSlain());              // players slain
+    data << uint32(pQuest->GetBonusTalents());              // bonus talents
 
     int iI;
 
@@ -588,15 +595,23 @@ void PlayerMenu::SendQuestQueryResponse( Quest const *pQuest )
             data << uint32(pQuest->ReqCreatureOrGOId[iI]);
         }
         data << uint32(pQuest->ReqCreatureOrGOCount[iI]);
+        data << uint32(0);                                  // added in WotLK, dunno if offset if correct
+    }
+
+    for (iI = 0; iI < QUEST_OBJECTIVES_COUNT; ++iI)
+    {
         data << uint32(pQuest->ReqItemId[iI]);
         data << uint32(pQuest->ReqItemCount[iI]);
     }
+
+    data << uint32(0);                                      // TODO: 5 item objective
+    data << uint32(0);
 
     for (iI = 0; iI < QUEST_OBJECTIVES_COUNT; iI++)
         data << ObjectiveText[iI];
 
     pSession->SendPacket( &data );
-    sLog.outDebug( "WORLD: Sent SMSG_QUEST_QUERY_RESPONSE questid=%u",pQuest->GetQuestId() );
+    sLog.outDebug( "WORLD: Sent SMSG_QUEST_QUERY_RESPONSE questid=%u", pQuest->GetQuestId() );
 }
 
 void PlayerMenu::SendQuestGiverOfferReward( Quest const* pQuest, uint64 npcGUID, bool EnbleNext )
@@ -678,9 +693,10 @@ void PlayerMenu::SendQuestGiverOfferReward( Quest const* pQuest, uint64 npcGUID,
     data << uint32(0x08);                                   // unused by client?
     data << uint32(pQuest->GetRewSpell());                  // reward spell, this spell will display (icon) (casted if RewSpellCast==0)
     data << uint32(pQuest->GetRewSpellCast());              // casted spell
-    data << uint32(0x00);                                   // unk, NOT honor
+    data << uint32(0);                                      // unknown
+    data << uint32(pQuest->GetBonusTalents());              // bonus talents
     pSession->SendPacket( &data );
-    sLog.outDebug( "WORLD: Sent SMSG_QUESTGIVER_OFFER_REWARD NPCGuid=%u, questid=%u",GUID_LOPART(npcGUID),pQuest->GetQuestId() );
+    sLog.outDebug( "WORLD: Sent SMSG_QUESTGIVER_OFFER_REWARD NPCGuid=%u, questid=%u", GUID_LOPART(npcGUID), pQuest->GetQuestId() );
 }
 
 void PlayerMenu::SendQuestGiverRequestItems( Quest const *pQuest, uint64 npcGUID, bool Completable, bool CloseOnCancel )

@@ -1,6 +1,6 @@
-# Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+# Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
 #
-# Thanks to the original authors: MaNGOS <http://www.mangosproject.org/>
+# Thanks to the original authors: MaNGOS <http://getmangos.com/>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -140,6 +140,7 @@ scripts/zone/blades_edge_mountains/blades_edge_mountains.cpp \
 scripts/zone/blasted_lands/blasted_lands.cpp \
 scripts/zone/blasted_lands/boss_kruul.cpp \
 scripts/zone/bloodmyst_isle/bloodmyst_isle.cpp \
+scripts/zone/borean_tundra/borean_tundra.cpp \
 scripts/zone/burning_steppes/burning_steppes.cpp \
 scripts/zone/caverns_of_time/dark_portal/boss_aeonus.cpp \
 scripts/zone/caverns_of_time/dark_portal/boss_chrono_lord_deja.cpp \

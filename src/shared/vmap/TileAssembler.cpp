@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,12 +75,12 @@ namespace VMAP
         addWorldAreaMapId(0);                               //Azeroth
         addWorldAreaMapId(1);                               //Kalimdor
         addWorldAreaMapId(530);                             //Expansion01
+        addWorldAreaMapId(571);                             //Expansion02
     }
     //=================================================================
 
     std::string getModNameFromModPosName(const std::string& pModPosName)
     {
-
         size_t spos = pModPosName.find_first_of('#');
         std::string modelFileName = pModPosName.substr(0,spos);
         return(modelFileName);
@@ -142,7 +142,6 @@ namespace VMAP
     //=================================================================
     bool TileAssembler::convertWorld()
     {
-
         #ifdef _ASSEMBLER_DEBUG
         #   ifdef _DEBUG
         ::g_df = fopen("../TileAssembler_debug.txt", "wb");

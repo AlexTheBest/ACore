@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -176,7 +176,7 @@ struct CreatureInfo
     uint32  rangeattacktime;
     uint32  unit_flags;                                     // enum UnitFlags mask values
     uint32  dynamicflags;
-    uint32  family;                                         // enum CreatureFamily values for type==CREATURE_TYPE_BEAST, or 0 in another cases
+    uint32  family;                                         // enum CreatureFamily values (optional)
     uint32  trainer_type;
     uint32  trainer_spell;
     uint32  classNum;
@@ -195,10 +195,7 @@ struct CreatureInfo
     int32   resistance4;
     int32   resistance5;
     int32   resistance6;
-    uint32  spell1;
-    uint32  spell2;
-    uint32  spell3;
-    uint32  spell4;
+    uint32  spells[CREATURE_MAX_SPELLS];
     uint32  PetSpellDataId;
     uint32  mingold;
     uint32  maxgold;
@@ -221,6 +218,8 @@ struct CreatureInfo
             return SKILL_HERBALISM;
         else if(type_flags & CREATURE_TYPEFLAGS_MININGLOOT)
             return SKILL_MINING;
+        else if(type_flags & CREATURE_TYPEFLAGS_ENGINEERLOOT)
+            return SKILL_ENGINERING;
         else
             return SKILL_SKINNING;                          // normal case
     }
@@ -246,9 +245,7 @@ struct NpcOptionLocale
 struct EquipmentInfo
 {
     uint32  entry;
-    uint32  equipmodel[3];
-    uint32  equipinfo[3];
-    uint32  equipslot[3];
+    uint32  equipentry[3];
 };
 
 // from `creature` table
@@ -256,6 +253,7 @@ struct CreatureData
 {
     uint32 id;                                              // entry in creature_template
     uint16 mapid;
+    uint16 phaseMask;
     uint32 displayid;
     int32 equipmentId;
     float posX;
@@ -352,6 +350,7 @@ struct VendorItemData
     {
         for (VendorItemList::iterator itr = m_items.begin(); itr != m_items.end(); ++itr)
             delete (*itr);
+        m_items.clear();
     }
 };
 
@@ -374,6 +373,10 @@ struct TrainerSpell
     uint32 reqskill;
     uint32 reqskillvalue;
     uint32 reqlevel;
+    uint32 learned_spell;
+
+    // helpers
+    bool IsCastable() const { return learned_spell != spell; }
 };
 
 typedef std::vector<TrainerSpell*> TrainerSpellList;
@@ -412,7 +415,7 @@ class TRINITY_DLL_SPEC Creature : public Unit
         void AddToWorld();
         void RemoveFromWorld();
 
-        bool Create (uint32 guidlow, Map *map, uint32 Entry, uint32 team, const CreatureData *data = NULL);
+        bool Create (uint32 guidlow, Map *map, uint32 phaseMask, uint32 Entry, uint32 team, const CreatureData *data = NULL);
         bool LoadCreaturesAddon(bool reload = false);
         void SelectLevel(const CreatureInfo *cinfo);
         void LoadEquipment(uint32 equip_entry, bool force=false);
@@ -425,6 +428,7 @@ class TRINITY_DLL_SPEC Creature : public Unit
         uint32 GetEquipmentId() const { return m_equipmentId; }
 
         bool isPet() const { return m_isPet; }
+        bool isVehicle() const { return m_isVehicle; }
         void SetCorpseDelay(uint32 delay) { m_corpseDelay = delay; }
         bool isTotem() const { return m_isTotem; }
         bool isRacialLeader() const { return GetCreatureInfo()->RacialLeader; }
@@ -441,9 +445,9 @@ class TRINITY_DLL_SPEC Creature : public Unit
         bool isCanInteractWithBattleMaster(Player* player, bool msg) const;
         bool isCanTrainingAndResetTalentsOf(Player* pPlayer) const;
         bool IsOutOfThreatArea(Unit* pVictim) const;
-        bool IsImmunedToSpell(SpellEntry const* spellInfo, bool useCharges = false);
+        bool IsImmunedToSpell(SpellEntry const* spellInfo);
                                                             // redefine Unit::IsImmunedToSpell
-        bool IsImmunedToSpellEffect(uint32 effect, uint32 mechanic) const;
+        bool IsImmunedToSpellEffect(SpellEntry const* spellInfo, uint32 index) const;
                                                             // redefine Unit::IsImmunedToSpellEffect
         bool isElite() const
         {
@@ -544,7 +548,7 @@ class TRINITY_DLL_SPEC Creature : public Unit
         bool LoadFromDB(uint32 guid, Map *map);
         void SaveToDB();
                                                             // overwrited in Pet
-        virtual void SaveToDB(uint32 mapid, uint8 spawnMask);
+        virtual void SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask);
         virtual void DeleteFromDB();                        // overwrited in Pet
 
         Loot loot;
@@ -660,11 +664,11 @@ class TRINITY_DLL_SPEC Creature : public Unit
 
         uint8 m_emoteState;
         bool m_isPet;                                       // set only in Pet::Pet
+        bool m_isVehicle;                                   // set only in Vehicle::Vehicle
         bool m_isTotem;                                     // set only in Totem::Totem
         ReactStates m_reactState;                           // for AI, not charmInfo
         void RegenerateMana();
         void RegenerateHealth();
-        uint32 m_regenTimer;
         MovementGeneratorType m_defaultMovementType;
         Cell m_currentCell;                                 // store current cell where creature listed
         uint32 m_DBTableGuid;                               ///< For new or temporary creatures is 0 for saved it is lowguid
