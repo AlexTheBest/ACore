@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -241,6 +241,32 @@ class ByteBuffer
             ASSERT(_rpos  + len  <= size() || PrintPosError(false,_rpos,len));
             memcpy(dest, &_storage[_rpos], len);
             _rpos += len;
+        }
+
+        bool readPackGUID(uint64& guid)
+        {
+            if(rpos()+1 > size())
+                return false;
+
+            guid = 0;
+
+            uint8 guidmark=0;
+            (*this) >> guidmark;
+
+            for(int i=0;i<8;i++)
+            {
+                if(guidmark & (uint8(1) << i))
+                {
+                    if(rpos()+1 > size())
+                        return false;
+
+                    uint8 bit;
+                    (*this) >> bit;
+                    guid |= (uint64(bit) << (i*8));
+                }
+            }
+
+            return true;
         }
 
         const uint8 *contents() const { return &_storage[0]; }

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,12 +22,15 @@
 #define __BATTLEGROUND_H
 
 #include "Common.h"
-#include "WorldPacket.h"
-#include "WorldSession.h"
-#include "Opcodes.h"
-#include "ObjectMgr.h"
-#include "BattleGroundMgr.h"
 #include "SharedDefines.h"
+
+class Creature;
+class GameObject;
+class Group;
+class Player;
+class WorldPacket;
+
+struct WorldSafeLocsEntry;
 
 enum BattleGroundSounds
 {
@@ -132,20 +135,6 @@ struct BattleGroundObjectInfo
     uint32      spellid;
 };
 
-#define MAX_QUEUED_PLAYERS_MAP 7
-
-enum BattleGroundTypeId
-{
-    BATTLEGROUND_AV     = 1,
-    BATTLEGROUND_WS     = 2,
-    BATTLEGROUND_AB     = 3,
-    BATTLEGROUND_NA     = 4,
-    BATTLEGROUND_BE     = 5,
-    BATTLEGROUND_AA     = 6,
-    BATTLEGROUND_EY     = 7,
-    BATTLEGROUND_RL     = 8
-};
-
 // handle the queue types and bg types separately to enable joining queue for different sized arenas at the same time
 enum BattleGroundQueueTypeId
 {
@@ -153,9 +142,10 @@ enum BattleGroundQueueTypeId
     BATTLEGROUND_QUEUE_WS     = 2,
     BATTLEGROUND_QUEUE_AB     = 3,
     BATTLEGROUND_QUEUE_EY     = 4,
-    BATTLEGROUND_QUEUE_2v2     = 5,
-    BATTLEGROUND_QUEUE_3v3     = 6,
-    BATTLEGROUND_QUEUE_5v5     = 7,
+    BATTLEGROUND_QUEUE_SA     = 5,
+    BATTLEGROUND_QUEUE_2v2    = 6,
+    BATTLEGROUND_QUEUE_3v3    = 7,
+    BATTLEGROUND_QUEUE_5v5    = 8,
 };
 
 enum ScoreType
@@ -262,7 +252,7 @@ class BattleGround
         BattleGround();
         /*BattleGround(const BattleGround& bg);*/
         virtual ~BattleGround();
-        virtual void Update(time_t diff);                   // must be implemented in BG subclass of BG specific update code, but must in begginning call parent version
+        virtual void Update(uint32 diff);                   // must be implemented in BG subclass of BG specific update code, but must in begginning call parent version
         virtual bool SetupBattleGround()                    // must be implemented in BG subclass
         {
             return true;
@@ -275,7 +265,7 @@ class BattleGround
         /* Battleground */
         // Get methods:
         char const* GetName() const         { return m_Name; }
-        uint32 GetTypeID() const            { return m_TypeID; }
+        BattleGroundTypeId GetTypeID() const { return m_TypeID; }
         uint32 GetQueueType() const         { return m_Queue_type; }
         uint32 GetInstanceID() const        { return m_InstanceID; }
         uint32 GetStatus() const            { return m_Status; }
@@ -298,7 +288,7 @@ class BattleGround
 
         // Set methods:
         void SetName(char const* Name)      { m_Name = Name; }
-        void SetTypeID(uint32 TypeID)       { m_TypeID = TypeID; }
+        void SetTypeID(BattleGroundTypeId TypeID) { m_TypeID = TypeID; }
         void SetQueueType(uint32 ID)        { m_Queue_type = ID; }
         void SetInstanceID(uint32 InstanceID) { m_InstanceID = InstanceID; }
         void SetStatus(uint32 Status)       { m_Status = Status; }
@@ -395,13 +385,7 @@ class BattleGround
 
         /* Raid Group */
         Group *GetBgRaid(uint32 TeamID) const { return TeamID == ALLIANCE ? m_BgRaids[BG_TEAM_ALLIANCE] : m_BgRaids[BG_TEAM_HORDE]; }
-        void SetBgRaid(uint32 TeamID, Group *bg_raid)
-        {
-            Group* &old_raid = TeamID == ALLIANCE ? m_BgRaids[BG_TEAM_ALLIANCE] : m_BgRaids[BG_TEAM_HORDE];
-            if(old_raid) old_raid->SetBattlegroundGroup(NULL);
-            if(bg_raid) bg_raid->SetBattlegroundGroup(this);
-            old_raid = bg_raid;
-        }
+        void SetBgRaid(uint32 TeamID, Group *bg_raid);
 
         virtual void UpdatePlayerScore(Player *Source, uint32 type, uint32 value);
 
@@ -468,6 +452,8 @@ class BattleGround
 
         // since arenas can be AvA or Hvh, we have to get the "temporary" team of a player
         uint32 GetPlayerTeam(uint64 guid);
+        bool IsPlayerInBattleGround(uint64 guid);
+        void PlayerRelogin(Player* plr);
 
         void SetDeleteThis() {m_SetDeleteThis = true;}
 
@@ -496,7 +482,7 @@ class BattleGround
         BGHonorMode m_HonorMode;
     private:
         /* Battleground */
-        uint32 m_TypeID;                                    //Battleground type, defined in enum BattleGroundTypeId
+        BattleGroundTypeId m_TypeID;
         uint32 m_InstanceID;                                //BattleGround Instance's GUID!
         uint32 m_Status;
         uint32 m_StartTime;

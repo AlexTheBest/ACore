@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -324,7 +324,7 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
         data << pProto->ItemId;
         data << pProto->Class;
         data << pProto->SubClass;
-        data << uint32(-1);                                 // new 2.0.3, not exist in wdb cache?
+        data << int32(pProto->Unk0);                        // new 2.0.3, not exist in wdb cache?
         data << Name;
         data << uint8(0x00);                                //pProto->Name2; // blizz not send name there, just uint8(0x00); <-- \0 = empty string = empty name...
         data << uint8(0x00);                                //pProto->Name3; // blizz not send name there, just uint8(0x00);
@@ -346,14 +346,17 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
         data << pProto->RequiredCityRank;
         data << pProto->RequiredReputationFaction;
         data << pProto->RequiredReputationRank;
-        data << pProto->MaxCount;
-        data << pProto->Stackable;
+        data << int32(pProto->MaxCount);
+        data << int32(pProto->Stackable);
         data << pProto->ContainerSlots;
-        for(int i = 0; i < 10; i++)
+        data << pProto->StatsCount;                         // item stats count
+        for(int i = 0; i < pProto->StatsCount; i++)
         {
             data << pProto->ItemStat[i].ItemStatType;
             data << pProto->ItemStat[i].ItemStatValue;
         }
+        data << pProto->ScalingStatDistribution;            // scaling stats distribution
+        data << pProto->ScalingStatValue;                   // some kind of flags used to determine stat values column
         for(int i = 0; i < 5; i++)
         {
             data << pProto->Damage[i].DamageMin;
@@ -417,7 +420,7 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
         data << pProto->PageMaterial;
         data << pProto->StartQuest;
         data << pProto->LockID;
-        data << pProto->Material;
+        data << int32(pProto->Material);
         data << pProto->Sheath;
         data << pProto->RandomProperty;
         data << pProto->RandomSuffix;
@@ -437,7 +440,8 @@ void WorldSession::HandleItemQuerySingleOpcode( WorldPacket & recv_data )
         data << pProto->GemProperties;
         data << pProto->RequiredDisenchantSkill;
         data << pProto->ArmorDamageModifier;
-        data << uint32(0);                                  // added in 2.4.2.8209, duration (seconds)
+        data << pProto->Duration;                           // added in 2.4.2.8209, duration (seconds)
+        data << pProto->ItemLimitCategory;                  // WotLK, ItemLimitCategory
         SendPacket( &data );
     }
     else
@@ -738,7 +742,7 @@ void WorldSession::SendListInventory( uint64 vendorguid )
 
     float discountMod = _player->GetReputationPriceDiscount(pCreature);
 
-    for(int i = 0; i < numitems; i++ )
+    for(int i = 0; i < numitems; ++i )
     {
         if(VendorItem const* crItem = vItems->GetItem(i))
         {
@@ -845,6 +849,7 @@ void WorldSession::HandleBuyBankSlotOpcode(WorldPacket& /*recvPacket*/)
     if (_player->GetMoney() < price)
         return;
 
+    _player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BUY_BANK_SLOT, slot);
     _player->SetByteValue(PLAYER_BYTES_2, 2, slot);
     _player->ModifyMoney(-int32(price));
 }
@@ -1106,57 +1111,80 @@ void WorldSession::HandleSocketOpcode(WorldPacket& recv_data)
 {
     sLog.outDebug("WORLD: CMSG_SOCKET_GEMS");
 
-    CHECK_PACKET_SIZE(recv_data,8*4);
+    CHECK_PACKET_SIZE(recv_data,8+8*MAX_GEM_SOCKETS);
 
-    uint64 guids[4];
-    uint32 GemEnchants[3], OldEnchants[3];
-    Item *Gems[3];
-    bool SocketBonusActivated, SocketBonusToBeActivated;
+    uint64 item_guid;
+    uint64 gem_guids[MAX_GEM_SOCKETS];
 
-    for(int i = 0; i < 4; i++)
-        recv_data >> guids[i];
-
-    if(!guids[0])
+    recv_data >> item_guid;
+    if(!item_guid)
         return;
+
+    for(int i = 0; i < MAX_GEM_SOCKETS; ++i)
+        recv_data >> gem_guids[i];
 
     //cheat -> tried to socket same gem multiple times
-    if((guids[1] && (guids[1] == guids[2] || guids[1] == guids[3])) || (guids[2] && (guids[2] == guids[3])))
+    if ((gem_guids[0] && (gem_guids[0] == gem_guids[1] || gem_guids[0] == gem_guids[2])) ||
+        (gem_guids[1] && (gem_guids[1] == gem_guids[2])))
         return;
 
-    Item *itemTarget = _player->GetItemByGuid(guids[0]);
+    Item *itemTarget = _player->GetItemByGuid(item_guid);
     if(!itemTarget)                                         //missing item to socket
+        return;
+
+    ItemPrototype const* itemProto = itemTarget->GetProto();
+    if(!itemProto)
         return;
 
     //this slot is excepted when applying / removing meta gem bonus
     uint8 slot = itemTarget->IsEquipped() ? itemTarget->GetSlot() : NULL_SLOT;
 
-    for(int i = 0; i < 3; i++)
-        Gems[i] = guids[i + 1] ? _player->GetItemByGuid(guids[i + 1]) : NULL;
+    Item *Gems[MAX_GEM_SOCKETS];
+    for(int i = 0; i < MAX_GEM_SOCKETS; ++i)
+        Gems[i] = gem_guids[i] ? _player->GetItemByGuid(gem_guids[i]) : NULL;
 
-    GemPropertiesEntry const *GemProps[3];
-    for(int i = 0; i < 3; ++i)                              //get geminfo from dbc storage
-    {
+    GemPropertiesEntry const *GemProps[MAX_GEM_SOCKETS];
+    for(int i = 0; i < MAX_GEM_SOCKETS; ++i)                //get geminfo from dbc storage
         GemProps[i] = (Gems[i]) ? sGemPropertiesStore.LookupEntry(Gems[i]->GetProto()->GemProperties) : NULL;
-    }
 
-    for(int i = 0; i < 3; ++i)                              //check for hack maybe
+    for(int i = 0; i < MAX_GEM_SOCKETS; ++i)                //check for hack maybe
     {
-        // tried to put gem in socket where no socket exists / tried to put normal gem in meta socket
+        if (!GemProps[i])
+            continue;
+
+        // tried to put gem in socket where no socket exists (take care about prismatic sockets)
+        if (!itemProto->Socket[i].Color)
+        {
+            // no prismatic socket
+            if(!itemTarget->GetEnchantmentId(PRISMATIC_ENCHANTMENT_SLOT))
+                return;
+
+            // not first not-colored (not normaly used) socket
+            if(i!=0 && !itemProto->Socket[i-1].Color && (i+1 >= MAX_GEM_SOCKETS || itemProto->Socket[i+1].Color))
+                return;
+
+            // ok, this is first not colored socket for item with prismatic socket 
+        }
+
+        // tried to put normal gem in meta socket
+        if (itemProto->Socket[i].Color == SOCKET_COLOR_META && GemProps[i]->color != SOCKET_COLOR_META)
+            return;
+
         // tried to put meta gem in normal socket
-        if( GemProps[i] && ( !itemTarget->GetProto()->Socket[i].Color ||
-            itemTarget->GetProto()->Socket[i].Color == SOCKET_COLOR_META && GemProps[i]->color != SOCKET_COLOR_META ||
-            itemTarget->GetProto()->Socket[i].Color != SOCKET_COLOR_META && GemProps[i]->color == SOCKET_COLOR_META ) )
+        if (itemProto->Socket[i].Color != SOCKET_COLOR_META && GemProps[i]->color == SOCKET_COLOR_META)
             return;
     }
 
-    for(int i = 0; i < 3; ++i)                              //get new and old enchantments
+    uint32 GemEnchants[MAX_GEM_SOCKETS];
+    uint32 OldEnchants[MAX_GEM_SOCKETS];
+    for(int i = 0; i < MAX_GEM_SOCKETS; ++i)                //get new and old enchantments
     {
         GemEnchants[i] = (GemProps[i]) ? GemProps[i]->spellitemenchantement : 0;
         OldEnchants[i] = itemTarget->GetEnchantmentId(EnchantmentSlot(SOCK_ENCHANTMENT_SLOT+i));
     }
 
     // check unique-equipped conditions
-    for(int i = 0; i < 3; ++i)
+    for(int i = 0; i < MAX_GEM_SOCKETS; ++i)
     {
         if (Gems[i] && (Gems[i]->GetProto()->Flags & ITEM_FLAGS_UNIQUE_EQUIPPED))
         {
@@ -1171,7 +1199,7 @@ void WorldSession::HandleSocketOpcode(WorldPacket& recv_data)
             }
 
             // continue check for case when attempt add 2 similar unique equipped gems in one item.
-            for (int j = 0; j < 3; ++j)
+            for (int j = 0; j < MAX_GEM_SOCKETS; ++j)
             {
                 if ((i != j) && (Gems[j]) && (Gems[i]->GetProto()->ItemId == Gems[j]->GetProto()->ItemId))
                 {
@@ -1179,7 +1207,7 @@ void WorldSession::HandleSocketOpcode(WorldPacket& recv_data)
                     return;
                 }
             }
-            for (int j = 0; j < 3; ++j)
+            for (int j = 0; j < MAX_GEM_SOCKETS; ++j)
             {
                 if (OldEnchants[j])
                 {
@@ -1197,29 +1225,29 @@ void WorldSession::HandleSocketOpcode(WorldPacket& recv_data)
         }
     }
 
-    SocketBonusActivated = itemTarget->GemsFitSockets();    //save state of socketbonus
+    bool SocketBonusActivated = itemTarget->GemsFitSockets();    //save state of socketbonus
     _player->ToggleMetaGemsActive(slot, false);             //turn off all metagems (except for the target item)
 
     //if a meta gem is being equipped, all information has to be written to the item before testing if the conditions for the gem are met
 
     //remove ALL enchants
-    for(uint32 enchant_slot = SOCK_ENCHANTMENT_SLOT; enchant_slot < SOCK_ENCHANTMENT_SLOT+3; ++enchant_slot)
+    for(uint32 enchant_slot = SOCK_ENCHANTMENT_SLOT; enchant_slot < SOCK_ENCHANTMENT_SLOT+MAX_GEM_SOCKETS; ++enchant_slot)
         _player->ApplyEnchantment(itemTarget,EnchantmentSlot(enchant_slot),false);
 
-    for(int i = 0; i < 3; ++i)
+    for(int i = 0; i < MAX_GEM_SOCKETS; ++i)
     {
         if(GemEnchants[i])
         {
             itemTarget->SetEnchantment(EnchantmentSlot(SOCK_ENCHANTMENT_SLOT+i), GemEnchants[i],0,0);
-            if(Item* guidItem = _player->GetItemByGuid(guids[i + 1]))
+            if(Item* guidItem = _player->GetItemByGuid(gem_guids[i]))
                 _player->DestroyItem(guidItem->GetBagSlot(), guidItem->GetSlot(), true );
         }
     }
 
-    for(uint32 enchant_slot = SOCK_ENCHANTMENT_SLOT; enchant_slot < SOCK_ENCHANTMENT_SLOT+3; ++enchant_slot)
+    for(uint32 enchant_slot = SOCK_ENCHANTMENT_SLOT; enchant_slot < SOCK_ENCHANTMENT_SLOT+MAX_GEM_SOCKETS; ++enchant_slot)
         _player->ApplyEnchantment(itemTarget,EnchantmentSlot(enchant_slot),true);
 
-    SocketBonusToBeActivated = itemTarget->GemsFitSockets();//current socketbonus state
+    bool SocketBonusToBeActivated = itemTarget->GemsFitSockets();//current socketbonus state
     if(SocketBonusActivated ^ SocketBonusToBeActivated)     //if there was a change...
     {
         _player->ApplyEnchantment(itemTarget,BONUS_ENCHANTMENT_SLOT,false);
