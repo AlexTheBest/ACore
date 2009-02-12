@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,10 +47,10 @@ struct TRINITY_DLL_DECL Traveller
 
     operator T&(void) { return i_traveller; }
     operator const T&(void) { return i_traveller; }
-    inline float GetPositionX() const { return i_traveller.GetPositionX(); }
-    inline float GetPositionY() const { return i_traveller.GetPositionY(); }
-    inline float GetPositionZ() const { return i_traveller.GetPositionZ(); }
-    inline T& GetTraveller(void) { return i_traveller; }
+    float GetPositionX() const { return i_traveller.GetPositionX(); }
+    float GetPositionY() const { return i_traveller.GetPositionY(); }
+    float GetPositionZ() const { return i_traveller.GetPositionZ(); }
+    T& GetTraveller(void) { return i_traveller; }
 
     float Speed(void) { assert(false); return 0.0f; }
     void Relocation(float x, float y, float z, float orientation) {}
