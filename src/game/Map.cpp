@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@
 #define MAX_GRID_LOAD_TIME      50
 
 // magic *.map header
-const char MAP_MAGIC[] = "MAP_2.00";
+const char MAP_MAGIC[] = "MAP_2.01";
 
 GridState* si_GridStates[MAX_GRID_STATE];
 
@@ -257,7 +257,7 @@ template<>
 void Map::AddToGrid(Creature* obj, NGridType *grid, Cell const& cell)
 {
     // add to world object registry in grid
-    if(obj->isPet() /*&& IS_PLAYER_GUID(obj->GetOwnerGUID())*/ || obj->isPossessedByPlayer())
+    if(obj->isPet() || obj->isPossessedByPlayer() || obj->isVehicle())
     {
         (*grid)(cell.CellX(), cell.CellY()).AddWorldObject<Creature>(obj, obj->GetGUID());
         obj->SetCurrentCell(cell);
@@ -301,7 +301,7 @@ template<>
 void Map::RemoveFromGrid(Creature* obj, NGridType *grid, Cell const& cell)
 {
     // remove from world object registry in grid
-    if(obj->isPet() || obj->isPossessedByPlayer())
+    if(obj->isPet() || obj->isPossessedByPlayer() || obj->isVehicle())
     {
         (*grid)(cell.CellX(), cell.CellY()).RemoveWorldObject<Creature>(obj, obj->GetGUID());
     }
@@ -1289,7 +1289,7 @@ float Map::GetVmapHeight(float x, float y, float z, bool useMaps) const
     return vmapHeight;
 }
 
-uint16 Map::GetAreaFlag(float x, float y ) const
+uint16 Map::GetAreaFlag(float x, float y, float z) const
 {
     //local x,y coords
     float lx,ly;
@@ -1307,11 +1307,30 @@ uint16 Map::GetAreaFlag(float x, float y ) const
     // ensure GridMap is loaded
     const_cast<Map*>(this)->EnsureGridCreated(GridPair(63-gx,63-gy));
 
+    uint16 areaflag;
     if(GridMaps[gx][gy])
-        return GridMaps[gx][gy]->area_flag[(int)(lx)][(int)(ly)];
+        areaflag = GridMaps[gx][gy]->area_flag[(int)(lx)][(int)(ly)];
     // this used while not all *.map files generated (instances)
     else
-        return GetAreaFlagByMapId(i_id);
+        areaflag = GetAreaFlagByMapId(i_id);
+
+    //FIXME: some hacks for areas above or underground for ground area
+    //       required for area specific spells/etc, until map/vmap data
+    //       not provided correct areaflag with this hacks
+    switch(areaflag)
+    {
+        // Acherus: The Ebon Hold (Plaguelands: The Scarlet Enclave)
+        case 1984:                                          // Plaguelands: The Scarlet Enclave
+        case 2076:                                          // Death's Breach (Plaguelands: The Scarlet Enclave)
+        case 2745:                                          // The Noxious Pass (Plaguelands: The Scarlet Enclave)
+            if(z > 350.0f) areaflag = 2048; break;
+        // Acherus: The Ebon Hold (Eastern Plaguelands)
+        case 856:                                           // The Noxious Glade (Eastern Plaguelands)
+        case 2456:                                          // Death's Breach (Eastern Plaguelands)
+            if(z > 350.0f) areaflag = 1950; break;
+    }
+
+    return areaflag;
 }
 
 uint8 Map::GetTerrainType(float x, float y ) const
@@ -1752,10 +1771,10 @@ bool InstanceMap::CanEnter(Player *player)
     }
 
     // cannot enter if the instance is full (player cap), GMs don't count
-    InstanceTemplate const* iTemplate = objmgr.GetInstanceTemplate(GetId());
-    if (!player->isGameMaster() && GetPlayersCountExceptGMs() >= iTemplate->maxPlayers)
+    uint32 maxPlayers = GetMaxPlayers();
+    if (!player->isGameMaster() && GetPlayersCountExceptGMs() >= maxPlayers)
     {
-        sLog.outDetail("MAP: Instance '%u' of map '%s' cannot have more than '%u' players. Player '%s' rejected", GetInstanceId(), GetMapName(), iTemplate->maxPlayers, player->GetName());
+        sLog.outDetail("MAP: Instance '%u' of map '%s' cannot have more than '%u' players. Player '%s' rejected", GetInstanceId(), GetMapName(), maxPlayers, player->GetName());
         player->SendTransferAborted(GetId(), TRANSFER_ABORT_MAX_PLAYERS);
         return false;
     }
@@ -2065,6 +2084,14 @@ void InstanceMap::SetResetSchedule(bool on)
     }
 }
 
+uint32 InstanceMap::GetMaxPlayers() const
+{
+    InstanceTemplate const* iTemplate = objmgr.GetInstanceTemplate(GetId());
+    if(!iTemplate)
+        return 0;
+    return IsHeroic() ? iTemplate->maxPlayersHeroic : iTemplate->maxPlayers;
+}
+
 /* ******* Battleground Instance Maps ******* */
 
 BattleGroundMap::BattleGroundMap(uint32 id, time_t expiry, uint32 InstanceId)
@@ -2120,12 +2147,14 @@ void BattleGroundMap::UnloadAll(bool pForce)
 {
     while(HavePlayers())
     {
-        Player * plr = m_mapRefManager.getFirst()->getSource();
-        if(plr) (plr)->TeleportTo(plr->m_homebindMapId, plr->m_homebindX, plr->m_homebindY, plr->m_homebindZ, plr->GetOrientation());
-        // TeleportTo removes the player from this map (if the map exists) -> calls BattleGroundMap::Remove -> invalidates the iterator.
-        // just in case, remove the player from the list explicitly here as well to prevent a possible infinite loop
-        // note that this remove is not needed if the code works well in other places
-        plr->GetMapRef().unlink();
+        if(Player * plr = m_mapRefManager.getFirst()->getSource())
+        {
+            plr->TeleportTo(plr->GetBattleGroundEntryPoint());
+            // TeleportTo removes the player from this map (if the map exists) -> calls BattleGroundMap::Remove -> invalidates the iterator.
+            // just in case, remove the player from the list explicitly here as well to prevent a possible infinite loop
+            // note that this remove is not needed if the code works well in other places
+            plr->GetMapRef().unlink();
+        }
     }
 
     Map::UnloadAll(pForce);

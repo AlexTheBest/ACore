@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -10,12 +10,12 @@
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
 #include "Common.h"
@@ -74,6 +74,8 @@ Group::~Group()
     for(uint8 i = 0; i < TOTAL_DIFFICULTIES; i++)
         for(BoundInstancesMap::iterator itr = m_boundInstances[i].begin(); itr != m_boundInstances[i].end(); ++itr)
             itr->second.save->RemoveGroup(this);
+
+    // Sub group counters clean up
     if (m_subGroupsCounts)
         delete[] m_subGroupsCounts;
 }
@@ -203,6 +205,11 @@ void Group::ConvertToRaid()
 
     if(!isBGGroup()) CharacterDatabase.PExecute("UPDATE groups SET isRaid = 1 WHERE leaderGuid='%u'", GUID_LOPART(m_leaderGuid));
     SendUpdate();
+
+    // update quest related GO states (quest activity dependent from raid membership)
+    for(member_citerator citr = m_memberSlots.begin(); citr != m_memberSlots.end(); ++citr)
+        if(Player* player = objmgr.GetPlayer(citr->guid))
+            player->UpdateForQuestsGO();
 }
 
 bool Group::AddInvite(Player *player)
@@ -288,6 +295,10 @@ bool Group::AddMember(const uint64 &guid, const char* name)
         }
         player->SetGroupUpdateFlag(GROUP_UPDATE_FULL);
         UpdatePlayerOutOfRange(player);
+
+        // quest related GO state dependent from raid memebership
+        if(isRaidGroup())
+            player->UpdateForQuestsGO();
     }
 
     return true;
@@ -302,9 +313,12 @@ uint32 Group::RemoveMember(const uint64 &guid, const uint8 &method)
     {
         bool leaderChanged = _removeMember(guid);
 
-        Player *player = objmgr.GetPlayer( guid ); // FG: TODO: could be removed, its just here for consistency
-        if (player)
+        if(Player *player = objmgr.GetPlayer( guid ))
         {
+            // quest related GO state dependent from raid membership
+            if(isRaidGroup())
+                player->UpdateForQuestsGO();
+
             WorldPacket data;
 
             if(method == 1)
@@ -362,6 +376,11 @@ void Group::Disband(bool hideDestroy)
             continue;
 
         player->SetGroup(NULL);
+
+        // quest related GO state dependent from raid membership
+        if(isRaidGroup())
+            player->UpdateForQuestsGO();
+
 
         if(!player->GetSession())
             continue;
@@ -729,6 +748,8 @@ void Group::CountTheRoll(Rolls::iterator rollI, uint32 NumberOfPlayers)
 
             if(player && player->GetSession())
             {
+                player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ROLL_NEED_ON_LOOT, roll->itemid, maxresul);
+
                 ItemPosCountVec dest;
                 LootItem *item = &(roll->getLoot()->items[roll->itemSlot]);
                 uint8 msg = player->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count );
@@ -774,6 +795,8 @@ void Group::CountTheRoll(Rolls::iterator rollI, uint32 NumberOfPlayers)
 
             if(player && player->GetSession())
             {
+                player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ROLL_GREED_ON_LOOT, roll->itemid, maxresul);
+
                 ItemPosCountVec dest;
                 LootItem *item = &(roll->getLoot()->items[roll->itemSlot]);
                 uint8 msg = player->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, roll->itemid, item->count );
@@ -835,13 +858,10 @@ void Group::GetDataForXPAtKill(Unit const* victim, uint32& count,uint32& sum_lev
 
         ++count;
         sum_level += member->getLevel();
-        // store maximum member level
         if(!member_with_max_level || member_with_max_level->getLevel() < member->getLevel())
             member_with_max_level = member;
 
-        uint32 gray_level = Trinity::XP::GetGrayLevel(member->getLevel());
-        // if the victim is higher level than the gray level of the currently examined group member,
-        // then set not_gray_member_with_max_level if needed.
+        uint32 gray_level = MaNGOS::XP::GetGrayLevel(member->getLevel());
         if( victim->getLevel() > gray_level && (!not_gray_member_with_max_level
            || not_gray_member_with_max_level->getLevel() < member->getLevel()))
             not_gray_member_with_max_level = member;
@@ -905,7 +925,6 @@ void Group::SendUpdate()
             data << (uint64)m_looterGuid;                   // looter guid
             data << (uint8)m_lootThreshold;                 // loot threshold
             data << (uint8)m_difficulty;                    // Heroic Mod Group
-
         }
         player->GetSession()->SendPacket( &data );
     }
@@ -984,7 +1003,7 @@ bool Group::_addMember(const uint64 &guid, const char* name, bool isAssistant)
         }
         // We are raid group and no one slot is free
         if (!groupFound)
-                return false;
+            return false;
     }
 
     return _addMember(guid, name, isAssistant, groupid);
@@ -1048,6 +1067,7 @@ bool Group::_removeMember(const uint64 &guid)
     if (slot != m_memberSlots.end())
     {
         SubGroupCounterDecrease(slot->group);
+
         m_memberSlots.erase(slot);
     }
 
@@ -1207,6 +1227,7 @@ void Group::ChangeMembersGroup(const uint64 &guid, const uint8 &group)
     if(!isRaidGroup())
         return;
     Player *player = objmgr.GetPlayer(guid);
+
     if (!player)
     {
         uint8 prevSubGroup;
@@ -1218,6 +1239,7 @@ void Group::ChangeMembersGroup(const uint64 &guid, const uint8 &group)
             SendUpdate();
     }
     else
+        // This methods handles itself groupcounter decrease
         ChangeMembersGroup(player, group);
 }
 
@@ -1311,7 +1333,7 @@ void Group::UpdateLooterGuid( Creature* creature, bool ifneed )
     SendUpdate();
 }
 
-uint32 Group::CanJoinBattleGroundQueue(uint32 bgTypeId, uint32 bgQueueType, uint32 MinPlayerCount, uint32 MaxPlayerCount, bool isRated, uint32 arenaSlot)
+uint32 Group::CanJoinBattleGroundQueue(BattleGroundTypeId bgTypeId, uint32 bgQueueType, uint32 MinPlayerCount, uint32 MaxPlayerCount, bool isRated, uint32 arenaSlot)
 {
     // check for min / max count
     uint32 memberscount = GetMembersCount();
@@ -1366,7 +1388,7 @@ uint32 Group::CanJoinBattleGroundQueue(uint32 bgTypeId, uint32 bgQueueType, uint
 void Roll::targetObjectBuildLink()
 {
     // called from link()
-    this->getTarget()->addLootValidatorRef(this);
+    getTarget()->addLootValidatorRef(this);
 }
 
 void Group::SetDifficulty(uint8 difficulty)
@@ -1474,7 +1496,7 @@ InstanceGroupBind* Group::BindToInstance(InstanceSave *save, bool permanent, boo
         InstanceGroupBind& bind = m_boundInstances[save->GetDifficulty()][save->GetMapId()];
         if(bind.save)
         {
-            // when a boss is killed or when copying the player's binds to the group
+            // when a boss is killed or when copying the players's binds to the group
             if(permanent != bind.perm || save != bind.save)
                 if(!load) CharacterDatabase.PExecute("UPDATE group_instance SET instance = '%u', permanent = '%u' WHERE leaderGuid = '%u' AND instance = '%u'", save->GetInstanceId(), permanent, GUID_LOPART(GetLeaderGUID()), bind.save->GetInstanceId());
         }
@@ -1535,4 +1557,4 @@ void Group::BroadcastGroupUpdate(void)
             DEBUG_LOG("-- Forced group value update for '%s'", pp->GetName());
         }
     }
-}
+}
