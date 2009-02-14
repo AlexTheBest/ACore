@@ -137,6 +137,9 @@ EndScriptData */
 #define FLAME_ENRAGE_DISTANCE   30
 #define FLAME_CHARGE_DISTANCE   50
 
+#define ITEM_ID_MAIN_HAND   32837
+#define ITEM_ID_OFF_HAND    32838
+
 /**** Creature Summon and Recognition IDs ****/
 enum CreatureEntry
 {
@@ -454,7 +457,7 @@ struct TRINITY_DLL_DECL boss_illidan_stormrageAI : public ScriptedAI
         {
             GameObject* Door = GameObject::GetGameObject((*m_creature), pInstance->GetData64(i));
             if(Door)
-                Door->SetUInt32Value(GAMEOBJECT_STATE, 0); // Open Doors
+                Door->SetGoState(0); // Open Doors
         }
     }
 
@@ -487,10 +490,10 @@ struct TRINITY_DLL_DECL boss_illidan_stormrageAI : public ScriptedAI
     {
         if(spell->Id == SPELL_GLAIVE_RETURNS) // Re-equip our warblades!
         {
-            if(!m_creature->GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY))
-                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 45479);
+            if(!m_creature->GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID))
+                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID, 45479);
             else
-                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY+1, 45481);
+                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID+1, 45481);
             m_creature->SetByteValue(UNIT_FIELD_BYTES_2, 0, SHEATH_STATE_MELEE );
         }
     }
@@ -567,8 +570,8 @@ struct TRINITY_DLL_DECL boss_illidan_stormrageAI : public ScriptedAI
             Timer[EVENT_FLIGHT_SEQUENCE] = 700;
             break;
         case 4://throw another
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 0);
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY+1, 0);
+            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID, 0);
+            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID+1, 0);
             {
                 uint8 i=0;
                 Creature* Glaive = m_creature->SummonCreature(BLADE_OF_AZZINOTH, GlaivePosition[i].x, GlaivePosition[i].y, GlaivePosition[i].z, 0, TEMPSUMMON_CORPSE_DESPAWN, 0);
@@ -653,14 +656,14 @@ struct TRINITY_DLL_DECL boss_illidan_stormrageAI : public ScriptedAI
 
         if(DemonTransformation[TransformCount].equip)
         {
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 45479); // Requip warglaives if needed
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY+1, 45481);
+            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID, 45479); // Requip warglaives if needed
+            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID+1, 45481);
             m_creature->SetByteValue(UNIT_FIELD_BYTES_2, 0, SHEATH_STATE_MELEE );
         }
         else
         {
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 0); // Unequip warglaives if needed
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY+1, 0);
+            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID+0, 0); // Unequip warglaives if needed
+            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID+1, 0);
         }
 
         switch(TransformCount)
@@ -999,10 +1002,10 @@ struct TRINITY_DLL_DECL npc_akama_illidanAI : public ScriptedAI
             DoorGUID[1] = pInstance->GetData64(DATA_GAMEOBJECT_ILLIDAN_DOOR_L);
 
             if(GETGO(Gate, GateGUID))
-                Gate->SetUInt32Value(GAMEOBJECT_STATE, 1);
+                Gate->SetGoState(1);
             for(uint8 i = 0; i < 2; i++)
                 if(GETGO(Door, DoorGUID[i]))
-                    Door->SetUInt32Value(GAMEOBJECT_STATE, 1);
+                    Door->SetGoState(1);
         }
         else
         {
@@ -1072,7 +1075,7 @@ struct TRINITY_DLL_DECL npc_akama_illidanAI : public ScriptedAI
 
         for(uint8 i = 0; i < 2; i++)
             if(GETGO(Door, DoorGUID[i]))
-                Door->SetUInt32Value(GAMEOBJECT_STATE, 1);
+                Door->SetGoState(1);
 
         if(GETCRE(Illidan, IllidanGUID))
         {
@@ -1238,7 +1241,7 @@ struct TRINITY_DLL_DECL npc_akama_illidanAI : public ScriptedAI
             Spirit[0]->InterruptNonMeleeSpells(true);
             Spirit[1]->InterruptNonMeleeSpells(true);
             if(GETGO(Gate, GateGUID))
-                Gate->SetUInt32Value(GAMEOBJECT_STATE, 0);
+                Gate->SetGoState(0);
             Timer = 2000;
             break;
         case 4:
@@ -1269,7 +1272,7 @@ struct TRINITY_DLL_DECL npc_akama_illidanAI : public ScriptedAI
         case 6:
             for(uint8 i = 0; i < 2; i++)
                 if(GETGO(Door, DoorGUID[i]))
-                    Door->SetUInt32Value(GAMEOBJECT_STATE, 0);
+                    Door->SetGoState(0);
             break;
         case 8:
             if(Phase == PHASE_WALK)
@@ -1379,9 +1382,9 @@ struct TRINITY_DLL_DECL boss_maievAI : public ScriptedAI
         Timer[EVENT_MAIEV_STEALTH] = 0;
         Timer[EVENT_MAIEV_TAUNT] = 22000 + rand()%21 * 1000;
         Timer[EVENT_MAIEV_SHADOW_STRIKE] = 30000;
-        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 44850);
-        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY + 1, 0);
-        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY + 2, 45738);
+        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID, 44850);
+        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 1, 0);
+        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 2, 45738);
     }
 
     void Aggro(Unit *who) {}
@@ -1659,7 +1662,7 @@ bool GOHello_cage_trap(Player* plr, GameObject* go)
 
     // Grid search for nearest live creature of entry 23304 within 10 yards
     Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck check(*plr, 23304, true, 10);
-    Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(trigger, check);
+    Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(plr, trigger, check);
 
     TypeContainerVisitor<Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck>, GridTypeMapContainer> cSearcher(searcher);
 
@@ -1667,7 +1670,7 @@ bool GOHello_cage_trap(Player* plr, GameObject* go)
     cell_lock->Visit(cell_lock, cSearcher, *(plr->GetMap()));
 
     ((cage_trap_triggerAI*)trigger->AI())->Active = true;
-    go->SetUInt32Value(GAMEOBJECT_STATE, 0);
+    go->SetGoState(0);
     return true;
 }
 
@@ -1831,8 +1834,8 @@ void boss_illidan_stormrageAI::Reset()
     m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_ATTACKABLE_2);
     m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
     m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-    m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 0);
-    m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY+1, 0);
+    m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID, 0);
+    m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID+1, 0);
     m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_LEVITATING + MOVEMENTFLAG_ONTRANSPORT);
     m_creature->setActive(false);
     Summons.DespawnAll();
@@ -1889,8 +1892,8 @@ void boss_illidan_stormrageAI::HandleTalkSequence()
         m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
         break;
     case 8:
-        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 45479); // Equip our warglaives!
-        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY+1, 45481);
+        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID, 45479); // Equip our warglaives!
+        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID+1, 45481);
         m_creature->SetByteValue(UNIT_FIELD_BYTES_2, 0, SHEATH_STATE_MELEE );
         m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
         break;
@@ -1950,7 +1953,7 @@ void boss_illidan_stormrageAI::HandleTalkSequence()
         {
             Maiev->CastSpell(Maiev, SPELL_TELEPORT_VISUAL, true);
             Maiev->setDeathState(JUST_DIED);
-            m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1,PLAYER_STATE_DEAD);
+            m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1,UNIT_STAND_STATE_DEAD);
         }
         break;
     case 21: // Kill ourself.

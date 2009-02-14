@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,6 @@
 #include "ItemPrototype.h"
 #include "NPCHandler.h"
 #include "Database/DatabaseEnv.h"
-#include "AuctionHouseObject.h"
 #include "Mail.h"
 #include "Map.h"
 #include "ObjectAccessor.h"
@@ -374,42 +373,6 @@ class ObjectMgr
             return sInstanceTemplate.LookupEntry<InstanceTemplate>(map);
         }
 
-        Item* GetAItem(uint32 id)
-        {
-            ItemMap::const_iterator itr = mAitems.find(id);
-            if (itr != mAitems.end())
-            {
-                return itr->second;
-            }
-            return NULL;
-        }
-        void AddAItem(Item* it)
-        {
-            ASSERT( it );
-            ASSERT( mAitems.find(it->GetGUIDLow()) == mAitems.end());
-            mAitems[it->GetGUIDLow()] = it;
-        }
-        bool RemoveAItem(uint32 id)
-        {
-            ItemMap::iterator i = mAitems.find(id);
-            if (i == mAitems.end())
-            {
-                return false;
-            }
-            mAitems.erase(i);
-            return true;
-        }
-        AuctionHouseObject * GetAuctionsMap( uint32 location );
-
-        //auction messages
-        void SendAuctionWonMail( AuctionEntry * auction );
-        void SendAuctionSalePendingMail( AuctionEntry * auction );
-        void SendAuctionSuccessfulMail( AuctionEntry * auction );
-        void SendAuctionExpiredMail( AuctionEntry * auction );
-        static uint32 GetAuctionCut( uint32 location, uint32 highBid );
-        static uint32 GetAuctionDeposit(uint32 location, uint32 time, Item *pItem);
-        static uint32 GetAuctionOutBid(uint32 currentBid);
-
         PetLevelInfo const* GetPetLevelInfo(uint32 creature_id, uint32 level) const;
 
         PlayerClassInfo const* GetPlayerClassInfo(uint32 class_) const
@@ -435,7 +398,7 @@ class ObjectMgr
         uint32 GetPlayerAccountIdByGUID(const uint64 &guid) const;
         uint32 GetPlayerAccountIdByPlayerName(const std::string& name) const;
 
-        uint32 GetNearestTaxiNode( float x, float y, float z, uint32 mapid );
+        uint32 GetNearestTaxiNode( float x, float y, float z, uint32 mapid, uint32 team );
         void GetTaxiPath( uint32 source, uint32 destination, uint32 &path, uint32 &cost);
         uint16 GetTaxiMount( uint32 id, uint32 team );
         void GetTaxiPathNodes( uint32 path, Path &pathnodes, std::vector<uint32>& mapIds );
@@ -465,14 +428,6 @@ class ObjectMgr
             return false;
         }
 
-        uint32 GetBattleMasterBG(uint32 entry) const
-        {
-            BattleMastersMap::const_iterator itr = mBattleMastersMap.find(entry);
-            if(itr != mBattleMastersMap.end())
-                return itr->second;
-            return 2;                                       //BATTLEGROUND_WS - i will not add include only for constant usage!
-        }
-
         void AddGossipText(GossipText *pGText);
         GossipText *GetGossipText(uint32 Text_ID);
 
@@ -491,6 +446,7 @@ class ObjectMgr
         }
 
         AreaTrigger const* GetGoBackTrigger(uint32 Map) const;
+        AreaTrigger const* GetMapEntranceTrigger(uint32 Map) const;
 
         uint32 GetAreaTriggerScriptId(uint32 trigger_id);
 
@@ -568,15 +524,11 @@ class ObjectMgr
         void LoadQuestAreaTriggers();
         void LoadAreaTriggerScripts();
         void LoadTavernAreaTriggers();
-        void LoadBattleMastersEntry();
         void LoadGameObjectForQuests();
 
         void LoadItemTexts();
         void LoadPageTexts();
 
-        //load first auction items, because of check if item exists, when loading
-        void LoadAuctionItems();
-        void LoadAuctions();
         void LoadPlayerInfo();
         void LoadPetLevelInfo();
         void LoadExplorationBaseXP();
@@ -597,6 +549,7 @@ class ObjectMgr
 
         std::string GeneratePetName(uint32 entry);
         uint32 GetBaseXP(uint32 level);
+        uint32 GetXPForLevel(uint32 level);
 
         int32 GetFishingBaseSkillLevel(uint32 entry) const
         {
@@ -608,12 +561,12 @@ class ObjectMgr
 
         void SetHighestGuids();
         uint32 GenerateLowGuid(HighGuid guidhigh);
-        uint32 GenerateAuctionID();
-        uint32 GenerateMailID();
-        uint32 GenerateItemTextID();
-        uint32 GeneratePetNumber();
         uint32 GenerateArenaTeamId();
+        uint32 GenerateAuctionID();
         uint32 GenerateGuildId();
+        uint32 GenerateItemTextID();
+        uint32 GenerateMailID();
+        uint32 GeneratePetNumber();
 
         void LoadPlayerInfoInCache();
         PCachePlayerInfo GetPlayerInfoFromCache(uint32 unPlayerGuid) const;
@@ -734,10 +687,7 @@ class ObjectMgr
 
         // reserved names
         void LoadReservedPlayersNames();
-        bool IsReservedName(const std::string& name) const
-        {
-            return m_ReservedNames.find(name) != m_ReservedNames.end();
-        }
+        bool IsReservedName(const std::string& name) const;
 
         // name with valid structure and symbols
         static bool IsValidName( const std::string& name, bool create = false );
@@ -811,20 +761,23 @@ class ObjectMgr
         ScriptNameMap &GetScriptNames() { return m_scriptNames; }
         const char * GetScriptName(uint32 id) { return id < m_scriptNames.size() ? m_scriptNames[id].c_str() : ""; }
         uint32 GetScriptId(const char *name);
+
+        int GetOrNewIndexForLocale(LocaleConstant loc);
     protected:
 
         // first free id for selected id type
-        uint32 m_auctionid;
-        uint32 m_mailid;
-        uint32 m_ItemTextId;
         uint32 m_arenaTeamId;
+        uint32 m_auctionid;
         uint32 m_guildId;
+        uint32 m_ItemTextId;
+        uint32 m_mailid;
         uint32 m_hiPetNumber;
 
         // first free low guid for seelcted guid type
         uint32 m_hiCharGuid;
         uint32 m_hiCreatureGuid;
         uint32 m_hiPetGuid;
+        uint32 m_hiVehicleGuid;
         uint32 m_hiItemGuid;
         uint32 m_hiGoGuid;
         uint32 m_hiDoGuid;
@@ -834,7 +787,6 @@ class ObjectMgr
 
         typedef UNORDERED_MAP<uint32, GossipText*> GossipTextMap;
         typedef UNORDERED_MAP<uint32, uint32> QuestAreaTriggerMap;
-        typedef UNORDERED_MAP<uint32, uint32> BattleMastersMap;
         typedef UNORDERED_MAP<uint32, std::string> ItemTextMap;
         typedef std::set<uint32> TavernAreaTriggerSet;
         typedef std::set<uint32> GameObjectForQuestSet;
@@ -844,16 +796,10 @@ class ObjectMgr
         ArenaTeamMap        mArenaTeamMap;
 
         ItemMap             mItems;
-        ItemMap             mAitems;
 
         ItemTextMap         mItemTexts;
 
-        AuctionHouseObject  mHordeAuctions;
-        AuctionHouseObject  mAllianceAuctions;
-        AuctionHouseObject  mNeutralAuctions;
-
         QuestAreaTriggerMap mQuestAreaTriggerMap;
-        BattleMastersMap    mBattleMastersMap;
         TavernAreaTriggerSet mTavernAreaTriggerSet;
         GameObjectForQuestSet mGameObjectForQuestSet;
         GossipTextMap       mGossipText;
@@ -867,7 +813,7 @@ class ObjectMgr
         PetCreateSpellMap   mPetCreateSpell;
 
         //character reserved names
-        typedef std::set<std::string> ReservedNamesMap;
+        typedef std::set<std::wstring> ReservedNamesMap;
         ReservedNamesMap    m_ReservedNames;
 
         std::set<uint32>    m_DisabledPlayerSpells;
@@ -881,7 +827,6 @@ class ObjectMgr
 
         typedef             std::vector<LocaleConstant> LocalForIndex;
         LocalForIndex        m_LocalForIndex;
-        int GetOrNewIndexForLocale(LocaleConstant loc);
 
         int DBCLocaleIndex;
 
@@ -899,6 +844,9 @@ class ObjectMgr
 
         void BuildPlayerLevelInfo(uint8 race, uint8 class_, uint8 level, PlayerLevelInfo* plinfo) const;
         PlayerInfo playerInfo[MAX_RACES][MAX_CLASSES];
+
+        typedef std::vector<uint32> PlayerXPperLevel;       // [level]
+        PlayerXPperLevel mPlayerXPperLevel;
 
         typedef std::map<uint32,uint32> BaseXPMap;          // [area level][base xp]
         BaseXPMap mBaseXPTable;
