@@ -82,9 +82,12 @@ extern void AddSC_mob_event();
 extern void AddSC_generic_creature();
 
 // -- Custom --
-extern void AddSC_custom_example();
-extern void AddSC_custom_gossip_codebox();
-extern void AddSC_test();
+
+// -- Examples --
+extern void AddSC_example_creature();
+extern void AddSC_example_escort();
+extern void AddSC_example_gossip_codebox();
+extern void AddSC_example_misc();
 
 // -- GO --
 extern void AddSC_go_scripts();
@@ -96,7 +99,6 @@ extern void AddSC_guards();
 
 // -- Item --
 extern void AddSC_item_scripts();
-extern void AddSC_item_test();
 
 // -- NPC --
 extern void AddSC_npc_professions();
@@ -210,6 +212,9 @@ extern void AddSC_blasted_lands();
 
 //Bloodmyst Isle
 extern void AddSC_bloodmyst_isle();
+
+//Borean Tundra
+extern void AddSC_borean_tundra();
 
 //Burning steppes
 extern void AddSC_burning_steppes();
@@ -392,12 +397,12 @@ extern void AddSC_boss_patchwerk();
 extern void AddSC_boss_razuvious();
 extern void AddSC_boss_highlord_mograine();
 extern void AddSC_boss_kelthuzad();
-extern void AddSC_boss_faerlina();
 extern void AddSC_boss_loatheb();
 extern void AddSC_boss_noth();
 extern void AddSC_boss_gluth();
 extern void AddSC_boss_sapphiron();
 extern void AddSC_boss_four_horsemen();
+extern void AddSC_boss_faerlina();
 
 //Netherstorm
 extern void AddSC_netherstorm();
@@ -566,6 +571,11 @@ extern void AddSC_undercity();
 extern void AddSC_ungoro_crater();
 
 //Upper blackrock spire
+
+//Utgarde Keep
+extern void AddSC_boss_keleseth();
+extern void AddSC_instance_utgarde_keep();
+
 //Wailing caverns
 
 //Western plaguelands
@@ -658,8 +668,7 @@ void LoadDatabase()
     LoadTrinityStrings(TScriptDB,"eventai_texts",-1,1+(TEXT_SOURCE_RANGE));
 
     // Gather Additional data from EventAI Texts
-    //result = TScriptDB.PQuery("SELECT entry, sound, type, language, emote FROM eventai_texts");
-    result = TScriptDB.PQuery("SELECT entry, sound, type, language FROM eventai_texts");
+    result = TScriptDB.PQuery("SELECT entry, sound, type, language, emote FROM eventai_texts");
 
     outstring_log("TSCR: Loading EventAI Texts additional data...");
     if (result)
@@ -677,7 +686,7 @@ void LoadDatabase()
             temp.SoundId        = fields[1].GetInt32();
             temp.Type           = fields[2].GetInt32();
             temp.Language       = fields[3].GetInt32();
-            temp.Emote          = 0;//fields[4].GetInt32();
+            temp.Emote          = fields[4].GetInt32();
 
             if (i >= 0)
             {
@@ -1138,6 +1147,8 @@ void LoadDatabase()
 
                     //3rd param target
                     case ACTION_T_SET_UNIT_FIELD:
+                        if (temp.action[j].param1 < OBJECT_END || temp.action[j].param1 >= UNIT_END)
+                            error_db_log("TSCR: Event %u Action %u param1 (UNIT_FIELD*). Index out of range for intended use.", i, j+1);
                         if (temp.action[j].param3 >= TARGET_T_END)
                             error_db_log("TSCR: Event %u Action %u uses incorrect Target type", i, j+1);
                         break;
@@ -1290,9 +1301,12 @@ void ScriptsInit()
     AddSC_generic_creature();
 
     // -- Custom --
-    AddSC_custom_example();
-    AddSC_custom_gossip_codebox();
-    AddSC_test();
+
+    // -- Examples --
+    AddSC_example_creature();
+    AddSC_example_escort();
+    AddSC_example_gossip_codebox();
+    AddSC_example_misc();
 
     // -- GO --
     AddSC_go_scripts();
@@ -1304,7 +1318,6 @@ void ScriptsInit()
 
     // -- Item --
     AddSC_item_scripts();
-    AddSC_item_test();
 
     // -- NPC --
     AddSC_npc_professions();
@@ -1418,6 +1431,9 @@ void ScriptsInit()
 
     //Bloodmyst Isle
     AddSC_bloodmyst_isle();
+	
+    //Borean Tundra
+    AddSC_borean_tundra();
 
     //Burning steppes
     AddSC_burning_steppes();
@@ -1594,12 +1610,12 @@ void ScriptsInit()
 
     //Naxxramas
     AddSC_boss_anubrekhan();
+	AddSC_boss_faerlina();
     AddSC_boss_maexxna();
     AddSC_boss_patchwerk();
     AddSC_boss_razuvious();
-    AddSC_boss_highlord_mograine();
-    AddSC_boss_kelthuzad();
-    AddSC_boss_faerlina();
+    AddSC_boss_highlord_mograine();    
+    AddSC_boss_kelthuzad();    
     AddSC_boss_loatheb();
     AddSC_boss_noth();
     AddSC_boss_gluth();
@@ -1773,6 +1789,11 @@ void ScriptsInit()
     AddSC_ungoro_crater();
 
     //Upper blackrock spire
+
+    //Utgarde Keep
+    AddSC_boss_keleseth();
+    AddSC_instance_utgarde_keep();
+	
     //Wailing caverns
 
     //Western plaguelands
