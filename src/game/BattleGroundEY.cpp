@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,8 @@
 #include "ObjectMgr.h"
 #include "MapManager.h"
 #include "Language.h"
-#include "World.h"
+#include "World.h" //music
+#include "WorldPacket.h"
 #include "Util.h"
 
 // these variables aren't used outside of this file, so declare them only here
@@ -51,7 +52,7 @@ BattleGroundEY::~BattleGroundEY()
 {
 }
 
-void BattleGroundEY::Update(time_t diff)
+void BattleGroundEY::Update(uint32 diff)
 {
     BattleGround::Update(diff);
     // after bg start we get there (once)
@@ -523,8 +524,11 @@ bool BattleGroundEY::SetupBattleGround()
     return true;
 }
 
-void BattleGroundEY::ResetBGSubclass()
+void BattleGroundEY::Reset()
 {
+    //call parent's class reset
+    BattleGround::Reset();
+
     m_TeamScores[BG_TEAM_ALLIANCE] = 0;
     m_TeamScores[BG_TEAM_HORDE] = 0;
     m_TeamPointsCount[BG_TEAM_ALLIANCE] = 0;

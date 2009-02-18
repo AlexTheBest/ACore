@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -198,8 +198,8 @@ struct TRINITY_DLL_DECL boss_leotheras_the_blindAI : public ScriptedAI
         m_creature->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_TAUNT, true);
         m_creature->ApplySpellImmune(0, IMMUNITY_EFFECT,SPELL_EFFECT_ATTACK_ME, true);
         m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, MODEL_NIGHTELF);
-        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY  , 0);
-        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY+1, 0);
+		m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID  , 0);
+        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID+1, 0);
         m_creature->CastSpell(m_creature, SPELL_DUAL_WIELD, true);
         m_creature->SetCorpseDelay(1000*60*60);
         if(pInstance)
@@ -277,7 +277,7 @@ struct TRINITY_DLL_DECL boss_leotheras_the_blindAI : public ScriptedAI
             m_creature->RemoveAurasDueToSpell(AURA_BANISH);
 
             // Leotheras is getting immune again
-            m_creature->ApplySpellImmune(AURA_BANISH, IMMUNITY_MECHANIC, MECHANIC_BANISH, true);
+            m_creature->ApplySpellImmune(AURA_BANISH, IMMUNITY_MECHANIC, 1<<MECHANIC_BANISH, true);
 
             // changing model to bloodelf
             m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, MODEL_NIGHTELF);
@@ -298,15 +298,15 @@ struct TRINITY_DLL_DECL boss_leotheras_the_blindAI : public ScriptedAI
         {
             // channelers != 0 apply banish aura
             // removing Leotheras banish immune to apply AURA_BANISH
-            m_creature->ApplySpellImmune(AURA_BANISH, IMMUNITY_MECHANIC, MECHANIC_BANISH, false);
+            m_creature->ApplySpellImmune(AURA_BANISH, IMMUNITY_MECHANIC, 1<<MECHANIC_BANISH, false);
             DoCast(m_creature, AURA_BANISH);
 
             // changing model
             m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, MODEL_DEMON);
 
             // and removing weapons
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY  , 0);
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY+1, 0);
+            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID  , 0);
+            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID+1, 0);
         }
     }
 
@@ -469,8 +469,8 @@ struct TRINITY_DLL_DECL boss_leotheras_the_blindAI : public ScriptedAI
                     m_creature->RemoveAurasDueToSpell(SPELL_WHIRLWIND,0);
                     m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, MODEL_DEMON);
                     DoScriptText(SAY_SWITCH_TO_DEMON, m_creature);
-                    m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY  , 0);
-                    m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY+1, 0);
+					m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID  , 0);
+				    m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID+1, 0);
                     DemonForm = true;
                     NeedThreatReset = true;
                     SwitchToDemon_Timer = 45000;
