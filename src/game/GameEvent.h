@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -127,7 +127,9 @@ class GameEvent
         bool hasGameObjectActiveEventExcept(uint32 go_guid, uint16 event_id);
     protected:
         typedef std::list<uint32> GuidList;
+        typedef std::list<uint16> IdList;
         typedef std::vector<GuidList> GameEventGuidMap;
+        typedef std::vector<IdList> GameEventIdMap;
         typedef std::pair<uint32, ModelEquip> ModelEquipPair;
         typedef std::list<ModelEquipPair> ModelEquipList;
         typedef std::vector<ModelEquipList> GameEventModelEquipMap;
@@ -149,6 +151,7 @@ class GameEvent
         GameEventModelEquipMap mGameEventModelEquip;
         GameEventGuidMap  mGameEventCreatureGuids;
         GameEventGuidMap  mGameEventGameobjectGuids;
+        GameEventIdMap    mGameEventPoolIds;
         GameEventDataMap  mGameEvent;
         GameEventBitmask  mGameEventBattleGroundHolidays;
         QuestIdToEventConditionMap mQuestToEventConditions;
