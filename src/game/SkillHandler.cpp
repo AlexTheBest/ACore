@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,10 +82,6 @@ void WorldSession::HandleLearnTalentOpcode( WorldPacket & recv_data )
         }
     }
 
-    // Check if it requires spell
-    if( talentInfo->DependsOnSpell && !player->HasSpell(talentInfo->DependsOnSpell) )
-        return;
-
     // Find out how many points we have in this field
     uint32 spentPoints = 0;
 
@@ -133,7 +129,7 @@ void WorldSession::HandleLearnTalentOpcode( WorldPacket & recv_data )
         return;
 
     // learn! (other talent ranks will unlearned at learning)
-    GetPlayer( )->learnSpell(spellid);
+    GetPlayer( )->learnSpell(spellid,false);
     sLog.outDetail("TalentID: %u Rank: %u Spell: %u\n", talent_id, requested_rank, spellid);
 
     // update free talent points

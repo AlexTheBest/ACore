@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  *
  * This program is free software; you can redistribute it and/or modify
@@ -270,7 +270,7 @@ void InstanceSaveManager::CleanupInstances()
 
     // creature_respawn and gameobject_respawn are in another database
     // first, obtain total instance set
-    std::set< uint32 > InstanceSet;
+    std::set<uint32> InstanceSet;
     QueryResult *result = CharacterDatabase.Query("SELECT id FROM instance");
     if( result )
     {
@@ -322,7 +322,7 @@ void InstanceSaveManager::PackInstances()
     // TODO: this can be done a LOT more efficiently
 
     // obtain set of all associations
-    std::set< uint32 > InstanceSet;
+    std::set<uint32> InstanceSet;
 
     // all valid ids are in the instance table
     // any associations to ids not in this table are assumed to be
@@ -344,7 +344,7 @@ void InstanceSaveManager::PackInstances()
 
     uint32 InstanceNumber = 1;
     // we do assume std::set is sorted properly on integer value
-    for (std::set< uint32 >::iterator i = InstanceSet.begin(); i != InstanceSet.end(); ++i)
+    for (std::set<uint32>::iterator i = InstanceSet.begin(); i != InstanceSet.end(); ++i)
     {
         if (*i != InstanceNumber)
         {
@@ -361,8 +361,8 @@ void InstanceSaveManager::PackInstances()
         bar.step();
     }
 
-    sLog.outString();
     sLog.outString( ">> Instance numbers remapped, next instance id is %u", InstanceNumber );
+    sLog.outString();
 }
 
 void InstanceSaveManager::LoadResetTimes()
@@ -454,7 +454,7 @@ void InstanceSaveManager::LoadResetTimes()
     // add the global reset times to the priority queue
     for(uint32 i = 0; i < sInstanceTemplate.MaxEntry; i++)
     {
-        InstanceTemplate* temp = (InstanceTemplate*)objmgr.GetInstanceTemplate(i);
+        InstanceTemplate const* temp = objmgr.GetInstanceTemplate(i);
         if(!temp) continue;
         // only raid/heroic maps have a global reset time
         const MapEntry* entry = sMapStore.LookupEntry(temp->map);
@@ -583,7 +583,7 @@ void InstanceSaveManager::_ResetOrWarnAll(uint32 mapid, bool warn, uint32 timeLe
 {
     // global reset for all instances of the given map
     // note: this isn't fast but it's meant to be executed very rarely
-    Map *map = (MapInstanced*)MapManager::Instance().GetBaseMap(mapid);
+    Map const *map = MapManager::Instance().GetBaseMap(mapid);
     if(!map->Instanceable())
         return;
     uint64 now = (uint64)time(NULL);
@@ -591,7 +591,7 @@ void InstanceSaveManager::_ResetOrWarnAll(uint32 mapid, bool warn, uint32 timeLe
     if(!warn)
     {
         // this is called one minute before the reset time
-        InstanceTemplate* temp = (InstanceTemplate*)objmgr.GetInstanceTemplate(mapid);
+        InstanceTemplate const* temp = objmgr.GetInstanceTemplate(mapid);
         if(!temp || !temp->reset_delay)
         {
             sLog.outError("InstanceSaveManager::ResetOrWarnAll: no instance template or reset delay for map %d", mapid);

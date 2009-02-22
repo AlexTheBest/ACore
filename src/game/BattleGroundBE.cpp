@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,7 @@
 #include "Creature.h"
 #include "ObjectMgr.h"
 #include "MapManager.h"
+#include "WorldPacket.h"
 #include "Language.h"
 
 BattleGroundBE::BattleGroundBE()
@@ -37,7 +38,7 @@ BattleGroundBE::~BattleGroundBE()
 
 }
 
-void BattleGroundBE::Update(time_t diff)
+void BattleGroundBE::Update(uint32 diff)
 {
     BattleGround::Update(diff);
 
@@ -201,9 +202,10 @@ void BattleGroundBE::FillInitialWorldStates(WorldPacket &data)
     data << uint32(0x9f3) << uint32(1);           // 9
 }
 
-void BattleGroundBE::ResetBGSubclass()
+void BattleGroundBE::Reset()
 {
-
+    //call parent's class reset
+    BattleGround::Reset();
 }
 
 bool BattleGroundBE::SetupBattleGround()
