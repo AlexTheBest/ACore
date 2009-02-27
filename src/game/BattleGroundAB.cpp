@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 #include "Language.h"
 #include "World.h"
 #include "Util.h"
+#include "WorldPacket.h"
 
 // these variables aren't used outside of this file, so declare them only here
 uint32 BG_AB_HonorScoreTicks[BG_HONOR_MODE_NUM] = {
@@ -52,7 +53,7 @@ BattleGroundAB::~BattleGroundAB()
 {
 }
 
-void BattleGroundAB::Update(time_t diff)
+void BattleGroundAB::Update(uint32 diff)
 {
     BattleGround::Update(diff);
 
@@ -425,9 +426,9 @@ void BattleGroundAB::_NodeDeOccupied(uint8 node)
     {
         WorldSafeLocsEntry const *ClosestGrave = NULL;
         Player *plr;
-        for (std::vector<uint64>::iterator itr = ghost_list.begin(); itr != ghost_list.end(); ++itr)
+        for (std::vector<uint64>::const_iterator itr = ghost_list.begin(); itr != ghost_list.end(); ++itr)
         {
-            plr = objmgr.GetPlayer(*ghost_list.begin());
+            plr = objmgr.GetPlayer(*itr);
             if( !plr )
                 continue;
             if( !ClosestGrave )
@@ -591,8 +592,11 @@ bool BattleGroundAB::SetupBattleGround()
     return true;
 }
 
-void BattleGroundAB::ResetBGSubclass()
+void BattleGroundAB::Reset()
 {
+    //call parent's class reset
+    BattleGround::Reset();
+
     m_TeamScores[BG_TEAM_ALLIANCE]          = 0;
     m_TeamScores[BG_TEAM_HORDE]             = 0;
     m_lastTick[BG_TEAM_ALLIANCE]            = 0;

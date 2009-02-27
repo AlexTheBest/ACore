@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -300,7 +300,7 @@ class BattleGroundEY : public BattleGround
     public:
         BattleGroundEY();
         ~BattleGroundEY();
-        void Update(time_t diff);
+        void Update(uint32 diff);
 
         /* inherited from BattlegroundClass */
         virtual void AddPlayer(Player *plr);
@@ -319,7 +319,7 @@ class BattleGroundEY : public BattleGround
         void HandleKillPlayer(Player *player, Player *killer);
         virtual WorldSafeLocsEntry const* GetClosestGraveYard(float x, float y, float z, uint32 team);
         virtual bool SetupBattleGround();
-        virtual void ResetBGSubclass();
+        virtual void Reset();
         void UpdateTeamScore(uint32 Team);
         void UpdatePlayerScore(Player *Source, uint32 type, uint32 value);
         virtual void FillInitialWorldStates(WorldPacket& data);

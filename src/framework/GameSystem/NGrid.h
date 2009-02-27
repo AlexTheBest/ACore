@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,21 +75,21 @@ class TRINITY_DLL_DECL NGrid
     public:
 
         typedef Grid<ACTIVE_OBJECT, WORLD_OBJECT_TYPES, GRID_OBJECT_TYPES, ThreadModel> GridType;
-        NGrid(uint32 id, int32 x, int32 y, time_t expiry, bool unload = true) :
-            i_gridId(id), i_cellstate(GRID_STATE_INVALID), i_x(x), i_y(y), i_GridObjectDataLoaded(false)
-            {
-                i_GridInfo = GridInfo(expiry, unload);
-            }
+        NGrid(uint32 id, int32 x, int32 y, time_t expiry, bool unload = true)
+            : i_gridId(id), i_x(x), i_y(y), i_cellstate(GRID_STATE_INVALID), i_GridObjectDataLoaded(false)
+        {
+            i_GridInfo = GridInfo(expiry, unload);
+        }
 
         const GridType& operator()(unsigned short x, unsigned short y) const { return i_cells[x][y]; }
         GridType& operator()(unsigned short x, unsigned short y) { return i_cells[x][y]; }
 
-        inline const uint32& GetGridId(void) const { return i_gridId; }
-        inline void SetGridId(const uint32 id) const { i_gridId = id; }
-        inline grid_state_t GetGridState(void) const { return i_cellstate; }
-        inline void SetGridState(grid_state_t s) { i_cellstate = s; }
-        inline int32 getX() const { return i_x; }
-        inline int32 getY() const { return i_y; }
+        const uint32& GetGridId(void) const { return i_gridId; }
+        void SetGridId(const uint32 id) const { i_gridId = id; }
+        grid_state_t GetGridState(void) const { return i_cellstate; }
+        void SetGridState(grid_state_t s) { i_cellstate = s; }
+        int32 getX() const { return i_x; }
+        int32 getY() const { return i_y; }
 
         void link(GridRefManager<NGrid<N, ACTIVE_OBJECT, WORLD_OBJECT_TYPES, GRID_OBJECT_TYPES, ThreadModel> >* pTo)
         {
