@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -56,7 +56,8 @@ enum TypeMask
     TYPEMASK_DYNAMICOBJECT  = 0x0040,
     TYPEMASK_CORPSE         = 0x0080,
     TYPEMASK_AIGROUP        = 0x0100,
-    TYPEMASK_AREATRIGGER    = 0x0200
+    TYPEMASK_AREATRIGGER    = 0x0200,
+    TYPEMASK_FARSIGHTOBJ    = TYPEMASK_PLAYER | TYPEMASK_UNIT | TYPEMASK_DYNAMICOBJECT
 };
 
 enum TypeID
@@ -72,6 +73,7 @@ enum TypeID
     TYPEID_AIGROUP       = 8,
     TYPEID_AREATRIGGER   = 9
 };
+#define MAX_TYPEID         10
 
 uint32 GuidHigh2TypeId(uint32 guid_hi);
 
@@ -85,6 +87,12 @@ enum TempSummonType
     TEMPSUMMON_CORPSE_TIMED_DESPAWN        = 6,             // despawns after a specified time after death
     TEMPSUMMON_DEAD_DESPAWN                = 7,             // despawns when the creature disappears
     TEMPSUMMON_MANUAL_DESPAWN              = 8              // despawns when UnSummon() is called
+};
+
+enum PhaseMasks
+{
+    PHASEMASK_NORMAL   = 0x00000001,
+    PHASEMASK_ANYWHERE = 0xFFFFFFFF
 };
 
 class WorldPacket;
@@ -354,7 +362,7 @@ class TRINITY_DLL_SPEC WorldObject : public Object
 
         virtual void Update ( uint32 /*time_diff*/ ) { }
 
-        void _Create( uint32 guidlow, HighGuid guidhigh, uint32 mapid );
+        void _Create( uint32 guidlow, HighGuid guidhigh, uint32 mapid, uint32 phaseMask);
 
         void Relocate(float x, float y, float z, float orientation)
         {
@@ -416,8 +424,12 @@ class TRINITY_DLL_SPEC WorldObject : public Object
         void GetRandomPoint( float x, float y, float z, float distance, float &rand_x, float &rand_y, float &rand_z ) const;
 
         void SetMapId(uint32 newMap) { m_mapId = newMap; }
-
         uint32 GetMapId() const { return m_mapId; }
+
+        virtual void SetPhaseMask(uint32 newPhaseMask, bool update);
+        uint32 GetPhaseMask() const { return m_phaseMask; }
+        bool InSamePhase(WorldObject const* obj) const { return InSamePhase(obj->GetPhaseMask()); }
+        bool InSamePhase(uint32 phasemask) const { return (GetPhaseMask() & phasemask); }
 
         uint32 GetZoneId() const;
         uint32 GetAreaId() const;
@@ -435,7 +447,11 @@ class TRINITY_DLL_SPEC WorldObject : public Object
         float GetDistance2d(const WorldObject* obj) const;
         float GetDistance2d(const float x, const float y) const;
         float GetDistanceZ(const WorldObject* obj) const;
-        bool IsInMap(const WorldObject* obj) const { return GetMapId()==obj->GetMapId() && GetInstanceId()==obj->GetInstanceId(); }
+        bool IsInMap(const WorldObject* obj) const
+        {
+            return IsInWorld() && obj->IsInWorld() && GetMapId()==obj->GetMapId() &&
+                GetInstanceId()==obj->GetInstanceId() && InSamePhase(obj);
+        }
         bool IsWithinDistInMap(const WorldObject* obj, const float dist2compare, const bool is3D = true) const;
         bool IsWithinLOS(const float x, const float y, const float z ) const;
         bool IsWithinLOSInMap(const WorldObject* obj) const;
@@ -496,7 +512,9 @@ class TRINITY_DLL_SPEC WorldObject : public Object
         bool m_isActive;
 
     private:
-        uint32 m_mapId;
+        uint32 m_mapId;                                     // object at map with map_id
+        uint32 m_InstanceId;                                // in map copy with instance id
+        uint32 m_phaseMask;                                 // in area phase state
 
         float m_positionX;
         float m_positionY;
@@ -504,8 +522,6 @@ class TRINITY_DLL_SPEC WorldObject : public Object
         float m_orientation;
 
         bool mSemaphoreTeleport;
-
-        uint32 m_InstanceId;
 };
 #endif
 
