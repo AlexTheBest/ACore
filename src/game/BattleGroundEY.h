@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,8 +26,8 @@
 class BattleGround;
 
 #define EY_MAX_TEAM_SCORE         2000
-#define BG_EY_FLAG_RESPAWN_TIME   10000                     //10 seconds
-#define BG_EY_FPOINTS_TICK_TIME   2000                      //2 seconds
+#define BG_EY_FLAG_RESPAWN_TIME   (10*IN_MILISECONDS)       //10 seconds
+#define BG_EY_FPOINTS_TICK_TIME   (2*IN_MILISECONDS)        //2 seconds
 
 enum BG_EY_WorldStates
 {
@@ -300,7 +300,7 @@ class BattleGroundEY : public BattleGround
     public:
         BattleGroundEY();
         ~BattleGroundEY();
-        void Update(time_t diff);
+        void Update(uint32 diff);
 
         /* inherited from BattlegroundClass */
         virtual void AddPlayer(Player *plr);
@@ -317,9 +317,9 @@ class BattleGroundEY : public BattleGround
         void HandleBuffUse(uint64 const& buff_guid);
         void HandleAreaTrigger(Player *Source, uint32 Trigger);
         void HandleKillPlayer(Player *player, Player *killer);
-        virtual WorldSafeLocsEntry const* GetClosestGraveYard(float x, float y, float z, uint32 team);
+        virtual WorldSafeLocsEntry const* GetClosestGraveYard(Player* player);
         virtual bool SetupBattleGround();
-        virtual void ResetBGSubclass();
+        virtual void Reset();
         void UpdateTeamScore(uint32 Team);
         void UpdatePlayerScore(Player *Source, uint32 type, uint32 value);
         virtual void FillInitialWorldStates(WorldPacket& data);

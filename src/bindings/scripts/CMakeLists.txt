@@ -20,15 +20,15 @@ SET(trinityscript_LIB_SRCS
    scripts/creature/mob_generic_creature.cpp
    scripts/creature/simple_ai.cpp
    scripts/creature/simple_ai.h
-   scripts/custom/custom_example.cpp
-   scripts/custom/custom_gossip_codebox.cpp
-   scripts/custom/test.cpp
+   scripts/examples/example_creature.cpp
+   scripts/examples/example_escort.cpp
+   scripts/examples/example_gossip_codebox.cpp
+   scripts/examples/example_misc.cpp
    scripts/go/go_scripts.cpp
    scripts/guard/guard_ai.cpp
    scripts/guard/guard_ai.h
    scripts/guard/guards.cpp
    scripts/item/item_scripts.cpp
-   scripts/item/item_test.cpp
    scripts/npc/npc_escortAI.cpp
    scripts/npc/npc_escortAI.h
    scripts/npc/npc_innkeeper.cpp
@@ -106,6 +106,7 @@ SET(trinityscript_LIB_SRCS
    scripts/zone/blasted_lands/blasted_lands.cpp
    scripts/zone/blasted_lands/boss_kruul.cpp
    scripts/zone/bloodmyst_isle/bloodmyst_isle.cpp
+   scripts/zone/borean_tundra/borean_tundra.cpp
    scripts/zone/burning_steppes/burning_steppes.cpp
    scripts/zone/caverns_of_time/dark_portal/def_dark_portal.h
    scripts/zone/caverns_of_time/dark_portal/instance_dark_portal.cpp
@@ -221,7 +222,6 @@ SET(trinityscript_LIB_SRCS
    scripts/zone/naxxramas/boss_gothik.cpp
    scripts/zone/naxxramas/boss_grobbulus.cpp
    scripts/zone/naxxramas/boss_heigan.cpp
-   scripts/zone/naxxramas/boss_highlord_mograine.cpp
    scripts/zone/naxxramas/boss_kelthuzad.cpp
    scripts/zone/naxxramas/boss_four_horsemen.cpp
    scripts/zone/naxxramas/boss_loatheb.cpp
@@ -346,6 +346,9 @@ SET(trinityscript_LIB_SRCS
    scripts/zone/uldaman/uldaman.cpp
    scripts/zone/undercity/undercity.cpp
    scripts/zone/ungoro_crater/ungoro_crater.cpp
+   scripts/zone/utgarde_keep/utgarde_keep/instance_utgarde_keep.cpp
+   scripts/zone/utgarde_keep/utgarde_keep/boss_keleseth.cpp
+   scripts/zone/utgarde_keep/utgarde_keep/boss_skarvald_dalronn.cpp
    scripts/zone/wailing_caverns/instance_wailing_caverns.cpp
    scripts/zone/western_plaguelands/western_plaguelands.cpp
    scripts/zone/westfall/westfall.cpp

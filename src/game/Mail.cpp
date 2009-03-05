@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -601,7 +601,7 @@ void WorldSession::HandleGetMail(WorldPacket & recv_data )
         data << (uint32) (*itr)->mailTemplateId;            // mail template (MailTemplate.dbc)
         data << (*itr)->subject;                            // Subject string - once 00, when mail type = 3
 
-        data << (uint8) item_count;
+        data << (uint8) item_count;                         // client limit is 0x10
 
         for(uint8 i = 0; i < item_count; ++i)
         {
@@ -612,7 +612,7 @@ void WorldSession::HandleGetMail(WorldPacket & recv_data )
             data << (uint32) (item ? item->GetGUIDLow() : 0);
             // entry
             data << (uint32) (item ? item->GetEntry() : 0);
-            for(uint8 j = 0; j < 6; ++j)
+            for(uint8 j = 0; j < MAX_INSPECTED_ENCHANTMENT_SLOT; ++j)
             {
                 // unsure
                 data << (uint32) (item ? item->GetEnchantmentCharges((EnchantmentSlot)j) : 0);
@@ -626,13 +626,15 @@ void WorldSession::HandleGetMail(WorldPacket & recv_data )
             // unk
             data << (uint32) (item ? item->GetItemSuffixFactor() : 0);
             // stack count
-            data << (uint8)  (item ? item->GetCount() : 0);
+            data << (uint32) (item ? item->GetCount() : 0);
             // charges
             data << (uint32) (item ? item->GetSpellCharges() : 0);
             // durability
             data << (uint32) (item ? item->GetUInt32Value(ITEM_FIELD_MAXDURABILITY) : 0);
             // durability
             data << (uint32) (item ? item->GetUInt32Value(ITEM_FIELD_DURABILITY) : 0);
+            // unknown wotlk
+            data << (uint8)  0;
         }
 
         mails_count += 1;

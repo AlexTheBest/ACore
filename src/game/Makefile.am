@@ -1,6 +1,6 @@
-# Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+# Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
 #
-# Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+# Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -9,297 +9,309 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, write to the Free Software
-# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 
 ## Process this file with automake to produce Makefile.in
 
 ## Sub-directories to parse
 
 ## CPP flags for includes, defines, etc.
-AM_CPPFLAGS = 
+AM_CPPFLAGS = $(TRINI_INCLUDES) -I$(top_builddir)/src/shared -I$(srcdir) -I$(srcdir)/../../dep/include -I$(srcdir)/../framework -I$(srcdir)/../shared -I$(srcdir)/../shared/vmap -I$(srcdir)/../realmd -DSYSCONFDIR=\"$(sysconfdir)/\"
 
 ## Build MaNGOS game library as convenience library.
 #  All libraries will be convenience libraries. Might be changed to shared
 #  later.
-noinst_LIBRARIES = libgame.a
-
-libgame_a_CPPFLAGS = \
-$(MYSQL_INCLUDES) \
-$(POSTGRE_INCLUDES) \
-$(TRINI_INCLUDES) \
--I$(top_srcdir)/dep/include \
--I$(top_srcdir)/src/framework \
--I$(top_srcdir)/src/shared \
--I$(top_srcdir)/src/shared/vmap
+noinst_LIBRARIES = libmangosgame.a
 
 #  libmangossgame library will later be reused by ...
-libgame_a_SOURCES = \
-$(srcdir)/AccountMgr.cpp \
-$(srcdir)/AccountMgr.h \
-$(srcdir)/AddonHandler.cpp \
-$(srcdir)/AddonHandler.h \
-$(srcdir)/AggressorAI.cpp \
-$(srcdir)/AggressorAI.h \
-$(srcdir)/AnimalRandomMovementGenerator.h \
-$(srcdir)/ArenaTeam.cpp \
-$(srcdir)/ArenaTeam.h \
-$(srcdir)/ArenaTeamHandler.cpp \
-$(srcdir)/AuctionHouse.cpp \
-$(srcdir)/AuctionHouseBot.cpp \
-$(srcdir)/AuctionHouseBot.h \
-$(srcdir)/AuctionHouseObject.h \
-$(srcdir)/Bag.cpp \
-$(srcdir)/Bag.h \
-$(srcdir)/BattleGround.cpp \
-$(srcdir)/BattleGroundAA.cpp \
-$(srcdir)/BattleGroundAB.cpp \
-$(srcdir)/BattleGroundAV.cpp \
-$(srcdir)/BattleGroundBE.cpp \
-$(srcdir)/BattleGroundEY.cpp \
-$(srcdir)/BattleGroundNA.cpp \
-$(srcdir)/BattleGroundRL.cpp \
-$(srcdir)/BattleGroundWS.cpp \
-$(srcdir)/BattleGround.h \
-$(srcdir)/BattleGroundAA.h \
-$(srcdir)/BattleGroundAB.h \
-$(srcdir)/BattleGroundAV.h \
-$(srcdir)/BattleGroundBE.h \
-$(srcdir)/BattleGroundEY.h \
-$(srcdir)/BattleGroundNA.h \
-$(srcdir)/BattleGroundRL.h \
-$(srcdir)/BattleGroundWS.h \
-$(srcdir)/BattleGroundHandler.cpp \
-$(srcdir)/BattleGroundMgr.cpp \
-$(srcdir)/BattleGroundMgr.h \
-$(srcdir)/Cell.h \
-$(srcdir)/CellImpl.h \
-$(srcdir)/Channel.cpp \
-$(srcdir)/Channel.h \
-$(srcdir)/ChannelHandler.cpp \
-$(srcdir)/ChannelMgr.h \
-$(srcdir)/CharacterHandler.cpp \
-$(srcdir)/Chat.cpp \
-$(srcdir)/Chat.h \
-$(srcdir)/ChatHandler.cpp \
-$(srcdir)/CombatHandler.cpp \
-$(srcdir)/ConfusedMovementGenerator.cpp \
-$(srcdir)/ConfusedMovementGenerator.h \
-$(srcdir)/Corpse.cpp \
-$(srcdir)/Corpse.h \
-$(srcdir)/CreatureAI.cpp \
-$(srcdir)/CreatureAI.h \
-$(srcdir)/CreatureAIImpl.h \
-$(srcdir)/CreatureAIRegistry.cpp \
-$(srcdir)/CreatureAIRegistry.h \
-$(srcdir)/CreatureAISelector.cpp \
-$(srcdir)/CreatureAISelector.h \
-$(srcdir)/CreatureGroups.cpp \
-$(srcdir)/CreatureGroups.h \
-$(srcdir)/Creature.cpp \
-$(srcdir)/Creature.h \
-$(srcdir)/Debugcmds.cpp \
-$(srcdir)/DestinationHolder.cpp \
-$(srcdir)/DestinationHolder.h \
-$(srcdir)/DestinationHolderImp.h \
-$(srcdir)/DuelHandler.cpp \
-$(srcdir)/DynamicObject.cpp \
-$(srcdir)/DynamicObject.h \
-$(srcdir)/FleeingMovementGenerator.cpp \
-$(srcdir)/FleeingMovementGenerator.h \
-$(srcdir)/Formulas.h \
-$(srcdir)/GameEvent.cpp \
-$(srcdir)/GameEvent.h \
-$(srcdir)/GameObject.cpp \
-$(srcdir)/GameObject.h \
-$(srcdir)/GlobalEvents.cpp \
-$(srcdir)/GlobalEvents.h \
-$(srcdir)/GossipDef.cpp \
-$(srcdir)/GossipDef.h \
-$(srcdir)/GridDefines.h \
-$(srcdir)/GridNotifiers.cpp \
-$(srcdir)/GridNotifiers.h \
-$(srcdir)/GridNotifiersImpl.h \
-$(srcdir)/GridStates.cpp \
-$(srcdir)/GridStates.h \
-$(srcdir)/Group.cpp \
-$(srcdir)/Group.h \
-$(srcdir)/GroupHandler.cpp \
-$(srcdir)/GuardAI.cpp \
-$(srcdir)/GuardAI.h \
-$(srcdir)/Guild.cpp \
-$(srcdir)/Guild.h \
-$(srcdir)/GuildHandler.cpp \
-$(srcdir)/HomeMovementGenerator.cpp \
-$(srcdir)/HomeMovementGenerator.h \
-$(srcdir)/HostilRefManager.cpp \
-$(srcdir)/HostilRefManager.h \
-$(srcdir)/IdleMovementGenerator.cpp \
-$(srcdir)/IdleMovementGenerator.h \
-$(srcdir)/InstanceData.cpp \
-$(srcdir)/InstanceData.h \
-$(srcdir)/InstanceSaveMgr.cpp \
-$(srcdir)/InstanceSaveMgr.h \
-$(srcdir)/Item.cpp \
-$(srcdir)/Item.h \
-$(srcdir)/ItemEnchantmentMgr.cpp \
-$(srcdir)/ItemEnchantmentMgr.h \
-$(srcdir)/ItemHandler.cpp \
-$(srcdir)/ItemPrototype.h \
-$(srcdir)/Language.h \
-$(srcdir)/Level0.cpp \
-$(srcdir)/Level1.cpp \
-$(srcdir)/Level2.cpp \
-$(srcdir)/Level3.cpp \
-$(srcdir)/LFGHandler.cpp \
-$(srcdir)/LootHandler.cpp \
-$(srcdir)/LootMgr.cpp \
-$(srcdir)/LootMgr.h \
-$(srcdir)/Mail.cpp \
-$(srcdir)/Mail.h \
-$(srcdir)/Map.cpp \
-$(srcdir)/Map.h \
-$(srcdir)/MapInstanced.cpp \
-$(srcdir)/MapInstanced.h \
-$(srcdir)/MapManager.cpp \
-$(srcdir)/MapManager.h \
-$(srcdir)/MiscHandler.cpp \
-$(srcdir)/MotionMaster.cpp \
-$(srcdir)/MotionMaster.h \
-$(srcdir)/MovementGenerator.cpp \
-$(srcdir)/MovementGenerator.h \
-$(srcdir)/MovementGeneratorImpl.h \
-$(srcdir)/MovementHandler.cpp \
-$(srcdir)/NPCHandler.cpp \
-$(srcdir)/NPCHandler.h \
-$(srcdir)/NullCreatureAI.cpp \
-$(srcdir)/NullCreatureAI.h \
-$(srcdir)/ObjectAccessor.cpp \
-$(srcdir)/ObjectAccessor.h \
-$(srcdir)/Object.cpp \
-$(srcdir)/ObjectDefines.h \
-$(srcdir)/ObjectGridLoader.cpp \
-$(srcdir)/ObjectGridLoader.h \
-$(srcdir)/Object.h \
-$(srcdir)/ObjectMgr.cpp \
-$(srcdir)/ObjectMgr.h \
-$(srcdir)/Opcodes.cpp \
-$(srcdir)/Opcodes.h \
-$(srcdir)/OutdoorPvP.cpp \
-$(srcdir)/OutdoorPvP.h \
-$(srcdir)/OutdoorPvPEP.cpp \
-$(srcdir)/OutdoorPvPEP.h \
-$(srcdir)/OutdoorPvPHP.cpp \
-$(srcdir)/OutdoorPvPHP.h \
-$(srcdir)/OutdoorPvPMgr.cpp \
-$(srcdir)/OutdoorPvPMgr.h \
-$(srcdir)/OutdoorPvPNA.cpp \
-$(srcdir)/OutdoorPvPNA.h \
-$(srcdir)/OutdoorPvPObjectiveAI.cpp \
-$(srcdir)/OutdoorPvPObjectiveAI.h \
-$(srcdir)/OutdoorPvPSI.cpp \
-$(srcdir)/OutdoorPvPSI.h \
-$(srcdir)/OutdoorPvPTF.cpp \
-$(srcdir)/OutdoorPvPTF.h \
-$(srcdir)/OutdoorPvPZM.cpp \
-$(srcdir)/OutdoorPvPZM.h \
-$(srcdir)/Path.h \
-$(srcdir)/PetAI.cpp \
-$(srcdir)/PetAI.h \
-$(srcdir)/Pet.cpp \
-$(srcdir)/Pet.h \
-$(srcdir)/PetHandler.cpp \
-$(srcdir)/PetitionsHandler.cpp \
-$(srcdir)/Player.cpp \
-$(srcdir)/Player.h \
-$(srcdir)/PlayerDump.cpp \
-$(srcdir)/PlayerDump.h \
-$(srcdir)/PointMovementGenerator.cpp \
-$(srcdir)/PointMovementGenerator.h \
-$(srcdir)/PossessedAI.cpp \
-$(srcdir)/PossessedAI.h \
-$(srcdir)/QueryHandler.cpp \
-$(srcdir)/QuestDef.cpp \
-$(srcdir)/QuestDef.h \
-$(srcdir)/QuestHandler.cpp \
-$(srcdir)/RandomMovementGenerator.cpp \
-$(srcdir)/RandomMovementGenerator.h \
-$(srcdir)/ReactorAI.cpp \
-$(srcdir)/ReactorAI.h \
-$(srcdir)/ScriptCalls.cpp \
-$(srcdir)/ScriptCalls.h \
-$(srcdir)/SharedDefines.h \
-$(srcdir)/SkillHandler.cpp \
-$(srcdir)/SpellAuraDefines.h \
-$(srcdir)/SpellAuras.cpp \
-$(srcdir)/SpellAuras.h \
-$(srcdir)/Spell.cpp \
-$(srcdir)/SpellEffects.cpp \
-$(srcdir)/Spell.h \
-$(srcdir)/SkillDiscovery.cpp \
-$(srcdir)/SkillDiscovery.h \
-$(srcdir)/SkillExtraItems.cpp \
-$(srcdir)/SkillExtraItems.h \
-$(srcdir)/SpellHandler.cpp \
-$(srcdir)/SocialMgr.cpp \
-$(srcdir)/SocialMgr.h \
-$(srcdir)/SpellMgr.cpp \
-$(srcdir)/SpellMgr.h \
-$(srcdir)/StatSystem.cpp \
-$(srcdir)/TargetedMovementGenerator.cpp \
-$(srcdir)/TargetedMovementGenerator.h \
-$(srcdir)/TaxiHandler.cpp \
-$(srcdir)/TemporarySummon.cpp \
-$(srcdir)/TemporarySummon.h \
-$(srcdir)/TicketHandler.cpp \
-$(srcdir)/TicketMgr.cpp \
-$(srcdir)/TicketMgr.h \
-$(srcdir)/Tools.cpp \
-$(srcdir)/Tools.h \
-$(srcdir)/TotemAI.cpp \
-$(srcdir)/TotemAI.h \
-$(srcdir)/Totem.cpp \
-$(srcdir)/Totem.h \
-$(srcdir)/TradeHandler.cpp \
-$(srcdir)/Transports.cpp \
-$(srcdir)/Transports.h \
-$(srcdir)/ThreatManager.cpp \
-$(srcdir)/ThreatManager.h \
-$(srcdir)/Traveller.h \
-$(srcdir)/Unit.cpp \
-$(srcdir)/Unit.h \
-$(srcdir)/UnitEvents.h \
-$(srcdir)/UpdateData.cpp \
-$(srcdir)/UpdateData.h \
-$(srcdir)/UpdateFields.h \
-$(srcdir)/UpdateMask.h \
-$(srcdir)/VoiceChatHandler.cpp \
-$(srcdir)/WaypointManager.cpp \
-$(srcdir)/WaypointManager.h \
-$(srcdir)/WaypointMovementGenerator.cpp \
-$(srcdir)/WaypointMovementGenerator.h \
-$(srcdir)/Weather.cpp \
-$(srcdir)/Weather.h \
-$(srcdir)/World.cpp \
-$(srcdir)/World.h \
-$(srcdir)/WorldLog.cpp \
-$(srcdir)/WorldLog.h \
-$(srcdir)/WorldSession.cpp \
-$(srcdir)/WorldSession.h \
-$(srcdir)/WorldSocket.cpp \
-$(srcdir)/WorldSocket.h \
-$(srcdir)/WorldSocketMgr.cpp \
-$(srcdir)/WorldSocketMgr.h \
-$(srcdir)/FollowerReference.cpp \
-$(srcdir)/FollowerReference.h \
-$(srcdir)/FollowerRefManager.h \
-$(srcdir)/GroupReference.cpp \
-$(srcdir)/GroupReference.h \
-$(srcdir)/GroupRefManager.h
+libmangosgame_a_SOURCES = \
+    AccountMgr.cpp \
+    AccountMgr.h \
+    AchievementMgr.h \
+    AchievementMgr.cpp \
+    AddonHandler.cpp \
+    AddonHandler.h \
+    AggressorAI.cpp \
+    AggressorAI.h \
+    AnimalRandomMovementGenerator.h \
+    ArenaTeam.cpp \
+    ArenaTeam.h \
+    ArenaTeamHandler.cpp \
+    AuctionHouseBot.cpp \
+    AuctionHouseBot.h \
+    AuctionHouseHandler.cpp \
+    AuctionHouseMgr.cpp \
+    AuctionHouseMgr.h \
+    Bag.cpp \
+    Bag.h \
+    BattleGround.cpp \
+    BattleGroundAA.cpp \
+    BattleGroundAB.cpp \
+    BattleGroundAV.cpp \
+    BattleGroundBE.cpp \
+    BattleGroundDS.cpp \
+    BattleGroundEY.cpp \
+    BattleGroundNA.cpp \
+    BattleGroundRL.cpp \
+    BattleGroundRV.cpp \
+    BattleGroundSA.cpp \
+    BattleGroundWS.cpp \
+    BattleGround.h \
+    BattleGroundAA.h \
+    BattleGroundAB.h \
+    BattleGroundAV.h \
+    BattleGroundBE.h \
+    BattleGroundDS.h \
+    BattleGroundEY.h \
+    BattleGroundNA.h \
+    BattleGroundRL.h \
+    BattleGroundRV.h \
+    BattleGroundSA.h \
+    BattleGroundWS.h \
+    BattleGroundHandler.cpp \
+    BattleGroundMgr.cpp \
+    BattleGroundMgr.h \
+    Calendar.cpp \
+    Calendar.h \
+    CalendarHandler.cpp \
+    Cell.h \
+    CellImpl.h \
+    Channel.cpp \
+    Channel.h \
+    ChannelHandler.cpp \
+    ChannelMgr.h \
+    CharacterHandler.cpp \
+    Chat.cpp \
+    Chat.h \
+    ChatHandler.cpp \
+    CombatHandler.cpp \
+    ConfusedMovementGenerator.cpp \
+    ConfusedMovementGenerator.h \
+    Corpse.cpp \
+    Corpse.h \
+    CreatureAI.cpp \
+    CreatureAI.h \
+    CreatureAIImpl.h \
+    CreatureAIRegistry.cpp \
+    CreatureAIRegistry.h \
+    CreatureAISelector.cpp \
+    CreatureAISelector.h \
+    CreatureGroups.cpp \
+    CreatureGroups.h \
+    Creature.cpp \
+    Creature.h \
+    debugcmds.cpp \
+    DestinationHolder.cpp \
+    DestinationHolder.h \
+    DestinationHolderImp.h \
+    DuelHandler.cpp \
+    DynamicObject.cpp \
+    DynamicObject.h \
+    FleeingMovementGenerator.cpp \
+    FleeingMovementGenerator.h \
+    Formulas.h \
+    GameEvent.cpp \
+    GameEvent.h \
+    GameObject.cpp \
+    GameObject.h \
+    GlobalEvents.cpp \
+    GlobalEvents.h \
+    GossipDef.cpp \
+    GossipDef.h \
+    GridDefines.h \
+    GridNotifiers.cpp \
+    GridNotifiers.h \
+    GridNotifiersImpl.h \
+    GridStates.cpp \
+    GridStates.h \
+    Group.cpp \
+    Group.h \
+    GroupHandler.cpp \
+    GuardAI.cpp \
+    GuardAI.h \
+    Guild.cpp \
+    Guild.h \
+    GuildHandler.cpp \
+    HomeMovementGenerator.cpp \
+    HomeMovementGenerator.h \
+    HostilRefManager.cpp \
+    HostilRefManager.h \
+    IdleMovementGenerator.cpp \
+    IdleMovementGenerator.h \
+    InstanceData.cpp \
+    InstanceData.h \
+    InstanceSaveMgr.cpp \
+    InstanceSaveMgr.h \
+    Item.cpp \
+    Item.h \
+    ItemEnchantmentMgr.cpp \
+    ItemEnchantmentMgr.h \
+    ItemHandler.cpp \
+    ItemPrototype.h \
+    Language.h \
+    Level0.cpp \
+    Level1.cpp \
+    Level2.cpp \
+    Level3.cpp \
+    LFGHandler.cpp \
+    LootHandler.cpp \
+    LootMgr.cpp \
+    LootMgr.h \
+    Mail.cpp \
+    Mail.h \
+    Map.cpp \
+    Map.h \
+    MapInstanced.cpp \
+    MapInstanced.h \
+    MapManager.cpp \
+    MapManager.h \
+    MapReference.h \
+    MapRefManager.h \
+    MiscHandler.cpp \
+    MotionMaster.cpp \
+    MotionMaster.h \
+    MovementGenerator.cpp \
+    MovementGenerator.h \
+    MovementGeneratorImpl.h \
+    MovementHandler.cpp \
+    NPCHandler.cpp \
+    NPCHandler.h \
+    NullCreatureAI.cpp \
+    NullCreatureAI.h \
+    ObjectAccessor.cpp \
+    ObjectAccessor.h \
+    Object.cpp \
+    ObjectDefines.h \
+    ObjectGridLoader.cpp \
+    ObjectGridLoader.h \
+    Object.h \
+    ObjectMgr.cpp \
+    ObjectMgr.h \
+    ObjectPosSelector.cpp \
+    ObjectPosSelector.h \
+    Opcodes.cpp \
+    Opcodes.h \
+    OutdoorPvP.cpp \
+    OutdoorPvP.h \
+    OutdoorPvPEP.cpp \
+    OutdoorPvPEP.h \
+    OutdoorPvPHP.cpp \
+    OutdoorPvPHP.h \
+    OutdoorPvPMgr.cpp \
+    OutdoorPvPMgr.h \
+    OutdoorPvPNA.cpp \
+    OutdoorPvPNA.h \
+    OutdoorPvPObjectiveAI.cpp \
+    OutdoorPvPObjectiveAI.h \
+    OutdoorPvPSI.cpp \
+    OutdoorPvPSI.h \
+    OutdoorPvPTF.cpp \
+    OutdoorPvPTF.h \
+    OutdoorPvPZM.cpp \
+    OutdoorPvPZM.h \
+    Path.h \
+    PetAI.cpp \
+    PetAI.h \
+    Pet.cpp \
+    Pet.h \
+    PetHandler.cpp \
+    PetitionsHandler.cpp \
+    Player.cpp \
+    Player.h \
+    PlayerDump.cpp \
+    PlayerDump.h \
+    PossessedAI.cpp \
+    PossessedAI.h \
+    PointMovementGenerator.cpp \
+    PointMovementGenerator.h \
+    PoolHandler.cpp \
+    PoolHandler.h \
+    QueryHandler.cpp \
+    QuestDef.cpp \
+    QuestDef.h \
+    QuestHandler.cpp \
+    RandomMovementGenerator.cpp \
+    RandomMovementGenerator.h \
+    ReactorAI.cpp \
+    ReactorAI.h \
+    ScriptCalls.cpp \
+    ScriptCalls.h \
+    SharedDefines.h \
+    SkillHandler.cpp \
+    SpellAuraDefines.h \
+    SpellAuras.cpp \
+    SpellAuras.h \
+    Spell.cpp \
+    SpellEffects.cpp \
+    Spell.h \
+    SkillDiscovery.cpp \
+    SkillDiscovery.h \
+    SkillExtraItems.cpp \
+    SkillExtraItems.h \
+    SpellHandler.cpp \
+    SocialMgr.cpp \
+    SocialMgr.h \
+    SpellMgr.cpp \
+    SpellMgr.h \
+    StatSystem.cpp \
+    TargetedMovementGenerator.cpp \
+    TargetedMovementGenerator.h \
+    TaxiHandler.cpp \
+    TemporarySummon.cpp \
+    TemporarySummon.h \
+    TotemAI.cpp \
+    TotemAI.h \
+    Totem.cpp \
+    Totem.h \
+    TradeHandler.cpp \
+    Transports.cpp \
+    Transports.h \
+    ThreatManager.cpp \
+    ThreatManager.h \
+    TicketHandler.cpp \
+    TicketMgr.cpp \
+    TicketMgr.h \
+    Traveller.h \
+    Unit.cpp \
+    Unit.h \
+    UnitEvents.h \
+    UpdateData.cpp \
+    UpdateData.h \
+    UpdateFields.h \
+    UpdateMask.h \
+    Vehicle.cpp \
+    Vehicle.h \
+    VoiceChatHandler.cpp \
+    WaypointManager.cpp \
+    WaypointManager.h \
+    WaypointMovementGenerator.cpp \
+    WaypointMovementGenerator.h \
+    Weather.cpp \
+    Weather.h \
+    World.cpp \
+    World.h \
+    WorldLog.cpp \
+    WorldLog.h \
+    WorldSession.cpp \
+    WorldSession.h \
+    WorldSocket.cpp \
+    WorldSocket.h \
+    WorldSocketMgr.cpp \
+    WorldSocketMgr.h \
+    FollowerReference.cpp \
+    FollowerReference.h \
+    FollowerRefManager.h \
+    GroupReference.cpp \
+    GroupReference.h \
+    GroupRefManager.h
+
+## Link against shared library
+libmangosgame_a_LIBADD = ../shared/libmangosshared.a ../shared/Auth/libmangosauth.a ../shared/Config/libmangosconfig.a ../shared/Database/libmangosdatabase.a ../shared/vmap/libmangosvmaps.a
 
 ## Additional files to include when running 'make dist'
 #  Nothing yet.

@@ -1,8 +1,8 @@
 -- MySQL dump 10.11
 --
--- Host: localhost    Database: char_temp
+-- Host: localhost    Database: characters
 -- ------------------------------------------------------
--- Server version	5.0.34-log
+-- Server version	5.0.45-Debian_1ubuntu3.1-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -14,6 +14,28 @@
 /*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;
 /*!40101 SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='NO_AUTO_VALUE_ON_ZERO' */;
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
+
+--
+-- Table structure for table `account_data`
+--
+
+DROP TABLE IF EXISTS `account_data`;
+CREATE TABLE `account_data` (
+  `account` int(11) unsigned NOT NULL default '0',
+  `type` int(11) unsigned NOT NULL default '0',
+  `time` bigint(11) unsigned NOT NULL default '0',
+  `data` longtext NOT NULL,
+  PRIMARY KEY  (`account`,`type`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `account_data`
+--
+
+LOCK TABLES `account_data` WRITE;
+/*!40000 ALTER TABLE `account_data` DISABLE KEYS */;
+/*!40000 ALTER TABLE `account_data` ENABLE KEYS */;
+UNLOCK TABLES;
 
 --
 -- Table structure for table `arena_team`
@@ -54,7 +76,8 @@ CREATE TABLE `arena_team_member` (
   `wons_week` int(10) unsigned NOT NULL default '0',
   `played_season` int(10) unsigned NOT NULL default '0',
   `wons_season` int(10) unsigned NOT NULL default '0',
-  `points_to_add` int(10) unsigned NOT NULL default '0'
+  `personal_rating` int(10) UNSIGNED NOT NULL DEFAULT '0',
+  PRIMARY KEY  (`arenateamid`,`guid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --
@@ -108,7 +131,6 @@ CREATE TABLE `auctionhouse` (
   `lastbid` int(11) NOT NULL default '0',
   `startbid` int(11) NOT NULL default '0',
   `deposit` int(11) NOT NULL default '0',
-  `location` tinyint(3) unsigned NOT NULL default '3',
   PRIMARY KEY  (`id`),
   UNIQUE KEY `item_guid` (`itemguid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -134,14 +156,22 @@ CREATE TABLE `auctionhousebot` (
   `maxitems` int(11) default '0' COMMENT 'This is the number of items you want to keep in the auction house.',
   `mintime` int(11) default '8' COMMENT 'Sets the minimum number of hours for an auction.',
   `maxtime` int(11) default '24' COMMENT 'Sets the maximum number of hours for an auction.',
+  `percentgreytradegoods` int(11) default '0' COMMENT 'Sets the percentage of the Grey Trade Goods auction items',
   `percentwhitetradegoods` int(11) default '27' COMMENT 'Sets the percentage of the White Trade Goods auction items',
   `percentgreentradegoods` int(11) default '12' COMMENT 'Sets the percentage of the Green Trade Goods auction items',
   `percentbluetradegoods` int(11) default '10' COMMENT 'Sets the percentage of the Blue Trade Goods auction items',
   `percentpurpletradegoods` int(11) default '1' COMMENT 'Sets the percentage of the Purple Trade Goods auction items',
+  `percentorangetradegoods` int(11) default '0' COMMENT 'Sets the percentage of the Orange Trade Goods auction items',
+  `percentyellowtradegoods` int(11) default '0' COMMENT 'Sets the percentage of the Yellow Trade Goods auction items',
+  `percentgreyitems` int(11) default '0' COMMENT 'Sets the percentage of the non trade Grey auction items',
   `percentwhiteitems` int(11) default '10' COMMENT 'Sets the percentage of the non trade White auction items',
   `percentgreenitems` int(11) default '30' COMMENT 'Sets the percentage of the non trade Green auction items',
   `percentblueitems` int(11) default '8' COMMENT 'Sets the percentage of the non trade Blue auction items',
   `percentpurpleitems` int(11) default '2' COMMENT 'Sets the percentage of the non trade Purple auction items',
+  `percentorangeitems` int(11) default '0' COMMENT 'Sets the percentage of the non trade Orange auction items',
+  `percentyellowitems` int(11) default '0' COMMENT 'Sets the percentage of the non trade Yellow auction items',
+  `minpricegrey` int(11) default '100' COMMENT 'Minimum price of Grey items (percentage).',
+  `maxpricegrey` int(11) default '150' COMMENT 'Maximum price of Grey items (percentage).',
   `minpricewhite` int(11) default '150' COMMENT 'Minimum price of White items (percentage).',
   `maxpricewhite` int(11) default '250' COMMENT 'Maximum price of White items (percentage).',
   `minpricegreen` int(11) default '800' COMMENT 'Minimum price of Green items (percentage).',
@@ -150,23 +180,38 @@ CREATE TABLE `auctionhousebot` (
   `maxpriceblue` int(11) default '1750' COMMENT 'Maximum price of Blue items (percentage).',
   `minpricepurple` int(11) default '2250' COMMENT 'Minimum price of Purple items (percentage).',
   `maxpricepurple` int(11) default '4550' COMMENT 'Maximum price of Purple items (percentage).',
-  `minbidpricewhite` int(11) default '70' COMMENT 'Starting bid price of White items as a percentage of the randomly chosen buyout price. Default: 100 (Bid and buyout price the same)',
-  `maxbidpricewhite` int(11) default '100' COMMENT 'Starting bid price of White items as a percentage of the randomly chosen buyout price. Default: 100 (Bid and buyout price the same)',
-  `minbidpricegreen` int(11) default '80' COMMENT 'Starting bid price of Green items as a percentage of the randomly chosen buyout price. Default: 100 (Bid and buyout price the same)',
-  `maxbidpricegreen` int(11) default '100' COMMENT 'Starting bid price of Green items as a percentage of the randomly chosen buyout price. Default: 100 (Bid and buyout price the same)',
-  `minbidpriceblue` int(11) default '75' COMMENT 'Starting bid price of Blue items as a percentage of the randomly chosen buyout price. Default: 100 (Bid and buyout price the same)',
-  `maxbidpriceblue` int(11) default '100' COMMENT 'Starting bid price of Blue items as a percentage of the randomly chosen buyout price. Default: 100 (Bid and buyout price the same)',
-  `minbidpricepurple` int(11) default '80' COMMENT 'Starting bid price of Purple items as a percentage of the randomly chosen buyout price. Default: 100 (Bid and buyout price the same)',
-  `maxbidpricepurple` int(11) default '100' COMMENT 'Starting bid price of Purple items as a percentage of the randomly chosen buyout price. Default: 100 (Bid and buyout price the same)',
+  `minpriceorange` int(11) default '3250' COMMENT 'Minimum price of Orange items (percentage).',
+  `maxpriceorange` int(11) default '5550' COMMENT 'Maximum price of Orange items (percentage).',
+  `minpriceyellow` int(11) default '5250' COMMENT 'Minimum price of Yellow items (percentage).',
+  `maxpriceyellow` int(11) default '6550' COMMENT 'Maximum price of Yellow items (percentage).',
+  `minbidpricegrey` int(11) default '70' COMMENT 'Starting bid price of Grey items as a percentage of the randomly chosen buyout price. Default: 70',
+  `maxbidpricegrey` int(11) default '100' COMMENT 'Starting bid price of Grey items as a percentage of the randomly chosen buyout price. Default: 100',
+  `minbidpricewhite` int(11) default '70' COMMENT 'Starting bid price of White items as a percentage of the randomly chosen buyout price. Default: 70',
+  `maxbidpricewhite` int(11) default '100' COMMENT 'Starting bid price of White items as a percentage of the randomly chosen buyout price. Default: 100',
+  `minbidpricegreen` int(11) default '80' COMMENT 'Starting bid price of Green items as a percentage of the randomly chosen buyout price. Default: 80',
+  `maxbidpricegreen` int(11) default '100' COMMENT 'Starting bid price of Green items as a percentage of the randomly chosen buyout price. Default: 100',
+  `minbidpriceblue` int(11) default '75' COMMENT 'Starting bid price of Blue items as a percentage of the randomly chosen buyout price. Default: 75',
+  `maxbidpriceblue` int(11) default '100' COMMENT 'Starting bid price of Blue items as a percentage of the randomly chosen buyout price. Default: 100',
+  `minbidpricepurple` int(11) default '80' COMMENT 'Starting bid price of Purple items as a percentage of the randomly chosen buyout price. Default: 80',
+  `maxbidpricepurple` int(11) default '100' COMMENT 'Starting bid price of Purple items as a percentage of the randomly chosen buyout price. Default: 100',
+  `minbidpriceorange` int(11) default '80' COMMENT 'Starting bid price of Orange items as a percentage of the randomly chosen buyout price. Default: 80',
+  `maxbidpriceorange` int(11) default '100' COMMENT 'Starting bid price of Orange items as a percentage of the randomly chosen buyout price. Default: 100',
+  `minbidpriceyellow` int(11) default '80' COMMENT 'Starting bid price of Yellow items as a percentage of the randomly chosen buyout price. Default: 80',
+  `maxbidpriceyellow` int(11) default '100' COMMENT 'Starting bid price of Yellow items as a percentage of the randomly chosen buyout price. Default: 100',
+  `maxstackgrey` int(11) default '0' COMMENT 'Stack size limits for item qualities - a value of 0 will disable a maximum stack size for that quality, which will allow the bot to create items in stack as large as the item allows.',
   `maxstackwhite` int(11) default '0' COMMENT 'Stack size limits for item qualities - a value of 0 will disable a maximum stack size for that quality, which will allow the bot to create items in stack as large as the item allows.',
   `maxstackgreen` int(11) default '3' COMMENT 'Stack size limits for item qualities - a value of 0 will disable a maximum stack size for that quality, which will allow the bot to create items in stack as large as the item allows.',
   `maxstackblue` int(11) default '2' COMMENT 'Stack size limits for item qualities - a value of 0 will disable a maximum stack size for that quality, which will allow the bot to create items in stack as large as the item allows.',
   `maxstackpurple` int(11) default '1' COMMENT 'Stack size limits for item qualities - a value of 0 will disable a maximum stack size for that quality, which will allow the bot to create items in stack as large as the item allows.',
+  `maxstackorange` int(11) default '1' COMMENT 'Stack size limits for item qualities - a value of 0 will disable a maximum stack size for that quality, which will allow the bot to create items in stack as large as the item allows.',
+  `maxstackyellow` int(11) default '1' COMMENT 'Stack size limits for item qualities - a value of 0 will disable a maximum stack size for that quality, which will allow the bot to create items in stack as large as the item allows.',
   `buyerpricegrey` int(11) default '1' COMMENT 'Multiplier to vendorprice when buying grey items from auctionhouse',
   `buyerpricewhite` int(11) default '1' COMMENT 'Multiplier to vendorprice when buying white items from auctionhouse',
   `buyerpricegreen` int(11) default '5' COMMENT 'Multiplier to vendorprice when buying green items from auctionhouse',
   `buyerpriceblue` int(11) default '12' COMMENT 'Multiplier to vendorprice when buying blue items from auctionhouse',
   `buyerpricepurple` int(11) default '15' COMMENT 'Multiplier to vendorprice when buying purple items from auctionhouse',
+  `buyerpriceorange` int(11) default '20' COMMENT 'Multiplier to vendorprice when buying orange items from auctionhouse',
+  `buyerpriceyellow` int(11) default '22' COMMENT 'Multiplier to vendorprice when buying yellow items from auctionhouse',
   `buyerbiddinginterval` int(11) default '1' COMMENT 'Interval how frequently AHB bids on each AH. Time in minutes',
   `buyerbidsperinterval` int(11) default '1' COMMENT 'number of bids to put in per bidding interval',
   PRIMARY KEY  (`auctionhouse`)
@@ -176,10 +221,10 @@ CREATE TABLE `auctionhousebot` (
 -- Data for table `auctionhousebot`
 --
 
-insert  into `auctionhousebot`(`auctionhouse`,`name`,`minitems`,`maxitems`,`mintime`,`maxtime`,`percentwhitetradegoods`,`percentgreentradegoods`,`percentbluetradegoods`,`percentpurpletradegoods`,`percentwhiteitems`,`percentgreenitems`,`percentblueitems`,`percentpurpleitems`,`minpricewhite`,`maxpricewhite`,`minpricegreen`,`maxpricegreen`,`minpriceblue`,`maxpriceblue`,`minpricepurple`,`maxpricepurple`,`minbidpricewhite`,`maxbidpricewhite`,`minbidpricegreen`,`maxbidpricegreen`,`minbidpriceblue`,`maxbidpriceblue`,`minbidpricepurple`,`maxbidpricepurple`,`maxstackwhite`,`maxstackgreen`,`maxstackblue`,`maxstackpurple`,`buyerpricegrey`,`buyerpricewhite`,`buyerpricegreen`,`buyerpriceblue`,`buyerpricepurple`,`buyerbiddinginterval`,`buyerbidsperinterval`) values
-(2,'Alliance',0,0,8,24,27,12,10,1,10,30,8,2,150,250,800,1400,1250,1750,2250,4550,70,100,80,100,75,100,80,100,0,3,2,1,1,1,5,12,15,1,1),
-(6,'Horde',0,0,8,24,27,12,10,1,10,30,8,2,150,250,800,1400,1250,1750,2250,4550,70,100,80,100,75,100,80,100,0,3,2,1,1,1,5,12,15,1,1),
-(7,'Neutral',0,0,8,24,27,12,10,1,10,30,8,2,150,250,800,1400,1250,1750,2250,4550,70,100,80,100,75,100,80,100,0,3,2,1,1,1,5,12,15,1,1);
+insert  into `auctionhousebot`(`auctionhouse`,`name`,`minitems`,`maxitems`,`mintime`,`maxtime`,`percentgreytradegoods`,`percentwhitetradegoods`,`percentgreentradegoods`,`percentbluetradegoods`,`percentpurpletradegoods`,`percentorangetradegoods`,`percentyellowtradegoods`,`percentgreyitems`,`percentwhiteitems`,`percentgreenitems`,`percentblueitems`,`percentpurpleitems`,`percentorangeitems`,`percentyellowitems`,`minpricegrey`,`maxpricegrey`,`minpricewhite`,`maxpricewhite`,`minpricegreen`,`maxpricegreen`,`minpriceblue`,`maxpriceblue`,`minpricepurple`,`maxpricepurple`,`minpriceorange`,`maxpriceorange`,`minpriceyellow`,`maxpriceyellow`,`minbidpricegrey`,`maxbidpricegrey`,`minbidpricewhite`,`maxbidpricewhite`,`minbidpricegreen`,`maxbidpricegreen`,`minbidpriceblue`,`maxbidpriceblue`,`minbidpricepurple`,`maxbidpricepurple`,`minbidpriceorange`,`maxbidpriceorange`,`minbidpriceyellow`,`maxbidpriceyellow`,`maxstackgrey`,`maxstackwhite`,`maxstackgreen`,`maxstackblue`,`maxstackpurple`,`maxstackorange`,`maxstackyellow`,`buyerpricegrey`,`buyerpricewhite`,`buyerpricegreen`,`buyerpriceblue`,`buyerpricepurple`,`buyerpriceorange`,`buyerpriceyellow`,`buyerbiddinginterval`,`buyerbidsperinterval`) values
+(2,'Alliance',0,0,8,24,0,27,12,10,1,0,0,0,10,30,8,2,0,0,100,150,150,250,800,1400,1250,1750,2250,4550,3250,5550,5250,6550,70,100,70,100,80,100,75,100,80,100,80,100,80,100,0,0,3,2,1,1,1,1,1,5,12,15,20,22,1,1),
+(6,'Horde',0,0,8,24,0,27,12,10,1,0,0,0,10,30,8,2,0,0,100,150,150,250,800,1400,1250,1750,2250,4550,3250,5550,5250,6550,70,100,70,100,80,100,75,100,80,100,80,100,80,100,0,0,3,2,1,1,1,1,1,5,12,15,20,22,1,1),
+(7,'Neutral',0,0,8,24,0,27,12,10,1,0,0,0,10,30,8,2,0,0,100,150,150,250,800,1400,1250,1750,2250,4550,3250,5550,5250,6550,70,100,70,100,80,100,75,100,80,100,80,100,80,100,0,0,3,2,1,1,1,1,1,5,12,15,20,22,1,1);
 
 --
 -- Table structure for table `bugreport`
@@ -200,6 +245,112 @@ CREATE TABLE `bugreport` (
 LOCK TABLES `bugreport` WRITE;
 /*!40000 ALTER TABLE `bugreport` DISABLE KEYS */;
 /*!40000 ALTER TABLE `bugreport` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `characters`
+--
+
+DROP TABLE IF EXISTS `characters`;
+CREATE TABLE `characters` (
+  `guid` int(11) unsigned NOT NULL default '0' COMMENT 'Global Unique Identifier',
+  `account` int(11) unsigned NOT NULL default '0' COMMENT 'Account Identifier',
+  `data` longtext,
+  `name` varchar(12) NOT NULL default '',
+  `race` tinyint(3) unsigned NOT NULL default '0',
+  `class` tinyint(3) unsigned NOT NULL default '0',
+  `position_x` float NOT NULL default '0',
+  `position_y` float NOT NULL default '0',
+  `position_z` float NOT NULL default '0',
+  `map` int(11) unsigned NOT NULL default '0' COMMENT 'Map Identifier',
+  `dungeon_difficulty` tinyint(1) unsigned NOT NULL DEFAULT '0',
+  `orientation` float NOT NULL default '0',
+  `taximask` longtext,
+  `online` tinyint(3) unsigned NOT NULL default '0',
+  `cinematic` tinyint(3) unsigned NOT NULL default '0',
+  `totaltime` int(11) unsigned NOT NULL default '0',
+  `leveltime` int(11) unsigned NOT NULL default '0',
+  `logout_time` bigint(20) unsigned NOT NULL default '0',
+  `is_logout_resting` tinyint(3) unsigned NOT NULL default '0',
+  `rest_bonus` float NOT NULL default '0',
+  `resettalents_cost` int(11) unsigned NOT NULL default '0',
+  `resettalents_time` bigint(20) unsigned NOT NULL default '0',
+  `trans_x` float NOT NULL default '0',
+  `trans_y` float NOT NULL default '0',
+  `trans_z` float NOT NULL default '0',
+  `trans_o` float NOT NULL default '0',
+  `transguid` bigint(20) unsigned NOT NULL default '0',
+  `extra_flags` int(11) unsigned NOT NULL default '0',
+  `stable_slots` tinyint(1) unsigned NOT NULL default '0',
+  `at_login` int(11) unsigned NOT NULL default '0',
+  `zone` int(11) unsigned NOT NULL default '0',
+  `death_expire_time` bigint(20) unsigned NOT NULL default '0',
+  `taxi_path` text,
+  `arena_pending_points` int(10) UNSIGNED NOT NULL default '0',
+  `latency` int(11) unsigned NOT NULL default '0',
+  `bgid` int(10) unsigned NOT NULL default '0',
+  `bgteam` int(10) unsigned NOT NULL default '0',
+  `bgmap` int(10) unsigned NOT NULL default '0',
+  `bgx` float NOT NULL default '0',
+  `bgy` float NOT NULL default '0',
+  `bgz` float NOT NULL default '0',
+  `bgo` float NOT NULL default '0',
+  PRIMARY KEY  (`guid`),
+  KEY `idx_account` (`account`),
+  KEY `idx_online` (`online`),
+  KEY `idx_name` (`name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Player System';
+
+--
+-- Dumping data for table `characters`
+--
+
+LOCK TABLES `characters` WRITE;
+/*!40000 ALTER TABLE `characters` DISABLE KEYS */;
+/*!40000 ALTER TABLE `characters` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `character_achievement`
+--
+
+DROP TABLE IF EXISTS `character_achievement`;
+CREATE TABLE `character_achievement` (
+  `guid` int(11) NOT NULL,
+  `achievement` int(11) NOT NULL,
+  `date` int(11) NOT NULL,
+  PRIMARY KEY  (`guid`,`achievement`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `character_achievement`
+--
+
+LOCK TABLES `character_achievement` WRITE;
+/*!40000 ALTER TABLE `character_achievement` DISABLE KEYS */;
+/*!40000 ALTER TABLE `character_achievement` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `character_achievement_progress`
+--
+
+DROP TABLE IF EXISTS `character_achievement_progress`;
+CREATE TABLE `character_achievement_progress` (
+  `guid` int(11) NOT NULL,
+  `criteria` int(11) NOT NULL,
+  `counter` int(11) NOT NULL,
+  `date` int(11) NOT NULL,
+  PRIMARY KEY  (`guid`,`criteria`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+--
+-- Dumping data for table `character_achievement_progress`
+--
+
+LOCK TABLES `character_achievement_progress` WRITE;
+/*!40000 ALTER TABLE `character_achievement_progress` DISABLE KEYS */;
+/*!40000 ALTER TABLE `character_achievement_progress` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -235,6 +386,7 @@ CREATE TABLE `character_aura` (
   `caster_guid` bigint(20) unsigned NOT NULL default '0' COMMENT 'Full Global Unique Identifier',
   `spell` int(11) unsigned NOT NULL default '0',
   `effect_index` int(11) unsigned NOT NULL default '0',
+  `stackcount` int(11) NOT NULL default '1',
   `amount` int(11) NOT NULL default '0',
   `maxduration` int(11) NOT NULL default '0',
   `remaintime` int(11) NOT NULL default '0',
@@ -383,9 +535,7 @@ CREATE TABLE `character_pet` (
   `level` int(11) unsigned NOT NULL default '1',
   `exp` int(11) unsigned NOT NULL default '0',
   `Reactstate` tinyint(1) unsigned NOT NULL default '0',
-  `loyaltypoints` int(11) NOT NULL default '0',
-  `loyalty` int(11) unsigned NOT NULL default '0',
-  `trainpoint` int(11) NOT NULL default '0',
+  `talentpoints` int(11) unsigned NOT NULL default '0',
   `name` varchar(100) default 'Pet',
   `renamed` tinyint(1) unsigned NOT NULL default '0',
   `slot` int(11) unsigned NOT NULL default '0',
@@ -424,7 +574,7 @@ CREATE TABLE `character_pet_declinedname` (
   `instrumental` varchar(12) NOT NULL default '',
   `prepositional` varchar(12) NOT NULL default '',
   PRIMARY KEY  (`id`),
-  KEY `owner_key` (`owner`)
+  KEY owner_key (`owner`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC;
 
 --
@@ -521,7 +671,7 @@ CREATE TABLE `character_social` (
   `guid` int(11) unsigned NOT NULL default '0' COMMENT 'Character Global Unique Identifier',
   `friend` int(11) unsigned NOT NULL default '0' COMMENT 'Friend Global Unique Identifier',
   `flags` tinyint(1) unsigned NOT NULL default '0' COMMENT 'Friend Flags',
-  `note` varchar(48) NOT NULL default '' COMMENT 'Friend Note',
+  `note` varchar(48) NOT NULL DEFAULT '' COMMENT 'Friend Note',
   PRIMARY KEY  (`guid`,`friend`,`flags`),
   KEY `guid` (`guid`),
   KEY `friend` (`friend`),
@@ -546,7 +696,6 @@ DROP TABLE IF EXISTS `character_spell`;
 CREATE TABLE `character_spell` (
   `guid` int(11) unsigned NOT NULL default '0' COMMENT 'Global Unique Identifier',
   `spell` int(11) unsigned NOT NULL default '0' COMMENT 'Spell Identifier',
-  `slot` int(11) unsigned NOT NULL default '0',
   `active` tinyint(3) unsigned NOT NULL default '1',
   `disabled` tinyint(3) unsigned NOT NULL default '0',
   PRIMARY KEY  (`guid`,`spell`)
@@ -584,28 +733,6 @@ LOCK TABLES `character_spell_cooldown` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `character_ticket`
---
-
-DROP TABLE IF EXISTS `character_ticket`;
-CREATE TABLE `character_ticket` (
-  `ticket_id` int(11) unsigned NOT NULL auto_increment,
-  `guid` int(11) unsigned NOT NULL default '0',
-  `ticket_text` text,
-  `ticket_lastchange` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP,
-  PRIMARY KEY  (`ticket_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Player System';
-
---
--- Dumping data for table `character_ticket`
---
-
-LOCK TABLES `character_ticket` WRITE;
-/*!40000 ALTER TABLE `character_ticket` DISABLE KEYS */;
-/*!40000 ALTER TABLE `character_ticket` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `character_tutorial`
 --
 
@@ -622,7 +749,7 @@ CREATE TABLE `character_tutorial` (
   `tut6` int(11) unsigned NOT NULL default '0',
   `tut7` int(11) unsigned NOT NULL default '0',
   PRIMARY KEY  (`account`,`realmid`),
-  KEY `acc_key` (`account`)
+  KEY acc_key (`account`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Player System';
 
 --
@@ -632,62 +759,6 @@ CREATE TABLE `character_tutorial` (
 LOCK TABLES `character_tutorial` WRITE;
 /*!40000 ALTER TABLE `character_tutorial` DISABLE KEYS */;
 /*!40000 ALTER TABLE `character_tutorial` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `characters`
---
-
-DROP TABLE IF EXISTS `characters`;
-CREATE TABLE `characters` (
-  `guid` int(11) unsigned NOT NULL default '0' COMMENT 'Global Unique Identifier',
-  `account` int(11) unsigned NOT NULL default '0' COMMENT 'Account Identifier',
-  `data` longtext,
-  `name` varchar(12) NOT NULL default '',
-  `race` tinyint(3) unsigned NOT NULL default '0',
-  `class` tinyint(3) unsigned NOT NULL default '0',
-  `position_x` float NOT NULL default '0',
-  `position_y` float NOT NULL default '0',
-  `position_z` float NOT NULL default '0',
-  `map` int(11) unsigned NOT NULL default '0' COMMENT 'Map Identifier',
-  `dungeon_difficulty` tinyint(1) unsigned NOT NULL default '0',
-  `orientation` float NOT NULL default '0',
-  `taximask` longtext,
-  `online` tinyint(3) unsigned NOT NULL default '0',
-  `cinematic` tinyint(3) unsigned NOT NULL default '0',
-  `totaltime` int(11) unsigned NOT NULL default '0',
-  `leveltime` int(11) unsigned NOT NULL default '0',
-  `logout_time` bigint(20) unsigned NOT NULL default '0',
-  `is_logout_resting` tinyint(3) unsigned NOT NULL default '0',
-  `rest_bonus` float NOT NULL default '0',
-  `resettalents_cost` int(11) unsigned NOT NULL default '0',
-  `resettalents_time` bigint(20) unsigned NOT NULL default '0',
-  `trans_x` float NOT NULL default '0',
-  `trans_y` float NOT NULL default '0',
-  `trans_z` float NOT NULL default '0',
-  `trans_o` float NOT NULL default '0',
-  `transguid` bigint(20) unsigned NOT NULL default '0',
-  `extra_flags` int(11) unsigned NOT NULL default '0',
-  `stable_slots` tinyint(1) unsigned NOT NULL default '0',
-  `at_login` int(11) unsigned NOT NULL default '0',
-  `zone` int(11) unsigned NOT NULL default '0',
-  `death_expire_time` bigint(20) unsigned NOT NULL default '0',
-  `taxi_path` text,
-  `arena_pending_points` int (10) UNSIGNED NOT NULL default '0',
-  `latency` int(11) unsigned NOT NULL default '0',
-  PRIMARY KEY  (`guid`),
-  KEY `idx_account` (`account`),
-  KEY `idx_online` (`online`),
-  KEY `idx_name` (`name`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Player System';
-
---
--- Dumping data for table `characters`
---
-
-LOCK TABLES `characters` WRITE;
-/*!40000 ALTER TABLE `characters` DISABLE KEYS */;
-/*!40000 ALTER TABLE `characters` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -704,6 +775,7 @@ CREATE TABLE `corpse` (
   `orientation` float NOT NULL default '0',
   `zone` int(11) unsigned NOT NULL default '38' COMMENT 'Zone Identifier',
   `map` int(11) unsigned NOT NULL default '0' COMMENT 'Map Identifier',
+  `phaseMask` smallint(5) unsigned NOT NULL default '1',
   `data` longtext,
   `time` bigint(20) unsigned NOT NULL default '0',
   `corpse_type` tinyint(3) unsigned NOT NULL default '0',
@@ -775,7 +847,7 @@ CREATE TABLE `gm_tickets` (
   `name` varchar(15) NOT NULL,
   `message` text NOT NULL,
   `timestamp` int(10) NOT NULL default '0',
-  `closed` tinyint(1) NOT NULL default '0',
+  `closed` int(10) NOT NULL default '0',
   `assignedto` int(10) NOT NULL default '0',
   `comment` text NOT NULL,
   PRIMARY KEY  (`guid`)
@@ -788,6 +860,40 @@ CREATE TABLE `gm_tickets` (
 LOCK TABLES `gm_tickets` WRITE;
 /*!40000 ALTER TABLE `gm_tickets` DISABLE KEYS */;
 /*!40000 ALTER TABLE `gm_tickets` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `groups`
+--
+
+DROP TABLE IF EXISTS `groups`;
+CREATE TABLE `groups` (
+  `leaderGuid` int(11) unsigned NOT NULL,
+  `mainTank` int(11) unsigned NOT NULL,
+  `mainAssistant` int(11) unsigned NOT NULL,
+  `lootMethod` tinyint(4) unsigned NOT NULL,
+  `looterGuid` int(11) unsigned NOT NULL,
+  `lootThreshold` tinyint(4) unsigned NOT NULL,
+  `icon1` int(11) unsigned NOT NULL,
+  `icon2` int(11) unsigned NOT NULL,
+  `icon3` int(11) unsigned NOT NULL,
+  `icon4` int(11) unsigned NOT NULL,
+  `icon5` int(11) unsigned NOT NULL,
+  `icon6` int(11) unsigned NOT NULL,
+  `icon7` int(11) unsigned NOT NULL,
+  `icon8` int(11) unsigned NOT NULL,
+  `isRaid` tinyint(1) unsigned NOT NULL,
+  `difficulty` tinyint(3) unsigned NOT NULL default '0',
+  PRIMARY KEY  (`leaderGuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Groups';
+
+--
+-- Dumping data for table `groups`
+--
+
+LOCK TABLES `groups` WRITE;
+/*!40000 ALTER TABLE `groups` DISABLE KEYS */;
+/*!40000 ALTER TABLE `groups` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -832,40 +938,6 @@ CREATE TABLE `group_member` (
 LOCK TABLES `group_member` WRITE;
 /*!40000 ALTER TABLE `group_member` DISABLE KEYS */;
 /*!40000 ALTER TABLE `group_member` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `groups`
---
-
-DROP TABLE IF EXISTS `groups`;
-CREATE TABLE `groups` (
-  `leaderGuid` int(11) unsigned NOT NULL,
-  `mainTank` int(11) unsigned NOT NULL,
-  `mainAssistant` int(11) unsigned NOT NULL,
-  `lootMethod` tinyint(4) unsigned NOT NULL,
-  `looterGuid` int(11) unsigned NOT NULL,
-  `lootThreshold` tinyint(4) unsigned NOT NULL,
-  `icon1` int(11) unsigned NOT NULL,
-  `icon2` int(11) unsigned NOT NULL,
-  `icon3` int(11) unsigned NOT NULL,
-  `icon4` int(11) unsigned NOT NULL,
-  `icon5` int(11) unsigned NOT NULL,
-  `icon6` int(11) unsigned NOT NULL,
-  `icon7` int(11) unsigned NOT NULL,
-  `icon8` int(11) unsigned NOT NULL,
-  `isRaid` tinyint(1) unsigned NOT NULL,
-  `difficulty` tinyint(3) unsigned NOT NULL default '0',
-  PRIMARY KEY  (`leaderGuid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Groups';
-
---
--- Dumping data for table `groups`
---
-
-LOCK TABLES `groups` WRITE;
-/*!40000 ALTER TABLE `groups` DISABLE KEYS */;
-/*!40000 ALTER TABLE `groups` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -937,7 +1009,7 @@ CREATE TABLE `guild_bank_item` (
   `SlotId` tinyint(3) unsigned NOT NULL default '0',
   `item_guid` int(11) unsigned NOT NULL default '0',
   `item_entry` int(11) unsigned NOT NULL default '0',
-  PRIMARY KEY  (`guildid`,`TabId`,`SlotId`),
+  PRIMARY KEY  (`guildid`,`tabid`,`slotid`),
   KEY `guildid_key` (`guildid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
@@ -984,7 +1056,7 @@ CREATE TABLE `guild_bank_tab` (
   `TabId` tinyint(1) unsigned NOT NULL default '0',
   `TabName` varchar(100) NOT NULL default '',
   `TabIcon` varchar(100) NOT NULL default '',
-  `TabText` varchar(500) NOT NULL default '',
+  `TabText` text,
   PRIMARY KEY  (`guildid`,`TabId`),
   KEY `guildid_key` (`guildid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -1011,7 +1083,7 @@ CREATE TABLE `guild_eventlog` (
   `PlayerGuid2` int(11) NOT NULL COMMENT 'Player 2',
   `NewRank` tinyint(2) NOT NULL COMMENT 'New rank(in case promotion/demotion)',
   `TimeStamp` bigint(20) NOT NULL COMMENT 'Event UNIX time'
-) ENGINE=InnoDB DEFAULT CHARSET=latin1 COMMENT='Guild Eventlog';
+) ENGINE = InnoDB DEFAULT CHARSET = latin1 COMMENT 'Guild Eventlog';
 
 --
 -- Dumping data for table `guild_eventlog`
@@ -1049,7 +1121,7 @@ CREATE TABLE `guild_member` (
   `BankRemSlotsTab5` int(11) unsigned NOT NULL default '0',
   KEY `guildid_key` (`guildid`),
   KEY `guildid_rank_key` (`guildid`,`rank`),
-  KEY `guid_key` (`guid`)
+  UNIQUE KEY `guid_key` (`guid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Guild System';
 
 --
@@ -1082,25 +1154,6 @@ CREATE TABLE `guild_rank` (
 LOCK TABLES `guild_rank` WRITE;
 /*!40000 ALTER TABLE `guild_rank` DISABLE KEYS */;
 /*!40000 ALTER TABLE `guild_rank` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
--- Table structure for table `has_logged_in_before`
---
-
-DROP TABLE IF EXISTS `has_logged_in_before`;
-CREATE TABLE `has_logged_in_before` (
-  `guid` int(11) unsigned NOT NULL default '0',
-  PRIMARY KEY  (`guid`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='ImpConfig check';
-
---
--- Dumping data for table `has_logged_in_before`
---
-
-LOCK TABLES `has_logged_in_before` WRITE;
-/*!40000 ALTER TABLE `has_logged_in_before` DISABLE KEYS */;
-/*!40000 ALTER TABLE `has_logged_in_before` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -1256,6 +1309,7 @@ CREATE TABLE `pet_aura` (
   `caster_guid` bigint(20) unsigned NOT NULL default '0' COMMENT 'Full Global Unique Identifier',
   `spell` int(11) unsigned NOT NULL default '0',
   `effect_index` int(11) unsigned NOT NULL default '0',
+  `stackcount` int(11) NOT NULL default '1',
   `amount` int(11) NOT NULL default '0',
   `maxduration` int(11) NOT NULL default '0',
   `remaintime` int(11) NOT NULL default '0',
@@ -1280,7 +1334,6 @@ DROP TABLE IF EXISTS `pet_spell`;
 CREATE TABLE `pet_spell` (
   `guid` int(11) unsigned NOT NULL default '0' COMMENT 'Global Unique Identifier',
   `spell` int(11) unsigned NOT NULL default '0' COMMENT 'Spell Identifier',
-  `slot` int(11) unsigned NOT NULL default '0',
   `active` int(11) unsigned NOT NULL default '0',
   PRIMARY KEY  (`guid`,`spell`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Pet System';
@@ -1360,6 +1413,7 @@ LOCK TABLES `petition_sign` WRITE;
 /*!40000 ALTER TABLE `petition_sign` DISABLE KEYS */;
 /*!40000 ALTER TABLE `petition_sign` ENABLE KEYS */;
 UNLOCK TABLES;
+/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
 --
 -- Table structure for table `saved_variables`
@@ -1367,7 +1421,7 @@ UNLOCK TABLES;
 
 DROP TABLE IF EXISTS `saved_variables`;
 CREATE TABLE `saved_variables` (
-  `NextArenaPointDistributionTime` timestamp NOT NULL default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP
+    `NextArenaPointDistributionTime` bigint(40) UNSIGNED NOT NULL DEFAULT '0'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Variable Saves';
 
 --
@@ -1380,6 +1434,7 @@ LOCK TABLES `saved_variables` WRITE;
 UNLOCK TABLES;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
+
 /*!40101 SET SQL_MODE=@OLD_SQL_MODE */;
 /*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;
 /*!40014 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS */;
@@ -1388,5 +1443,6 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2008-11-18 11:24:11
+-- Dump completed on 2008-01-10 11:37:06
 
+-- Updated on 2003-02-22 01:44:45
