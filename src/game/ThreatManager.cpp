@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,6 @@
 #include "Creature.h"
 #include "CreatureAI.h"
 #include "Map.h"
-#include "MapManager.h"
 #include "Player.h"
 #include "ObjectAccessor.h"
 #include "UnitEvents.h"
@@ -267,26 +266,36 @@ HostilReference* ThreatContainer::selectNextVictim(Creature* pAttacker, HostilRe
 {
     HostilReference* currentRef = NULL;
     bool found = false;
+    bool noPriorityTargetFound = false;
 
     std::list<HostilReference*>::iterator lastRef = iThreatList.end();
     lastRef--;
 
-    for(std::list<HostilReference*>::iterator iter = iThreatList.begin(); iter != iThreatList.end() && !found; ++iter)
+    for(std::list<HostilReference*>::iterator iter = iThreatList.begin(); iter != iThreatList.end() && !found;)
     {
         currentRef = (*iter);
 
         Unit* target = currentRef->getTarget();
         assert(target);                                     // if the ref has status online the target must be there !
 
-        // some units are preferred in comparison to others
-        if(iter != lastRef && (target->IsImmunedToDamage(pAttacker->GetMeleeDamageSchoolMask(), false) ||
-                target->hasUnitState(UNIT_STAT_CONFUSED)
-                ) )
+        // some units are prefered in comparison to others
+        if(!noPriorityTargetFound && (target->IsImmunedToDamage(pAttacker->GetMeleeDamageSchoolMask()) || target->hasNegativeAuraWithInterruptFlag(AURA_INTERRUPT_FLAG_DAMAGE)) )
         {
-            // current victim is a second choice target, so don't compare threat with it below
-            if(currentRef == pCurrentVictim)
-                pCurrentVictim = NULL;
-            continue;
+            if(iter != lastRef)
+            {
+                // current victim is a second choice target, so don't compare threat with it below
+                if(currentRef == pCurrentVictim)
+                    pCurrentVictim = NULL;
+                ++iter;
+                continue;
+            }
+            else
+            {
+                // if we reached to this point, everyone in the threatlist is a second choice target. In such a situation the target with the highest threat should be attacked.
+                noPriorityTargetFound = true;
+                iter = iThreatList.begin();
+                continue;
+            }
         }
 
         if(!pAttacker->IsOutOfThreatArea(target))           // skip non attackable currently targets
@@ -314,6 +323,7 @@ HostilReference* ThreatContainer::selectNextVictim(Creature* pAttacker, HostilRe
                 break;
             }
         }
+        ++iter;
     }
     if(!found)
         currentRef = NULL;
