@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,12 +30,18 @@
 #include "Language.h"
 #include "SpellAuras.h"
 #include "Formulas.h"
+#include "WorldPacket.h"
 
 BattleGroundAV::BattleGroundAV()
 {
-
     m_BgObjects.resize(BG_AV_OBJECT_MAX);
     m_BgCreatures.resize(AV_CPLACE_MAX+AV_STATICCPLACE_MAX);
+
+    //TODO FIX ME!
+    m_StartMessageIds[BG_STARTING_EVENT_FIRST]  = LANG_BG_EY_START_TWO_MINUTES;
+    m_StartMessageIds[BG_STARTING_EVENT_SECOND] = LANG_BG_EY_START_ONE_MINUTE;
+    m_StartMessageIds[BG_STARTING_EVENT_THIRD]  = LANG_BG_EY_START_HALF_MINUTE;
+    m_StartMessageIds[BG_STARTING_EVENT_FOURTH] = LANG_BG_EY_HAS_BEGUN;
 }
 
 BattleGroundAV::~BattleGroundAV()
@@ -239,7 +245,7 @@ void BattleGroundAV::UpdateScore(uint16 team, int16 points )
         }
         else if(!m_IsInformedNearVictory[teamindex] && m_Team_Scores[teamindex] < SEND_MSG_NEAR_LOSE)
         {
-            SendMessageToAll(GetTrinityString((teamindex==BG_TEAM_HORDE)?LANG_BG_AV_H_NEAR_LOSE:LANG_BG_AV_A_NEAR_LOSE));
+            SendMessageToAll(GetTrinityString((teamindex==BG_TEAM_HORDE)?LANG_BG_AV_H_NEAR_LOSE:LANG_BG_AV_A_NEAR_LOSE), teamindex==BG_TEAM_HORDE ? CHAT_MSG_BG_SYSTEM_HORDE : CHAT_MSG_BG_SYSTEM_ALLIANCE);
             PlaySoundToAll(AV_SOUND_NEAR_VICTORY);
             m_IsInformedNearVictory[teamindex] = true;
         }
@@ -294,7 +300,7 @@ Creature* BattleGroundAV::AddAVCreature(uint16 cinfoid, uint16 type )
     return creature;
 }
 
-void BattleGroundAV::Update(time_t diff)
+void BattleGroundAV::Update(uint32 diff)
 {
     BattleGround::Update(diff);
     if (GetStatus() == STATUS_WAIT_JOIN && GetPlayersSize())
@@ -366,19 +372,19 @@ void BattleGroundAV::Update(time_t diff)
             DoorClose(BG_AV_OBJECT_DOOR_A);
             DoorClose(BG_AV_OBJECT_DOOR_H);
 
-            SetStartDelayTime(START_DELAY0);
+            SetStartDelayTime(BG_START_DELAY_2M);
         }
         // After 1 minute, warning is signalled
-        else if (GetStartDelayTime() <= START_DELAY1 && !(m_Events & 0x04))
+        else if (GetStartDelayTime() <= BG_START_DELAY_1M && !(m_Events & 0x04))
         {
             m_Events |= 0x04;
-            SendMessageToAll(GetTrinityString(LANG_BG_AV_ONEMINTOSTART));
+            SendMessageToAll(GetTrinityString(LANG_BG_AV_ONEMINTOSTART), CHAT_MSG_BG_SYSTEM_NEUTRAL);
         }
         // After 1,5 minute, warning is signalled
-        else if (GetStartDelayTime() <= START_DELAY2 && !(m_Events & 0x08))
+        else if (GetStartDelayTime() <= BG_START_DELAY_1M + BG_START_DELAY_30S && !(m_Events & 0x08))
         {
             m_Events |= 0x08;
-            SendMessageToAll(GetTrinityString(LANG_BG_AV_HALFMINTOSTART));
+            SendMessageToAll(GetTrinityString(LANG_BG_AV_HALFMINTOSTART), CHAT_MSG_BG_SYSTEM_NEUTRAL);
         }
         // After 2 minutes, gates OPEN ! x)
         else if (GetStartDelayTime() <= 0 && !(m_Events & 0x10))
@@ -387,7 +393,7 @@ void BattleGroundAV::Update(time_t diff)
             UpdateWorldState(AV_SHOW_A_SCORE, 1);
             m_Events |= 0x10;
 
-            SendMessageToAll(GetTrinityString(LANG_BG_AV_STARTED));
+            SendMessageToAll(GetTrinityString(LANG_BG_AV_STARTED), CHAT_MSG_BG_SYSTEM_NEUTRAL);
             PlaySoundToAll(SOUND_BG_START);
             SetStatus(STATUS_IN_PROGRESS);
 
@@ -463,6 +469,14 @@ void BattleGroundAV::Update(time_t diff)
                      EventPlayerDestroyedPoint( i);
             }
     }
+}
+
+void BattleGroundAV::StartingEventCloseDoors()
+{
+}
+
+void BattleGroundAV::StartingEventOpenDoors()
+{
 }
 
 void BattleGroundAV::AddPlayer(Player *plr)

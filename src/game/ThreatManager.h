@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -208,10 +208,10 @@ class TRINITY_DLL_SPEC ThreatManager
 
         // methods to access the lists from the outside to do sume dirty manipulation (scriping and such)
         // I hope they are used as little as possible.
-        inline std::list<HostilReference*>& getThreatList() { return iThreatContainer.getThreatList(); }
-        inline std::list<HostilReference*>& getOfflieThreatList() { return iThreatOfflineContainer.getThreatList(); }
-        inline ThreatContainer& getOnlineContainer() { return iThreatContainer; }
-        inline ThreatContainer& getOfflineContainer() { return iThreatOfflineContainer; }
+        std::list<HostilReference*>& getThreatList() { return iThreatContainer.getThreatList(); }
+        std::list<HostilReference*>& getOfflieThreatList() { return iThreatOfflineContainer.getThreatList(); }
+        ThreatContainer& getOnlineContainer() { return iThreatContainer; }
+        ThreatContainer& getOfflineContainer() { return iThreatOfflineContainer; }
 };
 
 //=================================================
