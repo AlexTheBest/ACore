@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,6 +33,7 @@
 #include "NPCHandler.h"
 #include "ObjectAccessor.h"
 #include "Pet.h"
+#include "MapManager.h"
 
 void WorldSession::SendNameQueryOpcode(Player *p)
 {
@@ -185,14 +186,13 @@ void WorldSession::HandleCreatureQueryOpcode( WorldPacket & recv_data )
         data << (uint32)ci->type;
         data << (uint32)ci->family;                         // family         wdbFeild9
         data << (uint32)ci->rank;                           // rank           wdbFeild10
-        data << (uint32)0;                                  // unknown        wdbFeild11
         data << (uint32)ci->PetSpellDataId;                 // Id from CreatureSpellData.dbc    wdbField12
         data << (uint32)ci->Modelid1;                       // Modelid1
         data << (uint32)ci->Modelid2;                       // Modelid2
         data << (uint32)ci->Modelid3;                       // Modelid3
         data << (uint32)ci->Modelid4;                       // Modelid4
-        data << (float)1.0f;                                // unk
-        data << (float)1.0f;                                // unk
+        data << (float)ci->unk16;                           // unk
+        data << (float)ci->unk17;                           // unk
         data << (uint8)ci->RacialLeader;
         SendPacket( &data );
         sLog.outDebug(  "WORLD: Sent SMSG_CREATURE_QUERY_RESPONSE " );
@@ -276,20 +276,43 @@ void WorldSession::HandleCorpseQueryOpcode(WorldPacket & /*recv_data*/)
 
     Corpse *corpse = GetPlayer()->GetCorpse();
 
-    uint8 found = 1;
     if(!corpse)
-        found = 0;
-
-    WorldPacket data(MSG_CORPSE_QUERY, (1+found*(5*4)));
-    data << uint8(found);
-    if(found)
     {
-        data << corpse->GetMapId();
-        data << corpse->GetPositionX();
-        data << corpse->GetPositionY();
-        data << corpse->GetPositionZ();
-        data << _player->GetMapId();
+        WorldPacket data(MSG_CORPSE_QUERY, 1);
+        data << uint8(0);                                   // corpse not found
+        SendPacket(&data);
+        return;
     }
+
+    int32 mapid = corpse->GetMapId();
+    float x = corpse->GetPositionX();
+    float y = corpse->GetPositionY();
+    float z = corpse->GetPositionZ();
+    int32 corpsemapid = _player->GetMapId();
+
+    if(Map *map = MapManager::Instance().FindMap(corpse->GetMapId(), corpse->GetInstanceId()))
+    {
+        if(map->IsDungeon())
+        {
+            if(!map->GetEntrancePos(mapid, x, y))
+                return;
+
+            Map *entrance_map = MapManager::Instance().GetMap(mapid, _player);
+            if(!entrance_map)
+                return;
+
+            z = entrance_map->GetHeight(x, y, MAX_HEIGHT);
+            corpsemapid = corpse->GetMapId();
+        }
+    }
+
+    WorldPacket data(MSG_CORPSE_QUERY, 1+(5*4));
+    data << uint8(1);                                       // corpse found
+    data << int32(mapid);
+    data << float(x);
+    data << float(y);
+    data << float(z);
+    data << int32(corpsemapid);
     SendPacket(&data);
 }
 
@@ -299,8 +322,6 @@ void WorldSession::HandleNpcTextQueryOpcode( WorldPacket & recv_data )
 
     uint32 textID;
     uint64 guid;
-    GossipText *pGossip;
-    std::string GossipStr;
 
     recv_data >> textID;
     sLog.outDetail("WORLD: CMSG_NPC_TEXT_QUERY ID '%u'", textID);
@@ -308,7 +329,7 @@ void WorldSession::HandleNpcTextQueryOpcode( WorldPacket & recv_data )
     recv_data >> guid;
     GetPlayer()->SetUInt64Value(UNIT_FIELD_TARGET, guid);
 
-    pGossip = objmgr.GetGossipText(textID);
+    GossipText const* pGossip = objmgr.GetGossipText(textID);
 
     WorldPacket data( SMSG_NPC_TEXT_UPDATE, 100 );          // guess size
     data << textID;
@@ -370,14 +391,11 @@ void WorldSession::HandleNpcTextQueryOpcode( WorldPacket & recv_data )
 
             data << pGossip->Options[i].Language;
 
-            data << pGossip->Options[i].Emotes[0]._Delay;
-            data << pGossip->Options[i].Emotes[0]._Emote;
-
-            data << pGossip->Options[i].Emotes[1]._Delay;
-            data << pGossip->Options[i].Emotes[1]._Emote;
-
-            data << pGossip->Options[i].Emotes[2]._Delay;
-            data << pGossip->Options[i].Emotes[2]._Emote;
+            for(int j = 0; j < 3; ++j)
+            {
+                data << pGossip->Options[i].Emotes[j]._Delay;
+                data << pGossip->Options[i].Emotes[j]._Emote;
+            }
         }
     }
 

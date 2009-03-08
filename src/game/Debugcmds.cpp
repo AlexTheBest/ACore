@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,6 +63,7 @@ bool ChatHandler::HandleDebugSpellFailCommand(const char* args)
     uint8 failnum = (uint8)atoi(px);
 
     WorldPacket data(SMSG_CAST_FAILED, 5);
+    data << uint8(0);
     data << uint32(133);
     data << uint8(failnum);
     m_session->SendPacket(&data);
@@ -89,9 +90,6 @@ bool ChatHandler::HandleSetPoiCommand(const char* args)
         return false;
 
     uint32 icon = atol(icon_text);
-    if ( icon < 0 )
-        icon = 0;
-
     uint32 flags = atol(flags_text);
 
     sLog.outDetail("Command : POI, NPC = %u, icon = %u flags = %u", target->GetGUIDLow(), icon,flags);
@@ -221,7 +219,7 @@ bool ChatHandler::HandleSendOpcodeCommand(const char* /*args*/)
     ifs.close();
     sLog.outDebug("Sending opcode %u", data.GetOpcode());
     data.hexlike();
-    ((Player*)unit)->GetSession()->SendPacket(&data);
+    player->GetSession()->SendPacket(&data);
     PSendSysMessage(LANG_COMMAND_OPCODESENT, data.GetOpcode(), unit->GetName());
     return true;
 }
@@ -285,8 +283,7 @@ bool ChatHandler::HandleSendChatMsgCommand(const char* args)
 bool ChatHandler::HandleSendQuestPartyMsgCommand(const char* args)
 {
     uint32 msg = atol((char*)args);
-    if (msg >= 0)
-        m_session->GetPlayer()->SendPushToPartyResponse(m_session->GetPlayer(), msg);
+    m_session->GetPlayer()->SendPushToPartyResponse(m_session->GetPlayer(), msg);
     return true;
 }
 
@@ -303,8 +300,7 @@ bool ChatHandler::HandleGetLootRecipient(const char* /*args*/)
 bool ChatHandler::HandleSendQuestInvalidMsgCommand(const char* args)
 {
     uint32 msg = atol((char*)args);
-    if (msg >= 0)
-        m_session->GetPlayer()->SendCanTakeQuestResponse(msg);
+    m_session->GetPlayer()->SendCanTakeQuestResponse(msg);
     return true;
 }
 
@@ -542,6 +538,12 @@ bool ChatHandler::HandleGetItemState(const char* args)
     return true;
 }
 
+bool ChatHandler::HandleDebugBattlegroundCommand(const char * /*args*/)
+{
+    sBattleGroundMgr.ToggleTesting();
+    return true;
+}
+
 bool ChatHandler::HandleDebugArenaCommand(const char * /*args*/)
 {
     sBattleGroundMgr.ToggleArenaTesting();
@@ -591,3 +593,72 @@ bool ChatHandler::HandleDebugHostilRefList(const char * /*args*/)
     return true;
 }
 
+bool ChatHandler::HandleSpawnVehicle(const char* args)
+{
+    if(!args)
+        return false;
+
+    char* e = strtok((char*)args, " ");
+    char* i = strtok(NULL, " ");
+
+    if (!e || !i)
+        return false;
+
+    uint32 entry = (uint32)atoi(e);
+    uint32 id = (uint32)atoi(i);
+
+    CreatureInfo const *ci = objmgr.GetCreatureTemplate(entry);
+
+    if(!ci)
+        return false;
+
+    VehicleEntry const *ve = sVehicleStore.LookupEntry(id);
+
+    if(!ve)
+        return false;
+
+    Vehicle *v = new Vehicle;
+    Map *map = m_session->GetPlayer()->GetMap();
+    if(!v->Create(objmgr.GenerateLowGuid(HIGHGUID_VEHICLE), map, entry, id, m_session->GetPlayer()->GetTeam()))
+    {
+        delete v;
+        return false;
+    }
+
+    float px, py, pz;
+    m_session->GetPlayer()->GetClosePoint(px, py, pz, m_session->GetPlayer()->GetObjectSize());
+
+    v->Relocate(px, py, pz, m_session->GetPlayer()->GetOrientation());
+
+    if(!v->IsPositionValid())
+    {
+        sLog.outError("ERROR: Vehicle (guidlow %d, entry %d) not created. Suggested coordinates isn't valid (X: %f Y: %f)",
+            v->GetGUIDLow(), v->GetEntry(), v->GetPositionX(), v->GetPositionY());
+        delete v;
+        return false;
+    }
+
+    map->Add((Creature*)v);
+
+    return true;
+}
+
+bool ChatHandler::HandleSendLargePacketCommand(const char* /*args*/)
+{
+    const char* stuffingString = "This is a dummy string to push the packet's size beyond 128000 bytes. ";
+    std::ostringstream ss;
+    while(ss.str().size() < 128000)
+        ss << stuffingString;
+    SendSysMessage(ss.str().c_str());
+    return true;
+}
+
+bool ChatHandler::HandleSendSetPhaseShiftCommand(const char* args)
+{
+    if(!args)
+        return false;
+
+    uint32 PhaseShift = atoi(args);
+    m_session->SendSetPhaseShift(PhaseShift);
+    return true;
+}

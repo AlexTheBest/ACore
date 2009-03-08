@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,6 +29,7 @@
 #include "Language.h"
 #include "World.h"
 #include "Util.h"
+#include "WorldPacket.h"
 
 // these variables aren't used outside of this file, so declare them only here
 uint32 BG_AB_HonorScoreTicks[BG_HONOR_MODE_NUM] = {
@@ -46,93 +47,22 @@ BattleGroundAB::BattleGroundAB()
     m_BuffChange = true;
     m_BgObjects.resize(BG_AB_OBJECT_MAX);
     m_BgCreatures.resize(BG_AB_ALL_NODES_COUNT);
+
+    m_StartMessageIds[BG_STARTING_EVENT_FIRST]  = LANG_BG_AB_START_TWO_MINUTES;
+    m_StartMessageIds[BG_STARTING_EVENT_SECOND] = LANG_BG_AB_START_ONE_MINUTE;
+    m_StartMessageIds[BG_STARTING_EVENT_THIRD]  = LANG_BG_AB_START_HALF_MINUTE;
+    m_StartMessageIds[BG_STARTING_EVENT_FOURTH] = LANG_BG_AB_HAS_BEGUN;
 }
 
 BattleGroundAB::~BattleGroundAB()
 {
 }
 
-void BattleGroundAB::Update(time_t diff)
+void BattleGroundAB::Update(uint32 diff)
 {
     BattleGround::Update(diff);
 
-    if( GetStatus() == STATUS_WAIT_JOIN && GetPlayersSize() )
-    {
-        ModifyStartDelayTime(diff);
-
-        if( !(m_Events & 0x01) )
-        {
-            m_Events |= 0x01;
-
-            // setup here, only when at least one player has ported to the map
-            if(!SetupBattleGround())
-            {
-                EndNow();
-                return;
-            }
-
-            sLog.outDebug("Arathi Basin: entering state STATUS_WAIT_JOIN ...");
-
-            // despawn banners, auras and buffs
-            for (int obj = BG_AB_OBJECT_BANNER_NEUTRAL; obj < BG_AB_DYNAMIC_NODES_COUNT * 8; ++obj)
-                SpawnBGObject(obj, RESPAWN_ONE_DAY);
-            for (int i = 0; i < BG_AB_DYNAMIC_NODES_COUNT * 3; ++i)
-                SpawnBGObject(BG_AB_OBJECT_SPEEDBUFF_STABLES + i, RESPAWN_ONE_DAY);
-
-            // Starting doors
-            SpawnBGObject(BG_AB_OBJECT_GATE_A, RESPAWN_IMMEDIATELY);
-            SpawnBGObject(BG_AB_OBJECT_GATE_H, RESPAWN_IMMEDIATELY);
-            DoorClose(BG_AB_OBJECT_GATE_A);
-            DoorClose(BG_AB_OBJECT_GATE_H);
-
-            // Starting base spirit guides
-            _NodeOccupied(BG_AB_SPIRIT_ALIANCE,ALLIANCE);
-            _NodeOccupied(BG_AB_SPIRIT_HORDE,HORDE);
-
-            SetStartDelayTime(START_DELAY0);
-        }
-        // After 1 minute, warning is signalled
-        else if( GetStartDelayTime() <= START_DELAY1 && !(m_Events & 0x04) )
-        {
-            m_Events |= 0x04;
-            SendMessageToAll(GetTrinityString(LANG_BG_AB_ONEMINTOSTART));
-        }
-        // After 1,5 minute, warning is signalled
-        else if( GetStartDelayTime() <= START_DELAY2 && !(m_Events & 0x08) )
-        {
-            m_Events |= 0x08;
-            SendMessageToAll(GetTrinityString(LANG_BG_AB_HALFMINTOSTART));
-        }
-        // After 2 minutes, gates OPEN ! x)
-        else if( GetStartDelayTime() < 0 && !(m_Events & 0x10) )
-        {
-            m_Events |= 0x10;
-            SendMessageToAll(GetTrinityString(LANG_BG_AB_STARTED));
-
-            // spawn neutral banners
-            for (int banner = BG_AB_OBJECT_BANNER_NEUTRAL, i = 0; i < 5; banner += 8, ++i)
-                SpawnBGObject(banner, RESPAWN_IMMEDIATELY);
-            for (int i = 0; i < BG_AB_DYNAMIC_NODES_COUNT; ++i)
-            {
-                //randomly select buff to spawn
-                uint8 buff = urand(0, 2);
-                SpawnBGObject(BG_AB_OBJECT_SPEEDBUFF_STABLES + buff + i * 3, RESPAWN_IMMEDIATELY);
-            }
-            DoorOpen(BG_AB_OBJECT_GATE_A);
-            DoorOpen(BG_AB_OBJECT_GATE_H);
-
-            PlaySoundToAll(SOUND_BG_START);
-            if(sWorld.getConfig(CONFIG_BG_START_MUSIC))
-                PlaySoundToAll(SOUND_BG_START_L70ETC); //MUSIC
-            SetStatus(STATUS_IN_PROGRESS);
-
-            for(BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
-                if(Player* plr = objmgr.GetPlayer(itr->first))
-                    plr->RemoveAurasDueToSpell(SPELL_PREPARATION);
-        }
-
-    }
-    else if( GetStatus() == STATUS_IN_PROGRESS )
+    if( GetStatus() == STATUS_IN_PROGRESS )
     {
         int team_points[2] = { 0, 0 };
 
@@ -210,9 +140,9 @@ void BattleGroundAB::Update(time_t diff)
                 if( !m_IsInformedNearVictory && m_TeamScores[team] > 1800 )
                 {
                     if( team == BG_TEAM_ALLIANCE )
-                        SendMessageToAll(GetTrinityString(LANG_BG_AB_A_NEAR_VICTORY));
+                        SendMessageToAll(GetMangosString(LANG_BG_AB_A_NEAR_VICTORY), CHAT_MSG_BG_SYSTEM_NEUTRAL);
                     else
-                        SendMessageToAll(GetTrinityString(LANG_BG_AB_H_NEAR_VICTORY));
+                        SendMessageToAll(GetMangosString(LANG_BG_AB_H_NEAR_VICTORY), CHAT_MSG_BG_SYSTEM_NEUTRAL);
                     PlaySoundToAll(SOUND_NEAR_VICTORY);
                     m_IsInformedNearVictory = true;
                 }
@@ -232,6 +162,40 @@ void BattleGroundAB::Update(time_t diff)
         if( m_TeamScores[BG_TEAM_HORDE] >= 2000 )
             EndBattleGround(HORDE);
     }
+}
+
+void BattleGroundAB::StartingEventCloseDoors()
+{
+    // despawn banners, auras and buffs
+    for (int obj = BG_AB_OBJECT_BANNER_NEUTRAL; obj < BG_AB_DYNAMIC_NODES_COUNT * 8; ++obj)
+        SpawnBGObject(obj, RESPAWN_ONE_DAY);
+    for (int i = 0; i < BG_AB_DYNAMIC_NODES_COUNT * 3; ++i)
+        SpawnBGObject(BG_AB_OBJECT_SPEEDBUFF_STABLES + i, RESPAWN_ONE_DAY);
+
+    // Starting doors
+    DoorClose(BG_AB_OBJECT_GATE_A);
+    DoorClose(BG_AB_OBJECT_GATE_H);
+    SpawnBGObject(BG_AB_OBJECT_GATE_A, RESPAWN_IMMEDIATELY);
+    SpawnBGObject(BG_AB_OBJECT_GATE_H, RESPAWN_IMMEDIATELY);
+
+    // Starting base spirit guides
+    _NodeOccupied(BG_AB_SPIRIT_ALIANCE,ALLIANCE);
+    _NodeOccupied(BG_AB_SPIRIT_HORDE,HORDE);
+}
+
+void BattleGroundAB::StartingEventOpenDoors()
+{
+    // spawn neutral banners
+    for (int banner = BG_AB_OBJECT_BANNER_NEUTRAL, i = 0; i < 5; banner += 8, ++i)
+        SpawnBGObject(banner, RESPAWN_IMMEDIATELY);
+    for (int i = 0; i < BG_AB_DYNAMIC_NODES_COUNT; ++i)
+    {
+        //randomly select buff to spawn
+        uint8 buff = urand(0, 2);
+        SpawnBGObject(BG_AB_OBJECT_SPEEDBUFF_STABLES + buff + i * 3, RESPAWN_IMMEDIATELY);
+    }
+    DoorOpen(BG_AB_OBJECT_GATE_A);
+    DoorOpen(BG_AB_OBJECT_GATE_H);
 }
 
 void BattleGroundAB::AddPlayer(Player *plr)
@@ -424,20 +388,21 @@ void BattleGroundAB::_NodeDeOccupied(uint8 node)
     if( !ghost_list.empty() )
     {
         WorldSafeLocsEntry const *ClosestGrave = NULL;
-        Player *plr;
-        for (std::vector<uint64>::iterator itr = ghost_list.begin(); itr != ghost_list.end(); ++itr)
+        for (std::vector<uint64>::const_iterator itr = ghost_list.begin(); itr != ghost_list.end(); ++itr)
         {
-            plr = objmgr.GetPlayer(*ghost_list.begin());
-            if( !plr )
+            Player* plr = objmgr.GetPlayer(*itr);
+            if (!plr)
                 continue;
-            if( !ClosestGrave )
-                ClosestGrave = GetClosestGraveYard(plr->GetPositionX(), plr->GetPositionY(), plr->GetPositionZ(), plr->GetTeam());
 
-            plr->TeleportTo(GetMapId(), ClosestGrave->x, ClosestGrave->y, ClosestGrave->z, plr->GetOrientation());
+            if (!ClosestGrave)                              // cache
+                ClosestGrave = GetClosestGraveYard(plr);
+
+            if (ClosestGrave)
+                plr->TeleportTo(GetMapId(), ClosestGrave->x, ClosestGrave->y, ClosestGrave->z, plr->GetOrientation());
         }
     }
 
-     if( m_BgCreatures[node] )
+    if( m_BgCreatures[node] )
         DelCreature(node);
 
     // buff object isn't despawned
@@ -591,8 +556,11 @@ bool BattleGroundAB::SetupBattleGround()
     return true;
 }
 
-void BattleGroundAB::ResetBGSubclass()
+void BattleGroundAB::Reset()
 {
+    //call parent's class reset
+    BattleGround::Reset();
+
     m_TeamScores[BG_TEAM_ALLIANCE]          = 0;
     m_TeamScores[BG_TEAM_HORDE]             = 0;
     m_lastTick[BG_TEAM_ALLIANCE]            = 0;
@@ -615,9 +583,9 @@ void BattleGroundAB::ResetBGSubclass()
             DelCreature(i);
 }
 
-WorldSafeLocsEntry const* BattleGroundAB::GetClosestGraveYard(float x, float y, float /*z*/, uint32 team)
+WorldSafeLocsEntry const* BattleGroundAB::GetClosestGraveYard(Player* player)
 {
-    uint8 teamIndex = GetTeamIndexByTeamId(team);
+    uint8 teamIndex = GetTeamIndexByTeamId(player->GetTeam());
 
     // Is there any occupied node for this team?
     std::vector<uint8> nodes;
@@ -629,13 +597,16 @@ WorldSafeLocsEntry const* BattleGroundAB::GetClosestGraveYard(float x, float y, 
     // If so, select the closest node to place ghost on
     if( !nodes.empty() )
     {
+        float plr_x = player->GetPositionX();
+        float plr_y = player->GetPositionY();
+
         float mindist = 999999.0f;
         for (uint8 i = 0; i < nodes.size(); ++i)
         {
             WorldSafeLocsEntry const*entry = sWorldSafeLocsStore.LookupEntry( BG_AB_GraveyardIds[nodes[i]] );
             if( !entry )
                 continue;
-            float dist = (entry->x - x)*(entry->x - x)+(entry->y - y)*(entry->y - y);
+            float dist = (entry->x - plr_x)*(entry->x - plr_x)+(entry->y - plr_y)*(entry->y - plr_y);
             if( mindist > dist )
             {
                 mindist = dist;

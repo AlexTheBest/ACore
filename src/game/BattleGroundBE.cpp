@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,11 +25,22 @@
 #include "Creature.h"
 #include "ObjectMgr.h"
 #include "MapManager.h"
+#include "WorldPacket.h"
 #include "Language.h"
 
 BattleGroundBE::BattleGroundBE()
 {
     m_BgObjects.resize(BG_BE_OBJECT_MAX);
+
+    m_StartDelayTimes[BG_STARTING_EVENT_FIRST]  = BG_START_DELAY_1M;
+    m_StartDelayTimes[BG_STARTING_EVENT_SECOND] = BG_START_DELAY_30S;
+    m_StartDelayTimes[BG_STARTING_EVENT_THIRD]  = BG_START_DELAY_15S;
+    m_StartDelayTimes[BG_STARTING_EVENT_FOURTH] = BG_START_DELAY_NONE;
+    //we must set messageIds
+    m_StartMessageIds[BG_STARTING_EVENT_FIRST]  = LANG_ARENA_ONE_MINUTE;
+    m_StartMessageIds[BG_STARTING_EVENT_SECOND] = LANG_ARENA_THIRTY_SECONDS;
+    m_StartMessageIds[BG_STARTING_EVENT_THIRD]  = LANG_ARENA_FIFTEEN_SECONDS;
+    m_StartMessageIds[BG_STARTING_EVENT_FOURTH] = LANG_ARENA_HAS_BEGUN;
 }
 
 BattleGroundBE::~BattleGroundBE()
@@ -37,75 +48,32 @@ BattleGroundBE::~BattleGroundBE()
 
 }
 
-void BattleGroundBE::Update(time_t diff)
+void BattleGroundBE::Update(uint32 diff)
 {
     BattleGround::Update(diff);
-
-    // after bg start we get there
-    if (GetStatus() == STATUS_WAIT_JOIN && GetPlayersSize())
-    {
-        ModifyStartDelayTime(diff);
-
-        if (!(m_Events & 0x01))
-        {
-            m_Events |= 0x01;
-            // setup here, only when at least one player has ported to the map
-            if(!SetupBattleGround())
-            {
-                EndNow();
-                return;
-            }
-            for(uint32 i = BG_BE_OBJECT_DOOR_1; i <= BG_BE_OBJECT_DOOR_4; i++)
-                SpawnBGObject(i, RESPAWN_IMMEDIATELY);
-
-            for(uint32 i = BG_BE_OBJECT_BUFF_1; i <= BG_BE_OBJECT_BUFF_2; i++)
-                SpawnBGObject(i, RESPAWN_ONE_DAY);
-
-            SetStartDelayTime(START_DELAY1);
-            SendMessageToAll(LANG_ARENA_ONE_MINUTE);
-        }
-        // After 30 seconds, warning is signalled
-        else if (GetStartDelayTime() <= START_DELAY2 && !(m_Events & 0x04))
-        {
-            m_Events |= 0x04;
-            SendMessageToAll(LANG_ARENA_THIRTY_SECONDS);
-        }
-        // After 15 seconds, warning is signalled
-        else if (GetStartDelayTime() <= START_DELAY3 && !(m_Events & 0x08))
-        {
-            m_Events |= 0x08;
-            SendMessageToAll(LANG_ARENA_FIFTEEN_SECONDS);
-        }
-        // delay expired (1 minute)
-        else if (GetStartDelayTime() <= 0 && !(m_Events & 0x10))
-        {
-            m_Events |= 0x10;
-
-            for(uint32 i = BG_BE_OBJECT_DOOR_1; i <= BG_BE_OBJECT_DOOR_2; i++)
-                DoorOpen(i);
-
-            for(uint32 i = BG_BE_OBJECT_BUFF_1; i <= BG_BE_OBJECT_BUFF_2; i++)
-                SpawnBGObject(i, 60);
-
-            SendMessageToAll(LANG_ARENA_BEGUN);
-            SetStatus(STATUS_IN_PROGRESS);
-            SetStartDelayTime(0);
-
-            for(BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
-                if(Player *plr = objmgr.GetPlayer(itr->first))
-                    plr->RemoveAurasDueToSpell(SPELL_ARENA_PREPARATION);
-
-            if(!GetPlayersCountByTeam(ALLIANCE) && GetPlayersCountByTeam(HORDE))
-                EndBattleGround(HORDE);
-            else if(GetPlayersCountByTeam(ALLIANCE) && !GetPlayersCountByTeam(HORDE))
-                EndBattleGround(ALLIANCE);
-        }
-    }
 
     /*if(GetStatus() == STATUS_IN_PROGRESS)
     {
         // update something
     }*/
+}
+
+void BattleGroundBE::StartingEventCloseDoors()
+{
+    for(uint32 i = BG_BE_OBJECT_DOOR_1; i <= BG_BE_OBJECT_DOOR_4; i++)
+        SpawnBGObject(i, RESPAWN_IMMEDIATELY);
+
+    for(uint32 i = BG_BE_OBJECT_BUFF_1; i <= BG_BE_OBJECT_BUFF_2; i++)
+        SpawnBGObject(i, RESPAWN_ONE_DAY);
+}
+
+void BattleGroundBE::StartingEventOpenDoors()
+{
+    for(uint32 i = BG_BE_OBJECT_DOOR_1; i <= BG_BE_OBJECT_DOOR_2; i++)
+        DoorOpen(i);
+
+    for(uint32 i = BG_BE_OBJECT_BUFF_1; i <= BG_BE_OBJECT_BUFF_2; i++)
+        SpawnBGObject(i, 60);
 }
 
 void BattleGroundBE::AddPlayer(Player *plr)
@@ -201,9 +169,10 @@ void BattleGroundBE::FillInitialWorldStates(WorldPacket &data)
     data << uint32(0x9f3) << uint32(1);           // 9
 }
 
-void BattleGroundBE::ResetBGSubclass()
+void BattleGroundBE::Reset()
 {
-
+    //call parent's class reset
+    BattleGround::Reset();
 }
 
 bool BattleGroundBE::SetupBattleGround()
