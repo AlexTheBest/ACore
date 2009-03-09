@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,26 +47,51 @@ enum SpellCastTargetFlags
     TARGET_FLAG_RESURRECTABLE    = 0x8000*/
 
     TARGET_FLAG_SELF            = 0x00000000,
+    TARGET_FLAG_UNUSED1         = 0x00000001,               // not used in any spells as of 3.0.3 (can be set dynamically)
     TARGET_FLAG_UNIT            = 0x00000002,               // pguid
+    TARGET_FLAG_UNUSED2         = 0x00000004,               // not used in any spells as of 3.0.3 (can be set dynamically)
+    TARGET_FLAG_UNUSED3         = 0x00000008,               // not used in any spells as of 3.0.3 (can be set dynamically)
     TARGET_FLAG_ITEM            = 0x00000010,               // pguid
     TARGET_FLAG_SOURCE_LOCATION = 0x00000020,               // 3 float
     TARGET_FLAG_DEST_LOCATION   = 0x00000040,               // 3 float
-    TARGET_FLAG_OBJECT_UNK      = 0x00000080,               // ?
+    TARGET_FLAG_OBJECT_UNK      = 0x00000080,               // used in 7 spells only
+    TARGET_FLAG_UNIT_UNK        = 0x00000100,               // looks like self target (480 spells)
     TARGET_FLAG_PVP_CORPSE      = 0x00000200,               // pguid
-    TARGET_FLAG_OBJECT          = 0x00000800,               // pguid
-    TARGET_FLAG_TRADE_ITEM      = 0x00001000,               // pguid
-    TARGET_FLAG_STRING          = 0x00002000,               // string
-    TARGET_FLAG_UNK1            = 0x00004000,               // ?
-    TARGET_FLAG_CORPSE          = 0x00008000,               // pguid
-    TARGET_FLAG_UNK2            = 0x00010000                // pguid
+    TARGET_FLAG_UNIT_CORPSE     = 0x00000400,               // 10 spells (gathering professions)
+    TARGET_FLAG_OBJECT          = 0x00000800,               // pguid, 2 spells
+    TARGET_FLAG_TRADE_ITEM      = 0x00001000,               // pguid, 0 spells
+    TARGET_FLAG_STRING          = 0x00002000,               // string, 0 spells
+    TARGET_FLAG_UNK1            = 0x00004000,               // 199 spells, opening object/lock
+    TARGET_FLAG_CORPSE          = 0x00008000,               // pguid, resurrection spells
+    TARGET_FLAG_UNK2            = 0x00010000,               // pguid, not used in any spells as of 3.0.3 (can be set dynamically)
+    TARGET_FLAG_GLYPH           = 0x00020000                // used in glyph spells
 };
 
 enum SpellCastFlags
 {
+    CAST_FLAG_NONE               = 0x00000000,
+    CAST_FLAG_UNKNOWN0           = 0x00000001,              // may be pending spell cast
     CAST_FLAG_UNKNOWN1           = 0x00000002,
+    CAST_FLAG_UNKNOWN11          = 0x00000004,
+    CAST_FLAG_UNKNOWN12          = 0x00000008,
     CAST_FLAG_UNKNOWN2           = 0x00000010,
-    CAST_FLAG_AMMO               = 0x00000020,
-    CAST_FLAG_UNKNOWN3           = 0x00000100
+    CAST_FLAG_AMMO               = 0x00000020,              // Projectiles visual
+    CAST_FLAG_UNKNOWN8           = 0x00000040,
+    CAST_FLAG_UNKNOWN9           = 0x00000080,
+    CAST_FLAG_UNKNOWN3           = 0x00000100,
+    CAST_FLAG_UNKNOWN13          = 0x00000200,
+    CAST_FLAG_UNKNOWN14          = 0x00000400,
+    CAST_FLAG_UNKNOWN6           = 0x00000800,              // wotlk, trigger rune cooldown
+    CAST_FLAG_UNKNOWN15          = 0x00001000,
+    CAST_FLAG_UNKNOWN16          = 0x00002000,
+    CAST_FLAG_UNKNOWN17          = 0x00004000,
+    CAST_FLAG_UNKNOWN18          = 0x00008000,
+    CAST_FLAG_UNKNOWN19          = 0x00010000,
+    CAST_FLAG_UNKNOWN4           = 0x00020000,              // wotlk
+    CAST_FLAG_UNKNOWN10          = 0x00040000,
+    CAST_FLAG_UNKNOWN5           = 0x00080000,              // wotlk
+    CAST_FLAG_UNKNOWN20          = 0x00100000,
+    CAST_FLAG_UNKNOWN7           = 0x00200000               // wotlk, rune cooldown list
 };
 
 enum SpellRangeFlag
@@ -136,6 +161,7 @@ class SpellCastTargets
         void setUnitTarget(Unit *target);
         void setDestination(float x, float y, float z, bool send = true, int32 mapId = -1);
         void setDestination(Unit *target, bool send = true);
+        void setSource(float x, float y, float z);
 
         uint64 getGOTargetGUID() const { return m_GOTargetGUID; }
         GameObject *getGOTarget() const { return m_GOTarget; }
@@ -208,7 +234,7 @@ enum SpellTargets
     SPELL_TARGETS_CHAINHEAL,
 };
 
-#define SPELL_SPELL_CHANNEL_UPDATE_INTERVAL 1000
+#define SPELL_SPELL_CHANNEL_UPDATE_INTERVAL (1*IN_MILISECONDS)
 
 typedef std::multimap<uint64, uint64> SpellTargetTimeMap;
 
@@ -234,6 +260,7 @@ class Spell
         void EffectHealthLeech(uint32 i);
         void EffectQuestComplete(uint32 i);
         void EffectCreateItem(uint32 i);
+        void EffectCreateItem2(uint32 i);
         void EffectPersistentAA(uint32 i);
         void EffectEnergize(uint32 i);
         void EffectOpenLock(uint32 i);
@@ -276,6 +303,7 @@ class Spell
         void EffectStuck(uint32 i);
         void EffectSummonPlayer(uint32 i);
         void EffectActivateObject(uint32 i);
+        void EffectApplyGlyph(uint32 i);
         void EffectSummonTotem(uint32 i);
         void EffectEnchantHeldItem(uint32 i);
         void EffectSummonObject(uint32 i);
@@ -293,6 +321,8 @@ class Spell
         void EffectSkinning(uint32 i);
         void EffectCharge(uint32 i);
         void EffectProspecting(uint32 i);
+        void EffectMilling(uint32 i);
+        void EffectRenamePet(uint32 i);
         void EffectSendTaxi(uint32 i);
         void EffectSummonCritter(uint32 i);
         void EffectKnockBack(uint32 i);
@@ -319,16 +349,22 @@ class Spell
         void EffectKillCredit(uint32 i);
         void EffectQuestFail(uint32 i);
         void EffectRedirectThreat(uint32 i);
+        void EffectActivateRune(uint32 i);
+        void EffectTitanGrip(uint32 i);
+        void EffectEnchantItemPrismatic(uint32 i);
 
         Spell( Unit* Caster, SpellEntry const *info, bool triggered, uint64 originalCasterGUID = 0, Spell** triggeringContainer = NULL, bool skipCheck = false );
         ~Spell();
 
-        void prepare(SpellCastTargets * targets, Aura* triggeredByAura = NULL);
+        void prepare(SpellCastTargets const* targets, Aura* triggeredByAura = NULL);
         void cancel();
         void update(uint32 difftime);
         void cast(bool skipCheck = false);
         void finish(bool ok = true);
         void TakePower();
+        void TakeAmmo();
+        uint8 CheckRuneCost(uint32 runeCostID);
+        void TakeRunePower();
         void TakeReagents();
         void TakeCastItem();
         void TriggerSpell();
@@ -354,11 +390,10 @@ class Spell
         bool HaveTargetsForEffect(uint8 effect) const;
         void Delayed();
         void DelayedChannel();
-        inline uint32 getState() const { return m_spellState; }
+        uint32 getState() const { return m_spellState; }
         void setState(uint32 state) { m_spellState = state; }
 
         void DoCreateItem(uint32 i, uint32 itemtype);
-
         void WriteSpellGoTargets( WorldPacket * data );
         void WriteAmmoToPacket( WorldPacket * data );
         void FillTargetMap();
@@ -388,6 +423,8 @@ class Spell
         Item* m_CastItem;
         uint64 m_castItemGUID;
         uint8 m_cast_count;
+        uint32 m_glyphIndex;
+        uint32 m_preCastSpell;
         SpellCastTargets m_targets;
 
         int32 GetCastTime() const { return m_casttime; }
@@ -424,7 +461,7 @@ class Spell
 
         void UpdatePointers();                              // must be used at call Spell code after time delay (non triggered spell cast/update spell call/etc)
 
-        bool IsAffectedBy(SpellEntry const *spellInfo, uint32 effectId);
+        bool IsAffectedByAura(Aura *aura);
 
         bool CheckTargetCreatureType(Unit* target) const;
 
@@ -451,9 +488,17 @@ class Spell
         int32 m_casttime;                                   // Calculated spell cast time initialized only in Spell::prepare
         bool m_canReflect;                                  // can reflect this spell?
         bool m_autoRepeat;
+        uint8 m_runesState;
 
         uint8 m_delayAtDamageCount;
-        int32 GetNextDelayAtDamageMsTime() { return m_delayAtDamageCount < 5 ? 1000 - (m_delayAtDamageCount++)* 200 : 200; }
+        bool isDelayableNoMore()
+        {
+            if(m_delayAtDamageCount >= 2)
+                return true;
+
+            m_delayAtDamageCount++;
+            return false;
+        }
 
         // Delayed spells system
         uint64 m_delayStart;                                // time of spell delay start, filled by event handler, zero = just started
@@ -497,8 +542,6 @@ class Spell
         // Spell target subsystem
         //*****************************************
         // Targets store structures and data
-        uint32 m_countOfHit;
-        uint32 m_countOfMiss;
         struct TargetInfo
         {
             uint64 targetGUID;
