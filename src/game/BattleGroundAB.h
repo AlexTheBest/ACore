@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -172,6 +172,11 @@ enum BG_AB_Sounds
     SOUND_NEAR_VICTORY                  = 8456
 };
 
+#define BG_AB_NotABBGWeekendHonorTicks 330
+#define BG_AB_ABBGWeekendHonorTicks 200
+#define BG_AB_NotABBGWeekendReputationTicks 200
+#define BG_AB_ABBGWeekendReputationTicks 150
+
 // x, y, z, o
 const float BG_AB_NodePositions[BG_AB_DYNAMIC_NODES_COUNT][4] = {
     {1166.785f, 1200.132f, -56.70859f, 0.9075713f},         // stables
@@ -238,13 +243,16 @@ class BattleGroundAB : public BattleGround
         BattleGroundAB();
         ~BattleGroundAB();
 
-        void Update(time_t diff);
+        void Update(uint32 diff);
         void AddPlayer(Player *plr);
+        virtual void StartingEventCloseDoors();
+        virtual void StartingEventOpenDoors();
         void RemovePlayer(Player *plr,uint64 guid);
         void HandleAreaTrigger(Player *Source, uint32 Trigger);
         virtual bool SetupBattleGround();
-        virtual void ResetBGSubclass();
-        virtual WorldSafeLocsEntry const* GetClosestGraveYard(float x, float y, float z, uint32 team);
+        virtual void Reset();
+        void EndBattleGround(uint32 winner);
+        virtual WorldSafeLocsEntry const* GetClosestGraveYard(Player* player);
 
         /* Scorekeeping */
         virtual void UpdatePlayerScore(Player *Source, uint32 type, uint32 value);
@@ -265,7 +273,7 @@ class BattleGroundAB : public BattleGround
         void _NodeOccupied(uint8 node,Team team);
         void _NodeDeOccupied(uint8 node);
 
-        const char* _GetNodeName(uint8 node);
+        int32 _GetNodeNameId(uint8 node);
 
         /* Nodes info:
             0: neutral
@@ -273,15 +281,19 @@ class BattleGroundAB : public BattleGround
             2: horde contested
             3: ally occupied
             4: horde occupied     */
-        uint8             m_Nodes[BG_AB_DYNAMIC_NODES_COUNT];
-        uint8             m_prevNodes[BG_AB_DYNAMIC_NODES_COUNT];
-        BG_AB_BannerTimer m_BannerTimers[BG_AB_DYNAMIC_NODES_COUNT];
-        int32             m_NodeTimers[BG_AB_DYNAMIC_NODES_COUNT];
-        uint32            m_TeamScores[2];
-        uint32            m_lastTick[2];
-        uint32            m_HonorScoreTics[2];
-        uint32            m_ReputationScoreTics[2];
-        bool              m_IsInformedNearVictory;
+        uint8               m_Nodes[BG_AB_DYNAMIC_NODES_COUNT];
+        uint8               m_prevNodes[BG_AB_DYNAMIC_NODES_COUNT];
+        BG_AB_BannerTimer   m_BannerTimers[BG_AB_DYNAMIC_NODES_COUNT];
+        int32               m_NodeTimers[BG_AB_DYNAMIC_NODES_COUNT];
+        uint32              m_TeamScores[2];
+        uint32              m_lastTick[2];
+        uint32              m_HonorScoreTics[2];
+        uint32              m_ReputationScoreTics[2];
+        bool                m_IsInformedNearVictory;
+        uint32              m_HonorTics;
+        uint32              m_ReputationTics;
+
+
 };
 #endif
 
