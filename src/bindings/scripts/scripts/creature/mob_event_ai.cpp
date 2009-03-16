@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -546,7 +546,8 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
                 }else if ( param2 && urand(0,1) )
                 {
                     temp = param2;
-                }else
+                }
+                else
                 {
                     temp = param1;
                 }
@@ -681,13 +682,17 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
                             //Melee current victim if flag not set
                             if (!(param3 & CAST_NO_MELEE_IF_OOM))
                             {
-                                AttackDistance = 0;
-                                AttackAngle = 0;
+                                if (m_creature->GetMotionMaster()->GetCurrentMovementGeneratorType() == TARGETED_MOTION_TYPE)
+                                {
+                                    AttackDistance = 0;
+                                    AttackAngle = 0;
 
-                                m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim(), AttackDistance, AttackAngle);
+                                    m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim(), AttackDistance, AttackAngle);
+                                }
                             }
 
-                        }else
+                        }
+                        else
                         {
                             //Interrupt any previous spell
                             if (caster->IsNonMeleeSpellCasted(false) && param3 & CAST_INTURRUPT_PREVIOUS)
@@ -795,7 +800,7 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
             {
                 CombatMovementEnabled = param1;
 
-                //Allow movement (create new targeted movement gen if none exist already)
+                //Allow movement (create new targeted movement gen only if idle)
                 if (CombatMovementEnabled)
                 {
                     m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim(), AttackDistance, AttackAngle);
@@ -1084,9 +1089,17 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
 
     void EnterEvadeMode()
     {
-        ScriptedAI::EnterEvadeMode();
+        m_creature->InterruptNonMeleeSpells(true);
+        m_creature->RemoveAllAuras();
+        m_creature->DeleteThreatList();
+        m_creature->CombatStop();
 
-        IsFleeing = false;
+        if (m_creature->isAlive())
+            m_creature->GetMotionMaster()->MoveTargetedHome();
+
+        m_creature->SetLootRecipient(NULL);
+
+        InCombat = false;
 
         //Handle Evade events
         for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
@@ -1293,27 +1306,6 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
         if (EventUpdateTime < diff)
         {
             EventDiff += diff;
-
-            //Check for range based events
-            //if (m_creature->GetDistance(m_creature->getVictim()) >
-            if (Combat)
-            {
-                for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
-                {
-                    switch ((*i).Event.event_type)
-                    {
-                        case EVENT_T_RANGE:
-                            // in some cases this is called twice and victim may not exist in the second time
-                            if(m_creature->getVictim())
-                            {
-                                float dist = m_creature->GetDistance(m_creature->getVictim());
-                                if (dist > (*i).Event.event_param1 && dist < (*i).Event.event_param2)
-                                    ProcessEvent(*i);
-                            }
-                            break;
-                    }
-                }
-            }
 
             //Check for time based events
             for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)

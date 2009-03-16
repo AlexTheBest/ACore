@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,6 @@
 
 #include "Common.h"
 #include "WorldPacket.h"
-#include "WorldSession.h"
 #include "Opcodes.h"
 #include "Player.h"
 
@@ -204,11 +203,8 @@ class Channel
         void SendToAllButOne(WorldPacket *data, uint64 who);
         void SendToOne(WorldPacket *data, uint64 who);
 
-        bool IsOn(uint64 who) const { return players.count(who) != 0; }
-
-        bool IsBanned(const uint64 guid) const {return banned.count(guid) != 0; }
-
-        bool IsFirst() const { return !(players.size() > 1); }
+        bool IsOn(uint64 who) const { return players.find(who) != players.end(); }
+        bool IsBanned(uint64 guid) const { return banned.find(guid) != banned.end(); }
 
         uint8 GetPlayerFlags(uint64 p) const
         {

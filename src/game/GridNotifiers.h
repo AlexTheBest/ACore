@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -113,8 +113,10 @@ namespace Trinity
         std::set<uint64> plr_list;
         bool i_toPossessor;
         bool i_toSelf;
+        uint32 i_phaseMask;
         float i_dist;
-        Deliverer(WorldObject &src, WorldPacket *msg, bool to_possessor, bool to_self, float dist = 0.0f) : i_source(src), i_message(msg), i_toPossessor(to_possessor), i_toSelf(to_self), i_dist(dist) {}
+        Deliverer(WorldObject &src, WorldPacket *msg, bool to_possessor, bool to_self, float dist = 0.0f)
+            : i_source(src), i_message(msg), i_toPossessor(to_possessor), i_toSelf(to_self), i_dist(dist), i_phaseMask(src.GetPhaseMask()) {}
         void Visit(PlayerMapType &m);
         void Visit(CreatureMapType &m);
         void Visit(DynamicObjectMapType &m);
@@ -213,10 +215,12 @@ namespace Trinity
     template<class Check>
         struct TRINITY_DLL_DECL WorldObjectSearcher
     {
+        uint32 i_phaseMask;
         WorldObject* &i_object;
         Check &i_check;
 
-        WorldObjectSearcher(WorldObject* & result, Check& check) : i_object(result),i_check(check) {}
+        WorldObjectSearcher(WorldObject const* searcher, WorldObject* & result, Check& check)
+            : i_phaseMask(searcher->GetPhaseMask()), i_object(result),i_check(check) {}
 
         void Visit(GameObjectMapType &m);
         void Visit(PlayerMapType &m);
@@ -230,10 +234,12 @@ namespace Trinity
     template<class Check>
         struct TRINITY_DLL_DECL WorldObjectListSearcher
     {
+        uint32 i_phaseMask;
         std::list<WorldObject*> &i_objects;
         Check& i_check;
 
-        WorldObjectListSearcher(std::list<WorldObject*> &objects, Check & check) : i_objects(objects),i_check(check) {}
+        WorldObjectListSearcher(WorldObject const* searcher, std::list<WorldObject*> &objects, Check & check)
+            : i_phaseMask(searcher->GetPhaseMask()), i_objects(objects),i_check(check) {}
 
         void Visit(PlayerMapType &m);
         void Visit(CreatureMapType &m);
@@ -247,37 +253,44 @@ namespace Trinity
     template<class Do>
         struct TRINITY_DLL_DECL WorldObjectWorker
     {
+        uint32 i_phaseMask;
         Do const& i_do;
 
-        explicit WorldObjectWorker(Do const& _do) : i_do(_do) {}
+        WorldObjectWorker(WorldObject const* searcher, Do const& _do)
+            : i_phaseMask(searcher->GetPhaseMask()), i_do(_do) {}
 
         void Visit(GameObjectMapType &m)
         {
             for(GameObjectMapType::iterator itr=m.begin(); itr != m.end(); ++itr)
-                i_do(itr->getSource());
+                if(itr->getSource()->InSamePhase(i_phaseMask))
+                    i_do(itr->getSource());
         }
 
         void Visit(PlayerMapType &m)
         {
             for(PlayerMapType::iterator itr=m.begin(); itr != m.end(); ++itr)
-                i_do(itr->getSource());
+                if(itr->getSource()->InSamePhase(i_phaseMask))
+                    i_do(itr->getSource());
         }
         void Visit(CreatureMapType &m)
         {
             for(CreatureMapType::iterator itr=m.begin(); itr != m.end(); ++itr)
-                i_do(itr->getSource());
+                if(itr->getSource()->InSamePhase(i_phaseMask))
+                    i_do(itr->getSource());
         }
 
         void Visit(CorpseMapType &m)
         {
             for(CorpseMapType::iterator itr=m.begin(); itr != m.end(); ++itr)
-                i_do(itr->getSource());
+                if(itr->getSource()->InSamePhase(i_phaseMask))
+                    i_do(itr->getSource());
         }
 
         void Visit(DynamicObjectMapType &m)
         {
             for(DynamicObjectMapType::iterator itr=m.begin(); itr != m.end(); ++itr)
-                i_do(itr->getSource());
+                if(itr->getSource()->InSamePhase(i_phaseMask))
+                    i_do(itr->getSource());
         }
 
         template<class NOT_INTERESTED> void Visit(GridRefManager<NOT_INTERESTED> &) {}
@@ -288,10 +301,12 @@ namespace Trinity
     template<class Check>
         struct TRINITY_DLL_DECL GameObjectSearcher
     {
+        uint32 i_phaseMask;
         GameObject* &i_object;
         Check &i_check;
 
-        GameObjectSearcher(GameObject* & result, Check& check) : i_object(result),i_check(check) {}
+        GameObjectSearcher(WorldObject const* searcher, GameObject* & result, Check& check)
+            : i_phaseMask(searcher->GetPhaseMask()), i_object(result),i_check(check) {}
 
         void Visit(GameObjectMapType &m);
 
@@ -302,10 +317,12 @@ namespace Trinity
     template<class Check>
         struct TRINITY_DLL_DECL GameObjectLastSearcher
     {
+        uint32 i_phaseMask;
         GameObject* &i_object;
         Check& i_check;
 
-        GameObjectLastSearcher(GameObject* & result, Check& check) : i_object(result),i_check(check) {}
+        GameObjectLastSearcher(WorldObject const* searcher, GameObject* & result, Check& check)
+            : i_phaseMask(searcher->GetPhaseMask()), i_object(result), i_check(check) {}
 
         void Visit(GameObjectMapType &m);
 
@@ -315,10 +332,12 @@ namespace Trinity
     template<class Check>
         struct TRINITY_DLL_DECL GameObjectListSearcher
     {
+        uint32 i_phaseMask;
         std::list<GameObject*> &i_objects;
         Check& i_check;
 
-        GameObjectListSearcher(std::list<GameObject*> &objects, Check & check) : i_objects(objects),i_check(check) {}
+        GameObjectListSearcher(WorldObject const* searcher, std::list<GameObject*> &objects, Check & check)
+            : i_phaseMask(searcher->GetPhaseMask()), i_objects(objects), i_check(check) {}
 
         void Visit(GameObjectMapType &m);
 
@@ -331,10 +350,12 @@ namespace Trinity
     template<class Check>
         struct TRINITY_DLL_DECL UnitSearcher
     {
+        uint32 i_phaseMask;
         Unit* &i_object;
         Check & i_check;
 
-        UnitSearcher(Unit* & result, Check & check) : i_object(result),i_check(check) {}
+        UnitSearcher(WorldObject const* searcher, Unit* & result, Check & check)
+            : i_phaseMask(searcher->GetPhaseMask()), i_object(result),i_check(check) {}
 
         void Visit(CreatureMapType &m);
         void Visit(PlayerMapType &m);
@@ -346,10 +367,12 @@ namespace Trinity
     template<class Check>
         struct TRINITY_DLL_DECL UnitLastSearcher
     {
+        uint32 i_phaseMask;
         Unit* &i_object;
         Check & i_check;
 
-        UnitLastSearcher(Unit* & result, Check & check) : i_object(result),i_check(check) {}
+        UnitLastSearcher(WorldObject const* searcher, Unit* & result, Check & check)
+            : i_phaseMask(searcher->GetPhaseMask()), i_object(result),i_check(check) {}
 
         void Visit(CreatureMapType &m);
         void Visit(PlayerMapType &m);
@@ -361,10 +384,12 @@ namespace Trinity
     template<class Check>
         struct TRINITY_DLL_DECL UnitListSearcher
     {
+        uint32 i_phaseMask;
         std::list<Unit*> &i_objects;
         Check& i_check;
 
-        UnitListSearcher(std::list<Unit*> &objects, Check & check) : i_objects(objects),i_check(check) {}
+        UnitListSearcher(WorldObject const* searcher, std::list<Unit*> &objects, Check & check)
+            : i_phaseMask(searcher->GetPhaseMask()), i_objects(objects),i_check(check) {}
 
         void Visit(PlayerMapType &m);
         void Visit(CreatureMapType &m);
@@ -377,10 +402,12 @@ namespace Trinity
     template<class Check>
         struct TRINITY_DLL_DECL CreatureSearcher
     {
+        uint32 i_phaseMask;
         Creature* &i_object;
         Check & i_check;
 
-        CreatureSearcher(Creature* & result, Check & check) : i_object(result),i_check(check) {}
+        CreatureSearcher(WorldObject const* searcher, Creature* & result, Check & check)
+            : i_phaseMask(searcher->GetPhaseMask()), i_object(result),i_check(check) {}
 
         void Visit(CreatureMapType &m);
 
@@ -391,10 +418,12 @@ namespace Trinity
     template<class Check>
         struct TRINITY_DLL_DECL CreatureLastSearcher
     {
+        uint32 i_phaseMask;
         Creature* &i_object;
         Check & i_check;
 
-        CreatureLastSearcher(Creature* & result, Check & check) : i_object(result),i_check(check) {}
+        CreatureLastSearcher(WorldObject const* searcher, Creature* & result, Check & check)
+            : i_phaseMask(searcher->GetPhaseMask()), i_object(result),i_check(check) {}
 
         void Visit(CreatureMapType &m);
 
@@ -404,10 +433,12 @@ namespace Trinity
     template<class Check>
         struct TRINITY_DLL_DECL CreatureListSearcher
     {
+        uint32 i_phaseMask;
         std::list<Creature*> &i_objects;
         Check& i_check;
 
-        CreatureListSearcher(std::list<Creature*> &objects, Check & check) : i_objects(objects),i_check(check) {}
+        CreatureListSearcher(WorldObject const* searcher, std::list<Creature*> &objects, Check & check)
+            : i_phaseMask(searcher->GetPhaseMask()), i_objects(objects),i_check(check) {}
 
         void Visit(CreatureMapType &m);
 
@@ -419,10 +450,12 @@ namespace Trinity
     template<class Check>
     struct TRINITY_DLL_DECL PlayerSearcher
     {
+        uint32 i_phaseMask;
         Player* &i_object;
         Check & i_check;
 
-        PlayerSearcher(Player* & result, Check & check) : i_object(result),i_check(check) {}
+        PlayerSearcher(WorldObject const* searcher, Player* & result, Check & check)
+            : i_phaseMask(searcher->GetPhaseMask()), i_object(result),i_check(check) {}
 
         void Visit(PlayerMapType &m);
 
@@ -432,14 +465,37 @@ namespace Trinity
     template<class Do>
     struct TRINITY_DLL_DECL PlayerWorker
     {
+        uint32 i_phaseMask;
         Do& i_do;
 
-        explicit PlayerWorker(Do& _do) : i_do(_do) {}
+        PlayerWorker(WorldObject const* searcher, Do& _do)
+            : i_phaseMask(searcher->GetPhaseMask()), i_do(_do) {}
 
         void Visit(PlayerMapType &m)
         {
             for(PlayerMapType::iterator itr=m.begin(); itr != m.end(); ++itr)
-                i_do(itr->getSource());
+                if(itr->getSource()->InSamePhase(i_phaseMask))
+                    i_do(itr->getSource());
+        }
+
+        template<class NOT_INTERESTED> void Visit(GridRefManager<NOT_INTERESTED> &) {}
+    };
+
+    template<class Do>
+    struct TRINITY_DLL_DECL PlayerDistWorker
+    {
+        WorldObject const* i_searcher;
+        float i_dist;
+        Do& i_do;
+
+        PlayerDistWorker(WorldObject const* searcher, float _dist, Do& _do)
+            : i_searcher(searcher), i_dist(_dist), i_do(_do) {}
+
+        void Visit(PlayerMapType &m)
+        {
+            for(PlayerMapType::iterator itr=m.begin(); itr != m.end(); ++itr)
+                if(itr->getSource()->InSamePhase(i_searcher) && itr->getSource()->GetDistance(i_searcher) <= i_dist)
+                    i_do(itr->getSource());
         }
 
         template<class NOT_INTERESTED> void Visit(GridRefManager<NOT_INTERESTED> &) {}
@@ -966,6 +1022,49 @@ namespace Trinity
         Unit const* pUnit;
         uint32 entry;
         float range;
+    };
+
+    // Player checks and do
+
+    // Prepare using Builder localized packets with caching and send to player
+    template<class Builder>
+    class LocalizedPacketDo
+    {
+        public:
+            explicit LocalizedPacketDo(Builder& builder) : i_builder(builder) {}
+
+            ~LocalizedPacketDo()
+            {
+                for(size_t i = 0; i < i_data_cache.size(); ++i)
+                    delete i_data_cache[i];
+            }
+            void operator()( Player* p );
+
+        private:
+            Builder& i_builder;
+            std::vector<WorldPacket*> i_data_cache;         // 0 = default, i => i-1 locale index
+    };
+
+    // Prepare using Builder localized packets with caching and send to player
+    template<class Builder>
+    class LocalizedPacketListDo
+    {
+        public:
+            typedef std::vector<WorldPacket*> WorldPacketList;
+            explicit LocalizedPacketListDo(Builder& builder) : i_builder(builder) {}
+
+            ~LocalizedPacketListDo()
+            {
+                for(size_t i = 0; i < i_data_cache.size(); ++i)
+                    for(int j = 0; j < i_data_cache[i].size(); ++j)
+                        delete i_data_cache[i][j];
+            }
+            void operator()( Player* p );
+
+        private:
+            Builder& i_builder;
+            std::vector<WorldPacketList> i_data_cache;
+                                                            // 0 = default, i => i-1 locale index
     };
 
     #ifndef WIN32

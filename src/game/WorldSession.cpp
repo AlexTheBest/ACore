@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,12 +22,11 @@
     \ingroup u2w
 */
 
-#include "WorldSocket.h"
+#include "WorldSocket.h"                                    // must be first to make ACE happy with ACE includes in it
 #include "Common.h"
 #include "Database/DatabaseEnv.h"
 #include "Log.h"
 #include "Opcodes.h"
-#include "WorldSocket.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
 #include "Player.h"
@@ -35,12 +34,10 @@
 #include "Group.h"
 #include "Guild.h"
 #include "World.h"
-#include "MapManager.h"
 #include "ObjectAccessor.h"
 #include "BattleGroundMgr.h"
 #include "OutdoorPvPMgr.h"
-#include "Language.h"                                       // for CMSG_CANCEL_MOUNT_AURA handler
-#include "Chat.h"
+//#include "Language.h"                                       // for CMSG_CANCEL_MOUNT_AURA handler
 #include "SocialMgr.h"
 
 /// WorldSession constructor
@@ -305,19 +302,22 @@ void WorldSession::LogoutPlayer(bool Save)
             _player->BuildPlayerRepop();
             _player->RepopAtGraveyard();
         }
+        //drop a flag if player is carrying it
+        if(BattleGround *bg = _player->GetBattleGround())
+            bg->EventPlayerLoggedOut(_player);
 
-        ///- Remove player from battleground (teleport to entrance)
-        if(_player->InBattleGround())
-            _player->LeaveBattleground();
+        ///- Teleport to home if the player is in an invalid instance
+        if(!_player->m_InstanceValid && !_player->isGameMaster())
+            _player->TeleportTo(_player->m_homebindMapId, _player->m_homebindX, _player->m_homebindY, _player->m_homebindZ, _player->GetOrientation());
 
         sOutdoorPvPMgr.HandlePlayerLeaveZone(_player,_player->GetZoneId());
 
         for (int i=0; i < PLAYER_MAX_BATTLEGROUND_QUEUES; i++)
         {
-            if(int32 bgTypeId = _player->GetBattleGroundQueueId(i))
+            if(BattleGroundQueueTypeId bgQueueTypeId = _player->GetBattleGroundQueueTypeId(i))
             {
-                _player->RemoveBattleGroundQueueId(bgTypeId);
-                sBattleGroundMgr.m_BattleGroundQueues[ bgTypeId ].RemovePlayer(_player->GetGUID(), true);
+                _player->RemoveBattleGroundQueueId(bgQueueTypeId);
+                sBattleGroundMgr.m_BattleGroundQueues[ bgQueueTypeId ].RemovePlayer(_player->GetGUID(), true);
             }
         }
 
@@ -374,7 +374,7 @@ void WorldSession::LogoutPlayer(bool Save)
         // the player may not be in the world when logging out
         // e.g if he got disconnected during a transfer to another map
         // calls to GetMap in this case may cause crashes
-        if(_player->IsInWorld()) MapManager::Instance().GetMap(_player->GetMapId(), _player)->Remove(_player, false);
+        if(_player->IsInWorld()) _player->GetMap()->Remove(_player, false);
         // RemoveFromWorld does cleanup that requires the player to be in the accessor
         ObjectAccessor::Instance().RemoveObject(_player);
 
@@ -469,6 +469,13 @@ void WorldSession::SendNotification(int32 string_id,...)
     }
 }
 
+void WorldSession::SendSetPhaseShift(uint32 PhaseShift)
+{
+    WorldPacket data(SMSG_SET_PHASE_SHIFT, 4);
+    data << uint32(PhaseShift);
+    SendPacket(&data);
+}
+
 const char * WorldSession::GetTrinityString( int32 entry ) const
 {
     return objmgr.GetTrinityString(entry,GetSessionDbLocaleIndex());
@@ -519,3 +526,92 @@ void WorldSession::SendAuthWaitQue(uint32 position)
     }
 }
 
+void WorldSession::LoadAccountData()
+{
+    for (uint32 i = 0; i < NUM_ACCOUNT_DATA_TYPES; ++i)
+    {
+        AccountData data;
+        m_accountData[i] = data;
+    }
+
+    QueryResult *result = CharacterDatabase.PQuery("SELECT type, time, data FROM account_data WHERE account='%u'", GetAccountId());
+
+    if(!result)
+        return;
+
+    do
+    {
+        Field *fields = result->Fetch();
+
+        uint32 type = fields[0].GetUInt32();
+        if(type < NUM_ACCOUNT_DATA_TYPES)
+        {
+            m_accountData[type].Time = fields[1].GetUInt32();
+            m_accountData[type].Data = fields[2].GetCppString();
+        }
+    } while (result->NextRow());
+
+    delete result;
+}
+
+void WorldSession::SetAccountData(uint32 type, time_t time_, std::string data)
+{
+    m_accountData[type].Time = time_;
+    m_accountData[type].Data = data;
+
+    uint32 acc = GetAccountId();
+
+    CharacterDatabase.BeginTransaction ();
+    CharacterDatabase.PExecute("DELETE FROM account_data WHERE account='%u' AND type='%u'", acc, type);
+    CharacterDatabase.escape_string(data);
+    CharacterDatabase.PExecute("INSERT INTO account_data VALUES ('%u','%u','%u','%s')", acc, type, (uint32)time_, data.c_str());
+    CharacterDatabase.CommitTransaction ();
+}
+
+void WorldSession::ReadMovementInfo(WorldPacket &data, MovementInfo *mi)
+{
+    CHECK_PACKET_SIZE(data, data.rpos()+4+2+4+4+4+4+4);
+    data >> mi->flags;
+    data >> mi->unk1;
+    data >> mi->time;
+    data >> mi->x;
+    data >> mi->y;
+    data >> mi->z;
+    data >> mi->o;
+
+    if(mi->flags & MOVEMENTFLAG_ONTRANSPORT)
+    {
+        CHECK_PACKET_SIZE(data, data.rpos()+8+4+4+4+4+4+1);
+        data >> mi->t_guid;
+        data >> mi->t_x;
+        data >> mi->t_y;
+        data >> mi->t_z;
+        data >> mi->t_o;
+        data >> mi->t_time;
+        data >> mi->t_seat;
+    }
+
+    if((mi->flags & (MOVEMENTFLAG_SWIMMING | MOVEMENTFLAG_FLYING2)) || (mi->unk1 & 0x20))
+    {
+        CHECK_PACKET_SIZE(data, data.rpos()+4);
+        data >> mi->s_pitch;
+    }
+
+    CHECK_PACKET_SIZE(data, data.rpos()+4);
+    data >> mi->fallTime;
+
+    if(mi->flags & MOVEMENTFLAG_JUMPING)
+    {
+        CHECK_PACKET_SIZE(data, data.rpos()+4+4+4+4);
+        data >> mi->j_unk;
+        data >> mi->j_sinAngle;
+        data >> mi->j_cosAngle;
+        data >> mi->j_xyspeed;
+    }
+
+    if(mi->flags & MOVEMENTFLAG_SPLINE)
+    {
+        CHECK_PACKET_SIZE(data, data.rpos()+4);
+        data >> mi->u_unk1;
+    }
+}

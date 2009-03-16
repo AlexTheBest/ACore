@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -175,7 +175,8 @@ bool MapManager::CanPlayerEnter(uint32 mapid, Player* player)
         //The player has a heroic mode and tries to enter into instance which has no a heroic mode
         if (!entry->SupportsHeroicMode() && player->GetDifficulty() == DIFFICULTY_HEROIC)
         {
-            player->SendTransferAborted(mapid, TRANSFER_ABORT_DIFFICULTY2);      //Send aborted message
+            //Send aborted message
+            player->SendTransferAborted(mapid, TRANSFER_ABORT_DIFFICULTY, DIFFICULTY_HEROIC);
             return false;
         }
 
@@ -238,7 +239,7 @@ void MapManager::RemoveBonesFromMap(uint32 mapid, uint64 guid, float x, float y)
 }
 
 void
-MapManager::Update(time_t diff)
+MapManager::Update(uint32 diff)
 {
     i_timer.Update(diff);
     if( !i_timer.Passed() )
@@ -284,7 +285,8 @@ bool MapManager::ExistMapAndVMap(uint32 mapid, float x,float y)
 bool MapManager::IsValidMAP(uint32 mapid)
 {
     MapEntry const* mEntry = sMapStore.LookupEntry(mapid);
-    return mEntry && (!mEntry->Instanceable() || objmgr.GetInstanceTemplate(mapid));
+    return mEntry && (!mEntry->IsDungeon() || objmgr.GetInstanceTemplate(mapid));
+    // TODO: add check for battleground template
 }
 
 /*void MapManager::LoadGrid(int mapid, float x, float y, const WorldObject* obj, bool no_unload)

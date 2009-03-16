@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,17 +25,14 @@
 #include "WorldSession.h"
 #include "Opcodes.h"
 #include "Log.h"
-#include "World.h"
 #include "ObjectMgr.h"
 #include "SpellMgr.h"
 #include "Player.h"
 #include "GossipDef.h"
-#include "SpellAuras.h"
 #include "UpdateMask.h"
 #include "ScriptCalls.h"
 #include "ObjectAccessor.h"
 #include "Creature.h"
-#include "MapManager.h"
 #include "Pet.h"
 #include "BattleGroundMgr.h"
 #include "BattleGround.h"
@@ -162,29 +159,29 @@ void WorldSession::SendTrainerList( uint64 guid, const std::string& strTitle )
     float fDiscountMod = _player->GetReputationPriceDiscount(unit);
 
     uint32 count = 0;
-    for(TrainerSpellList::const_iterator itr = trainer_spells->spellList.begin(); itr != trainer_spells->spellList.end(); ++itr)
+    for(TrainerSpellMap::const_iterator itr = trainer_spells->spellList.begin(); itr != trainer_spells->spellList.end(); ++itr)
     {
-        TrainerSpell const* tSpell = *itr;
+        TrainerSpell const* tSpell = &itr->second;
 
-        if(!_player->IsSpellFitByClassAndRace(tSpell->spell))
+        if(!_player->IsSpellFitByClassAndRace(tSpell->learnedSpell))
             continue;
 
         ++count;
 
-        bool primary_prof_first_rank = spellmgr.IsPrimaryProfessionFirstRankSpell(tSpell->spell);
+        bool primary_prof_first_rank = spellmgr.IsPrimaryProfessionFirstRankSpell(tSpell->learnedSpell);
 
-        SpellChainNode const* chain_node = spellmgr.GetSpellChainNode(tSpell->spell);
+        SpellChainNode const* chain_node = spellmgr.GetSpellChainNode(tSpell->learnedSpell);
         uint32 req_spell = spellmgr.GetSpellRequired(tSpell->spell);
 
-        data << uint32(tSpell->spell);
+        data << uint32(tSpell->spell);                      // learned spell (or cast-spell in profession case)
         data << uint8(_player->GetTrainerSpellState(tSpell));
-        data << uint32(floor(tSpell->spellcost * fDiscountMod));
+        data << uint32(floor(tSpell->spellCost * fDiscountMod));
 
         data << uint32(primary_prof_first_rank ? 1 : 0);    // primary prof. learn confirmation dialog
         data << uint32(primary_prof_first_rank ? 1 : 0);    // must be equal prev. field to have learn button in enabled state
-        data << uint8(tSpell->reqlevel);
-        data << uint32(tSpell->reqskill);
-        data << uint32(tSpell->reqskillvalue);
+        data << uint8(tSpell->reqLevel);
+        data << uint32(tSpell->reqSkill);
+        data << uint32(tSpell->reqSkillValue);
         data << uint32(chain_node && chain_node->prev ? chain_node->prev : req_spell);
         data << uint32(chain_node && chain_node->prev ? req_spell : 0);
         data << uint32(0);
@@ -235,11 +232,13 @@ void WorldSession::HandleTrainerBuySpellOpcode( WorldPacket & recv_data )
         return;
 
     // apply reputation discount
-    uint32 nSpellCost = uint32(floor(trainer_spell->spellcost * _player->GetReputationPriceDiscount(unit)));
+    uint32 nSpellCost = uint32(floor(trainer_spell->spellCost * _player->GetReputationPriceDiscount(unit)));
 
     // check money requirement
     if(_player->GetMoney() < nSpellCost )
         return;
+
+    _player->ModifyMoney( -int32(nSpellCost) );
 
     WorldPacket data(SMSG_PLAY_SPELL_VISUAL, 12);           // visual effect on trainer
     data << uint64(guid) << uint32(0xB3);
@@ -249,13 +248,15 @@ void WorldSession::HandleTrainerBuySpellOpcode( WorldPacket & recv_data )
     data << uint64(_player->GetGUID()) << uint32(0x016A);
     SendPacket(&data);
 
-    _player->ModifyMoney( -int32(nSpellCost) );
-
-    // learn explicitly to prevent lost money at lags, learning spell will be only show spell animation
-    _player->learnSpell(trainer_spell->spell);
+    // learn explicitly or cast explicitly
+    if(trainer_spell->IsCastable ())
+        //FIXME: prof. spell entry in trainer list not marked gray until list re-open.
+        _player->CastSpell(_player,trainer_spell->spell,true);
+    else
+        _player->learnSpell(spellId,false);
 
     data.Initialize(SMSG_TRAINER_BUY_SUCCEEDED, 12);
-    data << uint64(guid) << uint32(spellId);
+    data << uint64(guid) << uint32(trainer_spell->spell);
     SendPacket(&data);
 }
 
@@ -438,11 +439,12 @@ void WorldSession::HandleBinderActivateOpcode( WorldPacket & recv_data )
 void WorldSession::SendBindPoint(Creature *npc)
 {
     uint32 bindspell = 3286;
+    uint32 zone_id = _player->GetZoneId();
 
     // update sql homebind
-    CharacterDatabase.PExecute("UPDATE character_homebind SET map = '%u', zone = '%u', position_x = '%f', position_y = '%f', position_z = '%f' WHERE guid = '%u'", _player->GetMapId(), _player->GetZoneId(), _player->GetPositionX(), _player->GetPositionY(), _player->GetPositionZ(), _player->GetGUIDLow());
+    CharacterDatabase.PExecute("UPDATE character_homebind SET map = '%u', zone = '%u', position_x = '%f', position_y = '%f', position_z = '%f' WHERE guid = '%u'", _player->GetMapId(), zone_id, _player->GetPositionX(), _player->GetPositionY(), _player->GetPositionZ(), _player->GetGUIDLow());
     _player->m_homebindMapId = _player->GetMapId();
-    _player->m_homebindZoneId = _player->GetZoneId();
+    _player->m_homebindZoneId = zone_id;
     _player->m_homebindX = _player->GetPositionX();
     _player->m_homebindY = _player->GetPositionY();
     _player->m_homebindZ = _player->GetPositionZ();
@@ -461,19 +463,19 @@ void WorldSession::SendBindPoint(Creature *npc)
     data << float(_player->GetPositionY());
     data << float(_player->GetPositionZ());
     data << uint32(_player->GetMapId());
-    data << uint32(_player->GetZoneId());
+    data << uint32(zone_id);
     SendPacket( &data );
 
     DEBUG_LOG("New Home Position X is %f",_player->GetPositionX());
     DEBUG_LOG("New Home Position Y is %f",_player->GetPositionY());
     DEBUG_LOG("New Home Position Z is %f",_player->GetPositionZ());
     DEBUG_LOG("New Home MapId is %u",_player->GetMapId());
-    DEBUG_LOG("New Home ZoneId is %u",_player->GetZoneId());
+    DEBUG_LOG("New Home ZoneId is %u",zone_id);
 
     // zone update
     data.Initialize( SMSG_PLAYERBOUND, 8+4 );
     data << uint64(_player->GetGUID());
-    data << uint32(_player->GetZoneId());
+    data << uint32(zone_id);
     SendPacket( &data );
 
     _player->PlayerTalkClass->CloseGossip();
@@ -528,13 +530,12 @@ void WorldSession::SendStablePet(uint64 guid )
         data << uint32(pet->GetEntry());
         data << uint32(pet->getLevel());
         data << pet->GetName();                             // petname
-        data << uint32(pet->GetLoyaltyLevel());             // loyalty
-        data << uint8(0x01);                                // client slot 1 == current pet (0)
+        data << uint8(0x01);                                // flags?, client slot 1 == current pet (0)
         ++num;
     }
 
-    //                                                     0      1     2   3      4      5        6
-    QueryResult* result = CharacterDatabase.PQuery("SELECT owner, slot, id, entry, level, loyalty, name FROM character_pet WHERE owner = '%u' AND slot > 0 AND slot < 3",_player->GetGUIDLow());
+    //                                                     0      1     2   3      4      5
+    QueryResult* result = CharacterDatabase.PQuery("SELECT owner, slot, id, entry, level, name FROM character_pet WHERE owner = '%u' AND slot > 0 AND slot < 5",_player->GetGUIDLow());
 
     if(result)
     {
@@ -545,8 +546,7 @@ void WorldSession::SendStablePet(uint64 guid )
             data << uint32(fields[2].GetUInt32());          // petnumber
             data << uint32(fields[3].GetUInt32());          // creature entry
             data << uint32(fields[4].GetUInt32());          // level
-            data << fields[6].GetString();                  // name
-            data << uint32(fields[5].GetUInt32());          // loyalty
+            data << fields[5].GetString();                  // name
             data << uint8(fields[1].GetUInt32()+1);         // slot
 
             ++num;
@@ -596,7 +596,7 @@ void WorldSession::HandleStablePet( WorldPacket & recv_data )
 
     uint32 free_slot = 1;
 
-    QueryResult *result = CharacterDatabase.PQuery("SELECT owner,slot,id FROM character_pet WHERE owner = '%u'  AND slot > 0 AND slot < 3 ORDER BY slot ",_player->GetGUIDLow());
+    QueryResult *result = CharacterDatabase.PQuery("SELECT owner,slot,id FROM character_pet WHERE owner = '%u'  AND slot > 0 AND slot < 5 ORDER BY slot ",_player->GetGUIDLow());
     if(result)
     {
         do
@@ -660,7 +660,7 @@ void WorldSession::HandleUnstablePet( WorldPacket & recv_data )
 
     Pet *newpet = NULL;
 
-    QueryResult *result = CharacterDatabase.PQuery("SELECT entry FROM character_pet WHERE owner = '%u' AND id = '%u' AND slot > 0 AND slot < 3",_player->GetGUIDLow(),petnumber);
+    QueryResult *result = CharacterDatabase.PQuery("SELECT entry FROM character_pet WHERE owner = '%u' AND id = '%u' AND slot > 0 AND slot < 5",_player->GetGUIDLow(),petnumber);
     if(result)
     {
         Field *fields = result->Fetch();
@@ -704,7 +704,7 @@ void WorldSession::HandleBuyStableSlot( WorldPacket & recv_data )
 
     WorldPacket data(SMSG_STABLE_RESULT, 200);
 
-    if(GetPlayer()->m_stableSlots < 2)                      // max slots amount = 2
+    if(GetPlayer()->m_stableSlots < 4)                      // max slots amount = 4
     {
         StableSlotPricesEntry const *SlotPrice = sStableSlotPricesStore.LookupEntry(GetPlayer()->m_stableSlots+1);
         if(_player->GetMoney() >= SlotPrice->Price)
