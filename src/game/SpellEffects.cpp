@@ -1620,6 +1620,13 @@ void Spell::EffectDummy(uint32 i)
         case SPELLFAMILY_PALADIN:
             switch(m_spellInfo->SpellIconID)
             {
+                // Divine Storm
+                if (m_spellInfo->SpellFamilyFlags[1] & 0x20000)
+                {
+                    int32 damage=m_currentBasePoints[0] * damage /100;
+                    m_caster->CastCustomSpell(unitTarget, 54172, &damage , 0, 0, true);
+                    return;
+                }
                 case  156:                                  // Holy Shock
                 {
                     if(!unitTarget)
