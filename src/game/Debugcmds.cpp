@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,17 +21,14 @@
 #include "Common.h"
 #include "Database/DatabaseEnv.h"
 #include "WorldPacket.h"
-#include "WorldSession.h"
-#include "World.h"
+#include "Vehicle.h"
 #include "Player.h"
 #include "Opcodes.h"
 #include "Chat.h"
 #include "Log.h"
 #include "Unit.h"
-#include "ObjectAccessor.h"
 #include "GossipDef.h"
 #include "Language.h"
-#include "MapManager.h"
 #include "BattleGroundMgr.h"
 #include <fstream>
 #include "ObjectMgr.h"
@@ -63,6 +60,7 @@ bool ChatHandler::HandleDebugSpellFailCommand(const char* args)
     uint8 failnum = (uint8)atoi(px);
 
     WorldPacket data(SMSG_CAST_FAILED, 5);
+    data << uint8(0);
     data << uint32(133);
     data << uint8(failnum);
     m_session->SendPacket(&data);
@@ -70,7 +68,7 @@ bool ChatHandler::HandleDebugSpellFailCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleSetPoiCommand(const char* args)
+bool ChatHandler::HandleDebugSetPoiCommand(const char* args)
 {
     Player *pPlayer = m_session->GetPlayer();
     Unit* target = getSelectedUnit();
@@ -89,9 +87,6 @@ bool ChatHandler::HandleSetPoiCommand(const char* args)
         return false;
 
     uint32 icon = atol(icon_text);
-    if ( icon < 0 )
-        icon = 0;
-
     uint32 flags = atol(flags_text);
 
     sLog.outDetail("Command : POI, NPC = %u, icon = %u flags = %u", target->GetGUIDLow(), icon,flags);
@@ -99,7 +94,7 @@ bool ChatHandler::HandleSetPoiCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleEquipErrorCommand(const char* args)
+bool ChatHandler::HandleDebugEquipErrorCommand(const char* args)
 {
     if(!args)
         return false;
@@ -109,7 +104,7 @@ bool ChatHandler::HandleEquipErrorCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleSellErrorCommand(const char* args)
+bool ChatHandler::HandleDebugSellErrorCommand(const char* args)
 {
     if(!args)
         return false;
@@ -119,7 +114,7 @@ bool ChatHandler::HandleSellErrorCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleBuyErrorCommand(const char* args)
+bool ChatHandler::HandleDebugBuyErrorCommand(const char* args)
 {
     if(!args)
         return false;
@@ -129,7 +124,7 @@ bool ChatHandler::HandleBuyErrorCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleSendOpcodeCommand(const char* /*args*/)
+bool ChatHandler::HandleDebugSendOpcodeCommand(const char* /*args*/)
 {
     Unit *unit = getSelectedUnit();
     Player *player = NULL;
@@ -192,13 +187,21 @@ bool ChatHandler::HandleSendOpcodeCommand(const char* /*args*/)
             ifs >> val6;
             data << val6;
         }
-        else if(type == "pguid")
+        else if(type == "appitsguid")
         {
             data.append(unit->GetPackGUID());
         }
-        else if(type == "myguid")
+        else if(type == "appmyguid")
         {
             data.append(player->GetPackGUID());
+        }
+        else if(type == "myguid")
+        {
+            data << uint64(player->GetGUID());
+        }
+        else if(type == "itsguid")
+        {
+            data << uint64(unit->GetGUID());
         }
         else if(type == "pos")
         {
@@ -221,12 +224,12 @@ bool ChatHandler::HandleSendOpcodeCommand(const char* /*args*/)
     ifs.close();
     sLog.outDebug("Sending opcode %u", data.GetOpcode());
     data.hexlike();
-    ((Player*)unit)->GetSession()->SendPacket(&data);
+    player->GetSession()->SendPacket(&data);
     PSendSysMessage(LANG_COMMAND_OPCODESENT, data.GetOpcode(), unit->GetName());
     return true;
 }
 
-bool ChatHandler::HandleUpdateWorldStateCommand(const char* args)
+bool ChatHandler::HandleDebugUpdateWorldStateCommand(const char* args)
 {
     char* w = strtok((char*)args, " ");
     char* s = strtok(NULL, " ");
@@ -240,7 +243,7 @@ bool ChatHandler::HandleUpdateWorldStateCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandlePlaySound2Command(const char* args)
+bool ChatHandler::HandleDebugPlaySound2Command(const char* args)
 {
     if(!args)
         return false;
@@ -251,7 +254,7 @@ bool ChatHandler::HandlePlaySound2Command(const char* args)
 }
 
 //Send notification in channel
-bool ChatHandler::HandleSendChannelNotifyCommand(const char* args)
+bool ChatHandler::HandleDebugSendChannelNotifyCommand(const char* args)
 {
     if(!args)
         return false;
@@ -269,7 +272,7 @@ bool ChatHandler::HandleSendChannelNotifyCommand(const char* args)
 }
 
 //Send notification in chat
-bool ChatHandler::HandleSendChatMsgCommand(const char* args)
+bool ChatHandler::HandleDebugSendChatMsgCommand(const char* args)
 {
     if(!args)
         return false;
@@ -282,15 +285,14 @@ bool ChatHandler::HandleSendChatMsgCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleSendQuestPartyMsgCommand(const char* args)
+bool ChatHandler::HandleDebugSendQuestPartyMsgCommand(const char* args)
 {
     uint32 msg = atol((char*)args);
-    if (msg >= 0)
-        m_session->GetPlayer()->SendPushToPartyResponse(m_session->GetPlayer(), msg);
+    m_session->GetPlayer()->SendPushToPartyResponse(m_session->GetPlayer(), msg);
     return true;
 }
 
-bool ChatHandler::HandleGetLootRecipient(const char* /*args*/)
+bool ChatHandler::HandleDebugGetLootRecipient(const char* /*args*/)
 {
     Creature* target = getSelectedCreature();
     if(!target)
@@ -300,15 +302,14 @@ bool ChatHandler::HandleGetLootRecipient(const char* /*args*/)
     return true;
 }
 
-bool ChatHandler::HandleSendQuestInvalidMsgCommand(const char* args)
+bool ChatHandler::HandleDebugSendQuestInvalidMsgCommand(const char* args)
 {
     uint32 msg = atol((char*)args);
-    if (msg >= 0)
-        m_session->GetPlayer()->SendCanTakeQuestResponse(msg);
+    m_session->GetPlayer()->SendCanTakeQuestResponse(msg);
     return true;
 }
 
-bool ChatHandler::HandleGetItemState(const char* args)
+bool ChatHandler::HandleDebugGetItemState(const char* args)
 {
     if (!args)
         return false;
@@ -542,6 +543,12 @@ bool ChatHandler::HandleGetItemState(const char* args)
     return true;
 }
 
+bool ChatHandler::HandleDebugBattlegroundCommand(const char * /*args*/)
+{
+    sBattleGroundMgr.ToggleTesting();
+    return true;
+}
+
 bool ChatHandler::HandleDebugArenaCommand(const char * /*args*/)
 {
     sBattleGroundMgr.ToggleArenaTesting();
@@ -591,3 +598,96 @@ bool ChatHandler::HandleDebugHostilRefList(const char * /*args*/)
     return true;
 }
 
+bool ChatHandler::HandleDebugSpawnVehicle(const char* args)
+{
+    if(!args)
+        return false;
+
+    char* e = strtok((char*)args, " ");
+    char* i = strtok(NULL, " ");
+
+    if (!e || !i)
+        return false;
+
+    uint32 entry = (uint32)atoi(e);
+    uint32 id = (uint32)atoi(i);
+
+    CreatureInfo const *ci = objmgr.GetCreatureTemplate(entry);
+
+    if(!ci)
+        return false;
+
+    VehicleEntry const *ve = sVehicleStore.LookupEntry(id);
+
+    if(!ve)
+        return false;
+
+    Vehicle *v = new Vehicle;
+    Map *map = m_session->GetPlayer()->GetMap();
+    if(!v->Create(objmgr.GenerateLowGuid(HIGHGUID_VEHICLE), map, entry, id, m_session->GetPlayer()->GetTeam()))
+    {
+        delete v;
+        return false;
+    }
+
+    float px, py, pz;
+    m_session->GetPlayer()->GetClosePoint(px, py, pz, m_session->GetPlayer()->GetObjectSize());
+
+    v->Relocate(px, py, pz, m_session->GetPlayer()->GetOrientation());
+
+    if(!v->IsPositionValid())
+    {
+        sLog.outError("Vehicle (guidlow %d, entry %d) not created. Suggested coordinates isn't valid (X: %f Y: %f)",
+            v->GetGUIDLow(), v->GetEntry(), v->GetPositionX(), v->GetPositionY());
+        delete v;
+        return false;
+    }
+
+    map->Add((Creature*)v);
+
+    return true;
+}
+
+bool ChatHandler::HandleDebugSendLargePacketCommand(const char* /*args*/)
+{
+    const char* stuffingString = "This is a dummy string to push the packet's size beyond 128000 bytes. ";
+    std::ostringstream ss;
+    while(ss.str().size() < 128000)
+        ss << stuffingString;
+    SendSysMessage(ss.str().c_str());
+    return true;
+}
+
+bool ChatHandler::HandleDebugSendSetPhaseShiftCommand(const char* args)
+{
+    if(!args)
+        return false;
+
+    uint32 PhaseShift = atoi(args);
+    m_session->SendSetPhaseShift(PhaseShift);
+    return true;
+}
+
+bool ChatHandler::HandleDebugSetItemFlagCommand(const char* args)
+{
+    if(!args)
+        return false;
+
+    char* e = strtok((char*)args, " ");
+    char* f = strtok(NULL, " ");
+
+    if (!e || !f)
+        return false;
+
+    uint32 guid = (uint32)atoi(e);
+    uint32 flag = (uint32)atoi(f);
+
+    Item *i = m_session->GetPlayer()->GetItemByGuid(MAKE_NEW_GUID(guid, 0, HIGHGUID_ITEM));
+
+    if(!i)
+        return false;
+
+    i->SetUInt32Value(ITEM_FIELD_FLAGS, flag);
+
+    return true;
+}
