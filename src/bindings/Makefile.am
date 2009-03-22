@@ -1,6 +1,6 @@
-# Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+# Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
 #
-# Thanks to the original authors: MaNGOS <http://www.mangosproject.org/>
+# Thanks to the original authors: MaNGOS <http://getmangos.com/>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -18,8 +18,8 @@
 
 # interface folder is disabled for now
 
-if USE_TSCRIPTS
+#if USE_TSCRIPTS
 SUBDIRS = scripts
-else
-SUBDIRS = interface
-endif
+#else
+#SUBDIRS = interface
+#endif

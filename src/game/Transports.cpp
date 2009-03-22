@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@ void MapManager::LoadTransports()
         barGoLink bar( 1 );
         bar.step();
 
-        sLog.outString();
+        sLog.outString("");
         sLog.outString( ">> Loaded %u transports", count );
         return;
     }
@@ -114,7 +114,7 @@ void MapManager::LoadTransports()
     } while(result->NextRow());
     delete result;
 
-    sLog.outString();
+    sLog.outString("");
     sLog.outString( ">> Loaded %u transports", count );
 
     // check transport data DB integrity
@@ -139,7 +139,7 @@ void MapManager::LoadTransports()
 Transport::Transport() : GameObject()
 {
                                                             // 2.3.2 - 0x5A
-    m_updateFlag = (UPDATEFLAG_TRANSPORT | UPDATEFLAG_LOWGUID | UPDATEFLAG_HIGHGUID | UPDATEFLAG_HASPOSITION);
+    m_updateFlag = (UPDATEFLAG_TRANSPORT | UPDATEFLAG_LOWGUID | UPDATEFLAG_HIGHGUID | UPDATEFLAG_HAS_POSITION);
 }
 
 bool Transport::Create(uint32 guidlow, uint32 mapid, float x, float y, float z, float ang, uint32 animprogress, uint32 dynflags)
@@ -147,10 +147,11 @@ bool Transport::Create(uint32 guidlow, uint32 mapid, float x, float y, float z, 
     Relocate(x,y,z,ang);
 
     SetMapId(mapid);
+    // instance id and phaseMask isn't set to values different from std.
 
     if(!IsPositionValid())
     {
-        sLog.outError("ERROR: Transport (GUID: %u) not created. Suggested coordinates isn't valid (X: %f Y: %f)",
+        sLog.outError("Transport (GUID: %u) not created. Suggested coordinates isn't valid (X: %f Y: %f)",
             guidlow,x,y);
         return false;
     }
@@ -170,9 +171,10 @@ bool Transport::Create(uint32 guidlow, uint32 mapid, float x, float y, float z, 
     SetFloatValue(OBJECT_FIELD_SCALE_X, goinfo->size);
 
     SetUInt32Value(GAMEOBJECT_FACTION, goinfo->faction);
-    SetUInt32Value(GAMEOBJECT_FLAGS, goinfo->flags);
-
-    SetUInt32Value(OBJECT_FIELD_ENTRY, goinfo->id);
+    //SetUInt32Value(GAMEOBJECT_FLAGS, goinfo->flags);
+    SetUInt32Value(GAMEOBJECT_FLAGS, MAKE_PAIR32(0x28, 0x64));
+    SetUInt32Value(GAMEOBJECT_LEVEL, m_period);
+    SetEntry(goinfo->id);
 
     SetUInt32Value(GAMEOBJECT_DISPLAYID, goinfo->displayId);
 
@@ -181,7 +183,7 @@ bool Transport::Create(uint32 guidlow, uint32 mapid, float x, float y, float z, 
 
     SetGoAnimProgress(animprogress);
     if(dynflags)
-        SetUInt32Value(GAMEOBJECT_DYN_FLAGS, dynflags);
+        SetUInt32Value(GAMEOBJECT_DYNAMIC, MAKE_PAIR32(0, dynflags));
 
     return true;
 }
@@ -479,11 +481,8 @@ bool Transport::AddPassenger(Player* passenger)
 
 bool Transport::RemovePassenger(Player* passenger)
 {
-    if (m_passengers.find(passenger) != m_passengers.end())
-    {
-        sLog.outDetail("Player %s removed from transport %s.", passenger->GetName(), this->m_name.c_str());
-        m_passengers.erase(passenger);
-    }
+    if (m_passengers.erase(passenger))
+        sLog.outDetail("Player %s removed from transport %s.", passenger->GetName(), m_name.c_str());
     return true;
 }
 

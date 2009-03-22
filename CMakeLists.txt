@@ -16,6 +16,7 @@ OPTION(DO_SCRIPTS "With trinityscripts" 1)
 OPTION(DO_CLI "With CLI" 1)
 OPTION(DO_RA "With RA" 0)
 OPTION(DO_DEBUG "Debug mode" 0)
+OPTION(DO_WARN "Enable all compile warnings" 0)
 OPTION(LARGE_CELL "Large cell size" 0)
 OPTION(SHORT_SLEEP "Short sleep" 0)
 
@@ -39,7 +40,7 @@ EXECUTE_PROCESS(
         OUTPUT_VARIABLE HG_REVISION
 )
 
-message("* Trinity Core revision: ${HG_REVISION}")
+message("* TrinityCore2 revision: ${HG_REVISION}")
 
 IF (PREFIX)
     SET(CMAKE_INSTALL_PREFIX ${PREFIX})
@@ -50,11 +51,12 @@ if(CONF_DIR)
 else(CONF_DIR)
 SET(CONF_DIR ${PREFIX}/etc)
 endif(CONF_DIR)
+SET(LIBSDIR ${CMAKE_INSTALL_PREFIX}/lib)
 
 message("* Will install to: ${CMAKE_INSTALL_PREFIX}")
 message("* With config dir at: ${CONF_DIR}")
+message("* Libs install dir at: ${LIBSDIR}")
 
-SET(LIBSDIR "/usr/lib /usr/local/lib /lib")
 FIND_LIBRARY(SSLLIB NAMES ssl DOC "SSL library")
 FIND_LIBRARY(ZLIB z "Zlib library")
 
@@ -103,6 +105,11 @@ if(DO_DEBUG)
 message("* Debug mode ON")
 add_definitions(-g -DTRINITY_DEBUG)
 endif(DO_DEBUG)
+
+if(DO_WARN)
+    message("* All warnings mode")
+    add_definitions(-Wall -Wfatal-errors -Wextra)
+endif(DO_WARN)
 
 if(LARGE_CELL)
 message("* Large cell size")
