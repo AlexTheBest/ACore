@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,19 +82,10 @@ bool ChatHandler::HandleAccountDeleteCommand(const char* args)
     }
 
     /// Commands not recommended call from chat, but support anyway
-    if(m_session)
-    {
-        uint32 targetSecurity = accmgr.GetSecurity(account_id);
-
-        /// can delete only for account with less security
-        /// This is also reject self apply in fact
-        if (targetSecurity >= m_session->GetSecurity())
-        {
-            SendSysMessage (LANG_YOURS_SECURITY_IS_LOW);
-            SetSentErrorMessage (true);
-            return false;
-        }
-    }
+    /// can delete only for account with less security
+    /// This is also reject self apply in fact
+    if(HasLowerSecurityAccount (NULL,account_id,true))
+        return false;
 
     AccountOpResult result = accmgr.DeleteAccount(account_id);
     switch(result)
@@ -318,7 +309,7 @@ void CliRunnable::run()
     char commandbuf[256];
 
     ///- Display the list of available CLI functions then beep
-    sLog.outString();
+    sLog.outString("");
 
     if(sConfig.GetBoolDefault("BeepAtStart", true))
         printf("\a");                                       // \a = Alert
@@ -373,4 +364,3 @@ void CliRunnable::run()
     ///- End the database thread
     WorldDatabase.ThreadEnd();                                  // free mySQL thread resources
 }
-

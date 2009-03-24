@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -404,7 +404,7 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
         cell.SetNoCreate();
 
         Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck creature_check(*m_creature, entry, true, range);
-        Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(pCreature, creature_check);
+		Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(m_creature, pCreature, creature_check);
 
         TypeContainerVisitor<Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck>, GridTypeMapContainer> creature_searcher(searcher);
 
@@ -441,8 +441,8 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
         ardonis->SendUpdateToPlayer(player);
 
         //Set them to kneel
-        m_creature->SetStandState(PLAYER_STATE_KNEEL);
-        ardonis->SetStandState(PLAYER_STATE_KNEEL);
+		m_creature->SetStandState(UNIT_STAND_STATE_KNEEL);
+		ardonis->SetStandState(UNIT_STAND_STATE_KNEEL);
     }
 
     //Set them back to each other
@@ -466,8 +466,8 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
             ardonis->SendUpdateToPlayer(player);
 
             //Set state
-            m_creature->SetStandState(PLAYER_STATE_NONE);
-            ardonis->SetStandState(PLAYER_STATE_NONE);
+			m_creature->SetStandState(UNIT_STAND_STATE_STAND);
+			ardonis->SetStandState(UNIT_STAND_STATE_STAND);
         }
     }
 
@@ -639,7 +639,7 @@ Creature* SearchDawnforge(Player *source, uint32 entry, float range)
     cell.SetNoCreate();
 
     Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck creature_check(*source, entry, true, range);
-    Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(pCreature, creature_check);
+	Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(source, pCreature, creature_check);
 
     TypeContainerVisitor<Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck>, GridTypeMapContainer> creature_searcher(searcher);
 

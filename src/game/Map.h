@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -43,6 +43,7 @@ class InstanceData;
 class Group;
 class InstanceSave;
 class WorldObject;
+class TempSummon;
 
 namespace ZThread
 {
@@ -70,15 +71,135 @@ typedef RGuard<GridRWLock, ZThread::Lockable> GridReadGuard;
 typedef WGuard<GridRWLock, ZThread::Lockable> GridWriteGuard;
 typedef Trinity::SingleThreaded<GridRWLock>::Lock NullGuard;
 
-typedef struct
+//******************************************
+// Map file format defines
+//******************************************
+#define MAP_MAGIC             'SPAM'
+#define MAP_VERSION_MAGIC     '0.1w'
+#define MAP_AREA_MAGIC        'AERA'
+#define MAP_HEIGTH_MAGIC      'TGHM'
+#define MAP_LIQUID_MAGIC      'QILM'
+
+struct map_fileheader{
+    uint32 mapMagic;
+    uint32 versionMagic;
+    uint32 areaMapOffset;
+    uint32 areaMapSize;
+    uint32 heightMapOffset;
+    uint32 heightMapSize;
+    uint32 liquidMapOffset;
+    uint32 liquidMapSize;
+};
+
+#define MAP_AREA_NO_AREA      0x0001
+struct map_areaHeader{
+    uint32 fourcc;
+    uint16 flags;
+    uint16 gridArea;
+};
+
+#define MAP_HEIGHT_NO_HIGHT   0x0001
+#define MAP_HEIGHT_AS_INT16   0x0002
+#define MAP_HEIGHT_AS_INT8    0x0004
+
+struct map_heightHeader{
+    uint32 fourcc;
+    uint32 flags;
+    float  gridHeight;
+    float  gridMaxHeight;
+};
+
+#define MAP_LIQUID_NO_TYPE    0x0001
+#define MAP_LIQUID_NO_HIGHT   0x0002
+struct map_liquidHeader{
+    uint32 fourcc;
+    uint16 flags;
+    uint16 liquidType;
+    uint8  offsetX;
+    uint8  offsetY;
+    uint8  width;
+    uint8  height;
+    float  liquidLevel;
+};
+
+enum ZLiquidStatus{
+    LIQUID_MAP_NO_WATER     = 0x00000000,
+    LIQUID_MAP_ABOVE_WATER  = 0x00000001,
+    LIQUID_MAP_WATER_WALK   = 0x00000002,
+    LIQUID_MAP_IN_WATER     = 0x00000004,
+    LIQUID_MAP_UNDER_WATER  = 0x00000008
+};
+
+#define MAP_LIQUID_TYPE_NO_WATER    0x00
+#define MAP_LIQUID_TYPE_WATER       0x01
+#define MAP_LIQUID_TYPE_OCEAN       0x02
+#define MAP_LIQUID_TYPE_MAGMA       0x04
+#define MAP_LIQUID_TYPE_SLIME       0x08
+
+#define MAP_ALL_LIQUIDS   (MAP_LIQUID_TYPE_WATER | MAP_LIQUID_TYPE_OCEAN | MAP_LIQUID_TYPE_MAGMA | MAP_LIQUID_TYPE_SLIME)
+
+#define MAP_LIQUID_TYPE_DARK_WATER  0x10
+#define MAP_LIQUID_TYPE_WMO_WATER   0x20
+
+struct LiquidData{
+    uint32 type;
+    float  level;
+    float  depth_level;
+};
+
+class GridMap
 {
-    uint16 area_flag[16][16];
-    uint8 terrain_type[16][16];
-    float liquid_level[128][128];
-    float v9[16 * 8 + 1][16 * 8 + 1];
-    float v8[16 * 8][16 * 8];
-    //float Z[MAP_RESOLUTION][MAP_RESOLUTION];
-}GridMap;
+    uint32  m_flags;
+    // Area data
+    uint16  m_gridArea;
+    uint16 *m_area_map;
+    // Height level data
+    float   m_gridHeight;
+    float   m_gridIntHeightMultiplier;
+    union{
+        float  *m_V9;
+        uint16 *m_uint16_V9;
+        uint8  *m_uint8_V9;
+    };
+    union{
+        float  *m_V8;
+        uint16 *m_uint16_V8;
+        uint8  *m_uint8_V8;
+    };
+    // Liquid data
+    uint16  m_liquidType;
+    uint8   m_liquid_offX;
+    uint8   m_liquid_offY;
+    uint8   m_liquid_width;
+    uint8   m_liquid_height;
+    float   m_liquidLevel;
+    uint8  *m_liquid_type;
+    float  *m_liquid_map;
+
+    bool  loadAreaData(FILE *in, uint32 offset, uint32 size);
+    bool  loadHeihgtData(FILE *in, uint32 offset, uint32 size);
+    bool  loadLiquidData(FILE *in, uint32 offset, uint32 size);
+
+    // Get height functions and pointers
+    typedef float (GridMap::*pGetHeightPtr) (float x, float y) const; 
+    pGetHeightPtr m_gridGetHeight;
+    float  getHeightFromFloat(float x, float y) const;
+    float  getHeightFromUint16(float x, float y) const;
+    float  getHeightFromUint8(float x, float y) const;
+    float  getHeightFromFlat(float x, float y) const;
+
+public:
+    GridMap();
+    ~GridMap();
+    bool  loadData(char *filaname);
+    void  unloadData();
+
+    uint16 getArea(float x, float y);
+    inline float getHeight(float x, float y) {return (this->*m_gridGetHeight)(x, y);}
+    float  getLiquidLevel(float x, float y);
+    uint8  getTerrainType(float x, float y);
+    ZLiquidStatus getLiquidStatus(float x, float y, float z, uint8 ReqLiquidType, LiquidData *data = 0);
+};
 
 struct CreatureMover
 {
@@ -100,7 +221,8 @@ struct InstanceTemplate
     uint32 map;
     uint32 parent;    
     uint32 maxPlayers;
-    uint32 reset_delay;
+    uint32 maxPlayersHeroic;
+    uint32 reset_delay;                                 // FIX ME: now exist normal/heroic raids with possible different time of reset.
     uint32 access_id;
     float startLocX;
     float startLocY;
@@ -136,10 +258,8 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         // currently unused for normal maps
         bool CanUnload(uint32 diff)
         {
-            if(!m_unloadTimer)
-                return false;
-            if(m_unloadTimer <= diff)
-                return true;
+            if(!m_unloadTimer) return false;
+            if(m_unloadTimer <= diff) return true;
             m_unloadTimer -= diff;
             return false;
         }
@@ -161,7 +281,7 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
 
         template<class LOCK_TYPE, class T, class CONTAINER> void Visit(const CellLock<LOCK_TYPE> &cell, TypeContainerVisitor<T, CONTAINER> &visitor);
 
-        inline bool IsRemovalGrid(float x, float y) const
+        bool IsRemovalGrid(float x, float y) const
         {
             GridPair p = Trinity::ComputeGridPair(x, y);
             return( !getNGrid(p.x_coord, p.y_coord) || getNGrid(p.x_coord, p.y_coord)->GetGridState() == GRID_STATE_REMOVAL );
@@ -194,22 +314,30 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         float GetVmapHeight(float x, float y, float z, bool useMaps) const;
         bool IsInWater(float x, float y, float z) const;    // does not use z pos. This is for future use
 
-        uint16 GetAreaFlag(float x, float y ) const;
+        ZLiquidStatus getLiquidStatus(float x, float y, float z, uint8 ReqLiquidType, LiquidData *data = 0) const;
+
+        uint16 GetAreaFlag(float x, float y, float z) const;
         uint8 GetTerrainType(float x, float y ) const;
         float GetWaterLevel(float x, float y ) const;
         bool IsUnderWater(float x, float y, float z) const;
 
-        static uint32 GetAreaId(uint16 areaflag,uint32 map_id);
-        static uint32 GetZoneId(uint16 areaflag,uint32 map_id);
+        static uint32 GetAreaIdByAreaFlag(uint16 areaflag,uint32 map_id);
+        static uint32 GetZoneIdByAreaFlag(uint16 areaflag,uint32 map_id);
+        static void GetZoneAndAreaIdByAreaFlag(uint32& zoneid, uint32& areaid, uint16 areaflag,uint32 map_id);
 
-        uint32 GetAreaId(float x, float y) const
+        uint32 GetAreaId(float x, float y, float z) const
         {
-            return GetAreaId(GetAreaFlag(x,y),i_id);
+            return GetAreaIdByAreaFlag(GetAreaFlag(x,y,z),i_id);
         }
 
-        uint32 GetZoneId(float x, float y) const
+        uint32 GetZoneId(float x, float y, float z) const
         {
-            return GetZoneId(GetAreaFlag(x,y),i_id);
+            return GetZoneIdByAreaFlag(GetAreaFlag(x,y,z),i_id);
+        }
+
+        void GetZoneAndAreaId(uint32& zoneid, uint32& areaid, float x, float y, float z) const
+        {
+            GetZoneAndAreaIdByAreaFlag(zoneid,areaid,GetAreaFlag(x,y,z),i_id);
         }
 
         virtual void MoveAllCreaturesInMoveList();
@@ -220,8 +348,8 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         // assert print helper
         bool CheckGridIntegrity(Creature* c, bool moved) const;
 
-        uint32 GetInstanceId() { return i_InstanceId; }
-        uint8 GetSpawnMode() { return (i_spawnMode); }
+        uint32 GetInstanceId() const { return i_InstanceId; }
+        uint8 GetSpawnMode() const { return (i_spawnMode); }
         virtual bool CanEnter(Player* /*player*/) { return true; }
         const char* GetMapName() const;
 
@@ -233,6 +361,17 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         bool IsBattleGround() const { return i_mapEntry && i_mapEntry->IsBattleGround(); }
         bool IsBattleArena() const { return i_mapEntry && i_mapEntry->IsBattleArena(); }
         bool IsBattleGroundOrArena() const { return i_mapEntry && i_mapEntry->IsBattleGroundOrArena(); }
+        bool GetEntrancePos(int32 &mapid, float &x, float &y)
+        {
+            if(!i_mapEntry)
+                return false;
+            if(i_mapEntry->entrance_map < 0)
+                return false;
+            mapid = i_mapEntry->entrance_map;
+            x = i_mapEntry->entrance_x;
+            y = i_mapEntry->entrance_y;
+            return true;
+        }
 
         void AddObjectToRemoveList(WorldObject *obj);
         void AddObjectToSwitchList(WorldObject *obj, bool on);
@@ -276,9 +415,12 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         template<class NOTIFIER> void VisitAll(const float &x, const float &y, float radius, NOTIFIER &notifier);
         template<class NOTIFIER> void VisitWorld(const float &x, const float &y, float radius, NOTIFIER &notifier);
         template<class NOTIFIER> void VisitGrid(const float &x, const float &y, float radius, NOTIFIER &notifier);
+
+        TempSummon *SummonCreature(uint32 entry, float x, float y, float z, float angle, SummonPropertiesEntry const *properties = NULL, uint32 duration = 0, Unit *summoner = NULL);
     private:
         void LoadVMap(int pX, int pY);
         void LoadMap(uint32 mapid, uint32 instanceid, int x,int y);
+        GridMap *GetGrid(float x, float y);
 
         void SetTimer(uint32 t) { i_gridExpiry = t < MIN_GRID_DELAY ? MIN_GRID_DELAY : t; }
         //uint64 CalculateGridMask(const uint32 &y) const;
@@ -310,7 +452,7 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         bool isGridObjectDataLoaded(uint32 x, uint32 y) const { return getNGrid(x,y)->isGridObjectDataLoaded(); }
         void setGridObjectDataLoaded(bool pLoaded, uint32 x, uint32 y) { getNGrid(x,y)->setGridObjectDataLoaded(pLoaded); }
 
-        inline void setNGrid(NGridType* grid, uint32 x, uint32 y);
+        void setNGrid(NGridType* grid, uint32 x, uint32 y);
 
         void UpdateActiveCells(const float &x, const float &y, const uint32 &t_diff);
     protected:
@@ -405,11 +547,11 @@ class TRINITY_DLL_SPEC InstanceMap : public Map
         uint32 GetScriptId() { return i_script_id; }
         InstanceData* GetInstanceData() { return i_data; }
         void PermBindAllPlayers(Player *player);
-        time_t GetResetTime();
         void UnloadAll();
         bool CanEnter(Player* player);
         void SendResetWarnings(uint32 timeLeft) const;
         void SetResetSchedule(bool on);
+        uint32 GetMaxPlayers() const;
     private:
         bool m_resetAfterUnload;
         bool m_unloadWhenEmpty;

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software licensed under GPL version 2
  * Please see the included DOCS/LICENSE.TXT for more information */
 
@@ -259,6 +259,20 @@ void npc_escortAI::AddWaypoint(uint32 id, float x, float y, float z, uint32 Wait
     Escort_Waypoint t(id, x, y, z, WaitTimeMs);
 
     WaypointList.push_back(t);
+}
+
+void npc_escortAI::FillPointMovementListForCreature()
+{
+    std::list<PointMovement>::iterator itr;
+
+    for (itr = PointMovementList.begin(); itr != PointMovementList.end(); ++itr)
+    {
+        if (itr->m_uiCreatureEntry == m_creature->GetEntry())
+        {
+            Escort_Waypoint pPoint(itr->m_uiPointId,itr->m_fX,itr->m_fY,itr->m_fZ,itr->m_uiWaitTime);
+            WaypointList.push_back(pPoint);
+        }
+    }
 }
 
 void npc_escortAI::Start(bool bAttack, bool bDefend, bool bRun, uint64 pGUID)

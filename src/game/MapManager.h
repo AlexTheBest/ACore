@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,18 +47,28 @@ class TRINITY_DLL_DECL MapManager : public Trinity::Singleton<MapManager, Trinit
         Map const* GetBaseMap(uint32 id) const { return const_cast<MapManager*>(this)->_GetBaseMap(id); }
         void DeleteInstance(uint32 mapid, uint32 instanceId);
 
-        inline uint16 GetAreaFlag(uint32 mapid, float x, float y) const
+        uint16 GetAreaFlag(uint32 mapid, float x, float y, float z) const
         {
             Map const* m = GetBaseMap(mapid);
-            return m->GetAreaFlag(x, y);
+            return m->GetAreaFlag(x, y, z);
         }
-        inline uint32 GetAreaId(uint32 mapid, float x, float y) { return Map::GetAreaId(GetAreaFlag(mapid, x, y),mapid); }
-        inline uint32 GetZoneId(uint32 mapid, float x, float y) { return Map::GetZoneId(GetAreaFlag(mapid, x, y),mapid); }
+        uint32 GetAreaId(uint32 mapid, float x, float y, float z) const
+        {
+            return Map::GetAreaIdByAreaFlag(GetAreaFlag(mapid, x, y, z),mapid);
+        }
+        uint32 GetZoneId(uint32 mapid, float x, float y, float z) const
+        {
+            return Map::GetZoneIdByAreaFlag(GetAreaFlag(mapid, x, y, z),mapid);
+        }
+        void GetZoneAndAreaId(uint32& zoneid, uint32& areaid, uint32 mapid, float x, float y, float z)
+        {
+            Map::GetZoneAndAreaIdByAreaFlag(zoneid,areaid,GetAreaFlag(mapid, x, y, z),mapid);
+        }
 
         void Initialize(void);
-        void Update(time_t);
+        void Update(uint32);
 
-        inline void SetGridCleanUpDelay(uint32 t)
+        void SetGridCleanUpDelay(uint32 t)
         {
             if( t < MIN_GRID_DELAY )
                 i_gridCleanUpDelay = MIN_GRID_DELAY;
@@ -66,7 +76,7 @@ class TRINITY_DLL_DECL MapManager : public Trinity::Singleton<MapManager, Trinit
                 i_gridCleanUpDelay = t;
         }
 
-        inline void SetMapUpdateInterval(uint32 t)
+        void SetMapUpdateInterval(uint32 t)
         {
             if( t > MIN_MAP_UPDATE_DELAY )
                 t = MIN_MAP_UPDATE_DELAY;
@@ -96,6 +106,11 @@ class TRINITY_DLL_DECL MapManager : public Trinity::Singleton<MapManager, Trinit
             return IsValidMAP(mapid) && Trinity::IsValidMapCoord(x,y,z,o);
         }
 
+        static bool IsValidMapCoord(WorldLocation const& loc)
+        {
+            return IsValidMapCoord(loc.mapid,loc.x,loc.y,loc.z,loc.o);
+        }
+
         void DoDelayedMovesAndRemoves();
 
         void LoadTransports();
@@ -108,7 +123,7 @@ class TRINITY_DLL_DECL MapManager : public Trinity::Singleton<MapManager, Trinit
 
         bool CanPlayerEnter(uint32 mapid, Player* player);
         void RemoveBonesFromMap(uint32 mapid, uint64 guid, float x, float y);
-        inline uint32 GenerateInstanceId() { return ++i_MaxInstanceId; }
+        uint32 GenerateInstanceId() { return ++i_MaxInstanceId; }
         void InitMaxInstanceId();
 
         /* statistics */
