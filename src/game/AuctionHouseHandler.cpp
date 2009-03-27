@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
@@ -367,6 +367,7 @@ void WorldSession::HandleAuctionPlaceBid( WorldPacket & recv_data )
         }
         auction->bidder = pl->GetGUIDLow();
         auction->bid = price;
+        GetPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_AUCTION_BID, price);
 
         // after this update we should save player's money ...
         CharacterDatabase.PExecute("UPDATE auctionhouse SET buyguid = '%u',lastbid = '%u' WHERE id = '%u'", auction->bidder, auction->bid, auction->Id);
@@ -390,6 +391,7 @@ void WorldSession::HandleAuctionPlaceBid( WorldPacket & recv_data )
         }
         auction->bidder = pl->GetGUIDLow();
         auction->bid = auction->buyout;
+        GetPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_AUCTION_BID, auction->buyout);
 
         auctionmgr.SendAuctionSalePendingMail( auction );
         auctionmgr.SendAuctionSuccessfulMail( auction );
@@ -500,7 +502,7 @@ void WorldSession::HandleAuctionListBidderItems( WorldPacket & recv_data )
     recv_data >> outbiddedCount;
     if (recv_data.size() != (16 + outbiddedCount * 4 ))
     {
-        sLog.outError("Client sent bad opcode!!! with count: %u and size : %d (mustbe: %d", outbiddedCount, recv_data.size(),(16 + outbiddedCount * 4 ));
+        sLog.outError("Client sent bad opcode!!! with count: %u and size : %lu (must be: %u)", outbiddedCount, (unsigned long)recv_data.size(),(16 + outbiddedCount * 4 ));
         outbiddedCount = 0;
     }
 
@@ -638,3 +640,22 @@ void WorldSession::HandleAuctionListItems( WorldPacket & recv_data )
     SendPacket(&data);
 }
 
+void WorldSession::HandleAuctionListPendingSales( WorldPacket & recv_data )
+{
+    sLog.outDebug("CMSG_AUCTION_LIST_PENDING_SALES");
+    recv_data.hexlike();
+
+    uint32 count = 0;
+
+    WorldPacket data(SMSG_AUCTION_LIST_PENDING_SALES, 4);
+    data << uint32(count);                                  // count
+    /*for(uint32 i = 0; i < count; ++i)
+    {
+        data << "";                                         // string
+        data << "";                                         // string
+        data << uint32(0);
+        data << uint32(0);
+        data << float(0);
+    }*/
+    SendPacket(&data);
+}
