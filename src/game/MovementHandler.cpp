@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,14 +23,15 @@
 #include "WorldSession.h"
 #include "Opcodes.h"
 #include "Log.h"
-#include "World.h"
 #include "Corpse.h"
 #include "Player.h"
+#include "Vehicle.h"
 #include "MapManager.h"
 #include "Transports.h"
 #include "BattleGround.h"
 #include "WaypointMovementGenerator.h"
 #include "InstanceSaveMgr.h"
+#include "ObjectMgr.h"
 
 void WorldSession::HandleMoveWorldportAckOpcode( WorldPacket & /*recv_data*/ )
 {
@@ -87,6 +88,26 @@ void WorldSession::HandleMoveWorldportAckOpcode()
         }
         return;
     }
+
+    // battleground state prepare (in case join to BG), at relogin/tele player not invited
+    // only add to bg group and object, if the player was invited (else he entered through command)
+    if(_player->InBattleGround())
+    {
+        // cleanup seting if outdated
+        if(!mEntry->IsBattleGroundOrArena())
+        {
+            _player->SetBattleGroundId(0, BATTLEGROUND_TYPE_NONE); // We're not in BG.
+            // reset destination bg team
+            _player->SetBGTeam(0);
+        }
+        // join to bg case
+        else if(BattleGround *bg = _player->GetBattleGround())
+        {
+            if(_player->IsInvitedForBattleGroundInstance(_player->GetBattleGroundId()))
+                bg->AddPlayer(_player);
+        }
+    }
+
     GetPlayer()->SendInitialPacketsAfterAddToMap();
 
     // flight fast teleport case
@@ -131,34 +152,6 @@ void WorldSession::HandleMoveWorldportAckOpcode()
     if(!mEntry->IsMountAllowed())
         _player->RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
 
-    // battleground state prepare
-    // only add to bg group and object, if the player was invited (else he entered through command)
-    if(_player->InBattleGround() && _player->IsInvitedForBattleGroundInstance(_player->GetBattleGroundId()))
-    {
-        BattleGround *bg = _player->GetBattleGround();
-        if(bg)
-        {
-            bg->AddPlayer(_player);
-            if(bg->GetMapId() == _player->GetMapId())       // we teleported to bg
-            {
-                // get the team this way, because arenas might 'override' the teams.
-                uint32 team = bg->GetPlayerTeam(_player->GetGUID());
-                if(!team)
-                    team = _player->GetTeam();
-                if(!bg->GetBgRaid(team))      // first player joined
-                {
-                    Group *group = new Group;
-                    bg->SetBgRaid(team, group);
-                    group->Create(_player->GetGUIDLow(), _player->GetName());
-                }
-                else                                        // raid already exist
-                {
-                    bg->GetBgRaid(team)->AddMember(_player->GetGUID(), _player->GetName());
-                }
-            }
-        }
-    }
-
     // honorless target
     if(GetPlayer()->pvpInfo.inHostileArea)
         GetPlayer()->CastSpell(GetPlayer(), 2479, true);
@@ -166,7 +159,7 @@ void WorldSession::HandleMoveWorldportAckOpcode()
     // resummon pet
     if(GetPlayer()->m_temporaryUnsummonedPetNumber)
     {
-        Pet* NewPet = new Pet;
+        Pet* NewPet = new Pet(GetPlayer());
         if(!NewPet->LoadPetFromDB(GetPlayer(), 0, GetPlayer()->m_temporaryUnsummonedPetNumber, true))
             delete NewPet;
 
@@ -178,64 +171,15 @@ void WorldSession::HandleMoveWorldportAckOpcode()
 
 void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 {
-    CHECK_PACKET_SIZE(recv_data, 4+1+4+4+4+4+4);
+    uint32 opcode = recv_data.GetOpcode();
+    //sLog.outDebug("WORLD: Recvd %s (%u, 0x%X) opcode", LookupOpcodeName(opcode), opcode, opcode);
+
+    if(GetPlayer()->GetDontMove())
+        return;
 
     /* extract packet */
     MovementInfo movementInfo;
-    uint32 MovementFlags;
-
-    recv_data >> MovementFlags;
-    recv_data >> movementInfo.unk1;
-    recv_data >> movementInfo.time;
-    recv_data >> movementInfo.x;
-    recv_data >> movementInfo.y;
-    recv_data >> movementInfo.z;
-    recv_data >> movementInfo.o;
-
-    if(MovementFlags & MOVEMENTFLAG_ONTRANSPORT)
-    {
-        // recheck
-        CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+8+4+4+4+4+4);
-
-        recv_data >> movementInfo.t_guid;
-        recv_data >> movementInfo.t_x;
-        recv_data >> movementInfo.t_y;
-        recv_data >> movementInfo.t_z;
-        recv_data >> movementInfo.t_o;
-        recv_data >> movementInfo.t_time;
-    }
-
-    if(MovementFlags & (MOVEMENTFLAG_SWIMMING | MOVEMENTFLAG_FLYING2))
-    {
-        // recheck
-        CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+4);
-
-        recv_data >> movementInfo.s_pitch;                  // pitch, -1.55=looking down, 0=looking straight forward, +1.55=looking up
-    }
-
-    // recheck
-    CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+4);
-
-    recv_data >> movementInfo.fallTime;                     // duration of last jump (when in jump duration from jump begin to now)
-
-    if(MovementFlags & MOVEMENTFLAG_JUMPING)
-    {
-        // recheck
-        CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+4+4+4+4);
-
-        recv_data >> movementInfo.j_unk;                    // constant, but different when jumping in water and on land?
-        recv_data >> movementInfo.j_sinAngle;               // sin of angle between orientation0 and players orientation
-        recv_data >> movementInfo.j_cosAngle;               // cos of angle between orientation0 and players orientation
-        recv_data >> movementInfo.j_xyspeed;                // speed of xy movement
-    }
-
-    if(MovementFlags & MOVEMENTFLAG_SPLINE)
-    {
-        // recheck
-        CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+4);
-
-        recv_data >> movementInfo.u_unk1;                   // unknown
-    }
+    ReadMovementInfo(recv_data, &movementInfo);
     /*----------------*/
 
     if(recv_data.size() != recv_data.rpos())
@@ -248,22 +192,11 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
     if (!Trinity::IsValidMapCoord(movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o))
         return;
 
-    // Handle possessed unit movement separately
-    Unit* pos_unit = GetPlayer()->GetCharm();
-    if (pos_unit && pos_unit->isPossessed()) // can be charmed but not possessed
-    {
-        HandlePossessedMovement(recv_data, movementInfo, MovementFlags);
-        return;
-    }
-
-    if (GetPlayer()->GetDontMove())
-        return;
-
-    //Save movement flags
-    GetPlayer()->SetUnitMovementFlags(MovementFlags);
+    Unit *mover = _player->m_mover;
+    Player *plMover = mover->GetTypeId()==TYPEID_PLAYER ? (Player*)mover : NULL;
 
     /* handle special cases */
-    if (MovementFlags & MOVEMENTFLAG_ONTRANSPORT)
+    if (movementInfo.flags & MOVEMENTFLAG_ONTRANSPORT)
     {
         // transports size limited
         // (also received at zeppelin leave by some reason with t_* as absolute in continent coordinates, can be safely skipped)
@@ -275,141 +208,106 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             return;
 
         // if we boarded a transport, add us to it
-        if (!GetPlayer()->m_transport)
+        if (plMover && !plMover->m_transport)
         {
             // elevators also cause the client to send MOVEMENTFLAG_ONTRANSPORT - just unmount if the guid can be found in the transport list
             for (MapManager::TransportSet::iterator iter = MapManager::Instance().m_Transports.begin(); iter != MapManager::Instance().m_Transports.end(); ++iter)
             {
                 if ((*iter)->GetGUID() == movementInfo.t_guid)
                 {
-                    // unmount before boarding
-                    GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
-
-                    GetPlayer()->m_transport = (*iter);
-                    (*iter)->AddPassenger(GetPlayer());
+                    plMover->m_transport = (*iter);
+                    (*iter)->AddPassenger(plMover);
                     break;
                 }
             }
         }
     }
-    else if (GetPlayer()->m_transport)                      // if we were on a transport, leave
+    else if (plMover && plMover->m_transport)               // if we were on a transport, leave
     {
-        GetPlayer()->m_transport->RemovePassenger(GetPlayer());
-        GetPlayer()->m_transport = NULL;
+        plMover->m_transport->RemovePassenger(plMover);
+        plMover->m_transport = NULL;
         movementInfo.t_x = 0.0f;
         movementInfo.t_y = 0.0f;
         movementInfo.t_z = 0.0f;
         movementInfo.t_o = 0.0f;
         movementInfo.t_time = 0;
+        movementInfo.t_seat = -1;
     }
 
     // fall damage generation (ignore in flight case that can be triggered also at lags in moment teleportation to another map).
-    if (recv_data.GetOpcode() == MSG_MOVE_FALL_LAND && !GetPlayer()->isInFlight())
-        GetPlayer()->HandleFallDamage(movementInfo);
+    if (opcode == MSG_MOVE_FALL_LAND && plMover && !plMover->isInFlight())
+        plMover->HandleFall(movementInfo);
 
-    if(((MovementFlags & MOVEMENTFLAG_SWIMMING) != 0) != GetPlayer()->IsInWater())
+    if (plMover && ((movementInfo.flags & MOVEMENTFLAG_SWIMMING) != 0) != plMover->IsInWater())
     {
         // now client not include swimming flag in case jumping under water
-        GetPlayer()->SetInWater( !GetPlayer()->IsInWater() || GetPlayer()->GetBaseMap()->IsUnderWater(movementInfo.x, movementInfo.y, movementInfo.z) );
+        plMover->SetInWater( !plMover->IsInWater() || plMover->GetBaseMap()->IsUnderWater(movementInfo.x, movementInfo.y, movementInfo.z) );
     }
 
     /*----------------------*/
 
     /* process position-change */
-    recv_data.put<uint32>(5, getMSTime());                  // offset flags(4) + unk(1)
-    WorldPacket data(recv_data.GetOpcode(), (GetPlayer()->GetPackGUID().size()+recv_data.size()));
-    data.append(GetPlayer()->GetPackGUID());
+    recv_data.put<uint32>(6, getMSTime());                  // fix time, offset flags(4) + unk(2)
+    WorldPacket data(recv_data.GetOpcode(), (mover->GetPackGUID().size()+recv_data.size()));
+    data.append(mover->GetPackGUID());                      // use mover guid
     data.append(recv_data.contents(), recv_data.size());
     GetPlayer()->SendMessageToSet(&data, false);
 
-    GetPlayer()->SetPosition(movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o);
-    GetPlayer()->m_movementInfo = movementInfo;
-    if (GetPlayer()->m_lastFallTime >= movementInfo.fallTime || GetPlayer()->m_lastFallZ <=movementInfo.z || recv_data.GetOpcode() == MSG_MOVE_FALL_LAND)
-        GetPlayer()->SetFallInformation(movementInfo.fallTime, movementInfo.z);
-
-    if(GetPlayer()->isMovingOrTurning())
-        GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
-
-    if(movementInfo.z < -500.0f)
-        GetPlayer()->HandleFallUnderMap();
-}
-
-void WorldSession::HandlePossessedMovement(WorldPacket& recv_data, MovementInfo& movementInfo, uint32& MovementFlags)
-{
-    // Whatever the client is controlling, it will send the GUID of the original player.
-    // If current player is controlling, it must be handled like the controlled player sent these opcodes
-
-    Unit* pos_unit = GetPlayer()->GetCharm();
-
-    if (pos_unit->GetTypeId() == TYPEID_PLAYER && ((Player*)pos_unit)->GetDontMove())
-        return;
-
-    //Save movement flags
-    pos_unit->SetUnitMovementFlags(MovementFlags);
-
-    // Remove possession if possessed unit enters a transport
-    if (MovementFlags & MOVEMENTFLAG_ONTRANSPORT)
+    if(plMover)                                             // nothing is charmed, or player charmed
     {
-        GetPlayer()->Uncharm();
-        return;
-    }
+        plMover->SetPosition(movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o);
+        plMover->m_movementInfo = movementInfo;
+        plMover->SetUnitMovementFlags(movementInfo.flags);
 
-    recv_data.put<uint32>(5, getMSTime());
-    WorldPacket data(recv_data.GetOpcode(), pos_unit->GetPackGUID().size()+recv_data.size());
-    data.append(pos_unit->GetPackGUID());
-    data.append(recv_data.contents(), recv_data.size());
-    // Send the packet to self but not to the possessed player; for creatures the first bool is irrelevant
-    pos_unit->SendMessageToSet(&data, true, false);
+        plMover->UpdateFallInformationIfNeed(movementInfo,recv_data.GetOpcode());
 
-    // Possessed is a player
-    if (pos_unit->GetTypeId() == TYPEID_PLAYER)
-    {
-        Player* plr = (Player*)pos_unit;
-
-        if (recv_data.GetOpcode() == MSG_MOVE_FALL_LAND)
-            plr->HandleFallDamage(movementInfo);
-
-        if(((MovementFlags & MOVEMENTFLAG_SWIMMING) != 0) != plr->IsInWater())
-        {
-            // Now client not include swimming flag in case jumping under water
-            plr->SetInWater( !plr->IsInWater() || plr->GetBaseMap()->IsUnderWater(movementInfo.x, movementInfo.y, movementInfo.z) );
-        }
-
-        plr->SetPosition(movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o, false);
-        plr->m_movementInfo = movementInfo;
-
-        if(plr->isMovingOrTurning())
-            plr->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
+        if(plMover->isMovingOrTurning())
+            plMover->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
 
         if(movementInfo.z < -500.0f)
         {
-            GetPlayer()->Uncharm();
-            plr->HandleFallUnderMap();
+            if(plMover->InBattleGround()
+                && plMover->GetBattleGround()
+                && plMover->GetBattleGround()->HandlePlayerUnderMap(_player))
+            {
+                // do nothing, the handle already did if returned true
+            }
+            else
+            {
+                // NOTE: this is actually called many times while falling
+                // even after the player has been teleported away
+                // TODO: discard movement packets after the player is rooted
+                if(plMover->isAlive())
+                {
+                    plMover->EnvironmentalDamage(DAMAGE_FALL_TO_VOID, GetPlayer()->GetMaxHealth());
+                    // change the death state to CORPSE to prevent the death timer from
+                    // starting in the next player update
+                    plMover->KillPlayer();
+                    plMover->BuildPlayerRepop();
+                }
+
+                // cancel the death timer here if started
+                plMover->RepopAtGraveyard();
+            }
         }
     }
-    else // Possessed unit is a creature
+    else                                                    // creature charmed
     {
-        Map* map = MapManager::Instance().GetMap(pos_unit->GetMapId(), pos_unit);
-        map->CreatureRelocation((Creature*)pos_unit, movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o);
+        if(Map *map = mover->GetMap())
+            map->CreatureRelocation((Creature*)mover, movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o);
+        mover->SetUnitMovementFlags(movementInfo.flags);
     }
 }
 
 void WorldSession::HandleForceSpeedChangeAck(WorldPacket &recv_data)
 {
-    CHECK_PACKET_SIZE(recv_data, 8+4+4+1+4+4+4+4+4);
+    //sLog.outDebug("WORLD: Recvd %s (%u, 0x%X) opcode", LookupOpcodeName(recv_data.GetOpcode()), recv_data.GetOpcode(), recv_data.GetOpcode());
+
+    CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+8+4);
 
     /* extract packet */
     uint64 guid;
-    uint8  unkB;
-    uint32 unk1, flags, time, fallTime;
-    float x, y, z, orientation;
-
-    uint64 t_GUID;
-    float  t_x, t_y, t_z, t_o;
-    uint32 t_time;
-    float  s_pitch;
-    float  j_unk1, j_sinAngle, j_cosAngle, j_xyspeed;
-    float  u_unk1;
+    uint32 unk1;
     float  newspeed;
 
     recv_data >> guid;
@@ -420,47 +318,10 @@ void WorldSession::HandleForceSpeedChangeAck(WorldPacket &recv_data)
 
     // continue parse packet
 
-    recv_data >> unk1;
-    recv_data >> flags >> unkB >> time;
-    recv_data >> x >> y >> z >> orientation;
-    if (flags & MOVEMENTFLAG_ONTRANSPORT)
-    {
-        // recheck
-        CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+8+4+4+4+4+4);
+    recv_data >> unk1;                                      // counter or moveEvent
 
-        recv_data >> t_GUID;
-        recv_data >> t_x >> t_y >> t_z >> t_o >> t_time;
-    }
-    if (flags & (MOVEMENTFLAG_SWIMMING | MOVEMENTFLAG_FLYING2))
-    {
-        // recheck
-        CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+4);
-
-        recv_data >> s_pitch;                               // pitch, -1.55=looking down, 0=looking straight forward, +1.55=looking up
-    }
-
-    // recheck
-    CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+4);
-
-    recv_data >> fallTime;                                  // duration of last jump (when in jump duration from jump begin to now)
-
-    if ((flags & MOVEMENTFLAG_JUMPING) || (flags & MOVEMENTFLAG_FALLING))
-    {
-        // recheck
-        CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+4+4+4+4);
-
-        recv_data >> j_unk1;                                // ?constant, but different when jumping in water and on land?
-        recv_data >> j_sinAngle >> j_cosAngle;              // sin + cos of angle between orientation0 and players orientation
-        recv_data >> j_xyspeed;                             // speed of xy movement
-    }
-
-    if(flags & MOVEMENTFLAG_SPLINE)
-    {
-        // recheck
-        CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+4);
-
-        recv_data >> u_unk1;                                // unknown
-    }
+    MovementInfo movementInfo;
+    ReadMovementInfo(recv_data, &movementInfo);
 
     // recheck
     CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+4);
@@ -473,7 +334,7 @@ void WorldSession::HandleForceSpeedChangeAck(WorldPacket &recv_data)
     UnitMoveType move_type;
     UnitMoveType force_move_type;
 
-    static char const* move_type_name[MAX_MOVE_TYPE] = {  "Walk", "Run", "RunBack", "Swim", "SwimBack", "TurnRate", "Flight", "FlightBack" };
+    static char const* move_type_name[MAX_MOVE_TYPE] = {  "Walk", "Run", "RunBack", "Swim", "SwimBack", "TurnRate", "Flight", "FlightBack", "PitchRate" };
 
     uint16 opcode = recv_data.GetOpcode();
     switch(opcode)
@@ -486,6 +347,7 @@ void WorldSession::HandleForceSpeedChangeAck(WorldPacket &recv_data)
         case CMSG_FORCE_TURN_RATE_CHANGE_ACK:           move_type = MOVE_TURN_RATE;     force_move_type = MOVE_TURN_RATE;   break;
         case CMSG_FORCE_FLIGHT_SPEED_CHANGE_ACK:        move_type = MOVE_FLIGHT;        force_move_type = MOVE_FLIGHT;      break;
         case CMSG_FORCE_FLIGHT_BACK_SPEED_CHANGE_ACK:   move_type = MOVE_FLIGHT_BACK;   force_move_type = MOVE_FLIGHT_BACK; break;
+        case CMSG_FORCE_PITCH_RATE_CHANGE_ACK:          move_type = MOVE_PITCH_RATE;    force_move_type = MOVE_PITCH_RATE;  break;
         default:
             sLog.outError("WorldSession::HandleForceSpeedChangeAck: Unknown move type opcode: %u", opcode);
             return;
@@ -520,20 +382,62 @@ void WorldSession::HandleForceSpeedChangeAck(WorldPacket &recv_data)
 void WorldSession::HandleSetActiveMoverOpcode(WorldPacket &recv_data)
 {
     sLog.outDebug("WORLD: Recvd CMSG_SET_ACTIVE_MOVER");
+    recv_data.hexlike();
 
-    CHECK_PACKET_SIZE(recv_data,8);
+    CHECK_PACKET_SIZE(recv_data, 8);
 
     uint64 guid;
     recv_data >> guid;
 
-    WorldPacket data(SMSG_TIME_SYNC_REQ, 4);                // new 2.0.x, enable movement
-    data << uint32(0x00000000);                             // on blizz it increments periodically
-    SendPacket(&data);
+    if(_player->m_mover->GetGUID() != guid)
+    {
+        sLog.outError("HandleSetActiveMoverOpcode: incorrect mover guid: mover is " I64FMT " and should be " I64FMT, _player->m_mover->GetGUID(), guid);
+        return;
+    }
 }
 
-void WorldSession::HandleNotActiveMoverOpcode(WorldPacket& /*recv_data*/)
+void WorldSession::HandleMoveNotActiveMover(WorldPacket &recv_data)
 {
     sLog.outDebug("WORLD: Recvd CMSG_MOVE_NOT_ACTIVE_MOVER");
+    recv_data.hexlike();
+
+    CHECK_PACKET_SIZE(recv_data, recv_data.rpos()+8);
+
+    uint64 old_mover_guid;
+    recv_data >> old_mover_guid;
+
+    if(_player->m_mover->GetGUID() == old_mover_guid)
+    {
+        sLog.outError("HandleMoveNotActiveMover: incorrect mover guid: mover is " I64FMT " and should be " I64FMT " instead of " I64FMT, _player->m_mover->GetGUID(), _player->GetGUID(), old_mover_guid);
+        return;
+    }
+
+    MovementInfo mi;
+    ReadMovementInfo(recv_data, &mi);
+    _player->m_movementInfo = mi;
+}
+
+void WorldSession::HandleDismissControlledVehicle(WorldPacket &recv_data)
+{
+    sLog.outDebug("WORLD: Recvd CMSG_DISMISS_CONTROLLED_VEHICLE");
+    recv_data.hexlike();
+
+    uint64 vehicleGUID = _player->GetCharmGUID();
+
+    if(!vehicleGUID)                                        // something wrong here...
+        return;
+
+    MovementInfo mi;
+    ReadMovementInfo(recv_data, &mi);
+    _player->m_movementInfo = mi;
+
+    // using charm guid, because we don't have vehicle guid...
+    if(Vehicle *vehicle = ObjectAccessor::GetVehicle(vehicleGUID))
+    {
+        _player->ExitVehicle(vehicle);
+        if(!vehicle->GetDBTableGUIDLow())
+            vehicle->Dismiss();
+    }
 }
 
 void WorldSession::HandleMountSpecialAnimOpcode(WorldPacket& /*recvdata*/)

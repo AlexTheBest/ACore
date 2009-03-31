@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -95,7 +95,7 @@ bool OutdoorPvPObjective::AddObject(uint32 type, uint32 entry, uint32 map, float
     if(!pMap)
         return true;
     GameObject * go = new GameObject;
-    if(!go->Create(guid,entry, pMap,x,y,z,o,rotation0,rotation1,rotation2,rotation3,100,1))
+    if(!go->Create(guid,entry, pMap,PHASEMASK_NORMAL,x,y,z,o,rotation0,rotation1,rotation2,rotation3,100,1))
     {
         sLog.outError("Gameobject template %u not found in database.", entry);
         delete go;
@@ -156,14 +156,12 @@ bool OutdoorPvPObjective::AddCreature(uint32 type, uint32 entry, uint32 teamval,
     if(!pMap)
         return true;
     Creature* pCreature = new Creature;
-    if (!pCreature->Create(guid, pMap, entry, teamval))
+    if (!pCreature->Create(guid, pMap, PHASEMASK_NORMAL, entry, teamval))
     {
         sLog.outError("Can't create creature entry: %u",entry);
         delete pCreature;
         return true;
     }
-
-    pCreature->AIM_Initialize();
 
     pCreature->Relocate(x, y, z, o);
 
@@ -256,7 +254,7 @@ bool OutdoorPvPObjective::AddCapturePoint(uint32 entry, uint32 map, float x, flo
         return true;
     // add GO...
     GameObject * go = new GameObject;
-    if(!go->Create(guid,entry, pMap,x,y,z,o,rotation0,rotation1,rotation2,rotation3,100,1))
+    if(!go->Create(guid,entry, pMap,PHASEMASK_NORMAL,x,y,z,o,rotation0,rotation1,rotation2,rotation3,100,1))
     {
         sLog.outError("Gameobject template %u not found in database.", entry);
         delete go;
@@ -269,15 +267,13 @@ bool OutdoorPvPObjective::AddCapturePoint(uint32 entry, uint32 map, float x, flo
     }
     // add creature...
     Creature* pCreature = new Creature;
-    if (!pCreature->Create(creature_guid, pMap, OPVP_TRIGGER_CREATURE_ENTRY, 0))
+    if (!pCreature->Create(creature_guid, pMap, PHASEMASK_NORMAL, OPVP_TRIGGER_CREATURE_ENTRY, 0))
     {
         sLog.outError("Can't create creature entry: %u",entry);
         delete pCreature;
     }
     else
     {
-        pCreature->AIM_Initialize();
-
         pCreature->Relocate(x, y, z, o);
 
         if(!pCreature->IsPositionValid())
@@ -315,8 +311,8 @@ bool OutdoorPvPObjective::DelCreature(uint32 type)
     // explicit removal from map
     // beats me why this is needed, but with the recent removal "cleanup" some creatures stay in the map if "properly" deleted
     // so this is a big fat workaround, if AddObjectToRemoveList and DoDelayedMovesAndRemoves worked correctly, this wouldn't be needed
-    if(Map * map = MapManager::Instance().FindMap(cr->GetMapId()))
-        map->Remove(cr,false);
+    //if(Map * map = MapManager::Instance().FindMap(cr->GetMapId()))
+    //    map->Remove(cr,false);
     // delete respawn time for this creature
     WorldDatabase.PExecute("DELETE FROM creature_respawn WHERE guid = '%u'", guid);
     cr->AddObjectToRemoveList();
@@ -373,8 +369,8 @@ bool OutdoorPvPObjective::DelCapturePoint()
             // explicit removal from map
             // beats me why this is needed, but with the recent removal "cleanup" some creatures stay in the map if "properly" deleted
             // so this is a big fat workaround, if AddObjectToRemoveList and DoDelayedMovesAndRemoves worked correctly, this wouldn't be needed
-            if(Map * map = MapManager::Instance().FindMap(cr->GetMapId()))
-                map->Remove(cr,false);
+            //if(Map * map = MapManager::Instance().FindMap(cr->GetMapId()))
+            //    map->Remove(cr,false);
             // delete respawn time for this creature
             WorldDatabase.PExecute("DELETE FROM creature_respawn WHERE guid = '%u'", guid);
             cr->AddObjectToRemoveList();

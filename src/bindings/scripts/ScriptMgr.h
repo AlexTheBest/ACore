@@ -1,4 +1,4 @@
-/* Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+/* Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * Thanks to the original authors: ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  *
@@ -10,7 +10,7 @@
 
 #include "Common.h"
 #include "Platform/CompilerDefs.h"
-#include "Database/DBCStructure.h"
+#include "DBCStructure.h"
 
 class Player;
 class Creature;
@@ -34,7 +34,8 @@ struct Script
         pGossipHello(NULL), pQuestAccept(NULL), pGossipSelect(NULL), pGossipSelectWithCode(NULL),
         pQuestSelect(NULL), pQuestComplete(NULL), pNPCDialogStatus(NULL), pGODialogStatus(NULL), pChooseReward(NULL),
         pItemHello(NULL), pGOHello(NULL), pAreaTrigger(NULL), pItemQuestAccept(NULL), pGOQuestAccept(NULL),
-        pGOChooseReward(NULL),pReceiveEmote(NULL),pItemUse(NULL), GetAI(NULL), GetInstanceData(NULL)
+        pGOChooseReward(NULL), pReceiveEmote(NULL), pItemUse(NULL), pEffectDummyGameObj(NULL), pEffectDummyCreature(NULL),
+        pEffectDummyItem(NULL), GetAI(NULL)
     {}
 
     std::string Name;
@@ -59,6 +60,9 @@ struct Script
     bool (*pGOChooseReward      )(Player*, GameObject*, Quest const*, uint32 );
     bool (*pReceiveEmote        )(Player*, Creature*, uint32 );
     bool (*pItemUse             )(Player*, Item*, SpellCastTargets const& );
+    bool (*pEffectDummyGameObj  )(Unit*, uint32, uint32, GameObject* );
+    bool (*pEffectDummyCreature )(Unit*, uint32, uint32, Creature* );
+    bool (*pEffectDummyItem     )(Unit*, uint32, uint32, Item* );
 
     CreatureAI* (*GetAI)(Creature*);
     InstanceData* (*GetInstanceData)(Map*);
