@@ -187,6 +187,11 @@ Unit::~Unit()
     RemoveAllDynObjects();
 
     if(m_charmInfo) delete m_charmInfo;
+
+    assert(!m_attacking);
+    assert(m_attackers.empty());
+    assert(m_sharedVision.empty());
+    assert(m_Controlled.empty());
 }
 
 void Unit::Update( uint32 p_time )
@@ -11941,7 +11946,7 @@ Player* Unit::GetSpellModOwner() const
 void Unit::SendPetCastFail(uint32 spellid, SpellCastResult msg)
 {
     if(msg == SPELL_CAST_OK)
-        return; 
+        return;
 
     Unit *owner = GetCharmerOrOwner();
     if(!owner || owner->GetTypeId() != TYPEID_PLAYER)
