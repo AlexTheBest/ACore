@@ -63,6 +63,9 @@ enum MMCleanFlag
     MMCF_RESET  = 2  // Flag if need top()->Reset()
 };
 
+// assume it is 25 yard per 0.6 second
+#define SPEED_CHARGE    42.0f
+
 class TRINITY_DLL_SPEC MotionMaster //: private std::stack<MovementGenerator *>
 {
     private:
@@ -92,6 +95,7 @@ class TRINITY_DLL_SPEC MotionMaster //: private std::stack<MovementGenerator *>
         ~MotionMaster();
 
         void Initialize();
+        void InitDefault();
 
         int size() const { return i_top + 1; }
         _Ty top() const { return Impl[i_top]; }
@@ -131,12 +135,14 @@ class TRINITY_DLL_SPEC MotionMaster //: private std::stack<MovementGenerator *>
         void MoveIdle(MovementSlot slot = MOTION_SLOT_ACTIVE);
         void MoveTargetedHome();
         void MoveRandom(float spawndist = 0.0f);
-        void MoveFollow(Unit* target, float dist, float angle);
+        void MoveFollow(Unit* target, float dist, float angle, MovementSlot slot = MOTION_SLOT_ACTIVE);
         void MoveChase(Unit* target, float dist = 0.0f, float angle = 0.0f);
         void MoveConfused();
         void MoveFleeing(Unit* enemy);
         void MovePoint(uint32 id, float x,float y,float z);
-        void MoveCharge(float x, float y, float z);
+        void MoveCharge(float x, float y, float z, float speed = SPEED_CHARGE);
+        void MoveJumpFrom(float srcX, float srcY, float speedXY, float speedZ);
+        void MoveJump(float x, float y, float z, float speedXY, float speedZ);
         void MoveTaxiFlight(uint32 path, uint32 pathnode);
         void MoveDistract(uint32 time);
         void MovePath(uint32 path_id, bool repeatable);

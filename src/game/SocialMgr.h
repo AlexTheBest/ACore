@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -143,7 +143,8 @@ class SocialMgr
         SocialMgr();
         ~SocialMgr();
         // Misc
-        void RemovePlayerSocial(uint32 guid);
+        void RemovePlayerSocial(uint32 guid) { m_socialMap.erase(guid); }
+
         void GetFriendInfo(Player *player, uint32 friendGUID, FriendInfo &friendInfo);
         // Packet management
         void MakeFriendStatusPacket(FriendsResult result, uint32 friend_guid, WorldPacket *data);

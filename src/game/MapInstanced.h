@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,7 +52,7 @@ class TRINITY_DLL_DECL MapInstanced : public Map
             SetUnloadReferenceLock(GridPair(63-p.x_coord, 63-p.y_coord), true);
         }
 
-        void RemoveGridMapReference(const GridPair &p)
+        void RemoveGridMapReference(GridPair const& p)
         {
             --GridMapReference[p.x_coord][p.y_coord];
             if (!GridMapReference[p.x_coord][p.y_coord])

@@ -1,4 +1,4 @@
-/* Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+/* Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * Thanks to the original authors: ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  *
@@ -11,7 +11,7 @@
 #include "CreatureAI.h"
 #include "Creature.h"
 
-float GetSpellMaxRange(uint32 id);
+float GetSpellMaxRangeForHostile(uint32 id);
 
 class SummonList : std::list<uint64>
 {
@@ -30,6 +30,16 @@ Unit* FindCreature(uint32 entry, float range, Unit* Finder);
 
 //Get a single gameobject of given entry
 GameObject* FindGameObject(uint32 entry, float range, Unit* Finder);
+
+struct PointMovement
+{
+    uint32 m_uiCreatureEntry;
+    uint32 m_uiPointId;
+    float m_fX;
+    float m_fY;
+    float m_fZ;
+    uint32 m_uiWaitTime;
+};
 
 struct TRINITY_DLL_DECL ScriptedAI : public CreatureAI
 {

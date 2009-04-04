@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,16 +20,15 @@
 
 #include "Totem.h"
 #include "WorldPacket.h"
-#include "MapManager.h"
 #include "Log.h"
 #include "Group.h"
 #include "Player.h"
 #include "ObjectMgr.h"
 #include "SpellMgr.h"
 
-Totem::Totem() : Creature()
+Totem::Totem(SummonPropertiesEntry const *properties, Unit *owner) : TempSummon(properties, owner)
 {
-    m_isTotem = true;
+    m_summonMask |= SUMMON_MASK_TOTEM;
     m_duration = 0;
     m_type = TOTEM_PASSIVE;
 }
@@ -89,8 +88,6 @@ void Totem::Summon(Unit* owner)
     data << GetGUID();
     SendMessageToSet(&data,true);
 
-    AIM_Initialize();
-
     switch(m_type)
     {
         case TOTEM_PASSIVE: CastSpell(this, GetSpell(), true); break;
@@ -112,11 +109,11 @@ void Totem::UnSummon()
     if (owner)
     {
         // clear owenr's totem slot
-        for(int i = 0; i < MAX_TOTEM; ++i)
+        for(int i = SUMMON_SLOT_TOTEM; i < MAX_TOTEM_SLOT; ++i)
         {
-            if(owner->m_TotemSlot[i]==GetGUID())
+            if(owner->m_SummonSlot[i]==GetGUID())
             {
-                owner->m_TotemSlot[i] = 0;
+                owner->m_SummonSlot[i] = 0;
                 break;
             }
         }
@@ -178,19 +175,19 @@ void Totem::SetTypeBySummonSpell(SpellEntry const * spellProto)
         m_type = TOTEM_STATUE;                              //Jewelery statue
 }
 
-bool Totem::IsImmunedToSpell(SpellEntry const* spellInfo, bool useCharges)
+bool Totem::IsImmunedToSpellEffect(SpellEntry const* spellInfo, uint32 index) const
 {
-/*    for (int i=0;i<3;i++)
+    // TODO: possibly all negative auras immuned?
+    switch(spellInfo->EffectApplyAuraName[index])
     {
-        switch(spellInfo->EffectApplyAuraName[i])
-        {
-            case SPELL_AURA_PERIODIC_DAMAGE:
-            case SPELL_AURA_PERIODIC_LEECH:
-                return true;
-            default:
-                continue;
-        }
-    }*/
-    return Creature::IsImmunedToSpell(spellInfo, useCharges);
+        case SPELL_AURA_PERIODIC_DAMAGE:
+        case SPELL_AURA_PERIODIC_LEECH:
+        case SPELL_AURA_MOD_FEAR:
+        case SPELL_AURA_TRANSFORM:
+            return true;
+        default:
+            break;
+    }
+    return Creature::IsImmunedToSpellEffect(spellInfo, index);
 }
 

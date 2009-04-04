@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -225,6 +225,7 @@ struct TRINITY_DLL_DECL boss_ragnarosAI : public Scripted_NoMovementAI
                 {
                     target = SelectUnit(SELECT_TARGET_RANDOM,0);
                     Summoned = m_creature->SummonCreature(12143,target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(),0,TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN,900000);
+                    if (Summoned)
                     ((CreatureAI*)Summoned->AI())->AttackStart(target);
                 }
 
@@ -242,6 +243,7 @@ struct TRINITY_DLL_DECL boss_ragnarosAI : public Scripted_NoMovementAI
                 {
                     target = SelectUnit(SELECT_TARGET_RANDOM,0);
                     Summoned = m_creature->SummonCreature(12143,target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(),0,TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN,900000);
+                    if (Summoned)
                     ((CreatureAI*)Summoned->AI())->AttackStart(target);
                 }
 
