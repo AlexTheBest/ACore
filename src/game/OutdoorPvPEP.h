@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 
 #include "OutdoorPvP.h"
 
-#include "Database/DBCStructure.h"
+#include "DBCStructure.h"
 
 const uint32 EP_AllianceBuffs[4] = {11413, 11414, 11415, 1386};
 

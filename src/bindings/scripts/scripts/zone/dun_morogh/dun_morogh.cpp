@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -44,7 +44,7 @@ struct TRINITY_DLL_DECL npc_narm_faulkAI : public ScriptedAI
     {
         lifeTimer = 120000;
         m_creature->SetUInt32Value(UNIT_DYNAMIC_FLAGS, 32);
-        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1,7);   // lay down
+        m_creature->SetStandState(UNIT_STAND_STATE_DEAD);
         spellHit = false;
     }
 
@@ -59,7 +59,7 @@ struct TRINITY_DLL_DECL npc_narm_faulkAI : public ScriptedAI
 
     void UpdateAI(const uint32 diff)
     {
-        if (!m_creature->GetUInt32Value(UNIT_FIELD_BYTES_1))
+       if (m_creature->IsStandState())
         {
             if(lifeTimer < diff)
                 m_creature->AI()->EnterEvadeMode();
@@ -73,7 +73,7 @@ struct TRINITY_DLL_DECL npc_narm_faulkAI : public ScriptedAI
         if(Spellkind->Id == 8593 && !spellHit)
         {
             DoCast(m_creature,32343);
-            m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1,0);
+            m_creature->SetStandState(UNIT_STAND_STATE_STAND);
             m_creature->SetUInt32Value(UNIT_DYNAMIC_FLAGS, 0);
             //m_creature->RemoveAllAuras();
             DoScriptText(SAY_HEAL, m_creature);

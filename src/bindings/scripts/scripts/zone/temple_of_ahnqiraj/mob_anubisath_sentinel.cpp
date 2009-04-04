@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -174,7 +174,7 @@ struct TRINITY_DLL_DECL aqsentinelAI : public ScriptedAI
         std::list<Creature*> assistList;
 
         NearbyAQSentinel u_check(nears);
-        Trinity::CreatureListSearcher<NearbyAQSentinel> searcher(assistList, u_check);
+        Trinity::CreatureListSearcher<NearbyAQSentinel> searcher(m_creature, assistList, u_check);
         TypeContainerVisitor<Trinity::CreatureListSearcher<NearbyAQSentinel>, GridTypeMapContainer >  grid_creature_searcher(searcher);
         CellLock<GridReadGuard> cell_lock(cell, p);
         cell_lock->Visit(cell_lock, grid_creature_searcher, *(nears->GetMap()));
@@ -220,6 +220,8 @@ struct TRINITY_DLL_DECL aqsentinelAI : public ScriptedAI
             DoYell("I dont have enough buddies.", LANG_NEUTRAL, 0);*/
         SendMyListToBuddies();
         CallBuddiesToAttack(who);
+        
+        delete[] chosenAbilities;
     }
 
     bool gatherOthersWhenAggro;

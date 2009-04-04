@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -38,16 +38,16 @@ class TransportPath
             uint32 delay;
         };
 
-        inline void SetLength(const unsigned int sz)
+        void SetLength(const unsigned int sz)
         {
             i_nodes.resize( sz );
         }
 
-        inline unsigned int Size(void) const { return i_nodes.size(); }
-        inline bool Empty(void) const { return i_nodes.empty(); }
-        inline void Resize(unsigned int sz) { i_nodes.resize(sz); }
-        inline void Clear(void) { i_nodes.clear(); }
-        inline PathNode* GetNodes(void) { return static_cast<PathNode *>(&i_nodes[0]); }
+        unsigned int Size(void) const { return i_nodes.size(); }
+        bool Empty(void) const { return i_nodes.empty(); }
+        void Resize(unsigned int sz) { i_nodes.resize(sz); }
+        void Clear(void) { i_nodes.clear(); }
+        PathNode* GetNodes(void) { return static_cast<PathNode *>(&i_nodes[0]); }
 
         PathNode& operator[](const unsigned int idx) { return i_nodes[idx]; }
         const PathNode& operator()(const unsigned int idx) const { return i_nodes[idx]; }
@@ -56,7 +56,7 @@ class TransportPath
         std::vector<PathNode> i_nodes;
 };
 
-class Transport : private GameObject
+class Transport : protected GameObject
 {
     public:
         explicit Transport();
@@ -83,7 +83,6 @@ class Transport : private GameObject
         typedef std::set<Player*> PlayerSet;
         PlayerSet const& GetPassengers() const { return m_passengers; }
 
-        std::string m_name;
     private:
         struct WayPoint
         {
@@ -114,6 +113,7 @@ class Transport : private GameObject
 
     private:
         void TeleportTransport(uint32 newMapid, float x, float y, float z);
+        void UpdateForMap(Map const* map);
         WayPointMap::iterator GetNextWayPoint();
 };
 #endif

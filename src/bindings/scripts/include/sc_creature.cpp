@@ -1,4 +1,4 @@
-/* Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+/* Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * Thanks to the original authors: ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  *
@@ -108,9 +108,9 @@ void ScriptedAI::AttackStart(Unit* who)
 void ScriptedAI::UpdateAI(const uint32 diff)
 {
     //Check if we have a current target
-    if (m_creature->isAlive() && UpdateVictim())
+    if (UpdateVictim())
     {
-        if (m_creature->isAttackReady() )
+        if (m_creature->isAttackReady())
         {
             //If we are within range melee the target
             if (m_creature->IsWithinMeleeRange(m_creature->getVictim()))
@@ -206,23 +206,23 @@ void ScriptedAI::DoSay(const char* text, uint32 language, Unit* target, bool Say
 {
     if (target)
     {
-        m_creature->Say(text, language, target->GetGUID());
+        m_creature->MonsterSay(text, language, target->GetGUID());
         if(SayEmote)
             m_creature->HandleEmoteCommand(EMOTE_ONESHOT_TALK);
     }
-    else m_creature->Say(text, language, 0);
+    else m_creature->MonsterSay(text, language, 0);
 }
 
 void ScriptedAI::DoYell(const char* text, uint32 language, Unit* target)
 {
-    if (target) m_creature->Yell(text, language, target->GetGUID());
-    else m_creature->Yell(text, language, 0);
+    if (target) m_creature->MonsterYell(text, language, target->GetGUID());
+    else m_creature->MonsterYell(text, language, 0);
 }
 
 void ScriptedAI::DoTextEmote(const char* text, Unit* target, bool IsBossEmote)
 {
-    if (target) m_creature->TextEmote(text, target->GetGUID(), IsBossEmote);
-    else m_creature->TextEmote(text, 0, IsBossEmote);
+    if (target) m_creature->MonsterTextEmote(text, target->GetGUID(), IsBossEmote);
+    else m_creature->MonsterTextEmote(text, 0, IsBossEmote);
 }
 
 void ScriptedAI::DoWhisper(const char* text, Unit* reciever, bool IsBossWhisper)
@@ -230,7 +230,7 @@ void ScriptedAI::DoWhisper(const char* text, Unit* reciever, bool IsBossWhisper)
     if (!reciever || reciever->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    m_creature->Whisper(text, reciever->GetGUID(), IsBossWhisper);
+    m_creature->MonsterWhisper(text, reciever->GetGUID(), IsBossWhisper);
 }
 
 void ScriptedAI::DoPlaySoundToSet(Unit* unit, uint32 sound)
@@ -437,11 +437,9 @@ SpellEntry const* ScriptedAI::SelectSpell(Unit* Target, int32 School, int32 Mech
         return false;
 
     //Using the extended script system we first create a list of viable spells
-    SpellEntry const* Spell[4];
-    Spell[0] = 0;
-    Spell[1] = 0;
-    Spell[2] = 0;
-    Spell[3] = 0;
+    SpellEntry const* Spell[CREATURE_MAX_SPELLS];
+    for (uint8 i=0;i<CREATURE_MAX_SPELLS;i++)
+        Spell[i] = 0;
 
     uint32 SpellCount = 0;
 
@@ -449,7 +447,7 @@ SpellEntry const* ScriptedAI::SelectSpell(Unit* Target, int32 School, int32 Mech
     SpellRangeEntry const* TempRange;
 
     //Check if each spell is viable(set it to null if not)
-    for (uint32 i = 0; i < 4; i++)
+    for (uint32 i = 0; i < CREATURE_MAX_SPELLS; i++)
     {
         TempSpell = GetSpellStore()->LookupEntry(m_creature->m_spells[i]);
 
@@ -493,13 +491,13 @@ SpellEntry const* ScriptedAI::SelectSpell(Unit* Target, int32 School, int32 Mech
             continue;
 
         //Check if the spell meets our range requirements
-        if (RangeMin && TempRange->maxRange < RangeMin)
+        if (RangeMin && m_creature->GetSpellMinRangeForTarget(Target, TempRange) < RangeMin)
             continue;
-        if (RangeMax && TempRange->maxRange > RangeMax)
+        if (RangeMax && m_creature->GetSpellMaxRangeForTarget(Target, TempRange) > RangeMax)
             continue;
 
         //Check if our target is in range
-        if (m_creature->IsWithinDistInMap(Target, TempRange->minRange) || !m_creature->IsWithinDistInMap(Target, TempRange->maxRange))
+        if (m_creature->IsWithinDistInMap(Target, m_creature->GetSpellMinRangeForTarget(Target, TempRange)) || !m_creature->IsWithinDistInMap(Target, m_creature->GetSpellMaxRangeForTarget(Target, TempRange)))
             continue;
 
         //All good so lets add it to the spell list
@@ -537,20 +535,20 @@ bool ScriptedAI::CanCast(Unit* Target, SpellEntry const *Spell, bool Triggered)
         return false;
 
     //Unit is out of range of this spell
-    if (m_creature->GetDistance(Target) > TempRange->maxRange || m_creature->GetDistance(Target) < TempRange->minRange)
+    if (m_creature->GetDistance(Target) > m_creature->GetSpellMaxRangeForTarget(Target, TempRange) || m_creature->GetDistance(Target) < m_creature->GetSpellMinRangeForTarget(Target, TempRange))
         return false;
 
     return true;
 }
 
 
-float GetSpellMaxRange(uint32 id)
+float GetSpellMaxRangeForHostile(uint32 id)
 {
     SpellEntry const *spellInfo = GetSpellStore()->LookupEntry(id);
     if(!spellInfo) return 0;
     SpellRangeEntry const *range = GetSpellRangeStore()->LookupEntry(spellInfo->rangeIndex);
     if(!range) return 0;
-    return range->maxRange;
+    return range->maxRangeHostile;
 }
 
 void FillSpellSummary()
@@ -583,7 +581,7 @@ void FillSpellSummary()
             //Spell targets AoE at enemy
             if ( TempSpell->EffectImplicitTargetA[j] == TARGET_ALL_ENEMY_IN_AREA ||
                 TempSpell->EffectImplicitTargetA[j] == TARGET_ALL_ENEMY_IN_AREA_INSTANT ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_ALL_AROUND_CASTER ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_DEST_CASTER ||
                 TempSpell->EffectImplicitTargetA[j] == TARGET_ALL_ENEMY_IN_AREA_CHANNELED )
                 SpellSummary[i].Targets |= 1 << (SELECT_TARGET_AOE_ENEMY-1);
 
@@ -592,7 +590,7 @@ void FillSpellSummary()
                 TempSpell->EffectImplicitTargetA[j] == TARGET_CURRENT_ENEMY_COORDINATES ||
                 TempSpell->EffectImplicitTargetA[j] == TARGET_ALL_ENEMY_IN_AREA ||
                 TempSpell->EffectImplicitTargetA[j] == TARGET_ALL_ENEMY_IN_AREA_INSTANT ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_ALL_AROUND_CASTER ||
+                TempSpell->EffectImplicitTargetA[j] == TARGET_DEST_CASTER ||
                 TempSpell->EffectImplicitTargetA[j] == TARGET_ALL_ENEMY_IN_AREA_CHANNELED )
                 SpellSummary[i].Targets |= 1 << (SELECT_TARGET_ANY_ENEMY-1);
 
@@ -605,7 +603,7 @@ void FillSpellSummary()
             //Spell targets aoe friends
             if ( TempSpell->EffectImplicitTargetA[j] == TARGET_ALL_PARTY_AROUND_CASTER ||
                 TempSpell->EffectImplicitTargetA[j] == TARGET_AREAEFFECT_PARTY ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_ALL_AROUND_CASTER)
+                TempSpell->EffectImplicitTargetA[j] == TARGET_DEST_CASTER)
                 SpellSummary[i].Targets |= 1 << (SELECT_TARGET_AOE_FRIEND-1);
 
             //Spell targets any friend(or self)
@@ -614,7 +612,7 @@ void FillSpellSummary()
                 TempSpell->EffectImplicitTargetA[j] == TARGET_SINGLE_PARTY ||
                 TempSpell->EffectImplicitTargetA[j] == TARGET_ALL_PARTY_AROUND_CASTER ||
                 TempSpell->EffectImplicitTargetA[j] == TARGET_AREAEFFECT_PARTY ||
-                TempSpell->EffectImplicitTargetA[j] == TARGET_ALL_AROUND_CASTER)
+                TempSpell->EffectImplicitTargetA[j] == TARGET_DEST_CASTER)
                 SpellSummary[i].Targets |= 1 << (SELECT_TARGET_ANY_FRIEND-1);
 
             //Make sure that this spell includes a damage effect
@@ -741,7 +739,7 @@ Unit* FindCreature(uint32 entry, float range, Unit* Finder)
         return NULL;
     Creature* target = NULL;
     Trinity::AllCreaturesOfEntryInRange check(Finder, entry, range);
-    Trinity::CreatureSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(target, check);
+	Trinity::CreatureSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(Finder, target, check);
     Finder->VisitNearbyObject(range, searcher);
     return target;
 }
@@ -752,7 +750,7 @@ GameObject* FindGameObject(uint32 entry, float range, Unit* Finder)
         return NULL;
     GameObject* target = NULL;
     Trinity::AllGameObjectsWithEntryInGrid go_check(entry);
-    Trinity::GameObjectSearcher<Trinity::AllGameObjectsWithEntryInGrid> searcher(target, go_check);
+    Trinity::GameObjectSearcher<Trinity::AllGameObjectsWithEntryInGrid> searcher(Finder, target, go_check);
     Finder->VisitNearbyGridObject(range, searcher);
     return target;
 }
@@ -761,7 +759,7 @@ Unit* ScriptedAI::DoSelectLowestHpFriendly(float range, uint32 MinHPDiff)
 {
     Unit* pUnit = NULL;
     Trinity::MostHPMissingInRange u_check(m_creature, range, MinHPDiff);
-    Trinity::UnitLastSearcher<Trinity::MostHPMissingInRange> searcher(pUnit, u_check);
+    Trinity::UnitLastSearcher<Trinity::MostHPMissingInRange> searcher(m_creature, pUnit, u_check);
     m_creature->VisitNearbyObject(range, searcher);
     return pUnit;
 }
@@ -770,7 +768,7 @@ std::list<Creature*> ScriptedAI::DoFindFriendlyCC(float range)
 {
     std::list<Creature*> pList;
     Trinity::FriendlyCCedInRange u_check(m_creature, range);
-    Trinity::CreatureListSearcher<Trinity::FriendlyCCedInRange> searcher(pList, u_check);
+    Trinity::CreatureListSearcher<Trinity::FriendlyCCedInRange> searcher(m_creature, pList, u_check);
     m_creature->VisitNearbyObject(range, searcher);
     return pList;
 }
@@ -779,7 +777,7 @@ std::list<Creature*> ScriptedAI::DoFindFriendlyMissingBuff(float range, uint32 s
 {
     std::list<Creature*> pList;
     Trinity::FriendlyMissingBuffInRange u_check(m_creature, range, spellid);
-    Trinity::CreatureListSearcher<Trinity::FriendlyMissingBuffInRange> searcher(pList, u_check);
+    Trinity::CreatureListSearcher<Trinity::FriendlyMissingBuffInRange> searcher(m_creature, pList, u_check);
     m_creature->VisitNearbyObject(range, searcher);
     return pList;
 }

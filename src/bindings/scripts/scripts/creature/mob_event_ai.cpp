@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -24,6 +24,7 @@ EndScriptData */
 #include "precompiled.h"
 #include "mob_event_ai.h"
 #include "ObjectMgr.h"
+#include "GameEventMgr.h"
 
 #define EVENT_UPDATE_TIME               500
 #define SPELL_RUN_AWAY                  8225
@@ -42,6 +43,7 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
     Mob_EventAI(Creature *c, std::list<EventHolder> pEventList) : ScriptedAI(c)
     {
         EventList = pEventList;
+        bEmptyList = pEventList.empty();
         Phase = 0;
         CombatMovementEnabled = true;
         MeleeEnabled = true;
@@ -49,13 +51,12 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
         AttackAngle = 0.0f;
 
         //Handle Spawned Events
-        for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
+        if (!bEmptyList)
         {
-            switch ((*i).Event.event_type)
+            for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
             {
-                case EVENT_T_SPAWNED:
+                if ((*i).Event.event_type == EVENT_T_SPAWNED)
                     ProcessEvent(*i);
-                    break;
             }
         }
     }
@@ -69,6 +70,7 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
     std::list<EventHolder> EventList;                       //Holder for events (stores enabled, time, and eventid)
     uint32 EventUpdateTime;                                 //Time between event updates
     uint32 EventDiff;                                       //Time between the last event call
+    bool bEmptyList;
 
     //Variables used by Events themselves
     uint8 Phase;                                            //Current phase, max 32 phases
@@ -457,6 +459,10 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
             {
             }
             break;
+        case EVENT_T_RECEIVE_EMOTE:
+            {
+            }
+            break;
         default:
             if (EAI_ErrorLevel > 0)
                 error_db_log("SD2: Creature %u using Event %u has invalid Event Type(%u), missing from ProcessEvent() Switch.", m_creature->GetEntry(), pHolder.Event.event_id, pHolder.Event.event_type);
@@ -679,13 +685,17 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
                             //Melee current victim if flag not set
                             if (!(param3 & CAST_NO_MELEE_IF_OOM))
                             {
-                                AttackDistance = 0;
-                                AttackAngle = 0;
+                                if (m_creature->GetMotionMaster()->GetCurrentMovementGeneratorType() == TARGETED_MOTION_TYPE)
+                                {
+                                    AttackDistance = 0;
+                                    AttackAngle = 0;
 
-                                m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim(), AttackDistance, AttackAngle);
+                                    m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim(), AttackDistance, AttackAngle);
+                                }
                             }
 
-                        }else
+                        }
+                        else
                         {
                             //Interrupt any previous spell
                             if (caster->IsNonMeleeSpellCasted(false) && param3 & CAST_INTURRUPT_PREVIOUS)
@@ -793,7 +803,7 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
             {
                 CombatMovementEnabled = param1;
 
-                //Allow movement (create new targeted movement gen if none exist already)
+                //Allow movement (create new targeted movement gen only if idle)
                 if (CombatMovementEnabled)
                 {
                     m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim(), AttackDistance, AttackAngle);
@@ -923,10 +933,17 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
             break;
         case ACTION_T_KILLED_MONSTER:
             {
-                Unit* target = GetTargetByType(param2, pActionInvoker);
+                //first attempt player who tapped creature
+                if (Player* pPlayer = m_creature->GetLootRecipient())
+                    pPlayer->RewardPlayerAndGroupAtEvent(param1,m_creature);
+                else
+                {
+                    //if not available, use pActionInvoker
+                    Unit* pTarget = GetTargetByType(param2, pActionInvoker);
 
-                if (target && target->GetTypeId() == TYPEID_PLAYER)
-                    ((Player*)target)->KilledMonster(param1, m_creature->GetGUID());
+                    if (Player* pPlayer = pTarget->GetCharmerOrOwnerPlayerOrPlayerItself())
+                        pPlayer->RewardPlayerAndGroupAtEvent(param1,m_creature);
+                }
             }
             break;
         case ACTION_T_SET_INST_DATA:
@@ -1020,15 +1037,14 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
         IsFleeing = false;
         Reset();
 
+        if (bEmptyList)
+            return;
+
         //Handle Spawned Events
         for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
         {
-            switch ((*i).Event.event_type)
-            {
-            case EVENT_T_SPAWNED:
+            if ((*i).Event.event_type == EVENT_T_SPAWNED)
                 ProcessEvent(*i);
-                break;
-            }
         }
     }
 
@@ -1036,6 +1052,9 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
     {
         EventUpdateTime = EVENT_UPDATE_TIME;
         EventDiff = 0;
+
+        if (bEmptyList)
+            return;
 
         //Reset all events to enabled
         for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
@@ -1049,11 +1068,13 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
                         {
                             (*i).Time = (*i).Event.event_param1;
                             (*i).Enabled = true;
-                        }else if ((*i).Event.event_param2 > (*i).Event.event_param1)
+                        }
+                        else if ((*i).Event.event_param2 > (*i).Event.event_param1)
                         {
                             (*i).Time = urand((*i).Event.event_param1, (*i).Event.event_param2);
                             (*i).Enabled = true;
-                        }else if (EAI_ErrorLevel > 0)
+                        }
+                        else if (EAI_ErrorLevel > 0)
                             error_db_log("SD2: Creature %u using Event %u (Type = %u) has InitialMax < InitialMin. Event disabled.", m_creature->GetEntry(), (*i).Event.event_id, (*i).Event.event_type);
                     }
                     break;
@@ -1071,10 +1092,13 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
     {
         m_creature->LoadCreaturesAddon();
 
-        for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
+        if (!bEmptyList)
         {
-            if ((*i).Event.event_type == EVENT_T_REACHED_HOME)
-                ProcessEvent(*i);
+            for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
+            {
+                if ((*i).Event.event_type == EVENT_T_REACHED_HOME)
+                    ProcessEvent(*i);
+            }
         }
 
         Reset();
@@ -1082,9 +1106,20 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
 
     void EnterEvadeMode()
     {
-        ScriptedAI::EnterEvadeMode();
+        m_creature->InterruptNonMeleeSpells(true);
+        m_creature->RemoveAllAuras();
+        m_creature->DeleteThreatList();
+        m_creature->CombatStop();
 
-        IsFleeing = false;
+        if (m_creature->isAlive())
+            m_creature->GetMotionMaster()->MoveTargetedHome();
+
+        m_creature->SetLootRecipient(NULL);
+
+        InCombat = false;
+
+        if (bEmptyList)
+            return;
 
         //Handle Evade events
         for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
@@ -1100,83 +1135,75 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
         IsFleeing = false;
         Reset();
 
+        if (bEmptyList)
+            return;
+
         //Handle Evade events
         for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
         {
-            switch ((*i).Event.event_type)
-            {
-                //Evade
-                case EVENT_T_DEATH:
-                    ProcessEvent(*i, killer);
-                    break;
-            }
+            if ((*i).Event.event_type == EVENT_T_DEATH)
+                ProcessEvent(*i, killer);
         }
     }
 
     void KilledUnit(Unit* victim)
     {
-        if (victim->GetTypeId() != TYPEID_PLAYER)
+        if (bEmptyList || victim->GetTypeId() != TYPEID_PLAYER)
             return;
 
         for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
         {
-            switch ((*i).Event.event_type)
-            {
-                //Kill
-                case EVENT_T_KILL:
-                    ProcessEvent(*i, victim);
-                    break;
-            }
+            if ((*i).Event.event_type == EVENT_T_KILL)
+                ProcessEvent(*i, victim);
         }
-
     }
 
     void JustSummoned(Creature* pUnit)
     {
-        if (!pUnit)
+        if (bEmptyList || !pUnit)
             return;
 
         for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
         {
-            switch ((*i).Event.event_type)
-            {
-                //Summoned
-                case EVENT_T_SUMMONED_UNIT:
-                    ProcessEvent(*i, pUnit);
-                    break;
-            }
+            if ((*i).Event.event_type == EVENT_T_SUMMONED_UNIT)
+                ProcessEvent(*i, pUnit);
         }
     }
 
     void Aggro(Unit *who)
     {
         //Check for on combat start events
-        for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
+        if (!bEmptyList)
         {
-            switch ((*i).Event.event_type)
+            for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
             {
+                switch ((*i).Event.event_type)
+                {
                 case EVENT_T_AGGRO:
                     (*i).Enabled = true;
                     ProcessEvent(*i, who);
                     break;
-                //Reset all in combat timers
+                    //Reset all in combat timers
                 case EVENT_T_TIMER:
                     if ((*i).Event.event_param2 == (*i).Event.event_param1)
                     {
                         (*i).Time = (*i).Event.event_param1;
                         (*i).Enabled = true;
-                    }else if ((*i).Event.event_param2 > (*i).Event.event_param1)
+                    }
+                    else if ((*i).Event.event_param2 > (*i).Event.event_param1)
                     {
                         (*i).Time = urand((*i).Event.event_param1, (*i).Event.event_param2);
                         (*i).Enabled = true;
-                    }else if (EAI_ErrorLevel > 0)
+                    }
+                    else if (EAI_ErrorLevel > 0)
                         error_db_log("SD2: Creature %u using Event %u (Type = %u) has InitialMax < InitialMin. Event disabled.", m_creature->GetEntry(), (*i).Event.event_id, (*i).Event.event_type);
                     break;
-                //All normal events need to be re-enabled and their time set to 0
+                    //All normal events need to be re-enabled and their time set to 0
                 default:
                     (*i).Enabled = true;
                     (*i).Time = 0;
                     break;
+                }
             }
         }
 
@@ -1216,21 +1243,24 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
             return;
 
         //Check for OOC LOS Event
-        for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
+        if (!bEmptyList && !m_creature->getVictim())
         {
-            switch ((*i).Event.event_type)
+            for (std::list<EventHolder>::iterator itr = EventList.begin(); itr != EventList.end(); ++itr)
             {
-            case EVENT_T_OOC_LOS:
+                if ((*itr).Event.event_type == EVENT_T_OOC_LOS)
                 {
-                    if ((*i).Event.event_param1 && m_creature->IsHostileTo(who))
-                        break;
+                    //can trigger if closer than fMaxAllowedRange
+                    float fMaxAllowedRange = (*itr).Event.event_param2;
 
-                    if ((*i).Event.event_param2 && !m_creature->IsHostileTo(who))
-                        break;
-
-                    ProcessEvent(*i, who);
+                    //if range is ok and we are actually in LOS
+                    if (m_creature->IsWithinDistInMap(who, fMaxAllowedRange) && m_creature->IsWithinLOSInMap(who))
+                    {
+                        //if friendly event&&who is not hostile OR hostile event&&who is hostile
+                        if (((*itr).Event.event_param1 && !m_creature->IsHostileTo(who)) ||
+                            ((!(*itr).Event.event_param1) && m_creature->IsHostileTo(who)))
+                            ProcessEvent(*itr, who);
+                    }
                 }
-                break;
             }
         }
 
@@ -1244,19 +1274,19 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
 
     void SpellHit(Unit* pUnit, const SpellEntry* pSpell)
     {
+        if (bEmptyList)
+            return;
+
         for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
         {
-            switch ((*i).Event.event_type)
+            if ((*i).Event.event_type == EVENT_T_SPELLHIT)
             {
-                //Spell hit
-                case EVENT_T_SPELLHIT:
-                    {
-                        //If spell id matches (or no spell id) & if spell school matches (or no spell school)
-                        if (!(*i).Event.event_param1 || pSpell->Id == (*i).Event.event_param1)
-                            if ((*i).Event.event_param2_s == -1 || pSpell->SchoolMask == (*i).Event.event_param2)
-                                ProcessEvent(*i, pUnit);
-                    }
-                    break;
+                //If spell id matches (or no spell id) & if spell school matches (or no spell school)
+                if (!(*i).Event.event_param1 || pSpell->Id == (*i).Event.event_param1)
+                {
+                    if ((*i).Event.event_param2_s == -1 || pSpell->SchoolMask == (*i).Event.event_param2)
+                        ProcessEvent(*i, pUnit);
+                }
             }
         }
     }
@@ -1288,52 +1318,33 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
         }
 
         //Events are only updated once every EVENT_UPDATE_TIME ms to prevent lag with large amount of events
-        if (EventUpdateTime < diff)
+        if (!bEmptyList)
         {
-            EventDiff += diff;
-
-            //Check for range based events
-            //if (m_creature->GetDistance(m_creature->getVictim()) >
-            if (Combat)
+            if (EventUpdateTime < diff)
             {
+                EventDiff += diff;
+
+                //Check for time based events
                 for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
                 {
+                    //Decrement Timers
+                    if ((*i).Time)
+                    {
+                        if ((*i).Time > EventDiff)
+                        {
+                            //Do not decrement timers if event cannot trigger in this phase
+                            if (!((*i).Event.event_inverse_phase_mask & (1 << Phase)))
+                                (*i).Time -= EventDiff;
+
+                            //Skip processing of events that have time remaining
+                            continue;
+                        }
+                        else (*i).Time = 0;
+                    }
+
+                    //Events that are updated every EVENT_UPDATE_TIME
                     switch ((*i).Event.event_type)
                     {
-                        case EVENT_T_RANGE:
-                            // in some cases this is called twice and victim may not exist in the second time
-                            if(m_creature->getVictim())
-                            {
-                                float dist = m_creature->GetDistance(m_creature->getVictim());
-                                if (dist > (*i).Event.event_param1 && dist < (*i).Event.event_param2)
-                                    ProcessEvent(*i);
-                            }
-                            break;
-                    }
-                }
-            }
-
-            //Check for time based events
-            for (std::list<EventHolder>::iterator i = EventList.begin(); i != EventList.end(); ++i)
-            {
-                //Decrement Timers
-                if ((*i).Time)
-                {
-                    if ((*i).Time > EventDiff)
-                    {
-                        //Do not decrement timers if event cannot trigger in this phase
-                        if (!((*i).Event.event_inverse_phase_mask & (1 << Phase)))
-                            (*i).Time -= EventDiff;
-
-                        //Skip processing of events that have time remaining
-                        continue;
-                    }
-                    else (*i).Time = 0;
-                }
-
-                //Events that are updated every EVENT_UPDATE_TIME
-                switch ((*i).Event.event_type)
-                {
                     case EVENT_T_TIMER_OOC:
                         ProcessEvent(*i);
                         break;
@@ -1356,16 +1367,17 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
                             }
                         }
                         break;
+                    }
                 }
-            }
 
-            EventDiff = 0;
-            EventUpdateTime = EVENT_UPDATE_TIME;
-        }
-        else
-        {
-            EventDiff += diff;
-            EventUpdateTime -= diff;
+                EventDiff = 0;
+                EventUpdateTime = EVENT_UPDATE_TIME;
+            }
+            else
+            {
+                EventDiff += diff;
+                EventUpdateTime -= diff;
+            }
         }
 
         //Melee Auto-Attack
@@ -1375,7 +1387,7 @@ struct TRINITY_DLL_DECL Mob_EventAI : public ScriptedAI
     }
 };
 
-CreatureAI* GetAI_Mob_EventAI(Creature *pCreature)
+CreatureAI* GetAI_mob_eventai(Creature* pCreature)
 {
     //Select events by creature id
     std::list<EventHolder> EventList;
@@ -1394,31 +1406,112 @@ CreatureAI* GetAI_Mob_EventAI(Creature *pCreature)
             if ((*i).event_flags & EFLAG_DEBUG_ONLY)
                 continue;
 #endif
-            if( pCreature->GetMap()->IsDungeon() )
+            if (pCreature->GetMap()->IsDungeon())
             {
-		  if ((pCreature->GetMap()->IsHeroic() && (*i).event_flags & EFLAG_HEROIC) ||
-	                     (!pCreature->GetMap()->IsHeroic() && (*i).event_flags & EFLAG_NORMAL))
-				EventList.push_back(EventHolder(*i));
+                if ((pCreature->GetMap()->IsHeroic() && (*i).event_flags & EFLAG_HEROIC) ||
+                    (!pCreature->GetMap()->IsHeroic() && (*i).event_flags & EFLAG_NORMAL))
+                {
+                    //event flagged for instance mode
+                    EventList.push_back(EventHolder(*i));
+                }
                 continue;
             }
 
             EventList.push_back(EventHolder(*i));
         }
 
-         //EventMap had events but they were not added because they must be for instance
-         if (EventList.empty())
-         {
-             if (EAI_ErrorLevel > 1)
-                 error_db_log("SD2: CreatureId has events but no events added to list because of instance flags.", pCreature->GetEntry());
-         }
-      }
-     else
-      {   
-          if (EAI_ErrorLevel > 1)
-             error_db_log("SD2: EventMap for Creature %u is empty but creature is using Mob_EventAI.", pCreature->GetEntry());
-      }
+        //EventMap had events but they were not added because they must be for instance
+        if (EventList.empty())
+        {
+            if (EAI_ErrorLevel > 1)
+                error_db_log("SD2: CreatureId has events but no events added to list because of instance flags.", pCreature->GetEntry());
+        }
+    }
+    else
+    {
+        if (EAI_ErrorLevel > 1)
+            error_db_log("SD2: EventMap for Creature %u is empty but creature is using Mob_EventAI.", pCreature->GetEntry());
+    }
 
-    return new Mob_EventAI (pCreature, EventList);
+    return new Mob_EventAI(pCreature, EventList);
+}
+
+bool ReceiveEmote_mob_eventai(Player* pPlayer, Creature* pCreature, uint32 uiEmote)
+{
+    if(pCreature->isCharmed())
+        return true;
+
+    Mob_EventAI* pTmpCreature = (Mob_EventAI*)(pCreature->AI());
+
+    if (pTmpCreature->bEmptyList)
+        return true;
+
+    for (std::list<EventHolder>::iterator itr = pTmpCreature->EventList.begin(); itr != pTmpCreature->EventList.end(); ++itr)
+    {
+        if ((*itr).Event.event_type == EVENT_T_RECEIVE_EMOTE)
+        {
+            if ((*itr).Event.event_param1 != uiEmote)
+                return true;
+
+            bool bProcess = false;
+
+            switch((*itr).Event.event_param2)
+            {
+                //enum ConditionType
+                case CONDITION_NONE:                        // 0 0
+                    bProcess = true;
+                    break;
+                case CONDITION_AURA:                        // spell_id     effindex
+                    if (pPlayer->HasAura((*itr).Event.event_param3,(*itr).Event.event_param4))
+                        bProcess = true;
+                    break;
+                case CONDITION_ITEM:                        // item_id      count
+                    if (pPlayer->HasItemCount((*itr).Event.event_param3,(*itr).Event.event_param4))
+                        bProcess = true;
+                    break;
+                case CONDITION_ITEM_EQUIPPED:               // item_id      count
+                    if (pPlayer->HasItemOrGemWithIdEquipped((*itr).Event.event_param3,(*itr).Event.event_param4))
+                        bProcess = true;
+                    break;
+                case CONDITION_ZONEID:                      // zone_id      0
+                    if (pPlayer->GetZoneId() == (*itr).Event.event_param3)
+                        bProcess = true;
+                    break;
+                case CONDITION_REPUTATION_RANK:             // faction_id   min_rank
+                    if (pPlayer->GetReputationRank((*itr).Event.event_param3) >= (*itr).Event.event_param4)
+                        bProcess = true;
+                    break;
+                case CONDITION_TEAM:                        // player_team  0, (469 - Alliance 67 - Horde)
+                    if (pPlayer->GetTeam() == (*itr).Event.event_param3)
+                        bProcess = true;
+                    break;
+                case CONDITION_SKILL:                       // skill_id     min skill_value
+                    if (pPlayer->HasSkill((*itr).Event.event_param3) && pPlayer->GetSkillValue((*itr).Event.event_param3) >= (*itr).Event.event_param4)
+                        bProcess = true;
+                    break;
+                case CONDITION_QUESTREWARDED:               // quest_id     0
+                    if (pPlayer->GetQuestRewardStatus((*itr).Event.event_param3))
+                        bProcess = true;
+                    break;
+                case CONDITION_QUESTTAKEN:                  // quest_id     0, for condition true while quest active.
+                    if (pPlayer->GetQuestStatus((*itr).Event.event_param3) == QUEST_STATUS_INCOMPLETE)
+                        bProcess = true;
+                    break;
+                case CONDITION_ACTIVE_EVENT:                // event_id     0
+                    if (IsHolidayActive(HolidayIds((*itr).Event.event_param3)))
+                        bProcess = true;
+                    break;
+            }
+
+            if (bProcess)
+            {
+                debug_log("SD2: ReceiveEmote EventAI: Condition ok, processing");
+                pTmpCreature->ProcessEvent(*itr, pPlayer);
+            }
+        }
+    }
+
+    return true;
 }
 
 void AddSC_mob_event()
@@ -1426,7 +1519,8 @@ void AddSC_mob_event()
     Script *newscript;
     newscript = new Script;
     newscript->Name = "mob_eventai";
-    newscript->GetAI = &GetAI_Mob_EventAI;
+    newscript->GetAI = &GetAI_mob_eventai;
+    newscript->pReceiveEmote = &ReceiveEmote_mob_eventai;
     newscript->RegisterSelf();
 }
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -68,6 +68,7 @@ void hyjalAI::Reset()
 
     // Misc
     WaveCount = 0;
+    EnemyCount = 0;
 
     // Set faction properly based on creature entry
     switch(m_creature->GetEntry())
@@ -148,7 +149,7 @@ void hyjalAI::EnterEvadeMode()
 
 void hyjalAI::Aggro(Unit *who)
 {
-    for(uint8 i = 0; i < 2; ++i)
+    for(uint8 i = 0; i < 3; ++i)
         if(Spell[i].Cooldown)
             SpellTimer[i] = Spell[i].Cooldown;
 
@@ -334,7 +335,7 @@ void hyjalAI::Retreat()
     // First get all creatures.
     std::list<Creature*> creatures;
     Trinity::AllFriendlyCreaturesInGrid creature_check(m_creature);
-    Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid> creature_searcher(creatures, creature_check);
+    Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid> creature_searcher(m_creature, creatures, creature_check);
     TypeContainerVisitor
         <Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid>,
         GridTypeMapContainer> creature_visitor(creature_searcher);
@@ -342,7 +343,7 @@ void hyjalAI::Retreat()
     // Then get all Ancient Gem Veins. NOTE: Grid Search will only be able to find those in the grid.
     std::list<GameObject*> goList;
     Trinity::AllGameObjectsWithEntryInGrid go_check(185557);
-    Trinity::GameObjectListSearcher<Trinity::AllGameObjectsWithEntryInGrid> go_search(goList, go_check);
+    Trinity::GameObjectListSearcher<Trinity::AllGameObjectsWithEntryInGrid> go_search(m_creature, goList, go_check);
     TypeContainerVisitor
         <Trinity::GameObjectListSearcher<Trinity::AllGameObjectsWithEntryInGrid>, GridTypeMapContainer> go_visit(go_search);
 
