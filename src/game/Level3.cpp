@@ -612,6 +612,7 @@ bool ChatHandler::HandleReloadAllSpellCommand(const char*)
     HandleReloadSpellAreaCommand("a");
     HandleReloadSpellElixirCommand("a");
     HandleReloadSpellLearnSpellCommand("a");
+    HandleReloadSpellLinkedSpellCommand("a");
     HandleReloadSpellProcEventCommand("a");
     HandleReloadSpellBonusesCommand("a");
     HandleReloadSpellScriptTargetCommand("a");
@@ -957,6 +958,14 @@ bool ChatHandler::HandleReloadSpellLearnSpellCommand(const char*)
     sLog.outString( "Re-Loading Spell Learn Spells..." );
     spellmgr.LoadSpellLearnSpells();
     SendGlobalGMSysMessage("DB table `spell_learn_spell` reloaded.");
+    return true;
+}
+
+bool ChatHandler::HandleReloadSpellLinkedSpellCommand(const char*)
+{
+    sLog.outString( "Re-Loading Spell Linked Spells..." );
+    spellmgr.LoadSpellLinked();
+    SendGlobalGMSysMessage("DB table `spell_linked_spell` reloaded.");
     return true;
 }
 
@@ -6179,7 +6188,7 @@ bool ChatHandler::HandleRespawnCommand(const char* /*args*/)
     return true;
 }
 
-bool ChatHandler::HandleGMFlyModeCommand(const char* args)
+bool ChatHandler::HandleGMFlyCommand(const char* args)
 {
     if (!*args)
         return false;
