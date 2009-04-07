@@ -159,7 +159,6 @@ Unit::Unit()
     for (int i = 0; i < MAX_MOVE_TYPE; ++i)
         m_speed_rate[i] = 1.0f;
 
-    m_removedAuras = 0;
     m_charmInfo = NULL;
     m_unit_movement_flags = 0;
     m_reducedThreatPercent = 0;
@@ -180,6 +179,14 @@ Unit::~Unit()
             m_currentSpells[i]->SetReferencedFromCurrent(false);
             m_currentSpells[i] = NULL;
         }
+    }
+
+    for (AuraList::iterator i = m_removedAuras.begin(); i != m_removedAuras.end();i = m_removedAuras.begin())
+    {
+        Aura * aur = *i;
+        sLog.outDebug("Aura %d is deleted from unit %d", aur->GetId(), GetGUIDLow());
+        m_removedAuras.pop_front();
+        delete (aur);
     }
 
     RemoveAllGameObjects();
@@ -472,7 +479,10 @@ void Unit::RemoveAurasWithInterruptFlags(uint32 flag, uint32 except)
         ++iter;
         if ((aur->GetSpellProto()->AuraInterruptFlags & flag) && (!except || aur->GetId() != except))
         {
+            uint32 removedAuras = m_removedAuras.size();
             RemoveAura(aur);
+            if (removedAuras+1<m_removedAuras.size())
+                iter=m_interruptableAuras.begin();
         }
     }
 
@@ -513,7 +523,10 @@ void Unit::RemoveSpellbyDamageTaken(uint32 damage, uint32 spell)
         ++iter;
         if ((!spell || aur->GetId() != spell) && roll_chance_f(chance))
         {
+            uint32 removedAuras = m_removedAuras.size();
             RemoveAura(aur);
+            if (removedAuras+1<m_ccAuras.size())
+                iter=m_interruptableAuras.begin();
         }
     }
 }
@@ -1659,7 +1672,7 @@ void Unit::DealMeleeDamage(CalcDamageInfo *damageInfo, bool durabilityLoss)
 
         // victim's damage shield
         std::set<AuraEffect*> alreadyDone;
-        uint32 removedAuras = pVictim->m_removedAuras;
+        uint32 removedAuras = pVictim->m_removedAuras.size();
         AuraEffectList const& vDamageShields = pVictim->GetAurasByType(SPELL_AURA_DAMAGE_SHIELD);
         for(AuraEffectList::const_iterator i = vDamageShields.begin(), next = vDamageShields.begin(); i != vDamageShields.end(); i = next)
         {
@@ -1688,9 +1701,9 @@ void Unit::DealMeleeDamage(CalcDamageInfo *damageInfo, bool durabilityLoss)
 
                pVictim->DealDamage(this, damage, 0, SPELL_DIRECT_DAMAGE, GetSpellSchoolMask(spellProto), spellProto, true);
 
-               if (pVictim->m_removedAuras > removedAuras)
+               if (pVictim->m_removedAuras.size() > removedAuras)
                {
-                   removedAuras = pVictim->m_removedAuras;
+                   removedAuras = pVictim->m_removedAuras.size();
                    next = vDamageShields.begin();
                }
            }
@@ -2083,7 +2096,10 @@ void Unit::CalcAbsorbResist(Unit *pVictim,SpellSchoolMask schoolMask, DamageEffe
             ++i;
             if (auraeff->GetAmount()<=0)
             {
+                uint32 removedAuras = pVictim->m_removedAuras.size();
                 pVictim->RemoveAura(aura);
+                if (removedAuras+1<pVictim->m_removedAuras.size())
+                    i=vSchoolAbsorb.begin();
             }
         }
     }
@@ -3199,7 +3215,6 @@ void Unit::_UpdateSpells( uint32 time )
     }
 
     // TODO: Find a better way to prevent crash when multiple auras are removed.
-    m_removedAuras = 0;
     for (AuraMap::iterator i = m_Auras.begin(); i != m_Auras.end(); ++i)
         i->second->SetUpdated(false);
 
@@ -3212,18 +3227,16 @@ void Unit::_UpdateSpells( uint32 time )
             continue;
         aur->SetUpdated(true);
 
-        aur->SetInUse(true);
+        uint32 removedAuras = m_removedAuras.size();
         aur->Update( time );
-        aur->SetInUse(false);
 
         // several auras can be deleted due to update
-        if(m_removedAuras)
+        if(removedAuras < m_removedAuras.size())
         {
-            m_removedAuras = 0;
             i = m_Auras.begin();
         }
         else
-            ++i;
+             ++i;
     }
 
     for(AuraMap::iterator i = m_Auras.begin(); i != m_Auras.end();)
@@ -3232,6 +3245,14 @@ void Unit::_UpdateSpells( uint32 time )
             RemoveAura(i, AURA_REMOVE_BY_EXPIRE);
         else
             ++i;
+    }
+
+    for (AuraList::iterator i = m_removedAuras.begin(); i != m_removedAuras.end();i = m_removedAuras.begin())
+    {
+        Aura * aur = *i;
+        sLog.outDebug("Aura %d is deleted from unit %d", aur->GetId(), GetGUIDLow());
+        m_removedAuras.pop_front();
+        delete (aur);
     }
 
     if(!m_gameObj.empty())
@@ -3787,7 +3808,6 @@ bool Unit::RemoveNoStackAurasDueToAura(Aura *Aur)
     {
         next = i;
         ++next;
-        if ((*i).second->IsInUse()) continue;
 
         SpellEntry const* i_spellProto = (*i).second->GetSpellProto();
 
@@ -3863,12 +3883,9 @@ void Unit::RemoveAura(uint32 spellId, uint64 caster ,AuraRemoveMode removeMode)
 
 void Unit::RemoveAura(Aura * aur ,AuraRemoveMode mode)
 {
-    if (aur->IsInUse())
-    {
-        if (!aur->GetRemoveMode())
-            aur->RemoveAura(mode);
+    // no need to remove
+    if (aur->IsRemoved())
         return;
-    }
     for(AuraMap::iterator iter = m_Auras.lower_bound(aur->GetId()); iter != m_Auras.upper_bound(aur->GetId());)
     {
         if (aur == iter->second)
@@ -3885,7 +3902,7 @@ void Unit::RemoveAurasDueToSpell(uint32 spellId, uint64 caster ,AuraRemoveMode r
 {
     for(AuraMap::iterator iter = m_Auras.lower_bound(spellId); iter != m_Auras.upper_bound(spellId);)
     {
-        if ((!caster || iter->second->GetCasterGUID()==caster)  && (!iter->second->IsInUse() || !iter->second->GetRemoveMode()))
+        if (!caster || iter->second->GetCasterGUID()==caster)
         {
             RemoveAura(iter, removeMode);
             iter = m_Auras.lower_bound(spellId);
@@ -3964,9 +3981,9 @@ void Unit::RemoveAurasDueToSpellBySteal(uint32 spellId, uint64 casterGUID, Unit 
 
             // Unregister _before_ adding to stealer
             aur->UnregisterSingleCastAura();
-
             // strange but intended behaviour: Stolen single target auras won't be treated as single targeted
             new_aur->SetIsSingleTarget(false);
+            stealer->AddAura(new_aur);
             RemoveAuraFromStack(iter, AURA_REMOVE_BY_ENEMY_SPELL);
             return;
         }
@@ -3979,7 +3996,7 @@ void Unit::RemoveAurasDueToItemSpell(Item* castItem,uint32 spellId)
 {
     for (AuraMap::iterator iter = m_Auras.lower_bound(spellId); iter != m_Auras.upper_bound(spellId);)
     {
-        if ((!castItem || iter->second->GetCastItemGUID()==castItem->GetGUID()) && (!iter->second->IsInUse() || !iter->second->GetRemoveMode()))
+        if (!castItem || iter->second->GetCastItemGUID()==castItem->GetGUID())
         {
             RemoveAura(iter);
             iter = m_Auras.upper_bound(spellId);          // overwrite by more appropriate
@@ -3998,7 +4015,10 @@ void Unit::RemoveAurasByType(AuraType auraType, uint64 casterGUID, Aura * except
         ++iter;
         if (aur != except && (!casterGUID || aur->GetCasterGUID()==casterGUID))
         {
+            uint32 removedAuras = m_removedAuras.size();
             RemoveAura(aur);
+            if (removedAuras+1<m_removedAuras.size())
+                iter=m_modAuras[auraType].begin();
         }
     }
 }
@@ -4012,7 +4032,10 @@ void Unit::RemoveAurasByTypeWithDispel(AuraType auraType, Spell * spell)
         ++iter;
         if (GetDispelChance(spell, aur->GetCaster(), aur->GetId()))
         {
+            uint32 removedAuras = m_removedAuras.size();
             RemoveAura(aur, AURA_REMOVE_BY_ENEMY_SPELL);
+            if (removedAuras+1<m_removedAuras.size())
+                iter=m_modAuras[auraType].begin();
         }
     }
 }
@@ -4032,35 +4055,26 @@ void Unit::RemoveNotOwnSingleTargetAuras()
     AuraList& scAuras = GetSingleCastAuras();
     for (AuraList::iterator iter = scAuras.begin(); iter != scAuras.end();)
     {
-        if ((*iter)->GetTarget()!=this)
+        Aura * aur=*iter;
+        ++iter;
+        if (aur->GetTarget()!=this)
         {
-            Aura * aur=*iter;
-            ++iter;
+            uint32 removedAuras = m_removedAuras.size();
             aur->GetTarget()->RemoveAura(aur->GetId(),aur->GetCasterGUID());
+            if (removedAuras+1<m_removedAuras.size())
+                iter=scAuras.begin();
         }
-        else
-            ++iter;
     }
 }
 
 void Unit::RemoveAura(AuraMap::iterator &i, AuraRemoveMode mode)
 {
     Aura* Aur = i->second;
-    //aura can be during update when removing, set it to remove at next update
-    if (Aur->IsInUse())
-    {
-        if (!Aur->GetRemoveMode())
-            Aur->RemoveAura(mode);
-        i++;
-        return;
-    }
-
     SpellEntry const* AurSpellInfo = Aur->GetSpellProto();
 
     // some ShapeshiftBoosts at remove trigger removing other auras including parent Shapeshift aura
     // remove aura from list before to prevent deleting it before
     m_Auras.erase(i);
-    ++m_removedAuras;                                       // internal count used by unit update
 
     Aur->UnregisterSingleCastAura();
 
@@ -4076,10 +4090,6 @@ void Unit::RemoveAura(AuraMap::iterator &i, AuraRemoveMode mode)
     {
         m_ccAuras.remove(Aur);
     }
-
-    // Set remove mode if mode already not set
-    if (!Aur->GetRemoveMode())
-            Aur->SetRemoveMode(mode);
 
     // Statue unsummoned at aura remove
     Totem* statue = NULL;
@@ -4129,11 +4139,15 @@ void Unit::RemoveAura(AuraMap::iterator &i, AuraRemoveMode mode)
         }
     }
 
+    Aur->SetRemoveMode(mode);
+
     sLog.outDebug("Aura %u now is remove mode %d", Aur->GetId(), mode);
     Aur->HandleEffects(false);
-    Aur->_RemoveAura();
 
-    delete Aur;
+    // set aura to be removed during unit::_updatespells
+    m_removedAuras.push_back(Aur);
+
+    Aur->_RemoveAura();
 
     if(statue)
         statue->UnSummon();
@@ -11475,10 +11489,6 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
         if (!parentAura)
             continue;
 
-        bool inuse = parentAura->IsInUse();
-        if (!inuse)
-            parentAura->SetInUse(true);
-
         bool useCharges= parentAura->GetAuraCharges()>0;
         bool takeCharges = false;
 
@@ -11611,19 +11621,11 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
             }
             takeCharges=true;
         }
-        if (!inuse)
-            parentAura->SetInUse(false);
-
-        if ( !parentAura->GetAuraDuration() && !(parentAura->IsPermanent() || (parentAura->IsPassive())) )
-            RemoveAura(parentAura);
-        else
+        // Remove charge (aura can be removed by triggers)
+        if(useCharges && takeCharges)
         {
-            // Remove charge (aura can be removed by triggers)
-            if(useCharges && takeCharges)
-            {
-                if (parentAura->DropAuraCharge())
-                    RemoveAura(parentAura->GetId(),parentAura->GetCasterGUID());
-            }
+            if (parentAura->DropAuraCharge())
+                RemoveAura(parentAura->GetId(),parentAura->GetCasterGUID());
         }
     }
 }
@@ -13107,6 +13109,8 @@ void Unit::GetPartyMember(std::list<Unit*> &TagUnitMap, float radius)
 
 void Unit::HandleAuraEffect(AuraEffect * aureff, bool apply)
 {
+    if (aureff->GetParentAura()->IsRemoved())
+        return;
     if (apply)
     {
         m_modAuras[aureff->GetAuraName()].push_back(aureff);
