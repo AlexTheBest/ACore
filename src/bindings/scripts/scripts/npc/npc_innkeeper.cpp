@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -52,7 +52,7 @@ bool GossipHello_npc_innkeeper(Player *player, Creature *_Creature)
     if (_Creature->isQuestGiver())
         player->PrepareQuestMenu( _Creature->GetGUID() );
 
-    if (isEventActive()&& !player->GetAura(SPELL_TRICK_OR_TREATED,0))
+    if (isEventActive()&& !player->GetAura(SPELL_TRICK_OR_TREATED, player->GetGUID()))
     {
         char* localizedEntry;
         switch (player->GetSession()->GetSessionDbLocaleIndex())
@@ -83,7 +83,7 @@ bool GossipHello_npc_innkeeper(Player *player, Creature *_Creature)
 
 bool GossipSelect_npc_innkeeper(Player *player, Creature *_Creature, uint32 sender, uint32 action )
 {
-    if (action == GOSSIP_ACTION_INFO_DEF+HALLOWEEN_EVENTID && isEventActive() && !player->GetAura(SPELL_TRICK_OR_TREATED,0))
+    if (action == GOSSIP_ACTION_INFO_DEF+HALLOWEEN_EVENTID && isEventActive() && !player->GetAura(SPELL_TRICK_OR_TREATED, player->GetGUID()))
     {
         player->CLOSE_GOSSIP_MENU();
         player->CastSpell(player, SPELL_TRICK_OR_TREATED, true);

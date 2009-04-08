@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -90,7 +90,7 @@ struct TRINITY_DLL_DECL mob_doom_blossomAI : public ScriptedAI
                 Despawn();
 
             CheckTeronTimer = 5000;
-        }else CheckTeronTimer -= diff;        
+        }else CheckTeronTimer -= diff;
 
         if(ShadowBoltTimer < diff && InCombat)
         {
@@ -331,7 +331,7 @@ struct TRINITY_DLL_DECL boss_teron_gorefiendAI : public ScriptedAI
         Unit* Ghost = NULL;
         if(GhostGUID)
             Ghost = Unit::GetUnit((*m_creature), GhostGUID);
-        if(Ghost && Ghost->isAlive() && Ghost->HasAura(SPELL_SHADOW_OF_DEATH, 0))
+        if(Ghost && Ghost->isAlive() && Ghost->HasAura(SPELL_SHADOW_OF_DEATH))
         {
             /*float x,y,z;
             Ghost->GetPosition(x,y,z);
@@ -487,7 +487,7 @@ struct TRINITY_DLL_DECL boss_teron_gorefiendAI : public ScriptedAI
             RandomYellTimer = 50000 + rand()%51 * 1000;
         }else RandomYellTimer -= diff;
 
-        if(!m_creature->HasAura(SPELL_BERSERK, 0))
+        if(!m_creature->HasAura(SPELL_BERSERK))
         {
             if(EnrageTimer < diff)
         {

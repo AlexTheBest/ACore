@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -46,6 +46,7 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
     instance_karazhan(Map* map) : ScriptedInstance(map) {Initialize();}
 
     uint32 Encounters[ENCOUNTERS];
+	std::string str_data;
 
     uint32 OperaEvent;
     uint32 OzDeathCount;
@@ -183,7 +184,19 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
         }
 
         if(data == DONE)
+        {
+            OUT_SAVE_INST_DATA;
+
+            std::ostringstream saveStream;
+            saveStream << Encounters[0] << " " << Encounters[1] << " " << Encounters[2] << " "
+                << Encounters[3] << " " << Encounters[4] << " " << Encounters[5] << " " << Encounters[6] << " "
+                << Encounters[7] << " " << Encounters[8] << " " << Encounters[9] << " " << Encounters[10];
+
+            str_data = saveStream.str();
+
             SaveToDB();
+            OUT_SAVE_INST_DATA_COMPLETE;
+        }
     }
 
      void SetData64(uint32 identifier, uint64 data)
@@ -226,20 +239,7 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
 
     const char* Save()
     {
-        OUT_SAVE_INST_DATA;
-        std::ostringstream stream;
-        stream << Encounters[0] << " "  << Encounters[1] << " "  << Encounters[2] << " "  << Encounters[3] << " "
-            << Encounters[4] << " "  << Encounters[5] << " "  << Encounters[6] << " "  << Encounters[7] << " "
-            << Encounters[8] << " "  << Encounters[9] << " "  << Encounters[10] << " "  << Encounters[11];
-        char* out = new char[stream.str().length() + 1];
-        strcpy(out, stream.str().c_str());
-        if(out)
-        {
-            OUT_SAVE_INST_DATA_COMPLETE;
-            return out;
-        }
-
-        return NULL;
+        return str_data.c_str();
     }
 
     void Load(const char* in)
@@ -251,8 +251,8 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
         }
 
         OUT_LOAD_INST_DATA(in);
-        std::istringstream stream(in);
-        stream >> Encounters[0] >> Encounters[1] >> Encounters[2] >> Encounters[3]
+        std::istringstream loadStream(in);
+        loadStream >> Encounters[0] >> Encounters[1] >> Encounters[2] >> Encounters[3]
             >> Encounters[4] >> Encounters[5] >> Encounters[6] >> Encounters[7]
             >> Encounters[8] >> Encounters[9] >> Encounters[10] >> Encounters[11];
         for(uint8 i = 0; i < ENCOUNTERS; ++i)

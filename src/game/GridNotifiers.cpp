@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@
 #include "UpdateData.h"
 #include "Item.h"
 #include "Map.h"
-#include "MapManager.h"
 #include "Transports.h"
 #include "ObjectAccessor.h"
 
@@ -94,9 +93,9 @@ PlayerVisibilityNotifier::Notify()
 
     // Now do operations that required done at object visibility change to visible
 
-    // target aura duration for caster show only if target exist at caster client
     // send data at target visibility change (adding to client)
     for(std::set<WorldObject*>::const_iterator vItr = i_visibleNow.begin(); vItr != i_visibleNow.end(); ++vItr)
+        // target aura duration for caster show only if target exist at caster client
         if((*vItr)!=&i_player && (*vItr)->isType(TYPEMASK_UNIT))
             i_player.SendInitialVisiblePackets((Unit*)(*vItr));
 
@@ -109,14 +108,20 @@ Deliverer::Visit(PlayerMapType &m)
 {
     for (PlayerMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
     {
-        if (!i_dist || iter->getSource()->GetDistance(&i_source) <= i_dist)
+        //if (!i_source.InSamePhase(iter->getSource()))
+        //    continue;
+        if(!iter->getSource()->InSamePhase(i_phaseMask))
+            continue;
+
+        if (!i_dist || iter->getSource()->GetDistance(&i_source) < i_dist)
         {
             // Send packet to all who are sharing the player's vision
             if (!iter->getSource()->GetSharedVisionList().empty())
             {
-                SharedVisionList::const_iterator it = iter->getSource()->GetSharedVisionList().begin();
-                for ( ; it != iter->getSource()->GetSharedVisionList().end(); ++it)
-                    SendPacket(*it);
+                SharedVisionList::const_iterator i = iter->getSource()->GetSharedVisionList().begin();
+                for ( ; i != iter->getSource()->GetSharedVisionList().end(); ++i)
+                    if((*i)->m_seer == iter->getSource())
+                        SendPacket(*i);
             }
 
             VisitObject(iter->getSource());
@@ -129,14 +134,18 @@ Deliverer::Visit(CreatureMapType &m)
 {
     for (CreatureMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
     {
-        if (!i_dist || iter->getSource()->GetDistance(&i_source) <= i_dist)
+        if(!iter->getSource()->InSamePhase(i_phaseMask))
+            continue;
+
+        if (!i_dist || iter->getSource()->GetDistance(&i_source) < i_dist)
         {
             // Send packet to all who are sharing the creature's vision
             if (!iter->getSource()->GetSharedVisionList().empty())
             {
-                SharedVisionList::const_iterator it = iter->getSource()->GetSharedVisionList().begin();
-                for ( ; it != iter->getSource()->GetSharedVisionList().end(); ++it)
-                    SendPacket(*it);
+                SharedVisionList::const_iterator i = iter->getSource()->GetSharedVisionList().begin();
+                for ( ; i != iter->getSource()->GetSharedVisionList().end(); ++i)
+                    if((*i)->m_seer == iter->getSource())
+                        SendPacket(*i);
             }
         }
     }
@@ -147,13 +156,18 @@ Deliverer::Visit(DynamicObjectMapType &m)
 {
     for (DynamicObjectMapType::iterator iter = m.begin(); iter != m.end(); ++iter)
     {
-        if (IS_PLAYER_GUID(iter->getSource()->GetCasterGUID()))
+        if(!iter->getSource()->InSamePhase(i_phaseMask))
+            continue;
+
+        if (!i_dist || iter->getSource()->GetDistance(&i_source) < i_dist)
         {
-            // Send packet back to the caster if the caster has vision of dynamic object
-            Player* caster = (Player*)iter->getSource()->GetCaster();
-            if (caster && caster->GetUInt64Value(PLAYER_FARSIGHT) == iter->getSource()->GetGUID() &&
-                (!i_dist || iter->getSource()->GetDistance(&i_source) <= i_dist))
-                SendPacket(caster);
+            if (IS_PLAYER_GUID(iter->getSource()->GetCasterGUID()))
+            {
+                // Send packet back to the caster if the caster has vision of dynamic object
+                Player* caster = (Player*)iter->getSource()->GetCaster();
+                if (caster && caster->m_seer == iter->getSource())
+                    SendPacket(caster);
+            }
         }
     }
 }
@@ -204,9 +218,6 @@ ObjectUpdater::Visit(GridRefManager<T> &m)
     }
 }
 
-template void ObjectUpdater::Visit<GameObject>(GameObjectMapType &);
-template void ObjectUpdater::Visit<DynamicObject>(DynamicObjectMapType &);
-
 bool CannibalizeObjectCheck::operator()(Corpse* u)
 {
     // ignore bones
@@ -224,3 +235,5 @@ bool CannibalizeObjectCheck::operator()(Corpse* u)
     return false;
 }
 
+template void ObjectUpdater::Visit<GameObject>(GameObjectMapType &);
+template void ObjectUpdater::Visit<DynamicObject>(DynamicObjectMapType &);
