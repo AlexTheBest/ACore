@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -52,7 +52,7 @@ struct TRINITY_DLL_DECL npc_ragged_johnAI : public ScriptedAI
 
     void MoveInLineOfSight(Unit *who)
     {
-        if( who->HasAura(16468,0) )
+        if( who->HasAura(16468) )
         {
             if( who->GetTypeId() == TYPEID_PLAYER && m_creature->IsWithinDistInMap(who, 15) && who->isInAccessiblePlaceFor(m_creature) )
             {

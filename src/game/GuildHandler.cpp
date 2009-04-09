@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,6 @@
 #include "Log.h"
 #include "Opcodes.h"
 #include "Guild.h"
-#include "MapManager.h"
 #include "GossipDef.h"
 #include "SocialMgr.h"
 
@@ -65,7 +64,7 @@ void WorldSession::HandleGuildCreateOpcode(WorldPacket& recvPacket)
         return;
 
     Guild *guild = new Guild;
-    if(!guild->create(GetPlayer()->GetGUID(),gname))
+    if(!guild->create(GetPlayer(),gname))
     {
         delete guild;
         return;
@@ -375,7 +374,7 @@ void WorldSession::HandleGuildDemoteOpcode(WorldPacket& recvPacket)
 
     guild->ChangeRank(plGuid, (slot->RankId+1));
     // Put record into guildlog
-    guild->LogGuildEvent(GUILD_EVENT_LOG_DEMOTE_PLAYER, GetPlayer()->GetGUIDLow(), GUID_LOPART(plGuid), (slot->RankId));
+    guild->LogGuildEvent(GUILD_EVENT_LOG_DEMOTE_PLAYER, GetPlayer()->GetGUIDLow(), GUID_LOPART(plGuid), slot->RankId);
 
     WorldPacket data(SMSG_GUILD_EVENT, (2+30));             // guess size
     data << (uint8)GE_DEMOTION;
@@ -663,7 +662,7 @@ void WorldSession::HandleGuildRankOpcode(WorldPacket& recvPacket)
     guild->SetRankName(rankId, rankname);
 
     if(rankId==GR_GUILDMASTER)                              // prevent loss leader rights
-        rights |= GR_RIGHT_ALL;
+        rights = GR_RIGHT_ALL;
 
     guild->SetRankRights(rankId, rights);
 
@@ -794,7 +793,7 @@ void WorldSession::HandleGuildSaveEmblemOpcode(WorldPacket& recvPacket)
 
     // remove fake death
     if(GetPlayer()->hasUnitState(UNIT_STAT_DIED))
-        GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
+        GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
 
     recvPacket >> EmblemStyle;
     recvPacket >> EmblemColor;
