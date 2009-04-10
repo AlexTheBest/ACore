@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -60,12 +60,6 @@ const float ShadowmoonChannelers[5][4]=
     {346,-74.5,-24.6,3.595},
     {344,-103.5,-24.5,2.356},
     {316,-109,-24.6,1.257}
-};
-
-class TRINITY_DLL_DECL BurningNovaAura : public Aura
-{
-    public:
-        BurningNovaAura(SpellEntry *spell, uint32 eff, Unit *target, Unit *caster) : Aura(spell, eff, NULL, target, caster, NULL){}
 };
 
 struct TRINITY_DLL_DECL boss_kelidan_the_breakerAI : public ScriptedAI
@@ -234,12 +228,14 @@ struct TRINITY_DLL_DECL boss_kelidan_the_breakerAI : public ScriptedAI
 
             if(SpellEntry *nova = (SpellEntry*)GetSpellStore()->LookupEntry(SPELL_BURNING_NOVA))
             {
-                for(uint32 i = 0; i < 3; ++i)
-                    if(nova->Effect[i] == SPELL_EFFECT_APPLY_AURA)
-                    {
-                        Aura *Aur = new BurningNovaAura(nova, i, m_creature, m_creature);
-                        m_creature->AddAura(Aur);
-                    }
+                uint8 eff_mask=0;
+                for (int i=0; i<3; i++)
+                {
+                    if (!nova->Effect[i])
+                        continue;
+                    eff_mask|=1<<i;
+                }
+                m_creature->AddAura(new Aura(nova, eff_mask, NULL, m_creature, m_creature));
             }
 
             if (HeroicMode)

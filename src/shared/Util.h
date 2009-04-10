@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -287,20 +287,20 @@ bool consoleToUtf8(const std::string& conStr,std::string& utf8str);
 bool Utf8FitTo(const std::string& str, std::wstring search);
 
 #if PLATFORM == PLATFORM_WINDOWS
-#define UTF8PRINTF(OUT,FRM,RESERR)                      \
-{                                                       \
-    char temp_buf[6000];                                \
-    va_list ap;                                         \
-    va_start(ap, FRM);                                  \
-    size_t temp_len = vsnprintf(temp_buf,6000,FRM,ap);  \
-    va_end(ap);                                         \
-                                                        \
-    wchar_t wtemp_buf[6000];                            \
-    size_t wtemp_len = 6000-1;                          \
+#define UTF8PRINTF(OUT,FRM,RESERR)                         \
+{                                                          \
+    char temp_buf[32*1024];                                \
+    va_list ap;                                            \
+    va_start(ap, FRM);                                     \
+    size_t temp_len = vsnprintf(temp_buf,32*1024,FRM,ap);  \
+    va_end(ap);                                            \
+                                                           \
+    wchar_t wtemp_buf[32*1024];                            \
+    size_t wtemp_len = 32*1024-1;                          \
     if(!Utf8toWStr(temp_buf,temp_len,wtemp_buf,wtemp_len)) \
-        return RESERR;                                  \
+        return RESERR;                                     \
     CharToOemBuffW(&wtemp_buf[0],&temp_buf[0],wtemp_len+1);\
-    fprintf(OUT,temp_buf);                              \
+    fprintf(OUT,temp_buf);                                 \
 }
 #else
 #define UTF8PRINTF(OUT,FRM,RESERR)                      \
@@ -317,3 +317,231 @@ uint32 CreatePIDFile(const std::string& filename);
 
 #endif
 
+//handler for operations on large flags
+#ifndef _FLAG96
+#define _FLAG96
+
+class flag96
+{
+private:
+    uint32 part[3];
+public:
+    flag96(uint32 p1=0,uint32 p2=0,uint32 p3=0)
+    {
+        part[0]=p1;
+        part[1]=p2;
+        part[2]=p3;
+    }
+
+    inline bool IsEqual(uint32 p1=0, uint32 p2=0, uint32 p3=0) const
+    {
+        return (
+            part[0]==p1 &&
+            part[1]==p2 &&
+            part[2]==p3);
+    };
+
+    inline bool HasFlag(uint32 p1=0, uint32 p2=0, uint32 p3=0) const
+    {
+        return (
+            part[0]&p1 ||
+            part[1]&p2 ||
+            part[2]&p3);
+    };
+
+    inline void Set(uint32 p1=0, uint32 p2=0, uint32 p3=0)
+    {
+        part[0]=p1;
+        part[1]=p2;
+        part[2]=p3;
+    };
+
+    template<class type>
+    inline bool operator < (type & right)
+    {
+        for (uint8 i=3;i>0;i--)
+        {
+            if (part[i-1]<right.part[i-1])
+                return 1;
+            else if (part[i-1]>right.part[i-1])
+                return 0;
+        }
+        return 0;
+    };
+
+    template<class type>
+    inline bool operator < (type & right) const
+    {
+        for (uint8 i=3;i>0;i--)
+        {
+            if (part[i-1]<right.part[i-1])
+                return 1;
+            else if (part[i-1]>right.part[i-1])
+                return 0;
+        }
+        return 0;
+    };
+
+    template<class type>
+    inline bool operator != (type & right)
+    {
+        if (part[0]!=right.part[0]
+            || part[1]!=right.part[1]
+            || part[2]!=right.part[2])
+                return true;
+        return false;
+    }
+
+    template<class type>
+    inline bool operator != (type & right) const
+    {
+        if (part[0]!=right.part[0]
+            || part[1]!=right.part[1]
+            || part[2]!=right.part[2])
+                return true;
+        return false;
+    };
+
+    template<class type>
+    inline bool operator == (type & right)
+    {
+        if (part[0]!=right.part[0]
+            || part[1]!=right.part[1]
+            || part[2]!=right.part[2])
+                return false;
+        return true;
+    };
+
+    template<class type>
+    inline bool operator == (type & right) const
+    {
+        if (part[0]!=right.part[0]
+            || part[1]!=right.part[1]
+            || part[2]!=right.part[2])
+                return false;
+        return true;
+    };
+
+    template<class type>
+    inline void operator = (type & right)
+    {
+        part[0]=right.part[0];
+        part[1]=right.part[1];
+        part[2]=right.part[2];
+    };
+
+    template<class type>
+    inline flag96 operator & (type & right)
+    {
+        flag96 ret(part[0] & right.part[0],part[1] & right.part[1],part[2] & right.part[2]);
+        return
+            ret;
+    };
+    template<class type>
+    inline flag96 operator & (type & right) const
+    {
+        flag96 ret(part[0] & right.part[0],part[1] & right.part[1],part[2] & right.part[2]);
+        return
+            ret;
+    };
+
+    template<class type>
+    inline void operator &= (type & right)
+    {
+        *this=*this & right;
+    };
+
+    template<class type>
+    inline flag96 operator | (type & right)
+    {
+        flag96 ret(part[0] | right.part[0],part[1] | right.part[1],part[2] | right.part[2]);
+        return
+            ret;
+    };
+
+    template<class type>
+    inline flag96 operator | (type & right) const
+    {
+        flag96 ret(part[0] | right.part[0],part[1] | right.part[1],part[2] | right.part[2]);
+        return
+            ret;
+    };
+
+    template<class type>
+    inline void operator |= (type & right)
+    {
+        *this=*this | right;
+    };
+
+    inline void operator ~ ()
+    {
+        part[2]=~part[2];
+        part[1]=~part[1];
+        part[0]=~part[0];
+    };
+
+    template<class type>
+    inline flag96 operator ^ (type & right)
+    {
+        flag96 ret(part[0] ^ right.part[0],part[1] ^ right.part[1],part[2] ^ right.part[2]);
+        return
+            ret;
+    };
+
+    template<class type>
+    inline flag96 operator ^ (type & right) const
+    {
+        flag96 ret(part[0] ^ right.part[0],part[1] ^ right.part[1],part[2] ^ right.part[2]);
+        return
+            ret;
+    };
+
+    template<class type>
+    inline void operator ^= (type & right)
+    {
+        *this=*this^right;
+    };
+
+    inline operator bool() const
+    {
+        return(
+            part[0] != 0 ||
+            part[1] != 0 ||
+            part[2] != 0);
+    };
+
+    inline operator bool()
+    {
+        return(
+            part[0] != 0 ||
+            part[1] != 0 ||
+            part[2] != 0);
+    };
+
+    inline bool operator ! () const
+    {
+        return(
+            part[0] == 0 &&
+            part[1] == 0 &&
+            part[2] == 0);
+    };
+
+    inline bool operator ! ()
+    {
+        return(
+            part[0] == 0 &&
+            part[1] == 0 &&
+            part[2] == 0);
+    };
+
+    inline uint32 & operator[](uint8 el)
+    {
+        return (part[el]);
+    };
+
+    inline const uint32 & operator[](uint8 el) const
+    {
+        return (part[el]);
+    };
+};
+#endif

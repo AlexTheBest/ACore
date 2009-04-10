@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software licensed under GPL version 2
 * Please see the included DOCS/LICENSE.TXT for more information */
 
@@ -35,18 +35,15 @@ struct TRINITY_DLL_DECL SimpleAI : public ScriptedAI
 
 public:
 
-    char* Aggro_Text[3];
-    bool Aggro_Say[3];
+    int32 Aggro_TextId[3];
     uint32 Aggro_Sound[3];
 
-    char* Death_Text[3];
-    bool Death_Say[3];
+    int32 Death_TextId[3];
     uint32 Death_Sound[3];
     uint32 Death_Spell;
     uint32 Death_Target_Type;
 
-    char* Kill_Text[3];
-    bool Kill_Say[3];
+    int32 Kill_TextId[3];
     uint32 Kill_Sound[3];
     uint32 Kill_Spell;
     uint32 Kill_Target_Type;
@@ -62,8 +59,7 @@ public:
         bool Enabled;                   //Spell enabled or disabled (default: false)
 
         //3 texts to many?
-        char* Text[3];
-        bool Say[3];
+        int32 TextId[3];
         uint32 Text_Sound[3];
     }Spell[10];
 
