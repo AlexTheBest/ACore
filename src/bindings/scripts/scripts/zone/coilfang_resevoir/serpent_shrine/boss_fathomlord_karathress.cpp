@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -331,7 +331,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_sharkkisAI : public ScriptedAI
 
         pet = false;
 
-        Creature *Pet = (Creature*) Unit::GetUnit(*m_creature, SummonedPet);
+        Creature *Pet = Unit::GetCreature(*m_creature, SummonedPet);
         if( Pet && Pet->isAlive() )
         {
             Pet->DealDamage( Pet, Pet->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false );
@@ -348,7 +348,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_sharkkisAI : public ScriptedAI
         if (pInstance)
         {
             Creature *Karathress = NULL;
-            Karathress = (Creature*)(Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_KARATHRESS)));
+            Karathress = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_KARATHRESS)));
 
             if (Karathress)
                 ((boss_fathomlord_karathressAI*)Karathress->AI())->EventSharkkisDeath();
@@ -407,7 +407,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_sharkkisAI : public ScriptedAI
         if(TheBeastWithin_Timer < diff)
         {
             DoCast(m_creature, SPELL_THE_BEAST_WITHIN);
-            Creature *Pet = (Creature*) Unit::GetUnit(*m_creature, SummonedPet);
+            Creature *Pet = Unit::GetCreature(*m_creature, SummonedPet);
             if( Pet && Pet->isAlive() )
             {
                 Pet->CastSpell( Pet, SPELL_PET_ENRAGE, true );
@@ -477,7 +477,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_tidalvessAI : public ScriptedAI
         if (pInstance)
         {
             Creature *Karathress = NULL;
-            Karathress = (Creature*)(Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_KARATHRESS)));
+            Karathress = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_KARATHRESS)));
 
             if (Karathress)
                 if(!m_creature->isAlive() && Karathress)
@@ -519,7 +519,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_tidalvessAI : public ScriptedAI
             return;
         }
 
-        if( !m_creature->HasAura(SPELL_WINDFURY_WEAPON, 0) )
+        if( !m_creature->HasAura(SPELL_WINDFURY_WEAPON) )
         {
             DoCast(m_creature, SPELL_WINDFURY_WEAPON);
         }
@@ -592,7 +592,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_caribdisAI : public ScriptedAI
         if (pInstance)
         {
             Creature *Karathress = NULL;
-            Karathress = (Creature*)(Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_KARATHRESS)));
+            Karathress = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_KARATHRESS)));
 
             if (Karathress)
                 if(!m_creature->isAlive() && Karathress)
