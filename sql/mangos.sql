@@ -22,7 +22,8 @@
 DROP TABLE IF EXISTS `db_version`;
 CREATE TABLE `db_version` (
   `version` varchar(120) default NULL,
-  `required_7616_02_mangos_command` bit(1) default NULL
+  `creature_ai_version` varchar(120) default NULL,
+  `required_7643_02_mangos_mangos_string` bit(1) default NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Used DB version notes';
 
 --
@@ -32,8 +33,30 @@ CREATE TABLE `db_version` (
 LOCK TABLES `db_version` WRITE;
 /*!40000 ALTER TABLE `db_version` DISABLE KEYS */;
 INSERT INTO `db_version` VALUES
-('Mangos default database.',NULL);
+('Mangos default database.','Creature EventAI not provided.',NULL);
 /*!40000 ALTER TABLE `db_version` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `achievement_criteria_data`
+--
+
+DROP TABLE IF EXISTS `achievement_criteria_data`;
+CREATE TABLE `achievement_criteria_data` (
+  `criteria_id` mediumint(8) NOT NULL,
+  `type` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `value1` mediumint(8) unsigned NOT NULL DEFAULT '0',
+  `value2` mediumint(8) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`criteria_id`,`type`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Achievment system';
+
+--
+-- Dumping data for table `achievement_criteria_data`
+--
+
+LOCK TABLES `achievement_criteria_data` WRITE;
+/*!40000 ALTER TABLE `achievement_criteria_data` DISABLE KEYS */;
+/*!40000 ALTER TABLE `achievement_criteria_data` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -50,7 +73,7 @@ CREATE TABLE `achievement_reward` (
   `subject` varchar(255) default NULL,
   `text` text,
   PRIMARY KEY  (`entry`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Loot System';
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Achievment system';
 
 --
 -- Dumping data for table `achievement_reward`
@@ -917,6 +940,105 @@ CREATE TABLE `disenchant_loot_template` (
 LOCK TABLES `disenchant_loot_template` WRITE;
 /*!40000 ALTER TABLE `disenchant_loot_template` DISABLE KEYS */;
 /*!40000 ALTER TABLE `disenchant_loot_template` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `creature_ai_scripts`
+--
+
+DROP TABLE IF EXISTS `creature_ai_scripts`;
+CREATE TABLE `creature_ai_scripts` (
+  `id` int(11) unsigned NOT NULL COMMENT 'Identifier' AUTO_INCREMENT,
+  `creature_id` int(11) unsigned NOT NULL default '0' COMMENT 'Creature Template Identifier',
+  `event_type` tinyint(5) unsigned NOT NULL default '0' COMMENT 'Event Type',
+  `event_inverse_phase_mask` int(11) signed NOT NULL default '0' COMMENT 'Mask which phases this event will not trigger in',
+  `event_chance` int(3) unsigned NOT NULL default '100',
+  `event_flags` int(3) unsigned NOT NULL default '0',
+  `event_param1` int(11) signed NOT NULL default '0',
+  `event_param2` int(11) signed NOT NULL default '0',
+  `event_param3` int(11) signed NOT NULL default '0',
+  `event_param4` int(11) signed NOT NULL default '0',
+  `action1_type` tinyint(5) unsigned NOT NULL default '0' COMMENT 'Action Type',
+  `action1_param1` int(11) signed NOT NULL default '0',
+  `action1_param2` int(11) signed NOT NULL default '0',
+  `action1_param3` int(11) signed NOT NULL default '0',
+  `action2_type` tinyint(5) unsigned NOT NULL default '0' COMMENT 'Action Type',
+  `action2_param1` int(11) signed NOT NULL default '0',
+  `action2_param2` int(11) signed NOT NULL default '0',
+  `action2_param3` int(11) signed NOT NULL default '0',
+  `action3_type` tinyint(5) unsigned NOT NULL default '0' COMMENT 'Action Type',
+  `action3_param1` int(11) signed NOT NULL default '0',
+  `action3_param2` int(11) signed NOT NULL default '0',
+  `action3_param3` int(11) signed NOT NULL default '0',
+  `comment` varchar(255) NOT NULL default '' COMMENT 'Event Comment',
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='EventAI Scripts';
+
+--
+-- Dumping data for table `creature_ai_scripts`
+--
+
+LOCK TABLES `creature_ai_scripts` WRITE;
+/*!40000 ALTER TABLE `creature_ai_scripts` DISABLE KEYS */;
+/*!40000 ALTER TABLE `creature_ai_scripts` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `creature_ai_summons`
+--
+
+DROP TABLE IF EXISTS `creature_ai_summons`;
+CREATE TABLE `creature_ai_summons` (
+  `id` int(11) unsigned NOT NULL COMMENT 'Location Identifier' AUTO_INCREMENT,
+  `position_x` float NOT NULL default '0',
+  `position_y` float NOT NULL default '0',
+  `position_z` float NOT NULL default '0',
+  `orientation` float NOT NULL default '0',
+  `spawntimesecs` int(11) unsigned NOT NULL default '120',
+  `comment` varchar(255) NOT NULL default '' COMMENT 'Summon Comment',
+  PRIMARY KEY (`id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='EventAI Summoning Locations';
+
+--
+-- Dumping data for table `creature_ai_summons`
+--
+
+LOCK TABLES `creature_ai_summons` WRITE;
+/*!40000 ALTER TABLE `creature_ai_summons` DISABLE KEYS */;
+/*!40000 ALTER TABLE `creature_ai_summons` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `creature_ai_texts`
+--
+
+DROP TABLE IF EXISTS `creature_ai_texts`;
+CREATE TABLE `creature_ai_texts` (
+  `entry` mediumint(8) NOT NULL,
+  `content_default` text NOT NULL,
+  `content_loc1` text,
+  `content_loc2` text,
+  `content_loc3` text,
+  `content_loc4` text,
+  `content_loc5` text,
+  `content_loc6` text,
+  `content_loc7` text,
+  `content_loc8` text,
+  `sound` mediumint(8) unsigned NOT NULL DEFAULT '0',
+  `type` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `language` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `emote` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `comment` text,
+  PRIMARY KEY (`entry`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Script Texts';
+
+--
+-- Dumping data for table `creature_ai_texts`
+--
+
+LOCK TABLES `creature_ai_texts` WRITE;
+/*!40000 ALTER TABLE `creature_ai_texts` DISABLE KEYS */;
+/*!40000 ALTER TABLE `creature_ai_texts` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -2341,6 +2463,7 @@ INSERT INTO `mangos_string` VALUES
 (56,'Current Message of the day: \r\n%s',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (57,'Using World DB: %s',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (58,'Using script library: %s',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
+(59,'Using creature EventAI: %s',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (100,'Global notify: ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (101,'Map: %u (%s) Zone: %u (%s) Area: %u (%s) Phase: %u\nX: %f Y: %f Z: %f Orientation: %f\ngrid[%u,%u]cell[%u,%u] InstanceID: %u\n ZoneX: %f ZoneY: %f\nGroundZ: %f FloorZ: %f Have height data (Map: %u VMap: %u)',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),
 (102,'%s is already being teleported.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL),

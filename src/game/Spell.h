@@ -278,6 +278,7 @@ class Spell
         void EffectSummonWild(uint32 i);
         void EffectHealMechanical(uint32 i);
         void EffectJump(uint32 i);
+        void EffectJump2(uint32 i);
         void EffectTeleUnitsFaceCaster(uint32 i);
         void EffectLearnSkill(uint32 i);
         void EffectAddHonor(uint32 i);
@@ -507,6 +508,7 @@ class Spell
         bool m_referencedFromCurrentSpell;                  // mark as references to prevent deleted and access by dead pointers
         bool m_executedCurrently;                           // mark as executed to prevent deleted and access by dead pointers
         bool m_needSpellLog;                                // need to send spell log?
+        bool m_needComboPoints;
         uint8 m_applyMultiplierMask;                        // by effect: damage multiplier needed?
         float m_damageMultipliers[3];                       // by effect: damage multiplier
 

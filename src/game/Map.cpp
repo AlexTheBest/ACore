@@ -307,9 +307,21 @@ void Map::RemoveFromGrid(DynamicObject* obj, NGridType *grid, Cell const& cell)
 template<class T>
 void Map::SwitchGridContainers(T* obj, bool on)
 {
-    CellPair pair = Trinity::ComputeCellPair(obj->GetPositionX(), obj->GetPositionY());
-    Cell cell(pair);
+    CellPair p = Trinity::ComputeCellPair(obj->GetPositionX(), obj->GetPositionY());
+    if(p.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || p.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP )
+    {
+        sLog.outError("Map::SwitchGridContainers: Object " I64FMT " have invalid coordinates X:%f Y:%f grid cell [%u:%u]", obj->GetGUID(), obj->GetPositionX(), obj->GetPositionY(), p.x_coord, p.y_coord);
+        return;
+    }
+
+    Cell cell(p);
+    if( !loaded(GridPair(cell.data.Part.grid_x, cell.data.Part.grid_y)) )
+        return;
+
+    DEBUG_LOG("Switch object " I64FMT " from grid[%u,%u] %u", obj->GetGUID(), cell.data.Part.grid_x, cell.data.Part.grid_y, on);
     NGridType *ngrid = getNGrid(cell.GridX(), cell.GridY());
+    assert( ngrid != NULL );
+
     GridType &grid = (*ngrid)(cell.CellX(), cell.CellY());
 
     if(on)
@@ -465,7 +477,7 @@ bool Map::Add(Player *player)
     SendInitTransports(player);
 
     player->m_clientGUIDs.clear();
-    AddNotifier(player);
+    //AddNotifier(player);
 
     return true;
 }
@@ -505,7 +517,7 @@ Map::Add(T *obj)
     //if(obj->GetTypeId() != TYPEID_UNIT)
     UpdateObjectVisibility(obj,cell,p);
 
-    AddNotifier(obj);
+    //AddNotifier(obj);
 }
 
 void Map::MessageBroadcast(Player *player, WorldPacket *msg, bool to_self, bool to_possessor)
@@ -711,7 +723,7 @@ void Map::Update(const uint32 &t_diff)
             }
         }
 
-        if(plr->m_seer != plr)
+        if(plr->m_seer != plr && !plr->hasUnitState(UNIT_STAT_ONVEHICLE))
         {
             Trinity::PlayerVisibilityNotifier notifier(*plr);
             VisitAll(plr->m_seer->GetPositionX(), plr->m_seer->GetPositionY(), World::GetMaxVisibleDistance(), notifier);
@@ -1765,8 +1777,6 @@ float Map::GetVmapHeight(float x, float y, float z, bool useMaps) const
     return vmapHeight;
 }
 
-#include "World.h"
-
 uint16 Map::GetAreaFlag(float x, float y, float z) const
 {
     uint16 areaflag;
@@ -1791,9 +1801,9 @@ uint16 Map::GetAreaFlag(float x, float y, float z) const
         case 2456:                                          // Death's Breach (Eastern Plaguelands)
             if(z > 350.0f) areaflag = 1950; break;
         // Dalaran
-        case 1593:
-        case 2484:
-        case 2492:
+        case 1593:                                          // Crystalsong Forest
+        case 2484:                                          // The Twilight Rivulet (Crystalsong Forest)
+        case 2492:                                          // Forlorn Woods (Crystalsong Forest)
             if (x > 5568.0f && x < 6116.0f && y > 282.0f && y < 982.0f && z > 563.0f) areaflag = 2153; break;
         // Maw of Neltharion (cave)
         case 164:                                           // Dragonblight
@@ -1801,6 +1811,27 @@ uint16 Map::GetAreaFlag(float x, float y, float z) const
         case 1827:                                          // Wintergrasp
         case 2591:                                          // The Cauldron of Flames (Wintergrasp)
             if (x > 4364.0f && x < 4632.0f && y > 1545.0f && y < 1886.0f && z < 200.0f) areaflag = 1853; break;
+        // Undercity (sewers enter and path)
+        case 179:                                           // Tirisfal Glades
+            if (x > 1595.0f && x < 1699.0f && y > 535.0f && y < 643.5f && z < 30.5f) areaflag = 685; break;
+        // Undercity (Royal Quarter)
+        case 210:                                           // Silverpine Forest
+        case 316:                                           // The Shining Strand (Silverpine Forest)
+        case 438:                                           // Lordamere Lake (Silverpine Forest)
+            if (x > 1237.0f && x < 1401.0f && y > 284.0f && y < 440.0f && z < -40.0f) areaflag = 685; break;
+        // Undercity (cave and ground zone, part of royal quarter)
+        case 607:                                           // Ruins of Lordaeron (Tirisfal Glades)
+            // ground and near to ground (by city walls)
+            if(z > 0.0f)
+            {
+                if (x > 1510.0f && x < 1839.0f && y > 29.77f && y < 433.0f) areaflag = 685;
+            }
+            // more wide underground, part of royal quarter
+            else
+            {
+                if (x > 1299.0f && x < 1839.0f && y > 10.0f && y < 440.0f) areaflag = 685;
+            }
+            break;
     }
 
     return areaflag;

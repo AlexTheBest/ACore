@@ -24,6 +24,7 @@ EndScriptData */
 #include "precompiled.h"
 #include "def_hyjal.h"
 #include "SpellAuras.h"
+#include "hyjal_trash.h"
 
 //text id -1534018 are the text used when previous events complete. Not part of this script.
 #define SAY_AGGRO                   -1534019
@@ -201,9 +202,9 @@ struct TargetDistanceOrder : public std::binary_function<const Unit, const Unit,
     }
 };
 
-struct TRINITY_DLL_DECL boss_archimondeAI : public ScriptedAI
+struct TRINITY_DLL_DECL boss_archimondeAI : public hyjal_trashAI
 {
-    boss_archimondeAI(Creature *c) : ScriptedAI(c)
+    boss_archimondeAI(Creature *c) : hyjal_trashAI(c)
     {
         pInstance = ((ScriptedInstance*)c->GetInstanceData());
     }
@@ -252,6 +253,7 @@ struct TRINITY_DLL_DECL boss_archimondeAI : public ScriptedAI
         WispCount = 0;                                      // When ~30 wisps are summoned, Archimonde dies
         EnrageTimer = 600000;                               // 10 minutes
         CheckDistanceTimer = 30000;                         // This checks if he's too close to the World Tree (75 yards from a point on the tree), if true then he will enrage
+        SummonWispTimer = 0;
 
         Enraged = false;
         BelowTenPercent = false;
@@ -309,6 +311,7 @@ struct TRINITY_DLL_DECL boss_archimondeAI : public ScriptedAI
 
     void JustDied(Unit *victim)
     {
+        hyjal_trashAI::JustDied(victim);
         DoScriptText(SAY_DEATH, m_creature);
 
         if (pInstance)
@@ -566,7 +569,7 @@ struct TRINITY_DLL_DECL boss_archimondeAI : public ScriptedAI
             else
                 DoScriptText(SAY_AIR_BURST2, m_creature);
 
-            DoCast(SelectUnit(SELECT_TARGET_RANDOM, 0), SPELL_AIR_BURST);
+            DoCast(SelectUnit(SELECT_TARGET_RANDOM, 1), SPELL_AIR_BURST);//not on tank
             AirBurstTimer = 25000 + rand()%15000;
         }else AirBurstTimer -= diff;
 
@@ -607,6 +610,7 @@ struct TRINITY_DLL_DECL boss_archimondeAI : public ScriptedAI
 
         DoMeleeAttackIfReady();
     }
+    void WaypointReached(uint32 i){}
 };
 
 CreatureAI* GetAI_boss_archimonde(Creature *_Creature)

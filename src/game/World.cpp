@@ -40,6 +40,7 @@
 #include "AchievementMgr.h"
 #include "AuctionHouseMgr.h"
 #include "ObjectMgr.h"
+#include "CreatureEventAIMgr.h"
 #include "SpellMgr.h"
 #include "Chat.h"
 #include "DBCStores.h"
@@ -736,7 +737,7 @@ void World::LoadConfigSettings(bool reload)
     {
         sLog.outError("StartHonorPoints (%i) must be in range 0..MaxHonorPoints(%u). Set to %u.",
             m_configs[CONFIG_START_HONOR_POINTS],m_configs[CONFIG_MAX_HONOR_POINTS],0);
-        m_configs[CONFIG_MAX_HONOR_POINTS] = 0;
+        m_configs[CONFIG_START_HONOR_POINTS] = 0;
     }
     else if(m_configs[CONFIG_START_HONOR_POINTS] > m_configs[CONFIG_MAX_HONOR_POINTS])
     {
@@ -1371,6 +1372,7 @@ void World::SetInitialWorldSettings()
     sLog.outString();
     achievementmgr.LoadAchievementReferenceList();
     achievementmgr.LoadAchievementCriteriaList();
+    achievementmgr.LoadAchievementCriteriaData();
     achievementmgr.LoadRewards();
     achievementmgr.LoadRewardLocales();
     achievementmgr.LoadCompletedAchievements();
@@ -1446,6 +1448,15 @@ void World::SetInitialWorldSettings()
 
     sLog.outString( "Loading Scripts text locales..." );    // must be after Load*Scripts calls
     objmgr.LoadDbScriptStrings();
+
+    sLog.outString( "Loading CreatureEventAI Texts...");
+    CreatureEAI_Mgr.LoadCreatureEventAI_Texts();
+
+    sLog.outString( "Loading CreatureEventAI Summons...");
+    CreatureEAI_Mgr.LoadCreatureEventAI_Summons();
+
+    sLog.outString( "Loading CreatureEventAI Scripts...");
+    CreatureEAI_Mgr.LoadCreatureEventAI_Scripts();
 
     sLog.outString( "Initializing Scripts..." );
     if(!LoadScriptingModule())
@@ -3190,14 +3201,20 @@ void World::UpdateMaxSessionCounters()
 void World::LoadDBVersion()
 {
     QueryResult* result = WorldDatabase.Query("SELECT db_version FROM version LIMIT 1");
+    //QueryResult* result = WorldDatabase.Query("SELECT version, creature_ai_version FROM db_version LIMIT 1");
     if(result)
     {
         Field* fields = result->Fetch();
 
-        m_DBVersion = fields[0].GetString();
+        m_DBVersion              = fields[0].GetCppString();
+        //m_CreatureEventAIVersion = fields[1].GetCppString();
         delete result;
     }
-    else
-        m_DBVersion = "unknown world database";
+
+    if(m_DBVersion.empty())
+        m_DBVersion = "Unknown world database.";
+
+    if(m_CreatureEventAIVersion.empty())
+        m_CreatureEventAIVersion = "Unknown creature EventAI.";
 }
 

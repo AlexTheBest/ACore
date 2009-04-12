@@ -114,9 +114,15 @@ SET(trinityscript_LIB_SRCS
    scripts/zone/caverns_of_time/dark_portal/boss_aeonus.cpp
    scripts/zone/caverns_of_time/dark_portal/boss_chrono_lord_deja.cpp
    scripts/zone/caverns_of_time/dark_portal/boss_temporus.cpp
+   scripts/zone/caverns_of_time/hyjal/boss_anetheron.cpp
    scripts/zone/caverns_of_time/hyjal/boss_archimonde.cpp
+   scripts/zone/caverns_of_time/hyjal/boss_azgalor.cpp
+   scripts/zone/caverns_of_time/hyjal/boss_kazrogal.cpp
+   scripts/zone/caverns_of_time/hyjal/boss_rage_winterchill.cpp
    scripts/zone/caverns_of_time/hyjal/def_hyjal.h
    scripts/zone/caverns_of_time/hyjal/hyjal.cpp
+   scripts/zone/caverns_of_time/hyjal/hyjal_trash.cpp
+   scripts/zone/caverns_of_time/hyjal/hyjal_trash.h
    scripts/zone/caverns_of_time/hyjal/hyjalAI.cpp
    scripts/zone/caverns_of_time/hyjal/hyjalAI.h
    scripts/zone/caverns_of_time/hyjal/instance_hyjal.cpp
@@ -236,6 +242,7 @@ SET(trinityscript_LIB_SRCS
    scripts/zone/onyxias_lair/boss_onyxia.cpp
    scripts/zone/orgrimmar/orgrimmar.cpp
    scripts/zone/razorfen_downs/boss_amnennar_the_coldbringer.cpp
+   scripts/zone/razorfen_downs/razorfen_downs.cpp
    scripts/zone/razorfen_kraul/razorfen_kraul.cpp
    scripts/zone/ruins_of_ahnqiraj/boss_ayamiss.cpp
    scripts/zone/ruins_of_ahnqiraj/boss_buru.cpp
@@ -346,10 +353,6 @@ SET(trinityscript_LIB_SRCS
    scripts/zone/uldaman/uldaman.cpp
    scripts/zone/undercity/undercity.cpp
    scripts/zone/ungoro_crater/ungoro_crater.cpp
-   scripts/zone/utgarde_keep/utgarde_keep/instance_utgarde_keep.cpp
-   scripts/zone/utgarde_keep/utgarde_keep/boss_keleseth.cpp
-   scripts/zone/utgarde_keep/utgarde_keep/boss_skarvald_dalronn.cpp
-   scripts/zone/utgarde_keep/utgarde_keep/boss_ingvar_the_plunderer.cpp
    scripts/zone/wailing_caverns/instance_wailing_caverns.cpp
    scripts/zone/western_plaguelands/western_plaguelands.cpp
    scripts/zone/westfall/westfall.cpp
@@ -380,6 +383,91 @@ SET(trinityscript_LIB_SRCS
    scripts/zone/zulgurub/boss_wushoolay.cpp
    scripts/zone/zulgurub/def_zulgurub.h
    scripts/zone/zulgurub/instance_zulgurub.cpp
+   scripts/zone/utgarde_keep/utgarde_keep/instance_utgarde_keep.cpp
+   scripts/zone/utgarde_keep/utgarde_keep/boss_keleseth.cpp
+   scripts/zone/utgarde_keep/utgarde_keep/boss_skarvald_dalronn.cpp
+   scripts/zone/utgarde_keep/utgarde_keep/boss_ingvar_the_plunderer.cpp
+   scripts/zone/utgarde_keep/utgarde_keep/def_utgarde_keep.h
+   scripts/zone/utgarde_keep/utgarde_pinnacle/instance_pinnacle.cpp
+   scripts/zone/utgarde_keep/utgarde_pinnacle/boss_skadi.cpp
+   scripts/zone/utgarde_keep/utgarde_pinnacle/boss_ymiron.cpp
+   scripts/zone/utgarde_keep/utgarde_pinnacle/boss_palehoof.cpp
+   scripts/zone/utgarde_keep/utgarde_pinnacle/boss_svala.cpp
+   scripts/zone/utgarde_keep/utgarde_pinnacle/def_pinnacle.h
+   scripts/zone/nexus/nexus/instance_nexus.cpp
+   scripts/zone/nexus/nexus/boss_magus_telestra.cpp
+   scripts/zone/nexus/nexus/boss_anomalus.cpp
+   scripts/zone/nexus/nexus/boss_ormorok.cpp
+   scripts/zone/nexus/nexus/boss_keristrasza.cpp
+   scripts/zone/nexus/nexus/commander_stoutbeard.cpp
+   scripts/zone/nexus/nexus/commander_kolurg.cpp
+   scripts/zone/nexus/nexus/def_nexus.h
+   scripts/zone/nexus/oculus/instance_oculus.cpp
+   scripts/zone/nexus/oculus/boss_drakos.cpp
+   scripts/zone/nexus/oculus/boss_urom.cpp
+   scripts/zone/nexus/oculus/boss_varos.cpp
+   scripts/zone/nexus/oculus/boss_eregos.cpp
+   scripts/zone/nexus/oculus/def_oculus.h
+   scripts/zone/azjol_nerub/azjol_nerub/instance_azjol_nerub.cpp
+   scripts/zone/azjol_nerub/azjol_nerub/boss_krikthir_the_gatewatcher.cpp
+   scripts/zone/azjol_nerub/azjol_nerub/boss_hadronox.cpp
+   scripts/zone/azjol_nerub/azjol_nerub/boss_anubarak.cpp
+   scripts/zone/azjol_nerub/azjol_nerub/def_azjol_nerub.h
+   scripts/zone/azjol_nerub/ahnkahet/instance_ahnkahet.cpp
+   scripts/zone/azjol_nerub/ahnkahet/boss_prince_taldaram.cpp
+   scripts/zone/azjol_nerub/ahnkahet/boss_elder_nadox.cpp
+   scripts/zone/azjol_nerub/ahnkahet/boss_jedoga_shadowseeker.cpp
+   scripts/zone/azjol_nerub/ahnkahet/boss_herald_volazj.cpp
+   scripts/zone/azjol_nerub/ahnkahet/boss_amanitar.cpp
+   scripts/zone/azjol_nerub/ahnkahet/def_ahnkahet.h
+   scripts/zone/draktharon_keep/instance_drak_tharon_keep.cpp
+   scripts/zone/draktharon_keep/boss_trollgore.cpp
+   scripts/zone/draktharon_keep/boss_novos.cpp
+   scripts/zone/draktharon_keep/boss_dred.cpp
+   scripts/zone/draktharon_keep/boss_tharon_ja.cpp
+   scripts/zone/draktharon_keep/def_drak_tharon_keep.h
+   scripts/zone/violet_hold/instance_violet_hold.cpp
+   scripts/zone/violet_hold/boss_cyanigosa.cpp
+   scripts/zone/violet_hold/boss_erekem.cpp
+   scripts/zone/violet_hold/boss_ichoron.cpp
+   scripts/zone/violet_hold/boss_lavanthor.cpp
+   scripts/zone/violet_hold/boss_moragg.cpp
+   scripts/zone/violet_hold/boss_xevozz.cpp
+   scripts/zone/violet_hold/boss_zuramat.cpp
+   scripts/zone/violet_hold/def_violet_hold.h
+   scripts/zone/gundrak/instance_gundrak.cpp
+   scripts/zone/gundrak/boss_slad_ran.cpp
+   scripts/zone/gundrak/boss_moorabi.cpp
+   scripts/zone/gundrak/boss_drakkari_colossus.cpp
+   scripts/zone/gundrak/boss_gal_darah.cpp
+   scripts/zone/gundrak/boss_eck.cpp
+   scripts/zone/gundrak/def_gundrak.h
+   scripts/zone/ulduar/halls_of_stone/instance_halls_of_stone.cpp
+   scripts/zone/ulduar/halls_of_stone/boss_maiden_of_grief.cpp
+   scripts/zone/ulduar/halls_of_stone/boss_krystallus.cpp
+   scripts/zone/ulduar/halls_of_stone/boss_sjonnir.cpp
+   scripts/zone/ulduar/halls_of_stone/def_halls_of_stone.h
+   scripts/zone/ulduar/halls_of_lightning/instance_halls_of_lightning.cpp
+   scripts/zone/ulduar/halls_of_lightning/boss_bjarngrim.cpp
+   scripts/zone/ulduar/halls_of_lightning/boss_ionar.cpp
+   scripts/zone/ulduar/halls_of_lightning/boss_volkhan.cpp
+   scripts/zone/ulduar/halls_of_lightning/boss_loken.cpp
+   scripts/zone/ulduar/halls_of_lightning/def_halls_of_lightning.h
+   scripts/zone/caverns_of_time/culling_of_stratholme/instance_culling_of_stratholme.cpp
+   scripts/zone/caverns_of_time/culling_of_stratholme/boss_meathook.cpp
+   scripts/zone/caverns_of_time/culling_of_stratholme/boss_epoch.cpp
+   scripts/zone/caverns_of_time/culling_of_stratholme/boss_mal_ganis.cpp
+   scripts/zone/caverns_of_time/culling_of_stratholme/boss_salramm.cpp
+   scripts/zone/caverns_of_time/culling_of_stratholme/def_culling_of_stratholme.h
+   scripts/zone/nexus/eye_of_eternity/instance_eye_of_eternity.cpp
+   scripts/zone/nexus/eye_of_eternity/boss_malygos.cpp
+   scripts/zone/nexus/eye_of_eternity/def_eye_of_eternity.h
+   scripts/zone/obsidian_sanctum/instance_obsidian_sanctum.cpp
+   scripts/zone/obsidian_sanctum/boss_sartharion.cpp
+   scripts/zone/obsidian_sanctum/def_obsidian_sanctum.h
+   scripts/zone/vault_of_archavon/instance_vault_of_archavon.cpp
+   scripts/zone/vault_of_archavon/boss_archavon.cpp
+   scripts/zone/vault_of_archavon/def_vault_of_archavon.h
    system.cpp
 )
 

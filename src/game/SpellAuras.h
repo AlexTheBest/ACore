@@ -92,16 +92,13 @@ class TRINITY_DLL_SPEC Aura
         void SetNegative() { m_positive = false; }
         void SetPositive() { m_positive = true; }
         bool IsPermanent() const { return m_permanent; }
-        void RemoveAura(AuraRemoveMode mode = AURA_REMOVE_BY_DEFAULT) { m_permanent = false; m_duration=0; m_removeMode = mode; }
 
         bool IsPassive() const { return m_isPassive; }
         bool IsDeathPersistent() const { return m_isDeathPersist; }
         bool IsRemovedOnShapeLost() const { return m_isRemovedOnShapeLost; }
         bool IsUpdated() const { return m_updated; }
+        bool IsRemoved() const { return m_isRemoved; }
         void SetUpdated(bool val) { m_updated = val; }
-
-        bool IsInUse() const { return m_in_use; }
-        void SetInUse(bool val) { m_in_use = val; }
 
         bool IsPersistent() const;
         bool IsAreaAura() const;
@@ -158,8 +155,8 @@ class TRINITY_DLL_SPEC Aura
         bool m_isPassive:1;
         bool m_positive:1;
         bool m_permanent:1;
+        bool m_isRemoved:1;
         bool m_updated:1;                                   // Prevent remove aura by stack if set
-        bool m_in_use:1;
         bool m_isSingleTargetAura:1;                        // true if it's a single target spell and registered at caster - can change at spell steal for example
 };
 class TRINITY_DLL_SPEC AuraEffect
@@ -270,6 +267,7 @@ class TRINITY_DLL_SPEC AuraEffect
         void HandleFarSight(bool Apply, bool Real);
         void HandleModPossessPet(bool Apply, bool Real);
         void HandleModMechanicImmunity(bool Apply, bool Real);
+        void HandleModStateImmunityMask(bool apply, bool Real);
         void HandleAuraModSkill(bool Apply, bool Real);
         void HandleModDamagePercentDone(bool Apply, bool Real);
         void HandleModPercentStat(bool Apply, bool Real);
@@ -334,6 +332,7 @@ class TRINITY_DLL_SPEC AuraEffect
         uint32 GetId() const { return m_spellProto->Id; }
         uint32 GetEffIndex() const { return m_effIndex; }
         int32 GetBasePoints() const { return m_currentBasePoints; }
+        int32 GetAuraAmplitude(){return m_amplitude;}
         void Update(uint32 diff);
 
         bool IsAreaAura() const { return m_isAreaAura; }

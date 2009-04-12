@@ -292,6 +292,22 @@ UPDATE `creature_template` SET `ScriptName`='boss_archimonde' WHERE `entry`=1796
 UPDATE `creature_template` SET `ScriptName`='mob_doomfire' WHERE `entry`=18095;
 UPDATE `creature_template` SET `ScriptName`='mob_doomfire_targetting' WHERE `entry`=18104;
 UPDATE `creature_template` SET `ScriptName`='mob_ancient_wisp' WHERE `entry`=17946;
+UPDATE `creature_template` SET `ScriptName`='mob_giant_infernal' WHERE `entry`=17908;
+UPDATE `creature_template` SET `ScriptName`='mob_abomination' WHERE `entry`=17898;
+UPDATE `creature_template` SET `ScriptName`='mob_ghoul' WHERE `entry`=17895;
+UPDATE `creature_template` SET `ScriptName`='mob_necromancer' WHERE `entry`=17899;
+UPDATE `creature_template` SET `ScriptName`='mob_banshee' WHERE `entry`=17905;
+UPDATE `creature_template` SET `ScriptName`='mob_crypt_fiend' WHERE `entry`=17897;
+UPDATE `creature_template` SET `ScriptName`='mob_fel_stalker' WHERE `entry`=17916;
+UPDATE `creature_template` SET `ScriptName`='mob_frost_wyrm' WHERE `entry`=17907;
+UPDATE `creature_template` SET `ScriptName`='mob_gargoyle' WHERE `entry`=17906;
+UPDATE `creature_template` SET `ScriptName`='alliance_rifleman' WHERE `entry`=17921;
+UPDATE `creature_template` SET `ScriptName`='mob_towering_infernal' WHERE `entry`=17818;
+UPDATE `creature_template` SET `ScriptName`='boss_anetheron' WHERE `entry`=17808;
+UPDATE `creature_template` SET `ScriptName`='boss_azgalor' WHERE `entry`=17842;
+UPDATE `creature_template` SET `ScriptName`='mob_lesser_doomguard' WHERE `entry`=17864;
+UPDATE `creature_template` SET `ScriptName`='boss_kazrogal' WHERE `entry`=17888;
+UPDATE `creature_template` SET `ScriptName`='boss_rage_winterchill' WHERE `entry`=17767;
 
 /* OLD HILLSBRAD */
 UPDATE `instance_template` SET `script`='instance_old_hillsbrad' WHERE `map`=560;
@@ -643,6 +659,7 @@ UPDATE `creature_template` SET `ScriptName`='npc_thrall_warchief' WHERE `entry`=
 
 /* RAZORFEN DOWNS */
 UPDATE `creature_template` SET `ScriptName`='boss_amnennar_the_coldbringer' WHERE `entry`=7358;
+UPDATE `creature_template` SET `ScriptName`='npc_henry_stern' WHERE `entry`=8696;
 
 /* RAZORFEN KRAUL */
 UPDATE `creature_template` SET `Scriptname`='npc_willix' WHERE `entry`=4508;

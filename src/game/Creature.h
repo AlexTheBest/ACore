@@ -134,6 +134,7 @@ enum CreatureFlagsExtra
     CREATURE_FLAG_EXTRA_WORLDEVENT      = 0x00004000,       // custom flag for world event creatures (left room for merging)
     //CREATURE_FLAG_EXTRA_CHARM_AI        = 0x00008000,       // use ai when charmed
     CREATURE_FLAG_EXTRA_NO_TAUNT        = 0x00010000,       // cannot be taunted
+    CREATURE_FLAG_EXTRA_NO_CRIT         = 0x00020000,       // creature can't do critical strikes
 };
 
 enum SummonMask
@@ -323,6 +324,29 @@ enum InhabitTypeValues
     INHABIT_WATER  = 2,
     INHABIT_AIR    = 4,
     INHABIT_ANYWHERE = INHABIT_GROUND | INHABIT_WATER | INHABIT_AIR
+};
+
+// Enums used by StringTextData::Type (CreatureEventAI)
+enum ChatType
+{
+    CHAT_TYPE_SAY               = 0,
+    CHAT_TYPE_YELL              = 1,
+    CHAT_TYPE_TEXT_EMOTE        = 2,
+    CHAT_TYPE_BOSS_EMOTE        = 3,
+    CHAT_TYPE_WHISPER           = 4,
+    CHAT_TYPE_BOSS_WHISPER      = 5,
+    CHAT_TYPE_ZONE_YELL         = 6
+};
+
+//Selection method used by SelectTarget (CreatureEventAI)
+enum AttackingTarget
+{
+    ATTACKING_TARGET_RANDOM = 0,                            //Just selects a random target
+    ATTACKING_TARGET_TOPAGGRO,                              //Selects targes from top aggro to bottom
+    ATTACKING_TARGET_BOTTOMAGGRO,                           //Selects targets from bottom aggro to top
+    ATTACKING_TARGET_RANDOM_PLAYER,                         //Just selects a random target (player only)
+    ATTACKING_TARGET_TOPAGGRO_PLAYER,                       //Selects targes from top aggro to bottom (player only)
+    ATTACKING_TARGET_BOTTOMAGGRO_PLAYER,                    //Selects targets from bottom aggro to top (player only)
 };
 
 // GCC have alternative #pragma pack() syntax and old gcc version not support pack(pop), also any gcc version not support it at some platform
@@ -658,6 +682,8 @@ class TRINITY_DLL_SPEC Creature : public Unit
         Unit *SelectVictim();
         void SetDeadByDefault (bool death_state) {m_isDeadByDefault = death_state;}
 
+        void SetDisableReputationGain(bool disable) { DisableReputationGain = disable; }
+        bool IsReputationGainDisabled() { return DisableReputationGain; }
     protected:
         bool CreateFromProto(uint32 guidlow,uint32 Entry,uint32 team, const CreatureData *data = NULL);
         bool InitEntry(uint32 entry, uint32 team=ALLIANCE, const CreatureData* data=NULL);
@@ -705,6 +731,8 @@ class TRINITY_DLL_SPEC Creature : public Unit
         float mHome_Y;
         float mHome_Z;
         float mHome_O;
+
+        bool DisableReputationGain;
 
     private:
         //WaypointMovementGenerator vars

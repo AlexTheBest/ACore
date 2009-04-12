@@ -59,9 +59,9 @@ enum SpellChannelInterruptFlags
 
 enum SpellAuraInterruptFlags
 {
-    AURA_INTERRUPT_FLAG_HITBYSPELL          = 0x00000001,   // 0    removed when getting hit by a negative spell?
+    AURA_INTERRUPT_FLAG_ANY_CAST            = 0x00000001,   // 0    removed by any cast
     AURA_INTERRUPT_FLAG_DAMAGE              = 0x00000002,   // 1    removed by any damage
-    AURA_INTERRUPT_FLAG_CC                  = 0x00000004,   // 2    crowd control
+    AURA_INTERRUPT_FLAG_HITBYSPELL          = 0x00000004,   // 2    removed when getting hit by a negative spell? aoe damage?
     AURA_INTERRUPT_FLAG_MOVE                = 0x00000008,   // 3    removed by any movement
     AURA_INTERRUPT_FLAG_TURNING             = 0x00000010,   // 4    removed by any turning
     AURA_INTERRUPT_FLAG_JUMP                = 0x00000020,   // 5    removed by entering combat
@@ -71,8 +71,8 @@ enum SpellAuraInterruptFlags
     AURA_INTERRUPT_FLAG_NOT_SHEATHED        = 0x00000200,   // 9    removed by unsheathing
     AURA_INTERRUPT_FLAG_TALK                = 0x00000400,   // 10   talk to npc / loot? action on creature
     AURA_INTERRUPT_FLAG_USE                 = 0x00000800,   // 11   mine/use/open action on gameobject
-    AURA_INTERRUPT_FLAG_ATTACK              = 0x00001000,   // 12   removed by attacking
-    AURA_INTERRUPT_FLAG_CAST                = 0x00002000,   // 13   ???
+    AURA_INTERRUPT_FLAG_ATTACK              = 0x00001000,   // 12   removed by attacking (negative spell cast?)
+    AURA_INTERRUPT_FLAG_CAST                = 0x00002000,   // 13   cast stealth breaking spell
     AURA_INTERRUPT_FLAG_UNK14               = 0x00004000,   // 14
     AURA_INTERRUPT_FLAG_TRANSFORM           = 0x00008000,   // 15   removed by transform?
     AURA_INTERRUPT_FLAG_UNK16               = 0x00010000,   // 16
@@ -295,6 +295,7 @@ class Pet;
 class Path;
 class PetAura;
 class Guardian;
+class UnitAI;
 
 struct SpellImmune
 {
@@ -328,7 +329,6 @@ enum DamageTypeToSchool
 
 enum AuraRemoveMode
 {
-    AURA_NO_REMOVE_MODE = 0,
     AURA_REMOVE_BY_DEFAULT,
     AURA_REMOVE_BY_STACK,               // change stack, single aura remove,
     AURA_REMOVE_BY_CANCEL,
@@ -422,6 +422,8 @@ enum UnitState
     UNIT_STAT_POSSESSED       = 0x00010000,
     UNIT_STAT_CHARGING        = 0x00020000,
     UNIT_STAT_JUMPING         = 0x00040000,
+    UNIT_STAT_ONVEHICLE       = 0x00080000,
+    UNIT_STAT_UNATTACKABLE    = (UNIT_STAT_IN_FLIGHT | UNIT_STAT_ONVEHICLE),
     UNIT_STAT_MOVING          = (UNIT_STAT_ROAMING | UNIT_STAT_CHASE),
     UNIT_STAT_CONTROLLED      = (UNIT_STAT_CONFUSED | UNIT_STAT_STUNNED | UNIT_STAT_FLEEING),
     UNIT_STAT_LOST_CONTROL    = (UNIT_STAT_CONTROLLED | UNIT_STAT_JUMPING | UNIT_STAT_CHARGING),
@@ -857,6 +859,7 @@ class TRINITY_DLL_SPEC Unit : public WorldObject
 
         virtual ~Unit ( );
 
+        void AddToWorld();
         void RemoveFromWorld();
 
         void CleanupsBeforeDelete();                        // used in ~Creature/~Player (or before mass creature delete to remove cross-references to already deleted units)
@@ -1142,6 +1145,10 @@ class TRINITY_DLL_SPEC Unit : public WorldObject
 
         void NearTeleportTo(float x, float y, float z, float orientation, bool casting = false);
 
+        void KnockbackFrom(float x, float y, float speedXY, float speedZ);
+        void JumpTo(float speedXY, float speedZ, bool forward = true);
+        void JumpTo(WorldObject *obj, float speedZ);
+
         void SendMonsterStop();
         void SendMonsterMove(float NewPosX, float NewPosY, float NewPosZ, uint32 Time, Player* player = NULL);
         void SendMonsterMove(float NewPosX, float NewPosY, float NewPosZ, uint32 MoveFlags, uint32 time, float speedZ, Player *player = NULL);
@@ -1149,8 +1156,6 @@ class TRINITY_DLL_SPEC Unit : public WorldObject
         void SendMonsterMoveByPath(Path const& path, uint32 start, uint32 end);
         void SendMonsterMoveWithSpeed(float x, float y, float z, uint32 transitTime = 0, Player* player = NULL);
         void SendMonsterMoveWithSpeedToCurrentDestination(Player* player = NULL);
-
-        virtual void MoveOutOfRange(Player &) {  };
 
         bool isAlive() const { return (m_deathState == ALIVE); };
         bool isDead() const { return ( m_deathState == DEAD || m_deathState == CORPSE ); };
@@ -1395,6 +1400,7 @@ class TRINITY_DLL_SPEC Unit : public WorldObject
         AuraEffect* GetAura(AuraType type, uint32 family, uint32 familyFlag1 , uint32 familyFlag2=0, uint32 familyFlag3=0, uint64 casterGUID=0);
         bool HasAuraEffect(uint32 spellId, uint8 effIndex, uint64 caster = 0) const;
         bool HasAura(uint32 spellId, uint64 caster = 0) const;
+        bool HasAura(Aura * aur) const;
         bool HasAuraType(AuraType auraType) const;
         bool HasAuraTypeWithMiscvalue(AuraType auratype, uint32 miscvalue) const;
 
@@ -1491,6 +1497,8 @@ class TRINITY_DLL_SPEC Unit : public WorldObject
         void addFollower(FollowerReference* pRef) { m_FollowingRefManager.insertFirst(pRef); }
         void removeFollower(FollowerReference* /*pRef*/ ) { /* nothing to do yet */ }
         static Unit* GetUnit(WorldObject& object, uint64 guid);
+        static Player* GetPlayer(uint64 guid);
+        static Creature* GetCreature(WorldObject& object, uint64 guid);
 
         MotionMaster* GetMotionMaster() { return &i_motionMaster; }
 
@@ -1555,6 +1563,7 @@ class TRINITY_DLL_SPEC Unit : public WorldObject
         UnitAI *i_AI, *i_disabledAI;
 
         void _UpdateSpells(uint32 time);
+        void _DeleteAuras();
 
         void _UpdateAutoRepeatSpell();
         bool m_AutoRepeatFirstCast;
@@ -1576,12 +1585,12 @@ class TRINITY_DLL_SPEC Unit : public WorldObject
         std::list<GameObject*> m_gameObj;
         bool m_isSorted;
         uint32 m_transform;
-        uint32 m_removedAuras;
 
         AuraEffectList m_modAuras[TOTAL_AURAS];
         AuraList m_scAuras;                        // casted singlecast auras
         AuraList m_interruptableAuras;
         AuraList m_ccAuras;
+        AuraList m_removedAuras;
         uint32 m_interruptMask;
 
         float m_auraModifiersGroup[UNIT_MOD_END][MODIFIER_TYPE_END];
@@ -1609,7 +1618,7 @@ class TRINITY_DLL_SPEC Unit : public WorldObject
         void SendAttackStop(Unit* victim);                  // only from AttackStop(Unit*)
         //void SendAttackStart(Unit* pVictim);                // only from Unit::AttackStart(Unit*)
 
-        bool IsTriggeredAtSpellProcEvent(Unit *pVictim, AuraEffect* aura, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, bool active, SpellProcEventEntry const*& spellProcEvent );
+        bool IsTriggeredAtSpellProcEvent(Unit *pVictim, Aura* aura, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, bool active, SpellProcEventEntry const*& spellProcEvent );
         bool HandleDummyAuraProc(   Unit *pVictim, uint32 damage, AuraEffect* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
         bool HandleObsModEnergyAuraProc(   Unit *pVictim, uint32 damage, AuraEffect* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
         bool HandleHasteAuraProc(   Unit *pVictim, uint32 damage, AuraEffect* triggeredByAura, SpellEntry const *procSpell, uint32 procFlag, uint32 procEx, uint32 cooldown);
@@ -1642,5 +1651,20 @@ class TRINITY_DLL_SPEC Unit : public WorldObject
         uint32 m_reducedThreatPercent;
         uint64 m_misdirectionTargetGUID;
 };
+
+namespace Trinity
+{
+    template<class T>
+    void RandomResizeList(std::list<T> &_list, uint32 _size)
+    {
+        while(_list.size() > _size)
+        {
+            typename std::list<T>::iterator itr = _list.begin();
+            advance(itr, urand(0, _list.size() - 1));
+            _list.erase(itr);
+        }
+    }
+}
+
 #endif
 

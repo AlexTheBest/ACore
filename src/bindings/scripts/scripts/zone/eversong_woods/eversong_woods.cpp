@@ -50,7 +50,7 @@ struct TRINITY_DLL_DECL npc_prospector_anvilwardAI : public npc_escortAI
     // Pure Virtual Functions
     void WaypointReached(uint32 i)
     {
-        Unit* player = Unit::GetUnit((*m_creature), PlayerGUID);
+        Player* player = Unit::GetPlayer(PlayerGUID);
 
         if(!player)
             return;
@@ -81,18 +81,11 @@ struct TRINITY_DLL_DECL npc_prospector_anvilwardAI : public npc_escortAI
     }
 };
 
-CreatureAI* GetAI_npc_prospector_anvilward(Creature *_Creature)
+CreatureAI* GetAI_npc_prospector_anvilward(Creature* pCreature)
 {
-    npc_prospector_anvilwardAI* thisAI = new npc_prospector_anvilwardAI(_Creature);
+    npc_prospector_anvilwardAI* thisAI = new npc_prospector_anvilwardAI(pCreature);
 
-    thisAI->AddWaypoint(0, 9294.78, -6682.51, 22.42);
-    thisAI->AddWaypoint(1, 9298.27, -6667.99, 22.42);
-    thisAI->AddWaypoint(2, 9309.63, -6658.84, 22.43);
-    thisAI->AddWaypoint(3, 9304.43, -6649.31, 26.46);
-    thisAI->AddWaypoint(4, 9298.83, -6648.00, 28.61);
-    thisAI->AddWaypoint(5, 9291.06, -6653.46, 31.83, 2500);
-    thisAI->AddWaypoint(6, 9289.08, -6660.17, 31.85, 5000);
-    thisAI->AddWaypoint(7, 9291.06, -6653.46, 31.83);
+    thisAI->FillPointMovementListForCreature();
 
     return (CreatureAI*)thisAI;
 }
@@ -346,7 +339,7 @@ struct TRINITY_DLL_DECL master_kelerun_bloodmournAI : public ScriptedAI
         if ( timer < diff ) {
 
           Creature* paladinSpawn;
-          paladinSpawn = ((Creature*)Unit::GetUnit((*m_creature), paladinGuid[paladinPhase]));
+          paladinSpawn = (Unit::GetCreature((*m_creature), paladinGuid[paladinPhase]));
             if ( paladinSpawn ) {
                ((npc_secondTrialAI*)paladinSpawn->AI())->Activate(m_creature->GetGUID());
 
@@ -446,7 +439,7 @@ void npc_secondTrialAI::JustDied(Unit* Killer) {
       if (Killer->GetTypeId() == TYPEID_PLAYER)
       {
           Creature* Summoner;
-          Summoner = ((Creature*)Unit::GetUnit((*m_creature), summonerGuid));
+          Summoner = (Unit::GetCreature((*m_creature), summonerGuid));
 
           if ( Summoner )
             ((master_kelerun_bloodmournAI*)Summoner->AI())->SecondTrialKill();
@@ -567,7 +560,7 @@ struct TRINITY_DLL_DECL npc_apprentice_mirvedaAI : public ScriptedAI
     {
         if (PlayerGUID)
         {
-            Unit* player = Unit::GetUnit((*m_creature), PlayerGUID);
+            Player* player = Unit::GetPlayer(PlayerGUID);
             if (player)
                 ((Player*)player)->FailQuest(QUEST_UNEXPECTED_RESULT);
         }
@@ -579,7 +572,7 @@ struct TRINITY_DLL_DECL npc_apprentice_mirvedaAI : public ScriptedAI
         {
             if (PlayerGUID)
             {
-                Unit* player = Unit::GetUnit((*m_creature), PlayerGUID);
+                Player* player = Unit::GetPlayer(PlayerGUID);
                 if(player)
                     ((Player*)player)->CompleteQuest(QUEST_UNEXPECTED_RESULT);
             }
@@ -683,7 +676,7 @@ struct TRINITY_DLL_DECL npc_infused_crystalAI : public Scripted_NoMovementAI
     {
         if (PlayerGUID && !Completed)
         {
-            Unit* player = Unit::GetUnit((*m_creature), PlayerGUID);
+            Player* player = Unit::GetPlayer(PlayerGUID);
             if (player)
                 ((Player*)player)->FailQuest(QUEST_POWERING_OUR_DEFENSES);
         }
@@ -697,7 +690,7 @@ struct TRINITY_DLL_DECL npc_infused_crystalAI : public Scripted_NoMovementAI
             Completed = true;
             if (PlayerGUID)
             {
-                Unit* player = Unit::GetUnit((*m_creature), PlayerGUID);
+                Player* player = Unit::GetPlayer(PlayerGUID);
                 if(player)
                     ((Player*)player)->CompleteQuest(QUEST_POWERING_OUR_DEFENSES);
             }

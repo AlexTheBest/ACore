@@ -134,7 +134,7 @@ struct TRINITY_DLL_DECL boss_fathomlord_karathressAI : public ScriptedAI
 
         if(RAdvisors[i])
         {
-            pAdvisor = ((Creature*)Unit::GetUnit((*m_creature), RAdvisors[i]));
+            pAdvisor = (Unit::GetCreature((*m_creature), RAdvisors[i]));
             if(pAdvisor && !pAdvisor->isAlive())
             {
             pAdvisor->Respawn();
@@ -205,7 +205,7 @@ struct TRINITY_DLL_DECL boss_fathomlord_karathressAI : public ScriptedAI
         DoScriptText(SAY_DEATH, m_creature);
 
         if (pInstance)
-            pInstance->SetData(DATA_FATHOMLORDKARATHRESSEVENT, NOT_STARTED);
+            pInstance->SetData(DATA_FATHOMLORDKARATHRESSEVENT, DONE);
 
         //support for quest 10944
         m_creature->SummonCreature(SEER_OLUM, OLUM_X, OLUM_Y, OLUM_Z, OLUM_O, TEMPSUMMON_TIMED_DESPAWN, 3600000);
@@ -280,7 +280,7 @@ struct TRINITY_DLL_DECL boss_fathomlord_karathressAI : public ScriptedAI
             for(uint8 i = 0; i < 4; ++i)
                 if(Advisors[i])
                 {
-                    Advisor = ((Creature*)Unit::GetUnit(*m_creature, Advisors[i]));
+                    Advisor = (Unit::GetCreature(*m_creature, Advisors[i]));
                     if(Advisor)
                     {
                         if(Advisor->isAlive())
@@ -331,7 +331,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_sharkkisAI : public ScriptedAI
 
         pet = false;
 
-        Creature *Pet = (Creature*) Unit::GetUnit(*m_creature, SummonedPet);
+        Creature *Pet = Unit::GetCreature(*m_creature, SummonedPet);
         if( Pet && Pet->isAlive() )
         {
             Pet->DealDamage( Pet, Pet->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false );
@@ -348,7 +348,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_sharkkisAI : public ScriptedAI
         if (pInstance)
         {
             Creature *Karathress = NULL;
-            Karathress = (Creature*)(Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_KARATHRESS)));
+            Karathress = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_KARATHRESS)));
 
             if (Karathress)
                 ((boss_fathomlord_karathressAI*)Karathress->AI())->EventSharkkisDeath();
@@ -407,7 +407,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_sharkkisAI : public ScriptedAI
         if(TheBeastWithin_Timer < diff)
         {
             DoCast(m_creature, SPELL_THE_BEAST_WITHIN);
-            Creature *Pet = (Creature*) Unit::GetUnit(*m_creature, SummonedPet);
+            Creature *Pet = Unit::GetCreature(*m_creature, SummonedPet);
             if( Pet && Pet->isAlive() )
             {
                 Pet->CastSpell( Pet, SPELL_PET_ENRAGE, true );
@@ -477,7 +477,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_tidalvessAI : public ScriptedAI
         if (pInstance)
         {
             Creature *Karathress = NULL;
-            Karathress = (Creature*)(Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_KARATHRESS)));
+            Karathress = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_KARATHRESS)));
 
             if (Karathress)
                 if(!m_creature->isAlive() && Karathress)
@@ -592,7 +592,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_caribdisAI : public ScriptedAI
         if (pInstance)
         {
             Creature *Karathress = NULL;
-            Karathress = (Creature*)(Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_KARATHRESS)));
+            Karathress = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_KARATHRESS)));
 
             if (Karathress)
                 if(!m_creature->isAlive() && Karathress)

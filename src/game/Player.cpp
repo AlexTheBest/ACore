@@ -340,7 +340,8 @@ Player::Player (WorldSession *session): Unit(), m_achievementMgr(this), m_reputa
 
     m_atLoginFlags = AT_LOGIN_NONE;
 
-    m_dontMove = false;
+    mSemaphoreTeleport_Near = false;
+    mSemaphoreTeleport_Far = false;
 
     pTrader = 0;
     ClearTrade();
@@ -466,8 +467,6 @@ Player::Player (WorldSession *session): Unit(), m_achievementMgr(this), m_reputa
     m_declinedname = NULL;
 
     m_isActive = true;
-
-    m_farsightVision = false;
 
     m_runes = NULL;
 
@@ -1645,9 +1644,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
         m_movementInfo.t_time = 0;
     }
 
-    SetSemaphoreTeleport(true);
-
-    // The player was ported to another map and looses the duel immediatly.
+    // The player was ported to another map and looses the duel immediately.
     // We have to perform this check before the teleport, otherwise the
     // ObjectAccessor won't find the flag.
     if (duel && GetMapId()!=mapid)
@@ -1662,72 +1659,29 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
 
     if ((GetMapId() == mapid) && (!m_transport))
     {
-        // prepare zone change detect
-        uint32 old_zone = GetZoneId();
-
-        // near teleport
-        if(!GetSession()->PlayerLogout())
-        {
-            WorldPacket data;
-            BuildTeleportAckMsg(&data, x, y, z, orientation);
-            GetSession()->SendPacket(&data);
-            SetPosition( x, y, z, orientation, true);
-        }
-        else
-            // this will be used instead of the current location in SaveToDB
-            m_teleport_dest = WorldLocation(mapid, x, y, z, orientation);
-
-        SetFallInformation(0, z);
-
-        //BuildHeartBeatMsg(&data);
-        //SendMessageToSet(&data, true);
         if (!(options & TELE_TO_NOT_UNSUMMON_PET))
         {
-            //same map, only remove pet if out of range
-            if(pet && !IsWithinDistInMap(pet, OWNER_MAX_DISTANCE))
-            {
-                if(pet->isControlled() && !pet->isTemporarySummoned() )
-                    m_temporaryUnsummonedPetNumber = pet->GetCharmInfo()->GetPetNumber();
-                else
-                    m_temporaryUnsummonedPetNumber = 0;
-
-                RemovePet(pet, PET_SAVE_NOT_IN_SLOT);
-            }
+            //same map, only remove pet if out of range for new position
+            if(pet && pet->GetDistance(x,y,z) >= OWNER_MAX_DISTANCE)
+                UnsummonPetTemporaryIfAny();
         }
 
         if(!(options & TELE_TO_NOT_LEAVE_COMBAT))
             CombatStop();
 
-        if (!(options & TELE_TO_NOT_UNSUMMON_PET))
-        {
-            // resummon pet
-            if(pet && m_temporaryUnsummonedPetNumber)
-            {
-                Pet* NewPet = new Pet(this);
-                if(!NewPet->LoadPetFromDB(this, 0, m_temporaryUnsummonedPetNumber, true))
-                    delete NewPet;
+        // this will be used instead of the current location in SaveToDB
+        m_teleport_dest = WorldLocation(mapid, x, y, z, orientation);
+        SetFallInformation(0, z);
 
-                m_temporaryUnsummonedPetNumber = 0;
-            }
-        }
-
-        uint32 newzone, newarea;
-        GetZoneAndAreaId(newzone,newarea);
-
+        // code for finish transfer called in WorldSession::HandleMovementOpcodes() 
+        // at client packet MSG_MOVE_TELEPORT_ACK
+        SetSemaphoreTeleportNear(true);
+        // near teleport, triggering send MSG_MOVE_TELEPORT_ACK from client at landing
         if(!GetSession()->PlayerLogout())
         {
-            // don't reset teleport semaphore while logging out, otherwise m_teleport_dest won't be used in Player::SaveToDB
-            SetSemaphoreTeleport(false);
-
-            UpdateZone(newzone,newarea);
-        }
-
-        // new zone
-        if(old_zone != newzone)
-        {
-            // honorless target
-            if(pvpInfo.inHostileArea)
-                CastSpell(this, 2479, true);
+            WorldPacket data;
+            BuildTeleportAckMsg(&data, x, y, z, orientation);
+            GetSession()->SendPacket(&data);
         }
     }
     else
@@ -1739,10 +1693,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
         // Check enter rights before map getting to avoid creating instance copy for player
         // this check not dependent from map instance copy and same for all instance copies of selected map
         if (!MapManager::Instance().CanPlayerEnter(mapid, this))
-        {
-            SetSemaphoreTeleport(false);
             return false;
-        }
 
         // If the map is not created, assume it is possible to enter it.
         // It will be created in the WorldPortAck.
@@ -1767,15 +1718,7 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
 
             // remove pet on map change
             if (pet)
-            {
-                //leaving map -> delete pet right away (doing this later will cause problems)
-                if(pet->isControlled() && !pet->isTemporarySummoned())
-                    m_temporaryUnsummonedPetNumber = pet->GetCharmInfo()->GetPetNumber();
-                else
-                    m_temporaryUnsummonedPetNumber = 0;
-
-                RemovePet(pet, PET_SAVE_NOT_IN_SLOT);
-            }
+                UnsummonPetTemporaryIfAny();
 
             // remove all dyn objects
             RemoveAllDynObjects();
@@ -1835,10 +1778,8 @@ bool Player::TeleportTo(uint32 mapid, float x, float y, float z, float orientati
             RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_CHANGE_MAP | AURA_INTERRUPT_FLAG_MOVE | AURA_INTERRUPT_FLAG_TURNING);
 
             // move packet sent by client always after far teleport
-            // SetPosition(final_x, final_y, final_z, final_o, true);
-            SetDontMove(true);
-
             // code for finish transfer to new map called in WorldSession::HandleMoveWorldportAckOpcode at client packet
+            SetSemaphoreTeleportFar(true);
         }
         else
             return false;
@@ -2474,7 +2415,7 @@ void Player::InitStatsForLevel(bool reapplyMods)
     SetUInt32Value(PLAYER_FIELD_MOD_TARGET_PHYSICAL_RESISTANCE,0);
     for(int i = 0; i < MAX_SPELL_SCHOOL; ++i)
     {
-        SetFloatValue(UNIT_FIELD_POWER_COST_MODIFIER+i,0.0f);
+        SetUInt32Value(UNIT_FIELD_POWER_COST_MODIFIER+i,0);
         SetFloatValue(UNIT_FIELD_POWER_COST_MULTIPLIER+i,0.0f);
     }
     // Reset no reagent cost field
@@ -3299,7 +3240,6 @@ void Player::_LoadSpellCooldowns(QueryResult *result)
     // some cooldowns can be already set at aura loading...
 
     //QueryResult *result = CharacterDatabase.PQuery("SELECT spell,item,time FROM character_spell_cooldown WHERE guid = '%u'",GetGUIDLow());
-
     if(result)
     {
         time_t curTime = time(NULL);
@@ -4688,24 +4628,24 @@ float Player::GetRatingBonusValue(CombatRating cr) const
 
 uint32 Player::GetMeleeCritDamageReduction(uint32 damage) const
 {
-    float melee  = GetRatingBonusValue(CR_CRIT_TAKEN_MELEE)*2.0f;
-    if (melee>25.0f) melee = 25.0f;
+    float melee  = GetRatingBonusValue(CR_CRIT_TAKEN_MELEE)*2.2f;
+    if (melee>33.0f) melee = 33.0f;
     return uint32 (melee * damage /100.0f);
 }
 
 uint32 Player::GetRangedCritDamageReduction(uint32 damage) const
 {
-    float ranged = GetRatingBonusValue(CR_CRIT_TAKEN_RANGED)*2.0f;
-    if (ranged>25.0f) ranged=25.0f;
+    float ranged = GetRatingBonusValue(CR_CRIT_TAKEN_RANGED)*2.2f;
+    if (ranged>33.0f) ranged=33.0f;
     return uint32 (ranged * damage /100.0f);
 }
 
 uint32 Player::GetSpellCritDamageReduction(uint32 damage) const
 {
-    float spell = GetRatingBonusValue(CR_CRIT_TAKEN_SPELL)*2.0f;
-    // In wow script resilience limited to 25%
-    if (spell>25.0f)
-        spell = 25.0f;
+    float spell = GetRatingBonusValue(CR_CRIT_TAKEN_SPELL)*2.2f;
+    // In wow script resilience limited to 33%
+    if (spell>33.0f)
+        spell = 33.0f;
     return uint32 (spell * damage / 100.0f);
 }
 
@@ -5489,11 +5429,6 @@ void Player::removeActionButton(uint8 button)
     sLog.outDetail( "Action Button '%u' Removed from Player '%u'", button, GetGUIDLow() );
 }
 
-void Player::SetDontMove(bool dontMove)
-{
-    m_dontMove = dontMove;
-}
-
 bool Player::SetPosition(float x, float y, float z, float orientation, bool teleport)
 {
     // prevent crash when a bad coord is sent by the client
@@ -5720,6 +5655,9 @@ int32 Player::CalculateReputationGain(uint32 creatureOrQuestLevel, int32 rep, bo
 void Player::RewardReputation(Unit *pVictim, float rate)
 {
     if(!pVictim || pVictim->GetTypeId() == TYPEID_PLAYER)
+        return;
+
+    if(((Creature*)pVictim)->IsReputationGainDisabled())
         return;
 
     ReputationOnKillEntry const* Rep = objmgr.GetReputationOnKilEntry(((Creature*)pVictim)->GetCreatureInfo()->Entry);
@@ -6273,7 +6211,7 @@ void Player::DuelComplete(DuelCompleteType type)
     if(!duel)
         return;
 
-    sLog.outDebug("Dual Complete %s %s", GetName(), duel->opponent->GetName());
+    sLog.outDebug("Duel Complete %s %s", GetName(), duel->opponent->GetName());
 
     WorldPacket data(SMSG_DUEL_COMPLETE, (1));
     data << (uint8)((type != DUEL_INTERUPTED) ? 1 : 0);
@@ -10256,7 +10194,7 @@ Item* Player::StoreItem( ItemPosCountVec const& dest, Item* pItem, bool update )
         return NULL;
 
     Item* lastItem = pItem;
-
+    uint32 entry = pItem->GetEntry();
     for(ItemPosCountVec::const_iterator itr = dest.begin(); itr != dest.end(); )
     {
         uint16 pos = itr->pos;
@@ -10272,7 +10210,7 @@ Item* Player::StoreItem( ItemPosCountVec const& dest, Item* pItem, bool update )
 
         lastItem = _StoreItem(pos,pItem,count,true,update);
     }
-
+    GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_OWN_ITEM, entry);
     return lastItem;
 }
 
@@ -12744,6 +12682,8 @@ void Player::RewardQuest( Quest const *pQuest, uint32 reward, Object* questGiver
         SendQuestReward( pQuest, XP, questGiver );
 
     if (q_status.uState != QUEST_NEW) q_status.uState = QUEST_CHANGED;
+    if (pQuest->GetZoneOrSort() > 0)
+        GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_COMPLETE_QUESTS_IN_ZONE, pQuest->GetZoneOrSort());
     GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_COMPLETE_QUEST_COUNT);
     GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_COMPLETE_QUEST);
 
@@ -13398,7 +13338,6 @@ void Player::ItemAddedQuestCheck( uint32 entry, uint32 count )
         }
     }
     UpdateForQuestsGO();
-    GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_OWN_ITEM, entry);
 }
 
 void Player::ItemRemovedQuestCheck( uint32 entry, uint32 count )
@@ -14414,10 +14353,10 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder )
     uint32 extraflags = fields[25].GetUInt32();
 
     m_stableSlots = fields[26].GetUInt32();
-    if(m_stableSlots > 4)
+    if(m_stableSlots > MAX_PET_STABLES)
     {
-        sLog.outError("Player can have not more 4 stable slots, but have in DB %u",uint32(m_stableSlots));
-        m_stableSlots = 4;
+        sLog.outError("Player can have not more %u stable slots, but have in DB %u",MAX_PET_STABLES,uint32(m_stableSlots));
+        m_stableSlots = MAX_PET_STABLES;
     }
 
     m_atLoginFlags = fields[27].GetUInt32();
@@ -15841,17 +15780,20 @@ void Player::_SaveAuras()
     AuraMap const& auras = GetAuras();
     for(AuraMap::const_iterator itr = auras.begin(); itr !=auras.end() ; ++itr)
     {
-        // skip all auras from spell that apply at cast SPELL_AURA_MOD_SHAPESHIFT or pet area auras.
-        // do not save single target auras (unless they were cast by the player)
+        // skip:
+        // area auras or single cast auras casted by other unit
+        // passive auras and stances
         if (itr->second->IsPassive()
-            || (itr->second->GetCasterGUID() != GetGUID() && itr->second->IsSingleTarget())
+            || itr->second->IsAuraType(SPELL_AURA_MOD_SHAPESHIFT)
+            || itr->second->IsAuraType(SPELL_AURA_MOD_STEALTH)
             || itr->second->IsRemovedOnShapeLost())
             continue;
-        SpellEntry const *spellInfo = itr->second->GetSpellProto();
-        for (uint8 i=0;i<MAX_SPELL_EFFECTS;++i)
-            if (spellInfo->Effect[i] == SPELL_AURA_MOD_SHAPESHIFT ||
-                spellInfo->Effect[i] == SPELL_AURA_MOD_STEALTH )
+        bool isCaster = itr->second->GetCasterGUID() == GetGUID();
+        if (!isCaster)
+            if (itr->second->IsSingleTarget()
+                || itr->second->IsAreaAura())
                 continue;
+
         int32 amounts[MAX_SPELL_EFFECTS];
         for (uint8 i=0;i<MAX_SPELL_EFFECTS;++i)
         {
@@ -16953,7 +16895,7 @@ void Player::RemoveSpellMods(Spell const* spell)
 
             if (mod && mod->charges == -1 && (mod->lastAffected == spell || mod->lastAffected==NULL))
             {
-                RemoveAurasDueToSpell(mod->spellId);
+                RemoveAurasDueToSpell(mod->spellId, 0, AURA_REMOVE_BY_EXPIRE);
                 if (m_spellMods[i].empty())
                     break;
                 else
@@ -18697,7 +18639,7 @@ void Player::SendAurasForTarget(Unit *target)
         // level
         data << aura->m_auraLevel;
         // charges
-        data << uint8(aura->GetStackAmount() ? aura->GetStackAmount() : aura->GetAuraCharges());
+        data << uint8(aura->GetStackAmount()>1 ? aura->GetStackAmount() : aura->GetAuraCharges());
 
         if(!(aura->m_auraFlags & AFLAG_CASTER))
         {
@@ -19534,7 +19476,7 @@ void Player::UpdateUnderwaterState( Map* m, float x, float y, float z )
     }
 
     // Allow travel in dark water on taxi or transport
-    if (liquid_status.type & MAP_LIQUID_TYPE_DARK_WATER && !isInFlight() && !(GetUnitMovementFlags()&MOVEMENTFLAG_ONTRANSPORT))
+    if ((liquid_status.type & MAP_LIQUID_TYPE_DARK_WATER) && !isInFlight() && !GetTransport())
         m_MirrorTimerFlags |= UNDERWARER_INDARKWATER;
     else
         m_MirrorTimerFlags &= ~UNDERWARER_INDARKWATER;
@@ -19645,14 +19587,17 @@ WorldObject* Player::GetViewpoint() const
 
 bool Player::CanUseBattleGroundObject()
 {
+    // TODO : some spells gives player ForceReaction to one faction (ReputationMgr::ApplyForceReaction)
+    // maybe gameobject code should handle that ForceReaction usage
+    // BUG: sometimes when player clicks on flag in AB - client won't send gameobject_use, only gameobject_report_use packet
     return ( //InBattleGround() &&                          // in battleground - not need, check in other cases
              //!IsMounted() && - not correct, player is dismounted when he clicks on flag
-             //i'm not sure if these two are correct, because invisible players should get visible when they click on flag
+             //player cannot use object when he is invulnerable (immune)
              !isTotalImmune() &&                            // not totally immune
+             //i'm not sure if these two are correct, because invisible players should get visible when they click on flag
              !HasStealthAura() &&                           // not stealthed
              !HasInvisibilityAura() &&                      // not invisible
              !HasAura(SPELL_RECENTLY_DROPPED_FLAG) &&    // can't pickup
-             //TODO player cannot use object when he is invulnerable (immune) - (ice block, divine shield, divine protection, divine intervention ...)
              isAlive()                                      // live player
            );
 }
@@ -19744,36 +19689,30 @@ void Player::EnterVehicle(Vehicle *vehicle)
 
     StopCastingCharm();
     StopCastingBindSight();
+
     SetCharm(vehicle, true);
     SetViewpoint(vehicle, true);
     SetMover(vehicle);
-
     SetClientControl(vehicle, 1);                           // redirect controls to vehicle
+
+    addUnitState(UNIT_STAT_ONVEHICLE);
+    Relocate(vehicle->GetPositionX(), vehicle->GetPositionY(), vehicle->GetPositionZ(), vehicle->GetOrientation());
+    AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
+    m_movementInfo.t_x = veSeat->m_attachmentOffsetX;
+    m_movementInfo.t_y = veSeat->m_attachmentOffsetY;
+    m_movementInfo.t_z = veSeat->m_attachmentOffsetZ;
+    m_movementInfo.t_o = 0;
+    m_movementInfo.t_time = getMSTime();
+    m_movementInfo.t_seat = 0;
 
     WorldPacket data(SMSG_ON_CANCEL_EXPECTED_RIDE_VEHICLE_AURA, 0);
     GetSession()->SendPacket(&data);
 
-    data.Initialize(MSG_MOVE_TELEPORT_ACK, 30);
-    data.append(GetPackGUID());
-    data << uint32(0);                                      // counter?
-    data << uint32(MOVEMENTFLAG_ONTRANSPORT);               // transport
-    data << uint16(0);                                      // special flags
-    data << uint32(getMSTime());                            // time
-    data << vehicle->GetPositionX();                        // x
-    data << vehicle->GetPositionY();                        // y
-    data << vehicle->GetPositionZ();                        // z
-    data << vehicle->GetOrientation();                      // o
-    // transport part, TODO: load/calculate seat offsets
-    data << uint64(vehicle->GetGUID());                     // transport guid
-    data << float(veSeat->m_attachmentOffsetX);             // transport offsetX
-    data << float(veSeat->m_attachmentOffsetY);             // transport offsetY
-    data << float(veSeat->m_attachmentOffsetZ);             // transport offsetZ
-    data << float(0);                                       // transport orientation
-    data << uint32(getMSTime());                            // transport time
-    data << uint8(0);                                       // seat
-    // end of transport part
-    data << uint32(0);                                      // fall time
+    BuildTeleportAckMsg(&data, GetPositionX(), GetPositionY(), GetPositionZ(), GetOrientation());
     GetSession()->SendPacket(&data);
+
+    BuildHeartBeatMsg(&data);
+    SendMessageToSet(&data, false);
 
     VehicleSpellInitialize();
 }
@@ -19787,21 +19726,24 @@ void Player::ExitVehicle(Vehicle *vehicle)
     SetCharm(vehicle, false);
     SetViewpoint(vehicle, false);
     SetMover(this);
-
     SetClientControl(vehicle, 0);
 
-    WorldPacket data(MSG_MOVE_TELEPORT_ACK, 30);
-    data.append(GetPackGUID());
-    data << uint32(0);                                      // counter?
-    data << uint32(MOVEMENTFLAG_FLY_UNK1);                  // fly unk
-    data << uint16(0x40);                                   // special flags
-    data << uint32(getMSTime());                            // time
-    data << vehicle->GetPositionX();                        // x
-    data << vehicle->GetPositionY();                        // y
-    data << vehicle->GetPositionZ();                        // z
-    data << vehicle->GetOrientation();                      // o
-    data << uint32(0);                                      // fall time
+    clearUnitState(UNIT_STAT_ONVEHICLE);
+    Relocate(vehicle->GetPositionX(), vehicle->GetPositionY(), vehicle->GetPositionZ(), vehicle->GetOrientation());
+    RemoveUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
+    m_movementInfo.t_x = 0;
+    m_movementInfo.t_y = 0;
+    m_movementInfo.t_z = 0;
+    m_movementInfo.t_o = 0;
+    m_movementInfo.t_time = 0;
+    m_movementInfo.t_seat = 0;
+
+    WorldPacket data;
+    BuildTeleportAckMsg(&data, GetPositionX(), GetPositionY(), GetPositionZ(), GetOrientation());
     GetSession()->SendPacket(&data);
+
+    BuildHeartBeatMsg(&data);
+    SendMessageToSet(&data, false);
 
     data.Initialize(SMSG_PET_SPELLS, 8+4);
     data << uint64(0);
@@ -19809,7 +19751,11 @@ void Player::ExitVehicle(Vehicle *vehicle)
     GetSession()->SendPacket(&data);
 
     // only for flyable vehicles?
-    CastSpell(this, 45472, true);                           // Parachute
+    //CastSpell(this, 45472, true);                           // Parachute
+
+    //if(!vehicle->GetDBTableGUIDLow())
+    if(vehicle->GetOwnerGUID() == GetGUID())
+        vehicle->Dismiss();
 }
 
 bool Player::isTotalImmune()
@@ -20162,7 +20108,7 @@ void Player::HandleFall(MovementInfo const& movementInfo)
 {
     // calculate total z distance of the fall
     float z_diff = m_lastFallZ - movementInfo.z;
-    sLog.outDebug("zDiff = %f", z_diff);
+    //sLog.outDebug("zDiff = %f", z_diff);
 
     //Players with low fall distance, Feather Fall or physical immunity (charges used) are ignored
     // 14.57 can be calculated by resolving damageperc formular below to 0
@@ -20474,4 +20420,38 @@ void Player::UpdateFallInformationIfNeed( MovementInfo const& minfo,uint16 opcod
 {
     if (m_lastFallTime >= minfo.fallTime || m_lastFallZ <=minfo.z || opcode == MSG_MOVE_FALL_LAND)
         SetFallInformation(minfo.fallTime, minfo.z);
+}
+
+void Player::UnsummonPetTemporaryIfAny()
+{
+    Pet* pet = GetPet();
+    if(!pet)
+        return;
+
+    if(!m_temporaryUnsummonedPetNumber && pet->isControlled() && !pet->isTemporarySummoned() )
+    {
+        m_temporaryUnsummonedPetNumber = pet->GetCharmInfo()->GetPetNumber();
+        m_oldpetspell = pet->GetUInt32Value(UNIT_CREATED_BY_SPELL);
+    }
+
+    RemovePet(pet, PET_SAVE_AS_CURRENT);
+}
+
+void Player::ResummonPetTemporaryUnSummonedIfAny()
+{
+    if(!m_temporaryUnsummonedPetNumber)
+        return;
+
+    // not resummon in not appropriate state
+    if(IsPetNeedBeTemporaryUnsummoned())
+        return;
+
+    if(GetPetGUID())
+        return;
+
+    Pet* NewPet = new Pet(this);
+    if(!NewPet->LoadPetFromDB(this, 0, m_temporaryUnsummonedPetNumber, true))
+        delete NewPet;
+
+    m_temporaryUnsummonedPetNumber = 0;
 }

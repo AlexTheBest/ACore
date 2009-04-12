@@ -28,7 +28,6 @@
 #include "GameSystem/GridReference.h"
 #include "ObjectDefines.h"
 #include "GridDefines.h"
-#include "CreatureAI.h"
 #include "Map.h"
 
 #include <set>
@@ -106,6 +105,7 @@ class InstanceData;
 class GameObject;
 class TempSummon;
 class Vehicle;
+class CreatureAI;
 
 typedef UNORDERED_MAP<Player*, UpdateData> UpdateDataMapType;
 
@@ -127,7 +127,7 @@ class TRINITY_DLL_SPEC Object
     public:
         virtual ~Object ( );
 
-        const bool& IsInWorld() const { return m_inWorld; }
+        const bool IsInWorld() const { return m_inWorld; }
         virtual void AddToWorld()
         {
             if(m_inWorld)
@@ -455,6 +455,7 @@ class TRINITY_DLL_SPEC WorldObject : public Object
         float GetDistanceSq(const float &x, const float &y, const float &z) const;
         float GetDistance2d(const WorldObject* obj) const;
         float GetDistance2d(const float x, const float y) const;
+        float GetExactDistance2d(const float x, const float y) const;
         float GetDistanceZ(const WorldObject* obj) const;
         bool IsInMap(const WorldObject* obj) const
         {
@@ -474,8 +475,6 @@ class TRINITY_DLL_SPEC WorldObject : public Object
         virtual void SendMessageToSetInRange(WorldPacket *data, float dist, bool self, bool to_possessor = true);
         void BuildHeartBeatMsg( WorldPacket *data ) const;
         void BuildTeleportAckMsg( WorldPacket *data, float x, float y, float z, float ang) const;
-        bool IsBeingTeleported() { return mSemaphoreTeleport; }
-        void SetSemaphoreTeleport(bool semphsetting) { mSemaphoreTeleport = semphsetting; }
 
         void MonsterSay(const char* text, uint32 language, uint64 TargetGuid);
         void MonsterYell(const char* text, uint32 language, uint64 TargetGuid);
@@ -538,8 +537,6 @@ class TRINITY_DLL_SPEC WorldObject : public Object
         float m_positionY;
         float m_positionZ;
         float m_orientation;
-
-        bool mSemaphoreTeleport;
 };
 #endif
 

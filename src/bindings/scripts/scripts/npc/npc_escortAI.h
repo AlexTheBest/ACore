@@ -7,6 +7,8 @@
 
 #define DEFAULT_MAX_PLAYER_DISTANCE 50
 
+extern UNORDERED_MAP<uint32, std::vector<PointMovement> > PointMovementMap;
+
 struct Escort_Waypoint
 {
     Escort_Waypoint(uint32 _id, float _x, float _y, float _z, uint32 _w)
@@ -68,6 +70,7 @@ struct TRINITY_DLL_DECL npc_escortAI : public ScriptedAI
         void SetCanMelee(bool usemelee) { CanMelee = usemelee; }
         void SetDespawnAtEnd(bool despawn) { DespawnAtEnd = despawn; }
         void SetDespawnAtFar(bool despawn) { DespawnAtFar = despawn; }
+        bool GetAttack() { return Attack; }//used in EnterEvadeMode override
 
     // EscortAI variables
     protected:

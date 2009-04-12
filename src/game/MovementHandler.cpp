@@ -41,6 +41,10 @@ void WorldSession::HandleMoveWorldportAckOpcode( WorldPacket & /*recv_data*/ )
 
 void WorldSession::HandleMoveWorldportAckOpcode()
 {
+    // ignore unexpected far teleports
+    if(!GetPlayer()->IsBeingTeleportedFar())
+        return;
+
     // get the teleport destination
     WorldLocation &loc = GetPlayer()->GetTeleportDest();
 
@@ -59,7 +63,7 @@ void WorldSession::HandleMoveWorldportAckOpcode()
     if(GetPlayer()->m_InstanceValid == false && !mInstance)
         GetPlayer()->m_InstanceValid = true;
 
-    GetPlayer()->SetSemaphoreTeleport(false);
+    GetPlayer()->SetSemaphoreTeleportFar(false);
 
     // relocate the player to the teleport destination
     GetPlayer()->SetMapId(loc.mapid);
@@ -79,7 +83,6 @@ void WorldSession::HandleMoveWorldportAckOpcode()
     {
         sLog.outDebug("WORLD: teleport of player %s (%d) to location %d,%f,%f,%f,%f failed", GetPlayer()->GetName(), GetPlayer()->GetGUIDLow(), loc.mapid, loc.x, loc.y, loc.z, loc.o);
         // teleport the player home
-        GetPlayer()->SetDontMove(false);
         if(!GetPlayer()->TeleportTo(GetPlayer()->m_homebindMapId, GetPlayer()->m_homebindX, GetPlayer()->m_homebindY, GetPlayer()->m_homebindZ, GetPlayer()->GetOrientation()))
         {
             // the player must always be able to teleport home
@@ -116,7 +119,6 @@ void WorldSession::HandleMoveWorldportAckOpcode()
         if(!_player->InBattleGround())
         {
             // short preparations to continue flight
-            GetPlayer()->SetDontMove(false);
             FlightPathMovementGenerator* flight = (FlightPathMovementGenerator*)(GetPlayer()->GetMotionMaster()->top());
             flight->Initialize(*GetPlayer());
             return;
@@ -157,16 +159,53 @@ void WorldSession::HandleMoveWorldportAckOpcode()
         GetPlayer()->CastSpell(GetPlayer(), 2479, true);
 
     // resummon pet
-    if(GetPlayer()->m_temporaryUnsummonedPetNumber)
-    {
-        Pet* NewPet = new Pet(GetPlayer());
-        if(!NewPet->LoadPetFromDB(GetPlayer(), 0, GetPlayer()->m_temporaryUnsummonedPetNumber, true))
-            delete NewPet;
+    GetPlayer()->ResummonPetTemporaryUnSummonedIfAny();
+}
 
-        GetPlayer()->m_temporaryUnsummonedPetNumber = 0;
+void WorldSession::HandleMoveTeleportAck(WorldPacket& recv_data)
+{
+    CHECK_PACKET_SIZE(recv_data,8+4);
+
+    sLog.outDebug("MSG_MOVE_TELEPORT_ACK");
+    uint64 guid;
+    uint32 flags, time;
+
+    recv_data >> guid;
+    recv_data >> flags >> time;
+    DEBUG_LOG("Guid " I64FMTD,guid);
+    DEBUG_LOG("Flags %u, time %u",flags, time/IN_MILISECONDS);
+
+    Unit *mover = _player->m_mover;
+    Player *plMover = mover->GetTypeId()==TYPEID_PLAYER ? (Player*)mover : NULL;
+
+    if(!plMover || !plMover->IsBeingTeleportedNear())
+        return;
+
+    if(guid != plMover->GetGUID())
+        return;
+
+    plMover->SetSemaphoreTeleportNear(false);
+
+    uint32 old_zone = plMover->GetZoneId();
+
+    WorldLocation const& dest = plMover->GetTeleportDest();
+
+    plMover->SetPosition(dest.x, dest.y, dest.z, dest.o, true);
+
+    uint32 newzone, newarea;
+    plMover->GetZoneAndAreaId(newzone,newarea);
+    plMover->UpdateZone(newzone,newarea);
+
+    // new zone
+    if(old_zone != newzone)
+    {
+        // honorless target
+        if(plMover->pvpInfo.inHostileArea)
+            plMover->CastSpell(plMover, 2479, true);
     }
 
-    GetPlayer()->SetDontMove(false);
+    // resummon pet
+    GetPlayer()->ResummonPetTemporaryUnSummonedIfAny();
 }
 
 void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
@@ -174,7 +213,11 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
     uint32 opcode = recv_data.GetOpcode();
     //sLog.outDebug("WORLD: Recvd %s (%u, 0x%X) opcode", LookupOpcodeName(opcode), opcode, opcode);
 
-    if(GetPlayer()->GetDontMove())
+    Unit *mover = _player->m_mover;
+    Player *plMover = mover->GetTypeId()==TYPEID_PLAYER ? (Player*)mover : NULL;
+
+    // ignore, waiting processing in WorldSession::HandleMoveWorldportAckOpcode and WorldSession::HandleMoveTeleportAck
+    if(plMover && plMover->IsBeingTeleported())
         return;
 
     /* extract packet */
@@ -191,9 +234,6 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
 
     if (!Trinity::IsValidMapCoord(movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o))
         return;
-
-    Unit *mover = _player->m_mover;
-    Player *plMover = mover->GetTypeId()==TYPEID_PLAYER ? (Player*)mover : NULL;
 
     /* handle special cases */
     if (movementInfo.flags & MOVEMENTFLAG_ONTRANSPORT)
@@ -258,7 +298,6 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
         plMover->SetPosition(movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o);
         plMover->m_movementInfo = movementInfo;
         plMover->SetUnitMovementFlags(movementInfo.flags);
-
         plMover->UpdateFallInformationIfNeed(movementInfo,recv_data.GetOpcode());
 
         if(plMover->isMovingOrTurning())
@@ -280,10 +319,14 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
                 if(plMover->isAlive())
                 {
                     plMover->EnvironmentalDamage(DAMAGE_FALL_TO_VOID, GetPlayer()->GetMaxHealth());
-                    // change the death state to CORPSE to prevent the death timer from
-                    // starting in the next player update
-                    plMover->KillPlayer();
-                    plMover->BuildPlayerRepop();
+                    // pl can be alive if GM/etc
+                    if(!plMover->isAlive())
+                    {
+                        // change the death state to CORPSE to prevent the death timer from
+                        // starting in the next player update
+                        plMover->KillPlayer();
+                        plMover->BuildPlayerRepop();
+                    }
                 }
 
                 // cancel the death timer here if started
@@ -294,7 +337,12 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
     else                                                    // creature charmed
     {
         if(Map *map = mover->GetMap())
+        {
+            //if(GetPlayer()->m_seer != mover)
+            if(((Creature*)mover)->isVehicle())
+                map->PlayerRelocation(GetPlayer(), movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o);
             map->CreatureRelocation((Creature*)mover, movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o);
+        }
         mover->SetUnitMovementFlags(movementInfo.flags);
     }
 }
@@ -435,8 +483,6 @@ void WorldSession::HandleDismissControlledVehicle(WorldPacket &recv_data)
     if(Vehicle *vehicle = ObjectAccessor::GetVehicle(vehicleGUID))
     {
         _player->ExitVehicle(vehicle);
-        if(!vehicle->GetDBTableGUIDLow())
-            vehicle->Dismiss();
     }
 }
 

@@ -85,17 +85,16 @@ Object::~Object( )
     //if(m_objectUpdated)
     //    ObjectAccessor::Instance().RemoveUpdateObject(this);
 
+    if(IsInWorld())
+    {
+        sLog.outCrash("Object::~Object - guid="I64FMTD", typeid=%d deleted but still in world!!", GetGUID(), GetTypeId());
+        assert(false);
+    }
+
+    assert(!m_objectUpdated);
+
     if(m_uint32Values)
     {
-        if(IsInWorld())
-        {
-            ///- Do NOT call RemoveFromWorld here, if the object is a player it will crash
-            sLog.outCrash("Object::~Object - guid="I64FMTD", typeid=%d deleted but still in world!!", GetGUID(), GetTypeId());
-            assert(false);
-        }
-
-        assert(!m_objectUpdated);
-
         //DEBUG_LOG("Object desctr 1 check (%p)",(void*)this);
         delete [] m_uint32Values;
         delete [] m_uint32Values_mirror;
@@ -286,7 +285,7 @@ void Object::_BuildMovementUpdate(ByteBuffer * data, uint8 flags, uint32 flags2)
             {
                 flags2 = ((Player*)this)->GetUnitMovementFlags();
 
-                if(((Player*)this)->GetTransport())
+                if(((Player*)this)->GetTransport() || ((Player*)this)->hasUnitState(UNIT_STAT_ONVEHICLE))
                     flags2 |= MOVEMENTFLAG_ONTRANSPORT;
                 else
                     flags2 &= ~MOVEMENTFLAG_ONTRANSPORT;
@@ -336,7 +335,10 @@ void Object::_BuildMovementUpdate(ByteBuffer * data, uint8 flags, uint32 flags2)
         {
             if(GetTypeId() == TYPEID_PLAYER)
             {
-                *data << (uint64)((Player*)this)->GetTransport()->GetGUID();
+                if(((Player*)this)->hasUnitState(UNIT_STAT_ONVEHICLE))
+                    *data << (uint64)((Player*)this)->GetCharmGUID();
+                else
+                    *data << (uint64)((Player*)this)->GetTransport()->GetGUID();
                 *data << (float)((Player*)this)->GetTransOffsetX();
                 *data << (float)((Player*)this)->GetTransOffsetY();
                 *data << (float)((Player*)this)->GetTransOffsetZ();
@@ -667,13 +669,15 @@ void Object::_BuildValuesUpdate(uint8 updatetype, ByteBuffer * data, UpdateMask 
                     if(GetTypeId() == TYPEID_PLAYER && target != this
                         && ((Player*)this)->IsInSameRaidWith(target))
                     {
-                        /*if(index == UNIT_FIELD_BYTES_2)
+                        // Allow targetting opposite faction in party when enabled in config
+                        if(sWorld.getConfig(CONFIG_ALLOW_TWO_SIDE_INTERACTION_GROUP) && index == UNIT_FIELD_BYTES_2)
                         {
                             DEBUG_LOG("-- VALUES_UPDATE: Sending '%s' the blue-group-fix from '%s' (flag)", target->GetName(), ((Player*)this)->GetName());
-                            *data << ( m_uint32Values[ index ] & (UNIT_BYTE2_FLAG_SANCTUARY << 8) ); // this flag is at uint8 offset 1 !!
+                            *data << ( m_uint32Values[ index ] & ((UNIT_BYTE2_FLAG_SANCTUARY /*| UNIT_BYTE2_FLAG_AURAS | UNIT_BYTE2_FLAG_UNK5*/) << 8) ); // this flag is at uint8 offset 1 !!
+
                             ch = true;
                         }
-                        else*/
+                        else
                         {
                             FactionTemplateEntry const *ft1, *ft2;
                             ft1 = ((Player*)this)->getFactionTemplateEntry();
@@ -745,20 +749,10 @@ void Object::_BuildValuesUpdate(uint8 updatetype, ByteBuffer * data, UpdateMask 
 
 void Object::ClearUpdateMask(bool remove)
 {
-    if(!m_uint32Values_mirror || !m_uint32Values)
-    {
-        sLog.outCrash("Object::ClearUpdateMask: Object entry %u (type %u) does not have uint32Values", GetEntry(), GetTypeId());
-        return;
-    }
+    uint32 *temp = m_uint32Values;
 
-    uint32 temp = m_uint32Values[0];
-    temp = m_uint32Values_mirror[0];
+    memcpy(m_uint32Values_mirror, m_uint32Values, m_valuesCount*sizeof(uint32));
 
-    for( uint16 index = 0; index < m_valuesCount; index ++ )
-    {
-        if(m_uint32Values_mirror[index]!= m_uint32Values[index])
-            m_uint32Values_mirror[index] = m_uint32Values[index];
-    }
     if(m_objectUpdated)
     {
         if(remove)
@@ -802,27 +796,23 @@ bool Object::LoadValues(const char* data)
 
 void Object::_SetUpdateBits(UpdateMask *updateMask, Player* /*target*/) const
 {
-    if(!m_uint32Values_mirror || !m_uint32Values)
-    {
-        sLog.outCrash("Object::_SetUpdateBits: Object entry %u (type %u) does not have uint32Values", GetEntry(), GetTypeId());
-        return;
-    }
+    uint32 *value = m_uint32Values;
+    uint32 *mirror = m_uint32Values_mirror;
 
-    uint32 temp = m_uint32Values[0];
-    temp = m_uint32Values_mirror[0];
-
-    for(uint16 index = 0; index < m_valuesCount; ++index)
+    for(uint16 index = 0; index < m_valuesCount; ++index, ++value, ++mirror)
     {
-        if(m_uint32Values_mirror[index]!= m_uint32Values[index])
+        if(*mirror != *value)
             updateMask->SetBit(index);
     }
 }
 
 void Object::_SetCreateBits(UpdateMask *updateMask, Player* /*target*/) const
 {
-    for( uint16 index = 0; index < m_valuesCount; index++ )
+    uint32 *value = m_uint32Values;
+
+    for(uint16 index = 0; index < m_valuesCount; ++index, ++value)
     {
-        if(GetUInt32Value(index) != 0)
+        if(*value)
             updateMask->SetBit(index);
     }
 }
@@ -1147,8 +1137,7 @@ bool Object::PrintIndexError(uint32 index, bool set) const
 
 WorldObject::WorldObject()
     : m_mapId(0), m_InstanceId(0), m_phaseMask(PHASEMASK_NORMAL),
-    m_positionX(0.0f), m_positionY(0.0f), m_positionZ(0.0f), m_orientation(0.0f),
-    mSemaphoreTeleport(false)
+    m_positionX(0.0f), m_positionY(0.0f), m_positionZ(0.0f), m_orientation(0.0f)
 {
     m_positionX         = 0.0f;
     m_positionY         = 0.0f;
@@ -1159,8 +1148,6 @@ WorldObject::WorldObject()
     m_InstanceId        = 0;
 
     m_name = "";
-
-    mSemaphoreTeleport  = false;
 
     m_isActive          = false;
     IsTempWorldObject   = false;
@@ -1254,6 +1241,13 @@ float WorldObject::GetDistance2d(float x, float y) const
     float sizefactor = GetObjectSize();
     float dist = sqrt((dx*dx) + (dy*dy)) - sizefactor;
     return ( dist > 0 ? dist : 0);
+}
+
+float WorldObject::GetExactDistance2d(const float x, const float y) const
+{
+    float dx = GetPositionX() - x;
+    float dy = GetPositionY() - y;
+    return sqrt((dx*dx) + (dy*dy));
 }
 
 float WorldObject::GetDistance(const float x, const float y, const float z) const
@@ -1618,7 +1612,17 @@ void WorldObject::BuildHeartBeatMsg(WorldPacket *data) const
     *data << m_positionY;
     *data << m_positionZ;
     *data << m_orientation;
-    *data << uint32(0);
+    if(GetTypeId() == TYPEID_PLAYER && ((Unit*)this)->hasUnitState(UNIT_STAT_ONVEHICLE))
+    {
+        *data << uint64(((Unit*)this)->GetCharmGUID());
+        *data << float(((Player*)this)->GetTransOffsetX());
+        *data << float(((Player*)this)->GetTransOffsetY());
+        *data << float(((Player*)this)->GetTransOffsetZ());
+        *data << float(((Player*)this)->GetTransOffsetO());
+        *data << uint32(((Player*)this)->GetTransTime());
+        *data << uint8(((Player*)this)->GetTransSeat());
+    }
+    *data << uint32(0); //fall time
 }
 
 void WorldObject::BuildTeleportAckMsg(WorldPacket *data, float x, float y, float z, float ang) const
@@ -1637,6 +1641,16 @@ void WorldObject::BuildTeleportAckMsg(WorldPacket *data, float x, float y, float
     *data << y;
     *data << z;
     *data << ang;
+    if(GetTypeId() == TYPEID_PLAYER && ((Unit*)this)->hasUnitState(UNIT_STAT_ONVEHICLE))
+    {
+        *data << uint64(((Unit*)this)->GetCharmGUID());
+        *data << float(((Player*)this)->GetTransOffsetX());
+        *data << float(((Player*)this)->GetTransOffsetY());
+        *data << float(((Player*)this)->GetTransOffsetZ());
+        *data << float(((Player*)this)->GetTransOffsetO());
+        *data << uint32(((Player*)this)->GetTransTime());
+        *data << uint8(((Player*)this)->GetTransSeat());
+    }
     *data << uint32(0);
 }
 
@@ -1674,7 +1688,9 @@ Map const* WorldObject::GetBaseMap() const
 
 void WorldObject::AddObjectToRemoveList()
 {
-    Map* map = MapManager::Instance().FindMap(GetMapId(), GetInstanceId());
+    assert(m_uint32Values);
+
+    Map* map = FindMap();
     if(!map)
     {
         sLog.outError("Object (TypeId: %u Entry: %u GUID: %u) at attempt add to move list not have valid map (Id: %u).",GetTypeId(),GetEntry(),GetGUIDLow(),GetMapId());

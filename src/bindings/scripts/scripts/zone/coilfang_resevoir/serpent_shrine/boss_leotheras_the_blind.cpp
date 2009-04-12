@@ -200,7 +200,7 @@ struct TRINITY_DLL_DECL boss_leotheras_the_blindAI : public ScriptedAI
     {
         for(uint8 i = 0; i < 3; i++)
         {
-            Creature *add = (Creature*)Unit::GetUnit(*m_creature,SpellBinderGUID[i]);
+            Creature *add = Unit::GetCreature(*m_creature,SpellBinderGUID[i]);
             if (add && add->isAlive())
             {
                 add->setDeathState(DEAD);
@@ -212,9 +212,9 @@ struct TRINITY_DLL_DECL boss_leotheras_the_blindAI : public ScriptedAI
             float nx = x;
             float ny = y;
             float o = 2.4f;
-            if (i == 0) {nx += 20;o=3.0f;}
-            if (i == 1) ny -= 20;
-            if (i == 2) {nx += 18;ny -= 18;o=2.0f;}
+            if (i == 0) {nx += 10; ny -= 5; o=2.5f;}
+            if (i == 1) {nx -= 8; ny -= 7; o=0.9f;} 
+            if (i == 2) {nx -= 3; ny += 9; o=5.0f;}
             Creature* binder = m_creature->SummonCreature(MOB_SPELLBINDER,nx,ny,z,o,TEMPSUMMON_DEAD_DESPAWN,0);
             if (binder)
                 SpellBinderGUID[i] = binder->GetGUID();
@@ -267,7 +267,7 @@ struct TRINITY_DLL_DECL boss_leotheras_the_blindAI : public ScriptedAI
             m_creature->RemoveAurasDueToSpell(AURA_BANISH);
 
             // Leotheras is getting immune again
-            m_creature->ApplySpellImmune(AURA_BANISH, IMMUNITY_MECHANIC, 1<<MECHANIC_BANISH, true);
+            m_creature->ApplySpellImmune(AURA_BANISH, IMMUNITY_MECHANIC, MECHANIC_BANISH, true);
 
             // changing model to bloodelf
             m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, MODEL_NIGHTELF);
@@ -288,7 +288,7 @@ struct TRINITY_DLL_DECL boss_leotheras_the_blindAI : public ScriptedAI
         {
             // channelers != 0 apply banish aura
             // removing Leotheras banish immune to apply AURA_BANISH
-            m_creature->ApplySpellImmune(AURA_BANISH, IMMUNITY_MECHANIC, 1<<MECHANIC_BANISH, false);
+            m_creature->ApplySpellImmune(AURA_BANISH, IMMUNITY_MECHANIC, MECHANIC_BANISH, false);
             DoCast(m_creature, AURA_BANISH);
 
             // changing model

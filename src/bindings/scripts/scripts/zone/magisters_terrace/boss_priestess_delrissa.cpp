@@ -97,7 +97,6 @@ struct TRINITY_DLL_DECL boss_priestess_delrissaAI : public ScriptedAI
     boss_priestess_delrissaAI(Creature* c) : ScriptedAI(c)
     {
         pInstance = ((ScriptedInstance*)c->GetInstanceData());
-        //SummonAdds();
         Heroic = c->GetMap()->IsHeroic();
     }
 
@@ -131,6 +130,7 @@ struct TRINITY_DLL_DECL boss_priestess_delrissaAI : public ScriptedAI
 
         CombatPulseTimer  = 5000;
 
+        SummonAdds();
         CheckAdds();
 
         if (pInstance)
@@ -151,6 +151,9 @@ struct TRINITY_DLL_DECL boss_priestess_delrissaAI : public ScriptedAI
 
     void SummonAdds()
     {
+        if(!Adds.empty())
+            return;
+
         std::vector<uint32> AddList;
         for(uint8 i = 0; i < 8; ++i)
             AddList.push_back(AddEntry[i]);
@@ -177,7 +180,7 @@ struct TRINITY_DLL_DECL boss_priestess_delrissaAI : public ScriptedAI
         uint32 n = 0;
         for(std::vector<Add*>::iterator i = Adds.begin(); i != Adds.end(); ++i, ++n)
         {
-            Creature* pAdd = ((Creature*)Unit::GetUnit(*m_creature, (*i)->guid));
+            Creature* pAdd = (Unit::GetCreature(*m_creature, (*i)->guid));
             if(pAdd && pAdd->isAlive())
             {
                 pAdd->AI()->EnterEvadeMode();               // Force them out of combat and reset if they are in combat.
@@ -370,7 +373,7 @@ struct TRINITY_DLL_DECL boss_priestess_guestAI : public ScriptedAI
             return;
         }
 
-        Creature* Delrissa = ((Creature*)Unit::GetUnit(*m_creature, pInstance->GetData64(DATA_DELRISSA)));
+        Creature* Delrissa = (Unit::GetCreature(*m_creature, pInstance->GetData64(DATA_DELRISSA)));
         if (Delrissa)
         {
             pInstance->SetData(DATA_DELRISSA_DEATH_COUNT, 1);
@@ -390,7 +393,7 @@ struct TRINITY_DLL_DECL boss_priestess_guestAI : public ScriptedAI
             return;
         }
 
-        Creature* Delrissa = ((Creature*)Unit::GetUnit(*m_creature, pInstance->GetData64(DATA_DELRISSA)));
+        Creature* Delrissa = (Unit::GetCreature(*m_creature, pInstance->GetData64(DATA_DELRISSA)));
         if (Delrissa)
             Delrissa->AI()->KilledUnit(victim);
     }
@@ -403,7 +406,7 @@ struct TRINITY_DLL_DECL boss_priestess_guestAI : public ScriptedAI
             return;
         }
 
-        Creature* Delrissa = ((Creature*)Unit::GetUnit(*m_creature, pInstance->GetData64(DATA_DELRISSA)));
+        Creature* Delrissa = (Unit::GetCreature(*m_creature, pInstance->GetData64(DATA_DELRISSA)));
         if (Delrissa)
         {
             Group = ((boss_priestess_delrissaAI*)Delrissa->AI())->Adds;
@@ -631,13 +634,13 @@ struct TRINITY_DLL_DECL boss_ellris_duskhallowAI : public boss_priestess_guestAI
 
 /*void mob_fizzleAI::JustDied(Unit* killer)
 {
-    if(Creature* Ellris = ((Creature*)Unit::GetUnit(*m_creature, EllrisGUID)))
+    if(Creature* Ellris = (Unit::GetCreature(*m_creature, EllrisGUID)))
         ((boss_ellris_duskhallowAI*)Ellris->AI())->ImpGUID = 0;
 }
 
 void mob_fizzleAI::KilledUnit(Unit* victim)
 {
-    if(Creature* Ellris = ((Creature*)Unit::GetUnit(*m_creature, EllrisGUID)))
+    if(Creature* Ellris = (Unit::GetCreature(*m_creature, EllrisGUID)))
         ((boss_ellris_duskhallowAI*)Ellris->AI())->KilledUnit(victim);
 }*/
 
@@ -1025,13 +1028,13 @@ struct TRINITY_DLL_DECL boss_garaxxasAI : public boss_priestess_guestAI
 
 /*void mob_sliverAI::JustDied(Unit* killer)
 {
-    if(Creature* Garaxxas = ((Creature*)Unit::GetUnit(*m_creature, GaraxxasGUID)))
+    if(Creature* Garaxxas = (Unit::GetCreature(*m_creature, GaraxxasGUID)))
         ((boss_garaxxasAI*)Garaxxas->AI())->SliverGUID = 0;
 }
 
 void mob_sliverAI::KilledUnit(Unit* victim)
 {
-    if(Creature* Garaxxas = ((Creature*)Unit::GetUnit(*m_creature, GaraxxasGUID)))
+    if(Creature* Garaxxas = (Unit::GetCreature(*m_creature, GaraxxasGUID)))
         ((boss_garaxxasAI*)Garaxxas->AI())->KilledUnit(victim);
 }*/
 

@@ -39,18 +39,10 @@ SpellMgr::SpellMgr()
             case SPELL_EFFECT_PERSISTENT_AREA_AURA: //27
             case SPELL_EFFECT_SUMMON:               //28
             case SPELL_EFFECT_TRIGGER_MISSILE:      //32
-            //case SPELL_EFFECT_SUMMON_WILD:          //41 not 303
-            //case SPELL_EFFECT_SUMMON_GUARDIAN:      //42 not 303
             case SPELL_EFFECT_TRANS_DOOR:           //50 summon object
             case SPELL_EFFECT_SUMMON_PET:           //56
             case SPELL_EFFECT_ADD_FARSIGHT:         //72
-            //case SPELL_EFFECT_SUMMON_POSSESSED:     //73
-            //case SPELL_EFFECT_SUMMON_TOTEM:         //74
             case SPELL_EFFECT_SUMMON_OBJECT_WILD:   //76
-            //case SPELL_EFFECT_SUMMON_TOTEM_SLOT1:   //87
-            //case SPELL_EFFECT_SUMMON_TOTEM_SLOT2:   //88
-            //case SPELL_EFFECT_SUMMON_TOTEM_SLOT3:   //89
-            //case SPELL_EFFECT_SUMMON_TOTEM_SLOT4:   //90
             //case SPELL_EFFECT_SUMMON_CRITTER:       //97 not 303
             case SPELL_EFFECT_SUMMON_OBJECT_SLOT1:  //104
             case SPELL_EFFECT_SUMMON_OBJECT_SLOT2:  //105
@@ -75,6 +67,7 @@ SpellMgr::SpellMgr()
             case SPELL_EFFECT_FEED_PET:
             case SPELL_EFFECT_PROSPECTING:
             case SPELL_EFFECT_MILLING:
+            case SPELL_EFFECT_ENCHANT_ITEM_PRISMATIC:
                 EffectTargetType[i] = SPELL_REQUIRE_ITEM;
                 break;
             //caster must be pushed otherwise no sound
@@ -83,6 +76,7 @@ SpellMgr::SpellMgr()
             case SPELL_EFFECT_APPLY_AREA_AURA_ENEMY:
             case SPELL_EFFECT_APPLY_AREA_AURA_PET:
             case SPELL_EFFECT_APPLY_AREA_AURA_OWNER:
+            case SPELL_EFFECT_JUMP2:                //42
                 EffectTargetType[i] = SPELL_REQUIRE_CASTER;
                 break;
             default:
@@ -533,6 +527,8 @@ bool IsPositiveEffect(uint32 spellId, uint32 effIndex, bool deep)
         case 34700:                                         // Allergic Reaction
         case 31719:                                         // Suspension
             return false;
+        case 12042:                                         // Arcane Power
+            return true;
     }
 
     switch(spellproto->Mechanic)
@@ -597,6 +593,8 @@ bool IsPositiveEffect(uint32 spellId, uint32 effIndex, bool deep)
                             // non-positive targets of main spell return early
                             for(int i = 0; i < 3; ++i)
                             {
+                                if (!spellTriggeredProto->Effect[i])
+                                    continue;
                                 // if non-positive trigger cast targeted to positive target this main cast is non-positive
                                 // this will place this spell auras as debuffs
                                 if(IsPositiveTarget(spellTriggeredProto->EffectImplicitTargetA[effIndex],spellTriggeredProto->EffectImplicitTargetB[effIndex]) && !IsPositiveEffect(spellTriggeredId,i, true))
@@ -604,7 +602,6 @@ bool IsPositiveEffect(uint32 spellId, uint32 effIndex, bool deep)
                             }
                         }
                     }
-                    break;
                 case SPELL_AURA_PROC_TRIGGER_SPELL:
                     // many positive auras have negative triggered spells at damage for example and this not make it negative (it can be canceled for example)
                     break;
@@ -715,7 +712,7 @@ bool IsPositiveEffect(uint32 spellId, uint32 effIndex, bool deep)
         return false;
 
     if (!deep && spellproto->EffectTriggerSpell[effIndex]
-        && !spellproto->procFlags
+        && !spellproto->EffectApplyAuraName[effIndex]
         && IsPositiveTarget(spellproto->EffectImplicitTargetA[effIndex],spellproto->EffectImplicitTargetB[effIndex])
         && !IsPositiveSpell(spellproto->EffectTriggerSpell[effIndex], true))
         return false;
@@ -1198,7 +1195,7 @@ bool SpellMgr::IsSpellProcEventCanTriggeredBy(SpellProcEventEntry const * spellP
             // spellFamilyName is Ok need check for spellFamilyMask if present
             if(spellProcEvent->spellFamilyMask)
             {
-                if ((spellProcEvent->spellFamilyMask  & procSpell->SpellFamilyFlags ) == 0)
+                if ((spellProcEvent->spellFamilyMask & procSpell->SpellFamilyFlags ) == 0)
                     return false;
                 active = true; // Spell added manualy -> so its active spell
             }
@@ -2367,6 +2364,25 @@ void SpellMgr::LoadSpellCustomAttr()
         case 1122: // Inferno
         case 18662: // Curse of Doom
             spellInfo->EffectBasePoints[0] = 0; //prevent summon too many of them
+            break;
+        case 17941:    // Shadow Trance
+        case 22008:    // Netherwind Focus
+        case 31834:    // Light's Grace
+        case 34754:    // Clearcasting
+        case 34936:    // Backlash
+        case 48108:    // Hot Streak
+        case 51124:    // Killing Machine
+        case 54741:    // Firestarter
+        case 57761:    // Fireball!
+        case 39805:    // Lightning Overload
+        case 52437:    // Sudden Death
+            spellInfo->procCharges=1;
+            break;
+        case 44544:    // Fingers of Frost
+            spellInfo->procCharges=2;
+            break;
+        case 28200:    // Ascendance (Talisman of Ascendance trinket)
+            spellInfo->procCharges=6;
             break;
         default:
             break;

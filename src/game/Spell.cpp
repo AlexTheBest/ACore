@@ -307,6 +307,7 @@ Spell::Spell( Unit* Caster, SpellEntry const *info, bool triggered, uint64 origi
     m_triggeringContainer = triggeringContainer;
     m_referencedFromCurrentSpell = false;
     m_executedCurrently = false;
+    m_needComboPoints = NeedsComboPoints(m_spellInfo);
     m_delayStart = 0;
     m_delayAtDamageCount = 0;
 
@@ -945,6 +946,10 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
         if (target->reflectResult == SPELL_MISS_NONE)       // If reflected spell hit caster -> do all effect on him
             DoSpellHitOnUnit(m_caster, mask);
     }
+    // Do not take combo points on dodge
+    if (m_needComboPoints && m_targets.getUnitTargetGUID() == target->targetGUID)
+        if( missInfo != SPELL_MISS_NONE && missInfo != SPELL_MISS_MISS)
+            m_needComboPoints = false;
     /*else //TODO: This is a hack. need fix
     {
         uint32 tempMask = 0;
@@ -1022,14 +1027,6 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
             caster->ProcDamageAndSpell(unit, procAttacker, procVictim, procEx, 0, m_attackType, m_spellInfo);
     }
 
-    // Take combo points after effects handling (combo points are used in effect handling)
-    if(!m_IsTriggeredSpell && !m_CastItem
-        && NeedsComboPoints(m_spellInfo)
-        && m_caster->GetTypeId()==TYPEID_PLAYER
-        && target->targetGUID == m_targets.getUnitTargetGUID()
-        && (missInfo == SPELL_MISS_NONE || missInfo == SPELL_MISS_MISS))
-            ((Player*)m_caster)->ClearComboPoints();
-
     // Call scripted function for AI if this spell is casted upon a creature (except pets)
     if(IS_CREATURE_GUID(target->targetGUID))
     {
@@ -1103,8 +1100,8 @@ void Spell::DoSpellHitOnUnit(Unit *unit, const uint32 effectMask)
             }
 
             unit->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_HITBYSPELL);
-            if(m_customAttr & SPELL_ATTR_CU_AURA_CC)
-                unit->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_CC);
+            //if(m_customAttr & SPELL_ATTR_CU_AURA_CC)
+                //unit->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_CC);
         }
         else
         {
@@ -2192,6 +2189,10 @@ void Spell::prepare(SpellCastTargets const* targets, AuraEffect* triggeredByAura
     // Prepare data for triggers
     prepareDataForTriggerSystem();
 
+    // Set combo point requirement
+    if (m_IsTriggeredSpell || m_CastItem || m_caster->GetTypeId()!=TYPEID_PLAYER)
+        m_needComboPoints = false;
+
     // calculate cast time (calculated after first CheckCast check to prevent charge counting for first CheckCast fail)
     m_casttime = GetSpellCastTime(m_spellInfo, this);
 
@@ -2208,6 +2209,9 @@ void Spell::prepare(SpellCastTargets const* targets, AuraEffect* triggeredByAura
         if(isSpellBreakStealth(m_spellInfo) )
             m_caster->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_CAST);
 
+        if(!m_IsTriggeredSpell)
+            m_caster->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_ANY_CAST);
+
         m_caster->SetCurrentCastedSpell( this );
         m_selfContainer = &(m_caster->m_currentSpells[GetCurrentContainer()]);
         SendSpellStart();
@@ -2223,6 +2227,10 @@ void Spell::cancel()
 {
     if(m_spellState == SPELL_STATE_FINISHED)
         return;
+
+    SetReferencedFromCurrent(false);
+    if(m_selfContainer && *m_selfContainer == this)
+        *m_selfContainer = NULL;
 
     uint32 oldState = m_spellState;
     m_spellState = SPELL_STATE_FINISHED;
@@ -2541,6 +2549,10 @@ void Spell::_handle_immediate_phase()
 
 void Spell::_handle_finish_phase()
 {
+    // Take for real after all targets are processed
+    if (m_needComboPoints)
+        ((Player*)m_caster)->ClearComboPoints();
+
     // spell log
     if(m_needSpellLog)
         SendLogExecute();
@@ -3693,7 +3705,7 @@ SpellCastResult Spell::CheckCast(bool strict)
                 return SPELL_FAILED_TARGET_AURASTATE;
 
             // Not allow casting on flying player
-            if (target->isInFlight())
+            if (target->hasUnitState(UNIT_STAT_UNATTACKABLE))
                 return SPELL_FAILED_BAD_TARGETS;
 
             if(!m_IsTriggeredSpell && VMAP::VMapFactory::checkSpellForLoS(m_spellInfo->Id) && !m_caster->IsWithinLOSInMap(target))
@@ -3997,8 +4009,18 @@ SpellCastResult Spell::CheckCast(bool strict)
             {
                 if(m_spellInfo->SpellIconID == 1648)        // Execute
                 {
-                    if(!m_targets.getUnitTarget() || m_targets.getUnitTarget()->GetHealth() > m_targets.getUnitTarget()->GetMaxHealth()*0.2)
+                    if(!m_targets.getUnitTarget())
                         return SPELL_FAILED_BAD_TARGETS;
+                    if (m_targets.getUnitTarget()->GetHealth() > m_targets.getUnitTarget()->GetMaxHealth()*0.2)
+                    {
+                        bool found = false;
+                        Unit::AuraEffectList const& stateAuras = m_caster->GetAurasByType(SPELL_AURA_ABILITY_IGNORE_AURASTATE);
+                        for(Unit::AuraEffectList::const_iterator j = stateAuras.begin();j != stateAuras.end(); ++j)
+                            if((*j)->isAffectedOnSpell(m_spellInfo))
+                                found=true;
+                        if (!found)
+                            return SPELL_FAILED_BAD_TARGETS;
+                    }
                 }
                 else if (m_spellInfo->Id == 51582)          // Rocket Boots Engaged
                 {
@@ -4527,7 +4549,7 @@ SpellCastResult Spell::CheckCasterAuras() const
                 dispel_immune |= GetDispellMask(DispelType(m_spellInfo->EffectMiscValue[i]));
         }
         //immune movement impairment and loss of control
-        if(m_spellInfo->Id==(uint32)42292)
+        if(m_spellInfo->Id==42292 || m_spellInfo->Id==59752)
             mechanic_immune = IMMUNE_TO_MOVEMENT_IMPAIRMENT_AND_LOSS_CONTROL_MASK;
     }
 
@@ -4559,7 +4581,7 @@ SpellCastResult Spell::CheckCasterAuras() const
                 {
                     if( GetAllSpellMechanicMask(itr->second->GetSpellProto()) & mechanic_immune )
                         continue;
-                    if( GetAllSpellMechanicMask(itr->second->GetSpellProto()) & school_immune )
+                    if( GetSpellSchoolMask(itr->second->GetSpellProto()) & school_immune )
                         continue;
                     if( (1<<(itr->second->GetSpellProto()->Dispel)) & dispel_immune)
                         continue;
@@ -4620,8 +4642,9 @@ bool Spell::CanAutoCast(Unit* target)
             }
             else
             {
-                if( (target->GetAuraEffect(m_spellInfo->Id, j))->GetParentAura()->GetStackAmount() >= m_spellInfo->StackAmount)
-                    return false;
+                if( AuraEffect * aureff = target->GetAuraEffect(m_spellInfo->Id, j))
+                    if (aureff->GetParentAura()->GetStackAmount() >= m_spellInfo->StackAmount)
+                        return false;
             }
         }
         else if ( IsAreaAuraEffect( m_spellInfo->Effect[j] ))
