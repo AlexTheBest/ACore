@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -566,13 +566,15 @@ struct TRINITY_DLL_DECL cthunAI : public Scripted_NoMovementAI
                 Map *map = m_creature->GetMap();
                 if(!map->IsDungeon()) return;
 
+                //Play random sound to the zone
                 Map::PlayerList const &PlayerList = map->GetPlayers();
-                for (Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
+
+                if (!PlayerList.isEmpty())
                 {
-                    if (Player* i_pl = i->getSource())
+                    for(Map::PlayerList::const_iterator itr = PlayerList.begin(); itr != PlayerList.end(); ++itr)
                     {
-                        //Play random sound to the zone
-                        i_pl->SendPlaySound(RANDOM_SOUND_WHISPER, true);
+                        if (Player* pPlr = itr->getSource())
+                            pPlr->PlayDirectSound(RANDOM_SOUND_WHISPER,pPlr);
                     }
                 }
 
@@ -963,7 +965,7 @@ struct TRINITY_DLL_DECL eye_tentacleAI : public Scripted_NoMovementAI
         {
             Unit* target = NULL;
             target = SelectUnit(SELECT_TARGET_RANDOM,0);
-            if (target && !target->HasAura(SPELL_DIGESTIVE_ACID, 0))
+            if (target && !target->HasAura(SPELL_DIGESTIVE_ACID))
                 DoCast(target,SPELL_MIND_FLAY);
 
             //Mindflay every 10 seconds
@@ -1031,7 +1033,7 @@ struct TRINITY_DLL_DECL claw_tentacleAI : public Scripted_NoMovementAI
                 return;
             }
 
-            if (!target->HasAura(SPELL_DIGESTIVE_ACID, 0))
+            if (!target->HasAura(SPELL_DIGESTIVE_ACID))
             {
                 m_creature->GetMap()->CreatureRelocation(m_creature, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0);
                 Unit* p = DoSpawnCreature(MOB_SMALL_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0);
@@ -1127,7 +1129,7 @@ struct TRINITY_DLL_DECL giant_claw_tentacleAI : public Scripted_NoMovementAI
                 return;
             }
 
-            if (!target->HasAura(SPELL_DIGESTIVE_ACID, 0))
+            if (!target->HasAura(SPELL_DIGESTIVE_ACID))
             {
                 m_creature->GetMap()->CreatureRelocation(m_creature, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0);
                 Unit* p = DoSpawnCreature(MOB_GIANT_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0);
@@ -1211,7 +1213,7 @@ struct TRINITY_DLL_DECL giant_eye_tentacleAI : public Scripted_NoMovementAI
         {
             Unit* target = NULL;
             target = SelectUnit(SELECT_TARGET_RANDOM,0);
-            if (target && !target->HasAura(SPELL_DIGESTIVE_ACID, 0))
+            if (target && !target->HasAura(SPELL_DIGESTIVE_ACID))
                 DoCast(target,SPELL_GREEN_BEAM);
 
             //Beam every 2 seconds
@@ -1249,7 +1251,7 @@ void flesh_tentacleAI::JustDied(Unit* killer)
 {
     if (!Parent)
     {
-        DoYell("Error: No Parent variable", LANG_UNIVERSAL, NULL);
+        error_log("TSCR: flesh_tentacle: No Parent variable");
         return;
     }
 
@@ -1257,7 +1259,7 @@ void flesh_tentacleAI::JustDied(Unit* killer)
 
     if (Cthun)
         ((cthunAI*)(Cthun->AI()))->FleshTentcleKilled();
-    else DoYell("Error: No Cthun", LANG_UNIVERSAL, NULL);
+    else error_log("TSCR: flesh_tentacle: No Cthun");
 }
 
 //GetAIs

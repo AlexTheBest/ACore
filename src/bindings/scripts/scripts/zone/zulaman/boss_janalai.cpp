@@ -1,4 +1,4 @@
- /* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ /* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -238,7 +238,7 @@ struct TRINITY_DLL_DECL boss_janalaiAI : public ScriptedAI
             cell.SetNoCreate();
 
             Trinity::AllCreaturesOfEntryInRange check(m_creature, MOB_EGG, 100);
-            Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(templist, check);
+            Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(m_creature, templist, check);
 
             TypeContainerVisitor<Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange>, GridTypeMapContainer> cSearcher(searcher);
 
@@ -273,7 +273,7 @@ struct TRINITY_DLL_DECL boss_janalaiAI : public ScriptedAI
             cell.SetNoCreate();
 
             Trinity::AllCreaturesOfEntryInRange check(m_creature, MOB_FIRE_BOMB, 100);
-            Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(templist, check);
+            Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(m_creature, templist, check);
 
             TypeContainerVisitor<Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange>, GridTypeMapContainer> cSearcher(searcher);
 
@@ -397,7 +397,7 @@ struct TRINITY_DLL_DECL boss_janalaiAI : public ScriptedAI
 
                 m_creature->AttackStop();
                 m_creature->GetMotionMaster()->Clear();
-                DoTeleportTo(JanalainPos[0][0],JanalainPos[0][1],JanalainPos[0][2]);                
+                DoTeleportTo(JanalainPos[0][0],JanalainPos[0][1],JanalainPos[0][2]);
                 m_creature->StopMoving();
                 m_creature->CastSpell(m_creature, SPELL_HATCH_ALL, false);
                 HatchAllEggs(2);
@@ -514,7 +514,7 @@ struct TRINITY_DLL_DECL mob_amanishi_hatcherAI : public ScriptedAI
             cell.SetNoCreate();
 
             Trinity::AllCreaturesOfEntryInRange check(m_creature, 23817, 50);
-            Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(templist, check);
+            Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(m_creature, templist, check);
 
             TypeContainerVisitor<Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange>, GridTypeMapContainer> cSearcher(searcher);
 

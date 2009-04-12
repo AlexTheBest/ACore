@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software licensed under GPL version 2
  * Please see the included DOCS/LICENSE.TXT for more information */
 
@@ -13,6 +13,7 @@ EndScriptData */
 #include "npc_escortAI.h"
 
 #define WP_LAST_POINT   -1
+extern std::list<PointMovement> PointMovementList;
 
 bool npc_escortAI::IsVisible(Unit* who) const
 {
@@ -115,16 +116,23 @@ void npc_escortAI::UpdateAI(const uint32 diff)
             //Correct movement speed
             if (Run)
                 m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
-            else m_creature->AddUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
+                else
+                    m_creature->AddUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
 
             //Continue with waypoints
             if( !IsOnHold )
             {
-                m_creature->GetMotionMaster()->MovePoint(CurrentWP->id, CurrentWP->x, CurrentWP->y, CurrentWP->z );
-                debug_log("SD2: EscortAI Reconnect WP is: %u, %f, %f, %f", CurrentWP->id, CurrentWP->x, CurrentWP->y, CurrentWP->z);
-                WaitTimer = 0;
-                ReconnectWP = false;
-                return;
+                    if (CurrentWP != WaypointList.end())
+                    {
+                        m_creature->GetMotionMaster()->MovePoint(CurrentWP->id, CurrentWP->x, CurrentWP->y, CurrentWP->z );
+                        debug_log("TSCR: EscortAI Reconnect WP is: %u, %f, %f, %f", CurrentWP->id, CurrentWP->x, CurrentWP->y, CurrentWP->z);
+
+                        WaitTimer = 0;
+                        ReconnectWP = false;
+                        return;
+                    }
+                    else
+                        debug_log("TSCR: EscortAI Reconnected to end of WP list");
             }
         }
 
@@ -269,6 +277,22 @@ void npc_escortAI::AddWaypoint(uint32 id, float x, float y, float z, uint32 Wait
     Escort_Waypoint t(id, x, y, z, WaitTimeMs);
 
     WaypointList.push_back(t);
+}
+
+void npc_escortAI::FillPointMovementListForCreature()
+{
+    UNORDERED_MAP<uint32, std::vector<PointMovement> >::iterator pPointsEntries = PointMovementMap.find(m_creature->GetEntry());
+
+    if (pPointsEntries != PointMovementMap.end())
+    {
+        std::vector<PointMovement>::iterator itr;
+
+        for (itr = pPointsEntries->second.begin(); itr != pPointsEntries->second.end(); ++itr)
+        {
+            Escort_Waypoint pPoint(itr->m_uiPointId,itr->m_fX,itr->m_fY,itr->m_fZ,itr->m_uiWaitTime);
+            WaypointList.push_back(pPoint);
+        }
+    }
 }
 
 void npc_escortAI::Start(bool bAttack, bool bDefend, bool bRun, uint64 pGUID)

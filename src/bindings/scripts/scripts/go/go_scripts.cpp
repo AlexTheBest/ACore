@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -22,6 +22,7 @@ SDCategory: Game Objects
 EndScriptData */
 
 /* ContentData
+go_cat_figurine (the "trap" version of GO, two different exist)
 go_northern_crystal_pylon
 go_eastern_crystal_pylon
 go_western_crystal_pylon
@@ -30,10 +31,24 @@ go_field_repair_bot_74A
 go_orb_of_command
 go_tablet_of_madness
 go_tablet_of_the_seven
-go_teleporter
 EndContentData */
 
 #include "precompiled.h"
+
+/*######
+## go_cat_figurine
+######*/
+
+enum
+{
+    SPELL_SUMMON_GHOST_SABER    = 5968,
+};
+
+bool GOHello_go_cat_figurine(Player *player, GameObject* _GO)
+{
+    player->CastSpell(player,SPELL_SUMMON_GHOST_SABER,true);
+    return false;
+}
 
 /*######
 ## go_crystal_pylons (3x)
@@ -108,6 +123,26 @@ bool GOHello_go_field_repair_bot_74A(Player *player, GameObject* _GO)
 }
 
 /*######
+## go_gilded_brazier
+######*/
+
+enum
+{
+    NPC_STILLBLADE  = 17716,
+};
+
+bool GOHello_go_gilded_brazier(Player* pPlayer, GameObject* pGO)
+{
+    if (pGO->GetGoType() == GAMEOBJECT_TYPE_GOOBER)
+    {
+        if (Creature* pCreature = pPlayer->SummonCreature(NPC_STILLBLADE, 8087.632, -7542.740, 151.568, 0.122, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 5000))
+            pCreature->AI()->AttackStart(pPlayer);
+    }
+
+    return true;
+}
+
+/*######
 ## go_orb_of_command
 ######*/
 
@@ -148,16 +183,6 @@ bool GOHello_go_tablet_of_the_seven(Player *player, GameObject* _GO)
     return true;
 }
 
-/*######
-## go_teleporter
-######*/
-
-bool GOHello_go_teleporter(Player *player, GameObject* _GO)
-{
-    player->TeleportTo(0, 1807.07f,336.105f,70.3975f,0.0f);
-    return false;
-}
-
 /*#####
 ## go_jump_a_tron
 ######*/
@@ -173,7 +198,7 @@ bool GOHello_go_jump_a_tron(Player *player, GameObject* _GO)
 /*######
 ## go_ethereum_prison
 ######*/
- 
+
 float ethereum_NPC[2][7] =
 {
  {20785,20790,20789,20784,20786,20783,20788}, // hostile npc
@@ -184,7 +209,7 @@ bool GOHello_go_ethereum_prison(Player *player, GameObject* _GO)
 {
  _GO->SetGoState(0);
  switch(rand()%2){
-    case 0: 
+    case 0:
         _GO->SummonCreature(ethereum_NPC[0][rand()%6],_GO->GetPositionX(),_GO->GetPositionY(),_GO->GetPositionZ()+0.3, 0,TEMPSUMMON_CORPSE_TIMED_DESPAWN,10000);
     break;
     case 1:
@@ -213,6 +238,11 @@ void AddSC_go_scripts()
     Script *newscript;
 
     newscript = new Script;
+    newscript->Name = "go_cat_figurine";
+    newscript->pGOHello =           &GOHello_go_cat_figurine;
+    newscript->RegisterSelf();
+
+    newscript = new Script;
     newscript->Name="go_northern_crystal_pylon";
     newscript->pGOHello =           &GOHello_go_northern_crystal_pylon;
     newscript->RegisterSelf();
@@ -238,6 +268,11 @@ void AddSC_go_scripts()
     newscript->RegisterSelf();
 
     newscript = new Script;
+    newscript->Name = "go_gilded_brazier";
+    newscript->pGOHello =           &GOHello_go_gilded_brazier;
+    newscript->RegisterSelf();
+
+    newscript = new Script;
     newscript->Name="go_orb_of_command";
     newscript->pGOHello =           &GOHello_go_orb_of_command;
     newscript->RegisterSelf();
@@ -250,11 +285,6 @@ void AddSC_go_scripts()
     newscript = new Script;
     newscript->Name="go_tablet_of_the_seven";
     newscript->pGOHello =           &GOHello_go_tablet_of_the_seven;
-    newscript->RegisterSelf();
-
-    newscript = new Script;
-    newscript->Name="go_teleporter";
-    newscript->pGOHello =           &GOHello_go_teleporter;
     newscript->RegisterSelf();
 
     newscript = new Script;

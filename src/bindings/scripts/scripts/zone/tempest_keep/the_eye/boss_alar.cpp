@@ -241,12 +241,12 @@ struct TRINITY_DLL_DECL boss_alarAI : public ScriptedAI
                         WaitEvent = WE_DUMMY;
                         return;
                     case WE_DIE:
-                        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_DEAD);
+                        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, UNIT_STAND_STATE_DEAD);
                         WaitTimer = 5000;
                         WaitEvent = WE_REVIVE;
                         return;
                     case WE_REVIVE:
-                        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_NONE);
+                        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, UNIT_STAND_STATE_STAND);
                         m_creature->SetHealth(m_creature->GetMaxHealth());
                         m_creature->SetSpeed(MOVE_RUN, DefaultMoveSpeedRate);
                         m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
@@ -348,7 +348,7 @@ struct TRINITY_DLL_DECL boss_alarAI : public ScriptedAI
 
             if(Charge_Timer < diff)
             {
-                Unit *target= SelectUnit(SELECT_TARGET_RANDOM, 1, GetSpellMaxRange(SPELL_CHARGE), true);
+                Unit *target= SelectUnit(SELECT_TARGET_RANDOM, 1, GetSpellMaxRangeForHostile(SPELL_CHARGE), true);
                 DoCast(target, SPELL_CHARGE);
                 Charge_Timer = 30000;
             }else Charge_Timer -= diff;

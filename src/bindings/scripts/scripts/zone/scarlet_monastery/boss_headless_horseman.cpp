@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -176,7 +176,7 @@ struct TRINITY_DLL_DECL mob_wisp_invisAI : public ScriptedAI
         if (!who || Creaturetype != 1 || !who->isTargetableForAttack())
             return;
 
-        if (m_creature->GetDistance2d(who) < 0.1 && !who->HasAura(SPELL_SQUASH_SOUL,0))
+        if (m_creature->GetDistance2d(who) < 0.1 && !who->HasAura(SPELL_SQUASH_SOUL))
             DoCast(who,SPELL_SQUASH_SOUL);
     }
 
@@ -505,7 +505,7 @@ struct TRINITY_DLL_DECL boss_headless_horsemanAI : public ScriptedAI
     void SpellHitTarget(Unit* unit, const SpellEntry* spell)
     {
         if (spell->Id == SPELL_CONFLAGRATION)
-            if (unit->HasAura(SPELL_CONFLAGRATION,0))
+            if (unit->HasAura(SPELL_CONFLAGRATION))
                 SaySound(SAY_CONFLAGRATION,unit);
     }
 
@@ -572,7 +572,7 @@ struct TRINITY_DLL_DECL boss_headless_horsemanAI : public ScriptedAI
                 DoCast(m_creature,SPELL_BODY_REGEN,true);
                 m_creature->CastSpell(Head, SPELL_FLYING_HEAD,true);
                 DoCast(m_creature,SPELL_CONFUSE,false);                     //test
-                done_by->ProcDamageAndSpell(m_creature,PROC_FLAG_KILL_AND_GET_XP,PROC_FLAG_KILLED,PROC_EX_NONE,0);
+				done_by->ProcDamageAndSpell(m_creature,PROC_FLAG_KILL,PROC_FLAG_KILLED,PROC_EX_NONE,0);
                 whirlwind = 4000 + (rand()%5)*1000;
                 regen = 0;
             }
@@ -734,7 +734,7 @@ struct TRINITY_DLL_DECL mob_pulsing_pumpkinAI : public ScriptedAI
         sprouted = false;
         DoCast(m_creature,SPELL_PUMPKIN_AURA,true);
         DoCast(m_creature,SPELL_SPROUTING);
-        m_creature->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_DISABLE_ROTATE);
+		m_creature->SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_STUNNED);
     }
 
     void Aggro(Unit *who){}
@@ -745,7 +745,7 @@ struct TRINITY_DLL_DECL mob_pulsing_pumpkinAI : public ScriptedAI
         {
             sprouted = true;
             m_creature->RemoveAllAuras();
-            m_creature->RemoveFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_DISABLE_ROTATE);
+			m_creature->RemoveFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_STUNNED);
             DoCast(m_creature,SPELL_SPROUT_BODY,true);
             m_creature->UpdateEntry(PUMPKIN_FIEND);
             DoStartMovement(m_creature->getVictim());

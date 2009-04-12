@@ -1,4 +1,4 @@
- /* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ /* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -45,6 +45,10 @@ EndContentData */
 
 #define SAY_RAJ_INTRO1      "The romantic plays are really tough, but you'll do better this time. You have TALENT. Ready?"
 #define RAJ_GOSSIP1         "I've never been more ready."
+
+#define OZ_GM_GOSSIP1       "[GM] Change event to EVENT_OZ"
+#define OZ_GM_GOSSIP2       "[GM] Change event to EVENT_HOOD"
+#define OZ_GM_GOSSIP3       "[GM] Change event to EVENT_RAJ"
 
 struct Dialogue
 {
@@ -181,6 +185,7 @@ struct TRINITY_DLL_DECL npc_barnesAI : public npc_escortAI
                 }
                 IsBeingEscorted = false;
                 PerformanceReady = true;
+                m_creature->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
                 break;
         }
     }
@@ -377,6 +382,13 @@ bool GossipHello_npc_barnes(Player* player, Creature* _Creature)
     {
         player->ADD_GOSSIP_ITEM(0, OZ_GOSSIP1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
 
+        if (player->isGameMaster())
+        {
+            player->ADD_GOSSIP_ITEM(5, OZ_GM_GOSSIP1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
+            player->ADD_GOSSIP_ITEM(5, OZ_GM_GOSSIP2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 4);
+            player->ADD_GOSSIP_ITEM(5, OZ_GM_GOSSIP3, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 5);
+        }
+
         if(!((npc_barnesAI*)_Creature->AI())->RaidWiped)
             player->SEND_GOSSIP_MENU(8970, _Creature->GetGUID());
         else
@@ -394,10 +406,24 @@ bool GossipSelect_npc_barnes(Player *player, Creature *_Creature, uint32 sender,
             player->ADD_GOSSIP_ITEM(0, OZ_GOSSIP2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
             player->SEND_GOSSIP_MENU(8971, _Creature->GetGUID());
             break;
-
         case GOSSIP_ACTION_INFO_DEF+2:
             player->CLOSE_GOSSIP_MENU();
             ((npc_barnesAI*)_Creature->AI())->StartEvent();
+            break;
+        case GOSSIP_ACTION_INFO_DEF+3:
+            player->CLOSE_GOSSIP_MENU();
+            ((npc_barnesAI*)_Creature->AI())->Event = EVENT_OZ;
+            outstring_log("TSCR: player (GUID %i) manually set Opera event to EVENT_OZ",player->GetGUID());
+            break;
+        case GOSSIP_ACTION_INFO_DEF+4:
+            player->CLOSE_GOSSIP_MENU();
+            ((npc_barnesAI*)_Creature->AI())->Event = EVENT_HOOD;
+            outstring_log("TSCR: player (GUID %i) manually set Opera event to EVENT_HOOD",player->GetGUID());
+            break;
+        case GOSSIP_ACTION_INFO_DEF+5:
+            player->CLOSE_GOSSIP_MENU();
+            ((npc_barnesAI*)_Creature->AI())->Event = EVENT_RAJ;
+            outstring_log("TSCR: player (GUID %i) manually set Opera event to EVENT_RAJ",player->GetGUID());
             break;
     }
 
@@ -524,25 +550,25 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
         {
         case 0: return 9999999;
         case 1:
-            m_creature->Yell(SAY_DIALOG_MEDIVH_1,LANG_UNIVERSAL,NULL);
+            m_creature->MonsterYell(SAY_DIALOG_MEDIVH_1,LANG_UNIVERSAL,NULL);
             return 10000;
         case 2:
             if(arca)
-                ((Creature*)arca)->Yell(SAY_DIALOG_ARCANAGOS_2,LANG_UNIVERSAL,NULL);
+                ((Creature*)arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_2,LANG_UNIVERSAL,NULL);
             return 20000;
         case 3:
-            m_creature->Yell(SAY_DIALOG_MEDIVH_3,LANG_UNIVERSAL,NULL);
+            m_creature->MonsterYell(SAY_DIALOG_MEDIVH_3,LANG_UNIVERSAL,NULL);
             return 10000;
         case 4:
             if(arca)
-                ((Creature*)arca)->Yell(SAY_DIALOG_ARCANAGOS_4, LANG_UNIVERSAL, NULL);
+                ((Creature*)arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_4, LANG_UNIVERSAL, NULL);
             return 20000;
         case 5:
-            m_creature->Yell(SAY_DIALOG_MEDIVH_5, LANG_UNIVERSAL, NULL);
+            m_creature->MonsterYell(SAY_DIALOG_MEDIVH_5, LANG_UNIVERSAL, NULL);
             return 20000;
         case 6:
             if(arca)
-                ((Creature*)arca)->Yell(SAY_DIALOG_ARCANAGOS_6, LANG_UNIVERSAL, NULL);
+                ((Creature*)arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_6, LANG_UNIVERSAL, NULL);
             return 10000;
         case 7:
             FireArcanagosTimer = 500;
@@ -552,7 +578,7 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
             DoCast(m_creature, SPELL_MANA_SHIELD);
             return 10000;
         case 9:
-            m_creature->TextEmote(EMOTE_DIALOG_MEDIVH_7, 0, false);
+            m_creature->MonsterTextEmote(EMOTE_DIALOG_MEDIVH_7, 0, false);
             return 10000;
         case 10:
             if(arca)
@@ -560,7 +586,7 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
             return 1000;
         case 11:
             if(arca)
-                ((Creature*)arca)->Yell(SAY_DIALOG_ARCANAGOS_8, LANG_UNIVERSAL, NULL);
+                ((Creature*)arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_8, LANG_UNIVERSAL, NULL);
             return 5000;
         case 12:
             arca->GetMotionMaster()->MovePoint(0, -11010.82,-1761.18, 156.47);
@@ -569,7 +595,7 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
             arca->SetSpeed(MOVE_FLIGHT, 2.0f);
             return 10000;
         case 13:
-            m_creature->Yell(SAY_DIALOG_MEDIVH_9, LANG_UNIVERSAL, NULL);
+            m_creature->MonsterYell(SAY_DIALOG_MEDIVH_9, LANG_UNIVERSAL, NULL);
             return 10000;
         case 14:
             m_creature->SetVisibility(VISIBILITY_OFF);

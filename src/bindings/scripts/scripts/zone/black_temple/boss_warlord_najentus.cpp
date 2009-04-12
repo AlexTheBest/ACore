@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -95,7 +95,7 @@ struct TRINITY_DLL_DECL boss_najentusAI : public ScriptedAI
 
     void SpellHit(Unit *caster, const SpellEntry *spell)
     {
-        if(spell->Id == SPELL_HURL_SPINE && m_creature->HasAura(SPELL_TIDAL_SHIELD, 0))
+        if(spell->Id == SPELL_HURL_SPINE && m_creature->HasAura(SPELL_TIDAL_SHIELD))
         {
             m_creature->RemoveAurasDueToSpell(SPELL_TIDAL_SHIELD);
             m_creature->CastSpell(m_creature, SPELL_TIDAL_BURST, true);
@@ -116,7 +116,7 @@ struct TRINITY_DLL_DECL boss_najentusAI : public ScriptedAI
     {
         if(!SpineTargetGUID) return false;
         Unit* target = Unit::GetUnit(*m_creature, SpineTargetGUID);
-        if(target && target->HasAura(SPELL_IMPALING_SPINE, 1))
+        if(target && target->HasAura(SPELL_IMPALING_SPINE))
             target->RemoveAurasDueToSpell(SPELL_IMPALING_SPINE);
         SpineTargetGUID=0;
         return true;
@@ -154,7 +154,7 @@ struct TRINITY_DLL_DECL boss_najentusAI : public ScriptedAI
             SelectUnitList(target, 3, SELECT_TARGET_RANDOM, 80, true);
             for(std::list<Unit*>::iterator i = target.begin(); i != target.end(); ++i)
                 m_creature->CastSpell(*i, 39835, true);
-            NeedleSpineTimer = 20000+rand()%5000;
+            NeedleSpineTimer = 2000+rand()%1000;
         }else NeedleSpineTimer -= diff;
 
         if(SpecialYellTimer < diff)
@@ -199,7 +199,7 @@ bool GOHello_go_najentus_spine(Player *player, GameObject* _GO)
             {
                 player->CastSpell(player, SPELL_CREATE_NAJENTUS_SPINE, true);
                 _GO->SetLootState(GO_NOT_READY);
-                _GO->SetRespawnTime(0);
+                _GO->Delete();
             }
     return true;
 }

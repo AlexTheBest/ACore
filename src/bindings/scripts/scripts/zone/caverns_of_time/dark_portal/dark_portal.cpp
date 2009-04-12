@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -79,8 +79,8 @@ struct TRINITY_DLL_DECL npc_medivh_bmAI : public ScriptedAI
 
         if (pInstance->GetData(TYPE_MEDIVH) == IN_PROGRESS)
             m_creature->CastSpell(m_creature,SPELL_CHANNEL,true);
-        else if (m_creature->HasAura(SPELL_CHANNEL,0))
-            m_creature->RemoveAura(SPELL_CHANNEL,0);
+        else if (m_creature->HasAura(SPELL_CHANNEL))
+            m_creature->RemoveAura(SPELL_CHANNEL);
 
         m_creature->CastSpell(m_creature,SPELL_PORTAL_RUNE,true);
     }
@@ -92,7 +92,7 @@ struct TRINITY_DLL_DECL npc_medivh_bmAI : public ScriptedAI
 
         if (who->GetTypeId() == TYPEID_PLAYER && m_creature->IsWithinDistInMap(who, 10.0f))
         {
-            if (pInstance->GetData(TYPE_MEDIVH) == IN_PROGRESS)
+            if (pInstance->GetData(TYPE_MEDIVH) == IN_PROGRESS || pInstance->GetData(TYPE_MEDIVH) == DONE)
                 return;
 
             DoScriptText(SAY_INTRO, m_creature);
@@ -156,13 +156,13 @@ struct TRINITY_DLL_DECL npc_medivh_bmAI : public ScriptedAI
 
         if (SpellCorrupt_Timer)
         {
-            if (SpellCorrupt_Timer < diff)
+            if (SpellCorrupt_Timer <= diff)
             {
                     pInstance->SetData(TYPE_MEDIVH,SPECIAL);
 
-                if (m_creature->HasAura(SPELL_CORRUPT_AEONUS,0))
+                if (m_creature->HasAura(SPELL_CORRUPT_AEONUS))
                     SpellCorrupt_Timer = 1000;
-                else if (m_creature->HasAura(SPELL_CORRUPT,0))
+                else if (m_creature->HasAura(SPELL_CORRUPT))
                     SpellCorrupt_Timer = 3000;
                 else
                     SpellCorrupt_Timer = 0;
@@ -171,7 +171,7 @@ struct TRINITY_DLL_DECL npc_medivh_bmAI : public ScriptedAI
 
         if (Check_Timer)
         {
-            if (Check_Timer < diff)
+            if (Check_Timer <= diff)
             {
                 uint32 pct = pInstance->GetData(DATA_SHIELD);
 
@@ -181,7 +181,6 @@ struct TRINITY_DLL_DECL npc_medivh_bmAI : public ScriptedAI
                 {
                     DoScriptText(SAY_WEAK25, m_creature);
                     Life25 = false;
-                    Check_Timer = 0;
                 }
                 else if (Life50 && pct <= 50)
                 {
@@ -203,11 +202,16 @@ struct TRINITY_DLL_DECL npc_medivh_bmAI : public ScriptedAI
                     return;
                 }
 
-                if (pInstance->GetData(TYPE_MEDIVH) == DONE)
+                if (pInstance->GetData(TYPE_RIFT) == DONE)
                 {
                     DoScriptText(SAY_WIN, m_creature);
                     Check_Timer = 0;
+
+                    if (m_creature->HasAura(SPELL_CHANNEL))
+                        m_creature->RemoveAura(SPELL_CHANNEL);
+
                     //TODO: start the post-event here
+                    pInstance->SetData(TYPE_MEDIVH,DONE);
                 }
             }else Check_Timer -= diff;
         }
@@ -334,7 +338,8 @@ struct TRINITY_DLL_DECL npc_time_riftAI : public ScriptedAI
         debug_log("SD2: npc_time_rift: not casting anylonger, i need to die.");
         m_creature->setDeathState(JUST_DIED);
 
-        pInstance->SetData(TYPE_RIFT,SPECIAL);
+        if (pInstance->GetData(TYPE_RIFT) == IN_PROGRESS)
+            pInstance->SetData(TYPE_RIFT,SPECIAL);
     }
 };
 
