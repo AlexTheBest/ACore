@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -354,6 +354,7 @@ void hyjalAI::Reset()
 
     // Misc
     WaveCount = 0;
+    EnemyCount = 0;
 
     // Set faction properly based on creature entry
     switch(m_creature->GetEntry())
@@ -432,7 +433,7 @@ void hyjalAI::EnterEvadeMode()
 void hyjalAI::Aggro(Unit *who)
 {
     if(IsDummy)return;
-    for(uint8 i = 0; i < 2; ++i)
+    for(uint8 i = 0; i < 3; ++i)
         if(Spell[i].Cooldown)
             SpellTimer[i] = Spell[i].Cooldown;
 
@@ -686,7 +687,7 @@ void hyjalAI::Retreat()
     // First get all creatures.
     std::list<Creature*> creatures;
     Trinity::AllFriendlyCreaturesInGrid creature_check(m_creature);
-    Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid> creature_searcher(creatures, creature_check);
+    Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid> creature_searcher(m_creature, creatures, creature_check);
     TypeContainerVisitor
         <Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid>,
         GridTypeMapContainer> creature_visitor(creature_searcher);
@@ -1013,7 +1014,7 @@ void hyjalAI::HideNearPos(float x, float y)
     // First get all creatures.
     std::list<Creature*> creatures;
     Trinity::AllFriendlyCreaturesInGrid creature_check(m_creature);
-    Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid> creature_searcher(creatures, creature_check);
+    Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid> creature_searcher(m_creature, creatures, creature_check);
     TypeContainerVisitor
         <Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid>,
         GridTypeMapContainer> creature_visitor(creature_searcher);
@@ -1041,7 +1042,7 @@ void hyjalAI::RespawnNearPos(float x, float y)
     cell.SetNoCreate();
 
     Trinity::RespawnDo u_do;
-    Trinity::WorldObjectWorker<Trinity::RespawnDo> worker(u_do);
+    Trinity::WorldObjectWorker<Trinity::RespawnDo> worker(m_creature, u_do);
     TypeContainerVisitor<Trinity::WorldObjectWorker<Trinity::RespawnDo>, GridTypeMapContainer > obj_worker(worker);
     CellLock<GridReadGuard> cell_lock(cell, p);
     cell_lock->Visit(cell_lock, obj_worker, *m_creature->GetMap());
@@ -1050,7 +1051,7 @@ void hyjalAI::WaypointReached(uint32 i)
 {
     if(i == 1 || (i == 0 && m_creature->GetEntry() == THRALL))
     {
-        m_creature->Yell("Hurry, we don't have much time",0,0);
+        m_creature->MonsterYell("Hurry, we don't have much time",0,0);
         WaitForTeleport = true;
         TeleportTimer = 20000;
         if(m_creature->GetEntry() == JAINA)
@@ -1075,7 +1076,7 @@ void hyjalAI::WaypointReached(uint32 i)
         // First get all creatures.
         std::list<Creature*> creatures;
         Trinity::AllFriendlyCreaturesInGrid creature_check(m_creature);
-        Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid> creature_searcher(creatures, creature_check);
+        Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid> creature_searcher(m_creature, creatures, creature_check);
         TypeContainerVisitor
             <Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid>,
             GridTypeMapContainer> creature_visitor(creature_searcher);
@@ -1117,7 +1118,7 @@ void hyjalAI::DoOverrun(uint32 faction, const uint32 diff)
 
             std::list<Creature*> creatures;
             Trinity::AllFriendlyCreaturesInGrid creature_check(m_creature);
-            Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid> creature_searcher(creatures, creature_check);
+            Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid> creature_searcher(m_creature, creatures, creature_check);
             TypeContainerVisitor
                 <Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid>,
                 GridTypeMapContainer> creature_visitor(creature_searcher);

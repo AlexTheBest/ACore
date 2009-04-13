@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,9 +21,7 @@
 #include "TotemAI.h"
 #include "Totem.h"
 #include "Creature.h"
-#include "Player.h"
-#include "Database/DBCStores.h"
-#include "MapManager.h"
+#include "DBCStores.h"
 #include "ObjectAccessor.h"
 #include "SpellMgr.h"
 
@@ -68,9 +66,9 @@ TotemAI::UpdateAI(const uint32 /*diff*/)
     if (!spellInfo)
         return;
 
-    // Get spell rangy
+    // Get spell range
     SpellRangeEntry const* srange = sSpellRangeStore.LookupEntry(spellInfo->rangeIndex);
-    float max_range = GetSpellMaxRange(srange);
+    float max_range = GetSpellMaxRangeForHostile(srange);
 
     // SPELLMOD_RANGE not applied in this place just because not existence range mods for attacking totems
 
@@ -82,21 +80,10 @@ TotemAI::UpdateAI(const uint32 /*diff*/)
         !victim->isTargetableForAttack() || !i_totem.IsWithinDistInMap(victim, max_range) ||
         i_totem.IsFriendlyTo(victim) || !victim->isVisibleForOrDetect(&i_totem,false) )
     {
-        CellPair p(Trinity::ComputeCellPair(i_totem.GetPositionX(),i_totem.GetPositionY()));
-        Cell cell(p);
-        cell.data.Part.reserved = ALL_DISTRICT;
-
         victim = NULL;
-
         Trinity::NearestAttackableUnitInObjectRangeCheck u_check(&i_totem, &i_totem, max_range);
-        Trinity::UnitLastSearcher<Trinity::NearestAttackableUnitInObjectRangeCheck> checker(victim, u_check);
-
-        TypeContainerVisitor<Trinity::UnitLastSearcher<Trinity::NearestAttackableUnitInObjectRangeCheck>, GridTypeMapContainer > grid_object_checker(checker);
-        TypeContainerVisitor<Trinity::UnitLastSearcher<Trinity::NearestAttackableUnitInObjectRangeCheck>, WorldTypeMapContainer > world_object_checker(checker);
-
-        CellLock<GridReadGuard> cell_lock(cell, p);
-        cell_lock->Visit(cell_lock, grid_object_checker,  *MapManager::Instance().GetMap(i_totem.GetMapId(), &i_totem));
-        cell_lock->Visit(cell_lock, world_object_checker, *MapManager::Instance().GetMap(i_totem.GetMapId(), &i_totem));
+        Trinity::UnitLastSearcher<Trinity::NearestAttackableUnitInObjectRangeCheck> checker(&i_totem, victim, u_check);
+        i_totem.VisitNearbyObject(max_range, checker);
     }
 
     // If have target
