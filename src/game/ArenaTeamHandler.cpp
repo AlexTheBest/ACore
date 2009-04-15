@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,7 +27,6 @@
 #include "ArenaTeam.h"
 #include "World.h"
 #include "SocialMgr.h"
-#include "Language.h"
 
 void WorldSession::HandleInspectArenaStatsOpcode(WorldPacket & recv_data)
 {
@@ -173,7 +172,7 @@ void WorldSession::HandleArenaTeamInviteAcceptOpcode(WorldPacket & /*recv_data*/
     if(!at)
         return;
 
-    if(_player->GetArenaTeamIdFromDB(_player->GetGUIDLow(), at->GetType()))
+    if(_player->GetArenaTeamId(at->GetSlot()))
     {
         SendArenaTeamCommandResult(ERR_ARENA_TEAM_CREATE_S,"","",ERR_ALREADY_IN_ARENA_TEAM);   // already in arena team that size
         return;

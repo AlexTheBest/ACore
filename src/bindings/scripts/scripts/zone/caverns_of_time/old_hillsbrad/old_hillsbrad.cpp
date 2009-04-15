@@ -1,4 +1,4 @@
- /* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ /* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -235,12 +235,12 @@ struct TRINITY_DLL_DECL npc_thrall_old_hillsbradAI : public npc_escortAI
             case 9:
                 DoScriptText(SAY_TH_ARMORY, m_creature);
                 m_creature->AddUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
-                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, THRALL_WEAPON_MODEL);
-                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_INFO, THRALL_WEAPON_INFO);
-                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_INFO+1, 781);
-                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY+1, THRALL_SHIELD_MODEL);
-                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_INFO+2, THRALL_SHIELD_INFO);
-                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_INFO+3, 1038);
+                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID, THRALL_WEAPON_MODEL);
+                //m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_INFO, THRALL_WEAPON_INFO);
+                //m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_INFO+1, 781);
+                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID+1, THRALL_SHIELD_MODEL);
+                //m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_INFO+2, THRALL_SHIELD_INFO);
+                //m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_INFO+3, 1038);
                 break;
             case 10:
                 m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, THRALL_MODEL_EQUIPPED);
@@ -278,7 +278,6 @@ struct TRINITY_DLL_DECL npc_thrall_old_hillsbradAI : public npc_escortAI
                 break;
             case 31:
                 DoScriptText(SAY_TH_MOUNTS_UP, m_creature);
-                m_creature->HandleEmoteCommand(EMOTE_ONESHOT_TALK);
                 DoMount();
                 break;
             case 37:
@@ -347,11 +346,9 @@ struct TRINITY_DLL_DECL npc_thrall_old_hillsbradAI : public npc_escortAI
                 break;
             case 96:
                 DoScriptText(SAY_TH_EPOCH_WONDER, m_creature);
-                 m_creature->HandleEmoteCommand(EMOTE_ONESHOT_TALK);
                 break;
             case 97:
                 DoScriptText(SAY_TH_EPOCH_KILL_TARETHA, m_creature);
-                m_creature->HandleEmoteCommand(EMOTE_ONESHOT_EXCLAMATION);
                 m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
                 break;
             case 98:
@@ -386,11 +383,11 @@ struct TRINITY_DLL_DECL npc_thrall_old_hillsbradAI : public npc_escortAI
                     //alot will happen here, thrall and taretha talk, erozion appear at spot to explain
                     m_creature->SummonCreature(EROZION_ENTRY,2646.47,680.416,55.38,4.16,TEMPSUMMON_TIMED_DESPAWN,120000);
                 }
-                break;        
+                break;
             case 108:
-                //last waypoint, just set Thrall invisible, respawn is turned off   
+                //last waypoint, just set Thrall invisible, respawn is turned off
                 m_creature->SetVisibility(VISIBILITY_OFF);
-                break;    
+                break;
         }
     }
 
@@ -406,12 +403,8 @@ struct TRINITY_DLL_DECL npc_thrall_old_hillsbradAI : public npc_escortAI
         {
             DoUnmount();
             HadMount = false;
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 0);
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_INFO, 0);
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_INFO+1, 0);
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY+1, 0);
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_INFO+2, 0);
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_INFO+3, 0);
+            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID, 0);
+            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID+1, 0);
             m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, THRALL_MODEL_UNEQUIPPED);
         }
         if( IsBeingEscorted )
