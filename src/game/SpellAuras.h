@@ -74,6 +74,8 @@ class TRINITY_DLL_SPEC Aura
         uint8 GetAuraCharges() const { return m_procCharges; }
         void SetAuraCharges(uint8 charges);
         bool DropAuraCharge();
+        void SetProcDamage(uint32 val) { m_procDamage = val; }
+        uint32 GetProcDamage() const { return m_procDamage; }
 
         int8 GetStackAmount() const {return m_stackAmount;}
         void SetStackAmount(uint8 num);
@@ -92,6 +94,7 @@ class TRINITY_DLL_SPEC Aura
         void SetNegative() { m_positive = false; }
         void SetPositive() { m_positive = true; }
         bool IsPermanent() const { return m_permanent; }
+        void SetPermanent(bool val) { m_permanent = val; }
 
         bool IsPassive() const { return m_isPassive; }
         bool IsDeathPersistent() const { return m_isDeathPersist; }
@@ -159,6 +162,7 @@ class TRINITY_DLL_SPEC Aura
         bool m_updated:1;                                   // Prevent remove aura by stack if set
         bool m_isSingleTargetAura:1;                        // true if it's a single target spell and registered at caster - can change at spell steal for example
 };
+
 class TRINITY_DLL_SPEC AuraEffect
 {
     public:
@@ -333,7 +337,7 @@ class TRINITY_DLL_SPEC AuraEffect
         uint32 GetEffIndex() const { return m_effIndex; }
         int32 GetBasePoints() const { return m_currentBasePoints; }
         int32 GetAuraAmplitude(){return m_amplitude;}
-        void Update(uint32 diff);
+        virtual void Update(uint32 diff);
 
         bool IsAreaAura() const { return m_isAreaAura; }
         bool IsPeriodic() const { return m_isPeriodic; }

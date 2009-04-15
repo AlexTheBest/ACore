@@ -9548,7 +9548,7 @@ uint8 Player::CanStoreItems( Item **pItems,int count) const
             for(int t = INVENTORY_SLOT_BAG_START; !b_found && t < INVENTORY_SLOT_BAG_END; t++)
             {
                 pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, t );
-                if( pBag )
+                if( pBag && ItemCanGoIntoBag(pItem->GetProto(), pBag->GetProto()))
                 {
                     for(uint32 j = 0; j < pBag->GetBagSize(); j++)
                     {
@@ -9585,7 +9585,6 @@ uint8 Player::CanStoreItems( Item **pItems,int count) const
 
             if (b_found) continue;
 
-            /* until proper implementation
             if(pProto->BagFamily & BAG_FAMILY_MASK_CURRENCY_TOKENS)
             {
                 for(uint32 t = CURRENCYTOKEN_SLOT_START; t < CURRENCYTOKEN_SLOT_END; ++t)
@@ -9600,7 +9599,6 @@ uint8 Player::CanStoreItems( Item **pItems,int count) const
             }
 
             if (b_found) continue;
-            */
 
             for(int t = INVENTORY_SLOT_BAG_START; !b_found && t < INVENTORY_SLOT_BAG_END; t++)
             {
@@ -14419,7 +14417,6 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder )
 
     _LoadAuras(holder->GetResult(PLAYER_LOGIN_QUERY_LOADAURAS), time_diff);
     _LoadGlyphAuras();
-
     // add ghost flag (must be after aura load: PLAYER_FLAGS_GHOST set in aura)
     if( HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST) )
         m_deathState = DEAD;
@@ -16455,17 +16452,18 @@ void Player::RemovePet(Pet* pet, PetSaveMode mode, bool returnreagent)
         }
     }
 
-    pet->SavePetToDB(mode);
-
     // only if current pet in slot
     switch(pet->getPetType())
     {
         case POSSESSED_PET:
             pet->RemoveCharmedOrPossessedBy(NULL);
+            break;
         default:
-            SetGuardian(pet, false);
+            pet->SavePetToDB(mode);
             break;
     }
+
+    SetGuardian(pet, false);
 
     pet->CleanupsBeforeDelete();
     pet->AddObjectToRemoveList();
@@ -18001,13 +17999,25 @@ bool Player::canSeeOrDetect(Unit const* u, bool detect, bool inVisibleList, bool
         return false;
     }
 
-    // player see other player with stealth/invisibility only if he in same group or raid or same team (raid/team case dependent from conf setting)
-    if((m_mover->m_invisibilityMask || u->m_invisibilityMask) && !m_mover->canDetectInvisibilityOf(u))
-        if(!(u->GetTypeId()==TYPEID_PLAYER && !IsHostileTo(u) && IsGroupVisibleFor(((Player*)u))))
-            return false;
+    // GM's can see everyone with invisibilitymask with less or equal security level
+    if(m_mover->m_invisibilityMask || u->m_invisibilityMask)
+    {
+        if(isGameMaster())
+        {
+            if(u->GetTypeId() == TYPEID_PLAYER)
+                return ((Player*)u)->GetSession()->GetSecurity() <= GetSession()->GetSecurity();
+            else
+                return true;
+        }
+
+        // player see other player with stealth/invisibility only if he in same group or raid or same team (raid/team case dependent from conf setting)
+        if(!m_mover->canDetectInvisibilityOf(u))
+            if(!(u->GetTypeId()==TYPEID_PLAYER && !IsHostileTo(u) && IsGroupVisibleFor(((Player*)u))))
+                return false;
+    }
 
     // GM invisibility checks early, invisibility if any detectable, so if not stealth then visible
-    if(u->GetVisibility() == VISIBILITY_GROUP_STEALTH)
+    if(u->GetVisibility() == VISIBILITY_GROUP_STEALTH && !isGameMaster())
     {
         // if player is dead then he can't detect anyone in any cases
         //do not know what is the use of this detect

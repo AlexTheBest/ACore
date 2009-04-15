@@ -380,6 +380,7 @@ Spell::Spell( Unit* Caster, SpellEntry const *info, bool triggered, uint64 origi
     m_glyphIndex = 0;
     m_preCastSpell = 0;
     m_triggeredByAuraSpell  = NULL;
+    m_spellAura = NULL;
 
     //Auto Shot & Shoot (wand)
     m_autoRepeat = IsAutoRepeatRangedSpell(m_spellInfo);
@@ -938,6 +939,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
     uint32 procAttacker = m_procAttacker;
     uint32 procVictim   = m_procVictim;
     uint32 procEx       = PROC_EX_NONE;
+    m_spellAura = NULL; // Set aura to null for every target-make sure that pointer is not used for unit without aura applied
 
     if (missInfo==SPELL_MISS_NONE)                          // In case spell hit target, do all effect on that target
         DoSpellHitOnUnit(unit, mask);
@@ -981,6 +983,9 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
         if (m_canTrigger && missInfo != SPELL_MISS_REFLECT)
             caster->ProcDamageAndSpell(unitTarget, procAttacker, procVictim, procEx, addhealth, m_attackType, m_spellInfo);
 
+        if (m_spellAura)
+            m_spellAura->SetProcDamage(addhealth);
+
         int32 gain = unitTarget->ModifyHealth( int32(addhealth) );
 
         unitTarget->getHostilRefManager().threatAssist(caster, float(gain) * 0.5f, m_spellInfo);
@@ -1006,6 +1011,9 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
         // Do triggers for unit (reflect triggers passed on hit phase for correct drop charge)
         if (m_canTrigger && missInfo != SPELL_MISS_REFLECT)
             caster->ProcDamageAndSpell(unitTarget, procAttacker, procVictim, procEx, damageInfo.damage, m_attackType, m_spellInfo);
+
+        if (m_spellAura)
+            m_spellAura->SetProcDamage(damageInfo.damage);
 
         caster->DealSpellDamage(&damageInfo, true);
 
@@ -1186,7 +1194,9 @@ void Spell::DoSpellHitOnUnit(Unit *unit, const uint32 effectMask)
             if( m_spellInfo->SpellFamilyName == SPELLFAMILY_PRIEST && (m_spellInfo->SpellFamilyFlags[1] & 0x000020))
                 m_caster->CastSpell(unit, 41637, true, NULL, NULL, m_originalCasterGUID);
         }
-        unit->AddAura(Aur);
+        // Set aura only when successfully applied
+        if (unit->AddAura(Aur))
+            m_spellAura = Aur;
     }
     t_effmask = effectMask& ~t_effmask;
     for(uint32 effectNumber=0;effectNumber<3;effectNumber++)
@@ -1236,6 +1246,7 @@ void Spell::DoSpellHitOnUnit(Unit *unit, const uint32 effectMask)
                         _duration = aur ? aur->GetAuraDuration() : -1;
                     }
                     triggeredAur->SetAuraDuration(_duration);
+                    triggeredAur->SetPermanent(false);
                 }
             }
         }
@@ -2570,8 +2581,8 @@ void Spell::SendSpellCooldown()
         return;
     }
 
-    // have infinity cooldown but set at aura apply
-    if(m_spellInfo->Attributes & SPELL_ATTR_DISABLED_WHILE_ACTIVE)
+    // have infinity cooldown but set at aura apply                  // do not set cooldown for triggered spells (needed by reincarnation)
+    if(m_spellInfo->Attributes & SPELL_ATTR_DISABLED_WHILE_ACTIVE || m_IsTriggeredSpell)
         return;
 
     _player->AddSpellAndCategoryCooldowns(m_spellInfo,m_CastItem ? m_CastItem->GetEntry() : 0, this);
@@ -2813,6 +2824,10 @@ void Spell::SendSpellStart()
     uint32 castFlags = CAST_FLAG_UNKNOWN1;
     if(IsRangedSpell())
         castFlags |= CAST_FLAG_AMMO;
+    if ((m_caster->GetTypeId() == TYPEID_PLAYER ||
+        (m_caster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_caster)->isPet()))
+         && m_spellInfo->powerType != POWER_HEALTH )
+        castFlags |= CAST_FLAG_POWER_LEFT_SELF;
 
     if(m_spellInfo->runeCostID)
         castFlags |= CAST_FLAG_UNKNOWN10;
@@ -2833,23 +2848,8 @@ void Spell::SendSpellStart()
 
     m_targets.write(&data);
 
-    if ( castFlags & CAST_FLAG_UNKNOWN6 )                   // predicted power?
-        data << uint32(0);
-
-    if ( castFlags & CAST_FLAG_UNKNOWN7 )                   // rune cooldowns list
-    {
-        uint8 v1 = 0;//m_runesState;
-        uint8 v2 = 0;//((Player*)m_caster)->GetRunesState();
-        data << uint8(v1);                                  // runes state before
-        data << uint8(v2);                                  // runes state after
-        for(uint8 i = 0; i < MAX_RUNES; ++i)
-        {
-            uint8 m = (1 << i);
-            if(m & v1)                                      // usable before...
-                if(!(m & v2))                               // ...but on cooldown now...
-                    data << uint8(0);                       // some unknown byte (time?)
-        }
-    }
+    if(castFlags & CAST_FLAG_POWER_LEFT_SELF)
+        data << uint32(m_caster->GetPower((Powers)m_spellInfo->powerType));
 
     if ( castFlags & CAST_FLAG_AMMO )
         WriteAmmoToPacket(&data);
@@ -2870,11 +2870,14 @@ void Spell::SendSpellGo()
     uint32 castFlags = CAST_FLAG_UNKNOWN3;
     if(IsRangedSpell())
         castFlags |= CAST_FLAG_AMMO;                        // arrows/bullets visual
+    if ((m_caster->GetTypeId() == TYPEID_PLAYER ||
+        (m_caster->GetTypeId() == TYPEID_UNIT && ((Creature*)m_caster)->isPet()))
+        && m_spellInfo->powerType != POWER_HEALTH )
+        castFlags |= CAST_FLAG_POWER_LEFT_SELF; // should only be sent to self, but the current messaging doesn't make that possible
 
     if((m_caster->GetTypeId() == TYPEID_PLAYER) && (m_caster->getClass() == CLASS_DEATH_KNIGHT) && m_spellInfo->runeCostID)
     {
         castFlags |= CAST_FLAG_UNKNOWN10;                   // same as in SMSG_SPELL_START
-        castFlags |= CAST_FLAG_UNKNOWN6;                    // makes cooldowns visible
         castFlags |= CAST_FLAG_UNKNOWN7;                    // rune cooldowns list
     }
 
@@ -2895,8 +2898,8 @@ void Spell::SendSpellGo()
 
     m_targets.write(&data);
 
-    if ( castFlags & CAST_FLAG_UNKNOWN6 )                   // unknown wotlk, predicted power?
-        data << uint32(0);
+    if(castFlags & CAST_FLAG_POWER_LEFT_SELF)
+        data << uint32(m_caster->GetPower((Powers)m_spellInfo->powerType));
 
     if ( castFlags & CAST_FLAG_UNKNOWN7 )                   // rune cooldowns list
     {
@@ -3658,19 +3661,23 @@ SpellCastResult Spell::CheckCast(bool strict)
         }
     }
 
-    // caster state requirements
-    if(m_spellInfo->CasterAuraState && !m_caster->HasAuraState(AuraState(m_spellInfo->CasterAuraState), m_spellInfo, m_caster))
-        return SPELL_FAILED_CASTER_AURASTATE;
-    if(m_spellInfo->CasterAuraStateNot && m_caster->HasAuraState(AuraState(m_spellInfo->CasterAuraStateNot), m_spellInfo, m_caster))
-        return SPELL_FAILED_CASTER_AURASTATE;
+    // caster state requirements 
+    // not for triggered spells (needed by execute)
+    if (!m_IsTriggeredSpell)
+    {
+        if(m_spellInfo->CasterAuraState && !m_caster->HasAuraState(AuraState(m_spellInfo->CasterAuraState), m_spellInfo, m_caster))
+            return SPELL_FAILED_CASTER_AURASTATE;
+        if(m_spellInfo->CasterAuraStateNot && m_caster->HasAuraState(AuraState(m_spellInfo->CasterAuraStateNot), m_spellInfo, m_caster))
+            return SPELL_FAILED_CASTER_AURASTATE;
 
-    if(m_spellInfo->casterAuraSpell && !m_caster->HasAura(m_spellInfo->casterAuraSpell))
-        return SPELL_FAILED_CASTER_AURASTATE;
-    if(m_spellInfo->excludeCasterAuraSpell && m_caster->HasAura(m_spellInfo->excludeCasterAuraSpell))
-        return SPELL_FAILED_CASTER_AURASTATE;
+        if(m_spellInfo->casterAuraSpell && !m_caster->HasAura(m_spellInfo->casterAuraSpell))
+            return SPELL_FAILED_CASTER_AURASTATE;
+        if(m_spellInfo->excludeCasterAuraSpell && m_caster->HasAura(m_spellInfo->excludeCasterAuraSpell))
+            return SPELL_FAILED_CASTER_AURASTATE;
 
-    if(reqCombat && m_caster->isInCombat() && IsNonCombatSpell(m_spellInfo))
-        return SPELL_FAILED_AFFECTING_COMBAT;
+        if(reqCombat && m_caster->isInCombat() && IsNonCombatSpell(m_spellInfo))
+            return SPELL_FAILED_AFFECTING_COMBAT;
+    }
 
     // cancel autorepeat spells if cast start when moving
     // (not wand currently autorepeat cast delayed to moving stop anyway in spell update code)
@@ -3684,9 +3691,8 @@ SpellCastResult Spell::CheckCast(bool strict)
 
     if(Unit *target = m_targets.getUnitTarget())
     {
-
         // target state requirements (not allowed state), apply to self also
-        if(m_spellInfo->TargetAuraStateNot && target->HasAuraState(AuraState(m_spellInfo->TargetAuraStateNot), m_spellInfo, m_caster))
+        if(!m_IsTriggeredSpell && m_spellInfo->TargetAuraStateNot && target->HasAuraState(AuraState(m_spellInfo->TargetAuraStateNot), m_spellInfo, m_caster))
             return SPELL_FAILED_TARGET_AURASTATE;
 
         if(m_spellInfo->targetAuraSpell && !target->HasAura(m_spellInfo->targetAuraSpell))
@@ -3698,7 +3704,7 @@ SpellCastResult Spell::CheckCast(bool strict)
         if(target != m_caster)
         {
             // target state requirements (apply to non-self only), to allow cast affects to self like Dirty Deeds
-            if(m_spellInfo->TargetAuraState && !target->HasAuraState(AuraState(m_spellInfo->TargetAuraState), m_spellInfo, m_caster))
+            if(!m_IsTriggeredSpell && m_spellInfo->TargetAuraState && !target->HasAuraState(AuraState(m_spellInfo->TargetAuraState), m_spellInfo, m_caster))
                 return SPELL_FAILED_TARGET_AURASTATE;
 
             // Not allow casting on flying player
@@ -4004,22 +4010,7 @@ SpellCastResult Spell::CheckCast(bool strict)
         {
             case SPELL_EFFECT_DUMMY:
             {
-                if(m_spellInfo->SpellIconID == 1648)        // Execute
-                {
-                    if(!m_targets.getUnitTarget())
-                        return SPELL_FAILED_BAD_TARGETS;
-                    if (m_targets.getUnitTarget()->GetHealth() > m_targets.getUnitTarget()->GetMaxHealth()*0.2)
-                    {
-                        bool found = false;
-                        Unit::AuraEffectList const& stateAuras = m_caster->GetAurasByType(SPELL_AURA_ABILITY_IGNORE_AURASTATE);
-                        for(Unit::AuraEffectList::const_iterator j = stateAuras.begin();j != stateAuras.end(); ++j)
-                            if((*j)->isAffectedOnSpell(m_spellInfo))
-                                found=true;
-                        if (!found)
-                            return SPELL_FAILED_BAD_TARGETS;
-                    }
-                }
-                else if (m_spellInfo->Id == 51582)          // Rocket Boots Engaged
+                if (m_spellInfo->Id == 51582)          // Rocket Boots Engaged
                 {
                     if(m_caster->IsInWater())
                         return SPELL_FAILED_ONLY_ABOVEWATER;
@@ -4035,19 +4026,6 @@ SpellCastResult Spell::CheckCast(bool strict)
                 {
                     Unit *unit = m_targets.getUnitTarget();
                     if(!unit || !unit->HasAura(17743, 0))
-                        return SPELL_FAILED_BAD_TARGETS;
-                }
-                break;
-            }
-            case SPELL_EFFECT_SCHOOL_DAMAGE:
-            {
-                // Hammer of Wrath
-                if(m_spellInfo->SpellVisual[0] == 7250)
-                {
-                    if (!m_targets.getUnitTarget())
-                        return SPELL_FAILED_BAD_IMPLICIT_TARGETS;
-
-                    if(m_targets.getUnitTarget()->GetHealth() > m_targets.getUnitTarget()->GetMaxHealth()*0.2)
                         return SPELL_FAILED_BAD_TARGETS;
                 }
                 break;

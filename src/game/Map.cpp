@@ -386,6 +386,8 @@ Map::EnsureGridCreated(const GridPair &p)
         Guard guard(*this);
         if(!getNGrid(p.x_coord, p.y_coord))
         {
+            sLog.outDebug("Creating grid[%u,%u] for map %u instance %u", p.x_coord, p.y_coord, i_id, i_InstanceId);
+
             setNGrid(new NGridType(p.x_coord*MAX_NUMBER_OF_GRIDS + p.y_coord, p.x_coord, p.y_coord, i_gridExpiry, sWorld.getConfig(CONFIG_GRID_UNLOAD)),
                 p.x_coord, p.y_coord);
 
@@ -441,6 +443,8 @@ bool Map::EnsureGridLoaded(const Cell &cell)
     assert(grid != NULL);
     if( !isGridObjectDataLoaded(cell.GridX(), cell.GridY()) )
     {
+        sLog.outDebug("Loading grid[%u,%u] for map %u instance %u", cell.GridX(), cell.GridY(), i_id, i_InstanceId);
+
         ObjectGridLoader loader(*grid, this, cell);
         loader.LoadN();
 
@@ -1113,7 +1117,7 @@ bool Map::UnloadGrid(const uint32 &x, const uint32 &y, bool unloadAll)
         if(!unloadAll && ActiveObjectsNearGrid(x, y) )
              return false;
 
-        DEBUG_LOG("Unloading grid[%u,%u] for map %u", x,y, i_id);
+        sLog.outDebug("Unloading grid[%u,%u] for map %u", x,y, i_id);
 
         ObjectGridUnloader unloader(*grid);
 
@@ -1830,6 +1834,37 @@ uint16 Map::GetAreaFlag(float x, float y, float z) const
             else
             {
                 if (x > 1299.0f && x < 1839.0f && y > 10.0f && y < 440.0f) areaflag = 685;
+            }
+            break;
+        // The Makers' Perch (ground) and Makers' Overlook (ground and cave)
+        case 1335:                                          // Sholazar Basin
+            // The Makers' Perch ground (fast box)
+            if (x > 6100.0f && x < 6250.0f && y > 5650.0f && y < 5800.0f)
+            {
+                // nice slow circle
+                if ((x-6183.0f)*(x-6183.0f)+(y-5717.0f)*(y-5717.0f) < 2500.0f)
+                    areaflag = 2189;
+            }
+            // Makers' Overlook (ground and cave)
+            else if (x > 5634.48f && x < 5774.53f  && y < 3475.0f && z > 300.0f)
+            {
+                if(y > 3380.26f || y > 3265.0f && z < 360.0f) areaflag = 2187;
+            }
+            break;
+        // The Makers' Perch (underground)
+        case 2147:                                          // The Stormwright's Shelf (Sholazar Basin)
+            if (x > 6199.0f && x < 6283.0f && y > 5705.0f && y < 5817.0f && z < 38.0f) areaflag = 2189; break;
+        // Makers' Overlook (deep cave)
+        case 267:                                           // Icecrown
+            if (x > 5684.0f && x < 5798.0f && y > 3035.0f && y < 3367.0f && z < 358.0f) areaflag = 2187; break;
+        // Wyrmrest Temple (Dragonblight)
+        case 1814:                                          // Path of the Titans (Dragonblight)
+        case 1897:                                          // The Dragon Wastes (Dragonblight)
+            // fast box
+            if (x > 3400.0f && x < 3700.0f && y > 130.0f && y < 420.0f)
+            {
+                // nice slow circle
+                if ((x-3546.87f)*(x-3546.87f)+(y-272.71f)*(y-272.71f) < 19600.0f) areaflag = 1791;
             }
             break;
     }

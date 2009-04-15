@@ -73,9 +73,9 @@ enum SelectAggroTarget
 class TRINITY_DLL_SPEC UnitAI
 {
     protected:
-        Unit *me;
+        Unit* const me;
     public:
-        UnitAI(Unit *u) : me(u) {}
+        explicit UnitAI(Unit *u) : me(u) {}
         virtual void AttackStart(Unit *);
         virtual void UpdateAI(const uint32 diff) = 0;
 
@@ -95,9 +95,9 @@ class TRINITY_DLL_SPEC UnitAI
 class TRINITY_DLL_SPEC PlayerAI : public UnitAI
 {
     protected:
-        Player *me;
+        Player* const me;
     public:
-        PlayerAI(Player *p) : UnitAI((Unit*)p), me(p) {}
+        explicit PlayerAI(Player *p) : UnitAI((Unit*)p), me(p) {}
 
         void OnCharmed(bool apply);
 };
@@ -111,21 +111,26 @@ class TRINITY_DLL_SPEC SimpleCharmedAI : public PlayerAI
 class TRINITY_DLL_SPEC CreatureAI : public UnitAI
 {
     protected:
-        Creature *me;
+        Creature* const me;
+        Creature* const m_creature;
 
         bool UpdateVictim();
     public:
-        CreatureAI(Creature *c) : UnitAI((Unit*)c), me(c) {}
+        explicit CreatureAI(Creature *c) : UnitAI((Unit*)c), me(c), m_creature(c) {}
 
         virtual ~CreatureAI() {}
 
-        // Called if IsVisible(Unit *who) is true at each *who move
+        ///== Reactions At =================================
+
+        // Called if IsVisible(Unit *who) is true at each *who move, reaction at visibility zone enter
         virtual void MoveInLineOfSight(Unit *);
 
-        // Called at stopping attack by any attacker
+        // Called for reaction at stopping attack at no attackers or targets
         virtual void EnterEvadeMode();
 
         // Called at any Damage from any attacker (before damage apply)
+        // Note: it for recalculation damage or special reaction at damage
+        // for attack reaction use AttackedBy called for not DOT damage in Unit::DealDamage also
         virtual void DamageTaken(Unit *done_by, uint32 & /*damage*/) {}
 
         // Called when the creature is killed
@@ -145,8 +150,8 @@ class TRINITY_DLL_SPEC CreatureAI : public UnitAI
         // Called when spell hits a target
         virtual void SpellHitTarget(Unit* target, const SpellEntry*) {}
 
-        // Called when vitim entered water and creature can not enter water
-        virtual bool canReachByRangeAttack(Unit*) { return false; }
+        // Called when the creature is target of hostile action: swing, hostile spell landed, fear/etc)
+        //virtual void AttackedBy(Unit* attacker);
 
         // Called when creature is spawned or respawned (for reseting variables)
         virtual void JustRespawned() {}
@@ -160,6 +165,28 @@ class TRINITY_DLL_SPEC CreatureAI : public UnitAI
         virtual void JustReachedHome() {}
 
         void DoZoneInCombat(Unit* pUnit = NULL);
+
+        ///== Triggered Actions Requested ==================
+
+        // Called when creature attack expected (if creature can and no have current victim)
+        // Note: for reaction at hostile action must be called AttackedBy function.
+        //virtual void AttackStart(Unit *) {}
+
+        // Called at World update tick
+        //virtual void UpdateAI(const uint32 diff ) {}
+
+        ///== State checks =================================
+
+        // Is unit visible for MoveInLineOfSight
+        //virtual bool IsVisible(Unit *) const { return false; }
+
+        // Called when victim entered water and creature can not enter water
+        virtual bool canReachByRangeAttack(Unit*) { return false; }
+
+        ///== Fields =======================================
+
+        // Pointer to controlled by AI creature
+        //Creature* const m_creature;
 };
 
 struct SelectableAI : public FactoryHolder<CreatureAI>, public Permissible<Creature>

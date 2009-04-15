@@ -43,7 +43,6 @@ struct TRINITY_DLL_DECL boss_anetheronAI : public hyjal_trashAI
         pInstance = ((ScriptedInstance*)c->GetInstanceData());
         go = false;    
         pos = 0;
-        Reset();
         SpellEntry *TempSpell = (SpellEntry*)GetSpellStore()->LookupEntry(SPELL_SLEEP);
         if(TempSpell && TempSpell->EffectImplicitTargetA[0] != 1)
         {
@@ -61,6 +60,7 @@ struct TRINITY_DLL_DECL boss_anetheronAI : public hyjal_trashAI
 
     void Reset()
     {
+        damageTaken = 0;
         SwarmTimer = 45000;
         SleepTimer = 60000;
         AuraTimer = 5000;

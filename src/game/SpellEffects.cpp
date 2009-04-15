@@ -448,12 +448,6 @@ void Spell::SpellDamageSchoolDmg(uint32 effect_idx)
                     if(unitTarget->HasAuraState(AURA_STATE_IMMOLATE, m_spellInfo, m_caster))
                         damage += int32(damage*0.25f);
                 }
-                // Haunt
-                else if (m_spellInfo->SpellFamilyFlags[1] & 0x40000)
-                {
-                    m_currentBasePoints[1] = int32(damage * m_currentBasePoints[1] / 100);
-                }
-
                 // Conflagrate - consumes immolate
                 if (m_spellInfo->TargetAuraState == AURA_STATE_IMMOLATE)
                 {
@@ -3358,7 +3352,7 @@ void Spell::EffectDispel(uint32 i)
             for (uint32 i=urand(0, list_size-1);i>0;--i)
                  itr++;
 
-            if (GetDispelChance(this, (*itr)->GetCaster(), (*itr)->GetId()))
+            if (GetDispelChance((*itr)->GetCaster(), (*itr)->GetId()))
             {
                 success_list.push_back(*itr);
                 dispel_list.erase(itr);
@@ -3489,8 +3483,7 @@ void Spell::EffectPickPocket(uint32 /*i*/)
         {
             // Reveal action + get attack
             m_caster->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TALK);
-            if (((Creature*)unitTarget)->IsAIEnabled)
-                ((Creature*)unitTarget)->AI()->AttackStart(m_caster);
+            m_caster->CombatStart(unitTarget);
         }
     }
 }
@@ -4131,6 +4124,14 @@ void Spell::SpellDamageWeaponDmg(uint32 i)
             {
                 if(m_caster->GetTypeId()==TYPEID_PLAYER)
                     ((Player*)m_caster)->AddComboPoints(unitTarget, 1);
+            }
+            // Fan of Knives
+            else if(m_spellInfo->SpellFamilyFlags[1] & 0x40000)
+            {
+                // 50% more damage with daggers
+                if (Item* item = ((Player*)m_caster)->GetWeaponForAttack(m_attackType))
+                    if (item->GetProto()->SubClass == ITEM_SUBCLASS_WEAPON_DAGGER)
+                        totalDamagePercentMod *= 1.5f;
             }
             // Mutilate (for each hand)
             else if(m_spellInfo->SpellFamilyFlags[1] & 0x6)
@@ -4914,8 +4915,6 @@ void Spell::EffectScriptEffect(uint32 effIndex)
                         flag96 familyFlag = aura->GetSpellProto()->SpellFamilyFlags;
                         if (!(familyFlag[1] & 0x00000080 || familyFlag[0] & 0x0000C000))
                             continue;
-                        // Refresh aura duration
-                        aura->RefreshAura();
 
                         // Serpent Sting - Instantly deals 40% of the damage done by your Serpent Sting.
                         if (familyFlag[0] & 0x4000)
@@ -4944,9 +4943,13 @@ void Spell::EffectScriptEffect(uint32 effIndex)
                         //{
                         //    spellId = 53366; // 53366 Chimera Shot - Wyvern
                         //}
+
+                        // Refresh aura duration
+                        aura->RefreshAura();
+                        break;
                     }
                     if (spellId)
-                        m_caster->CastCustomSpell(unitTarget, spellId, &basePoint, 0, 0, false);
+                        m_caster->CastCustomSpell(unitTarget, spellId, &basePoint, 0, 0, true);
                     return;
                 }
                 default:
@@ -5876,13 +5879,19 @@ void Spell::EffectDispelMechanic(uint32 i)
 
     Unit::AuraMap& Auras = unitTarget->GetAuras();
     for(Unit::AuraMap::iterator iter = Auras.begin(); iter != Auras.end(); iter++)
+    {
        if(GetAllSpellMechanicMask(iter->second->GetSpellProto()) & (1<<(mechanic)))
+       {
             dispel_list.push(iter->second);
+       }
+    }
 
     for(;dispel_list.size();dispel_list.pop())
     {
-        if (GetDispelChance(this, dispel_list.front()->GetCaster(), dispel_list.front()->GetId()))
-            unitTarget->RemoveAura(dispel_list.front()->GetId(), dispel_list.front()->GetCasterGUID());
+        if (GetDispelChance(dispel_list.front()->GetCaster(), dispel_list.front()->GetId()))
+        {
+            unitTarget->RemoveAura(dispel_list.front(), AURA_REMOVE_BY_ENEMY_SPELL);
+        }
     }
 }
 

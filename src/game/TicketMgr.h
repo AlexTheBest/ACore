@@ -32,9 +32,14 @@ struct GM_Ticket
     uint64 guid;
     uint64 playerGuid;
     std::string name;
+    float pos_x;
+    float pos_y;
+    float pos_z;
+    uint32 map;
     std::string message;
+    uint64 createtime;
     uint64 timestamp;
-    uint16 closed;
+    uint64 closed;
     uint64 assignedToGM;
     std::string comment;
 };
@@ -45,7 +50,7 @@ typedef std::list<GM_Ticket*>                                       GmTicketList
 class TicketMgr
 {
     public:
-        TicketMgr(){m_ticketid = 1;}    //constructor
+        TicketMgr(){ InitTicketID();}    //constructor
         ~TicketMgr(){}  //destructor
 
         // Object Holder

@@ -574,30 +574,27 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         return 0;
     }
 
-    if(pVictim->GetTypeId() != TYPEID_PLAYER)
+    // no xp,health if type 8 /critters/
+    if(pVictim->GetTypeId() != TYPEID_PLAYER && pVictim->GetCreatureType() == CREATURE_TYPE_CRITTER)
     {
-        // no xp,health if type 8 /critters/
-        if ( pVictim->GetCreatureType() == CREATURE_TYPE_CRITTER)
+        // allow loot only if has loot_id in creature_template
+        if(damage >= pVictim->GetHealth())
         {
-            // allow loot only if has loot_id in creature_template
-            if(damage >= pVictim->GetHealth())
-            {
-                pVictim->setDeathState(JUST_DIED);
-                pVictim->SetHealth(0);
+            pVictim->setDeathState(JUST_DIED);
+            pVictim->SetHealth(0);
 
-                CreatureInfo const* cInfo = ((Creature*)pVictim)->GetCreatureInfo();
-                if(cInfo && cInfo->lootid)
-                    pVictim->SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
+            CreatureInfo const* cInfo = ((Creature*)pVictim)->GetCreatureInfo();
+            if(cInfo && cInfo->lootid)
+                pVictim->SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
 
-                // some critters required for quests
-                if(GetTypeId() == TYPEID_PLAYER)
-                    ((Player*)this)->KilledMonster(pVictim->GetEntry(),pVictim->GetGUID());
-            }
-            else
-                pVictim->ModifyHealth(- (int32)damage);
-
-            return damage;
+            // some critters required for quests
+            if(GetTypeId() == TYPEID_PLAYER)
+                ((Player*)this)->KilledMonster(pVictim->GetEntry(),pVictim->GetGUID());
         }
+        else
+            pVictim->ModifyHealth(- (int32)damage);
+
+        return damage;
     }
 
     DEBUG_LOG("DealDamageStart");
@@ -834,22 +831,6 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         DEBUG_LOG("DealDamageAlive");
 
         pVictim->ModifyHealth(- (int32)damage);
-
-        if(damagetype != DOT)
-        {
-            if(!getVictim())
-            /*{
-                // if have target and damage pVictim just call AI reaction
-                if(pVictim != getVictim() && pVictim->GetTypeId()==TYPEID_UNIT && ((Creature*)pVictim)->IsAIEnabled)
-                    ((Creature*)pVictim)->AI()->AttackedBy(this);
-            }
-            else*/
-            {
-                // if not have main target then attack state with target (including AI call)
-                //start melee attacks only after melee hit
-                Attack(pVictim,(damagetype == DIRECT_DAMAGE));
-            }
-        }
 
         if(damagetype == DIRECT_DAMAGE || damagetype == SPELL_DIRECT_DAMAGE)
         {
@@ -2268,6 +2249,10 @@ void Unit::AttackerStateUpdate (Unit *pVictim, WeaponAttackType attType, bool ex
             }
         }
 
+        // if damage pVictim call AI reaction
+        //if(pVictim->GetTypeId()==TYPEID_UNIT && ((Creature*)pVictim)->AI())
+        //    ((Creature*)pVictim)->AI()->AttackedBy(this);
+
         return;
     }
 
@@ -2295,6 +2280,10 @@ void Unit::AttackerStateUpdate (Unit *pVictim, WeaponAttackType attType, bool ex
                 --m_extraAttacks;
         }
     }
+
+    // if damage pVictim call AI reaction
+    //if(pVictim->GetTypeId()==TYPEID_UNIT && ((Creature*)pVictim)->AI())
+    //    ((Creature*)pVictim)->AI()->AttackedBy(this);
 }
 
 MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(const Unit *pVictim, WeaponAttackType attType) const
@@ -3300,7 +3289,7 @@ void Unit::_UpdateSpells( uint32 time )
 
     if(!m_gameObj.empty())
     {
-        std::list<GameObject*>::iterator ite1, dnext1;
+        GameObjectList::iterator ite1, dnext1;
         for (ite1 = m_gameObj.begin(); ite1 != m_gameObj.end(); ite1 = dnext1)
         {
             dnext1 = ite1;
@@ -3477,40 +3466,16 @@ bool Unit::IsNonMeleeSpellCasted(bool withDelayed, bool skipChanneled, bool skip
 void Unit::InterruptNonMeleeSpells(bool withDelayed, uint32 spell_id)
 {
     // generic spells are interrupted if they are not finished or delayed
-    Spell *spell = m_currentSpells[CURRENT_GENERIC_SPELL];
-    if (spell && (!spell_id || spell->m_spellInfo->Id==spell_id))
-    {
-        m_currentSpells[CURRENT_GENERIC_SPELL] = NULL;
+    if (m_currentSpells[CURRENT_GENERIC_SPELL] && (!spell_id || m_currentSpells[CURRENT_GENERIC_SPELL]->m_spellInfo->Id==spell_id))
+        InterruptSpell(CURRENT_GENERIC_SPELL,withDelayed);
 
-        if  ( (spell->getState() != SPELL_STATE_FINISHED) &&
-            (withDelayed || spell->getState() != SPELL_STATE_DELAYED) )
-            spell->cancel();
-        spell->SetReferencedFromCurrent(false);
-    }
-
-    spell = m_currentSpells[CURRENT_AUTOREPEAT_SPELL];
     // autorepeat spells are interrupted if they are not finished or delayed
-    if (spell && (!spell_id || spell->m_spellInfo->Id==spell_id))
-    {
-        m_currentSpells[CURRENT_AUTOREPEAT_SPELL] = NULL;
-        // send disable autorepeat packet in any case
-        if(GetTypeId()==TYPEID_PLAYER)
-            ((Player*)this)->SendAutoRepeatCancel();
-        if ( (spell->getState() != SPELL_STATE_FINISHED) &&
-            (withDelayed || spell->getState() != SPELL_STATE_DELAYED) )
-            spell->cancel();
-        spell->SetReferencedFromCurrent(false);
-    }
+    if (m_currentSpells[CURRENT_AUTOREPEAT_SPELL] && (!spell_id || m_currentSpells[CURRENT_AUTOREPEAT_SPELL]->m_spellInfo->Id==spell_id))
+        InterruptSpell(CURRENT_AUTOREPEAT_SPELL,withDelayed);
 
     // channeled spells are interrupted if they are not finished, even if they are delayed
-    spell = m_currentSpells[CURRENT_CHANNELED_SPELL];
-    if (spell && (!spell_id || spell->m_spellInfo->Id==spell_id))
-    {
-        m_currentSpells[CURRENT_CHANNELED_SPELL] = NULL;
-        if (spell->getState() != SPELL_STATE_FINISHED)
-            spell->cancel();
-        spell->SetReferencedFromCurrent(false);
-    }
+    if (m_currentSpells[CURRENT_CHANNELED_SPELL] && (!spell_id || m_currentSpells[CURRENT_CHANNELED_SPELL]->m_spellInfo->Id==spell_id))
+        InterruptSpell(CURRENT_CHANNELED_SPELL,true);
 }
 
 Spell* Unit::FindCurrentSpellBySpellId(uint32 spell_id) const
@@ -3763,7 +3728,7 @@ bool Unit::AddAura(Aura *Aur)
             else
                 foundAura->RefreshAura();
             delete Aur;
-            return true;
+            return false;
         }
     }
 
@@ -4075,7 +4040,7 @@ void Unit::RemoveAurasByTypeWithDispel(AuraType auraType, Spell * spell)
     {
         Aura * aur = (*iter)->GetParentAura();
         ++iter;
-        if (GetDispelChance(spell, aur->GetCaster(), aur->GetId()))
+        if (GetDispelChance(aur->GetCaster(), aur->GetId()))
         {
             uint32 removedAuras = m_removedAuras.size();
             RemoveAura(aur, AURA_REMOVE_BY_ENEMY_SPELL);
@@ -4375,6 +4340,15 @@ DynamicObject * Unit::GetDynObject(uint32 spellId)
     return NULL;
 }
 
+GameObject* Unit::GetGameObject(uint32 spellId) const
+{
+    for (GameObjectList::const_iterator i = m_gameObj.begin(); i != m_gameObj.end();)
+        if ((*i)->GetSpellId() == spellId)
+            return *i;
+
+    return NULL;
+}
+
 void Unit::AddGameObject(GameObject* gameObj)
 {
     assert(gameObj && gameObj->GetOwnerGUID()==0);
@@ -4425,7 +4399,7 @@ void Unit::RemoveGameObject(uint32 spellid, bool del)
 {
     if(m_gameObj.empty())
         return;
-    std::list<GameObject*>::iterator i, next;
+    GameObjectList::iterator i, next;
     for (i = m_gameObj.begin(); i != m_gameObj.end(); i = next)
     {
         next = i;
@@ -4448,7 +4422,7 @@ void Unit::RemoveGameObject(uint32 spellid, bool del)
 void Unit::RemoveAllGameObjects()
 {
     // remove references to unit
-    for(std::list<GameObject*>::iterator i = m_gameObj.begin(); i != m_gameObj.end();)
+    for(GameObjectList::iterator i = m_gameObj.begin(); i != m_gameObj.end();)
     {
         (*i)->SetOwnerGUID(0);
         (*i)->SetRespawnTime(0);
@@ -5197,7 +5171,7 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
             if (dummySpell->SpellIconID == 2999)
             {
                 if (effIndex!=0)
-                    return true;
+                    return false;
                 AuraEffect *counter = GetAuraEffect(triggeredByAura->GetId(), 1);
                 if (!counter)
                     return true;
@@ -5699,7 +5673,7 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                     return false;
                 // Only 0 aura can proc
                 if (effIndex!=0)
-                    return true;
+                    return false;
                 // Wrath crit
                 if (procSpell->SpellFamilyFlags[0] & 0x1)
                 {
@@ -5827,8 +5801,10 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
         case SPELLFAMILY_PALADIN:
         {
             // Seal of Righteousness - melee proc dummy (addition ${$MWS*(0.022*$AP+0.044*$SPH)} damage)
-            if (dummySpell->SpellFamilyFlags[0]&0x8000000 && effIndex==0)
+            if (dummySpell->SpellFamilyFlags[0]&0x8000000)
             {
+                if (effIndex!=0)
+                    return false;
                 triggered_spell_id = 25742;
                 float ap = GetTotalAttackPowerValue(BASE_ATTACK);
                 int32 holy = SpellBaseDamageBonus(SPELL_SCHOOL_MASK_HOLY) +
@@ -7830,9 +7806,6 @@ bool Unit::Attack(Unit *victim, bool meleeAttack)
     //if(GetTypeId()==TYPEID_UNIT)
     //    ((Creature*)this)->SetCombatStartPosition(GetPositionX(), GetPositionY(), GetPositionZ());
 
-    //if(m_attacking->GetTypeId()==TYPEID_UNIT && ((Creature*)m_attacking)->IsAIEnabled)
-    //    ((Creature*)m_attacking)->AI()->AttackedBy(this);
-
     if(GetTypeId()==TYPEID_UNIT)
     {
         // should not let player enter combat by right clicking target
@@ -9044,10 +9017,11 @@ uint32 Unit::SpellHealingBonus(Unit *pVictim, SpellEntry const *spellProto, uint
                     break;
                 }
             }
-            coeff = (CastingTime / 3500.0f) * DotFactor;
+            // As wowwiki says: C = (Cast Time / 3.5) * 1.88 (for healing spells)
+            coeff = (CastingTime / 3500.0f) * DotFactor * 1.88f;
         }
 
-        float coeff2 = CalculateLevelPenalty(spellProto) * 1.88f * stack;
+        float coeff2 = CalculateLevelPenalty(spellProto)* stack;
         TakenTotal += TakenAdvertisedBenefit * coeff * coeff2;
         if(Player* modOwner = GetSpellModOwner())
         {
@@ -9070,7 +9044,7 @@ uint32 Unit::SpellHealingBonus(Unit *pVictim, SpellEntry const *spellProto, uint
         // Rejuvenation, Regrowth, Lifebloom, or Wild Growth
         if (pVictim->GetAura(SPELL_AURA_PERIODIC_HEAL, SPELLFAMILY_DRUID, 0x50, 0x4000010, 0))
             //increase healing by 20%
-            DoneTotalMod *= 1.2f;
+            TakenTotalMod *= 1.2f;
     }
 
     // Taken mods
@@ -9096,11 +9070,11 @@ uint32 Unit::SpellHealingBonus(Unit *pVictim, SpellEntry const *spellProto, uint
     if(damagetype==DOT)
     {
         // Healing over time taken percent
-        float minval_hot = GetMaxNegativeAuraModifier(SPELL_AURA_MOD_HOT_PCT);
+        float minval_hot = pVictim->GetMaxNegativeAuraModifier(SPELL_AURA_MOD_HOT_PCT);
         if(minval_hot)
             TakenTotalMod *= (100.0f + minval_hot) / 100.0f;
 
-        float maxval_hot = GetMaxPositiveAuraModifier(SPELL_AURA_MOD_HOT_PCT);
+        float maxval_hot = pVictim->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_HOT_PCT);
         if(maxval_hot)
             TakenTotalMod *= (100.0f + maxval_hot) / 100.0f;
     }
@@ -11555,6 +11529,8 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
         if (GetTypeId() == TYPEID_PLAYER && i->spellProcEvent && i->spellProcEvent->cooldown)
             cooldown = i->spellProcEvent->cooldown;
 
+        uint32 procDebug = 0;
+
         for (uint8 effIndex = 0; effIndex<MAX_SPELL_EFFECTS;++effIndex)
         {
             if (!(i->effMask & (1<<effIndex)))
@@ -11589,18 +11565,27 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
                     sLog.outDebug("ProcDamageAndSpell: casting spell id %u (triggered by %s dummy aura of spell %u)", spellInfo->Id,(isVictim?"a victim's":"an attacker's"), triggeredByAura->GetId());
                     if (!HandleDummyAuraProc(pTarget, damage, triggeredByAura, procSpell, procFlag, procExtra, cooldown))
                         continue;
+                    if (procDebug & 1)
+                        sLog.outError("Dummy aura of spell %d procs twice from one effect!",spellInfo->Id);
+                    procDebug |= 1;
                     break;
                 }
                 case SPELL_AURA_OBS_MOD_ENERGY:
                     sLog.outDebug("ProcDamageAndSpell: casting spell id %u (triggered by %s aura of spell %u)", spellInfo->Id,(isVictim?"a victim's":"an attacker's"), triggeredByAura->GetId());
                     if (!HandleObsModEnergyAuraProc(pTarget, damage, triggeredByAura, procSpell, procFlag, procExtra, cooldown))
                         continue;
+                    if (procDebug & 2)
+                        sLog.outError("ObsModEnergy aura of spell %d procs twice from one effect!",spellInfo->Id);
+                    procDebug |= 2;
                     break;
                 case SPELL_AURA_MOD_HASTE:
                 {
                     sLog.outDebug("ProcDamageAndSpell: casting spell id %u (triggered by %s haste aura of spell %u)", spellInfo->Id,(isVictim?"a victim's":"an attacker's"), triggeredByAura->GetId());
                     if (!HandleHasteAuraProc(pTarget, damage, triggeredByAura, procSpell, procFlag, procExtra, cooldown))
                         continue;
+                    if (procDebug & 4)
+                        sLog.outError("Haste aura of spell %d procs twice from one effect!",spellInfo->Id);
+                    procDebug |= 4;
                     break;
                 }
                 case SPELL_AURA_OVERRIDE_CLASS_SCRIPTS:
@@ -11608,6 +11593,9 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
                     sLog.outDebug("ProcDamageAndSpell: casting spell id %u (triggered by %s aura of spell %u)", spellInfo->Id,(isVictim?"a victim's":"an attacker's"), triggeredByAura->GetId());
                     if (!HandleOverrideClassScriptAuraProc(pTarget, damage, triggeredByAura, procSpell, cooldown))
                         continue;
+                    if (procDebug & 8)
+                        sLog.outError("OverrideClassScripts aura of spell %d procs twice from one effect!",spellInfo->Id);
+                    procDebug |= 8;
                     break;
                 }
                 case SPELL_AURA_RAID_PROC_FROM_CHARGE_WITH_VALUE:
@@ -11834,8 +11822,8 @@ void Unit::SetFeared(bool apply, uint64 casterGUID, uint32 spellID)
 
             // attack caster if can
             Unit* caster = ObjectAccessor::GetObjectInWorld(casterGUID, (Unit*)NULL);
-            if(caster && caster != getVictim() && ((Creature*)this)->IsAIEnabled)
-                ((Creature*)this)->AI()->AttackStart(caster);
+            if(caster && ((Creature*)this)->AI())
+                ((Creature*)this)->AI()->AttackedBy(caster);
         }
     }
 
@@ -12297,7 +12285,7 @@ Pet* Unit::CreateTamedPetFrom(Creature* creatureTarget,uint32 spell_id)
     return pet;
 }
 
-bool Unit::IsTriggeredAtSpellProcEvent(Unit *pVictim, Aura * aura, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, bool active, SpellProcEventEntry const*& spellProcEvent )
+bool Unit::IsTriggeredAtSpellProcEvent(Unit *pVictim, Aura * aura, SpellEntry const* procSpell, uint32 procFlag, uint32 procExtra, WeaponAttackType attType, bool isVictim, bool active, SpellProcEventEntry const *& spellProcEvent )
 {
     SpellEntry const* spellProto = aura->GetSpellProto ();
 
@@ -12315,7 +12303,7 @@ bool Unit::IsTriggeredAtSpellProcEvent(Unit *pVictim, Aura * aura, SpellEntry co
         return false;
 
     // Check spellProcEvent data requirements
-    if(!SpellMgr::IsSpellProcEventCanTriggeredBy(spellProcEvent, EventProcFlag, procSpell, procFlag, procExtra, active))
+    if(!spellmgr.IsSpellProcEventCanTriggeredBy(spellProcEvent, EventProcFlag, procSpell, procFlag, procExtra, active))
         return false;
 
     // In most cases req get honor or XP from kill
@@ -12500,6 +12488,9 @@ void Unit::SetToNotify()
 
 void Unit::Kill(Unit *pVictim, bool durabilityLoss)
 {
+    // Prevent killing unit twice (and giving reward from kill twice)
+    if (!pVictim->isAlive())
+        return;
     pVictim->SetHealth(0);
 
     // find player: owner of controlled `this` or `this` itself maybe

@@ -442,6 +442,7 @@ class ChatHandler
         bool HandleDeMorphCommand(const char* args);
         bool HandleGoCreatureCommand(const char* args);
         bool HandleGoObjectCommand(const char* args);
+        bool HandleGoTicketCommand(const char* args);
         bool HandleGoTriggerCommand(const char* args);
         bool HandleGoGraveyardCommand(const char* args);
 
@@ -562,7 +563,6 @@ class ChatHandler
         GameObject* GetObjectGlobalyWithGuidOrNearWithDbGuid(uint32 lowguid,uint32 entry);
 
         // Utility methods for commands
-        void ShowTicket(uint64 guid, char const* text, char const* time);
         bool LookupPlayerSearchCommand(QueryResult* result, int32 limit);
         bool HandleBanListHelper(QueryResult* result);
         bool HandleBanHelper(BanMode mode,char const* args);

@@ -426,24 +426,22 @@ m_auraSlot(MAX_AURAS), m_auraLevel(1), m_procCharges(0), m_stackAmount(1),m_aura
     // Aura is positive when it is casted by friend and at least one aura is positive
     // or when it is casted by enemy and  at least one aura is negative
     bool swap=false;
-    if (!caster || caster==target)
-        m_positive=IsPositiveSpell(m_spellProto->Id);
+    if (!caster || caster==target) // caster == target - 1 negative effect is enough for aura to be negative
+        m_positive = false;
     else
-    {
         m_positive = !caster->IsHostileTo(m_target);
-        for (uint8 i=0;i<MAX_SPELL_EFFECTS;++i)
+    for (uint8 i=0;i<MAX_SPELL_EFFECTS;++i)
+    {
+        if (!(1<<i & GetEffectMask()))
+            continue;
+        if (m_positive == IsPositiveEffect(GetId(), i))
         {
-            if (!(1<<i & GetEffectMask()))
-                continue;
-            if (m_positive == IsPositiveEffect(GetId(), i))
-            {
-                swap = true;
-                break;
-            }
+            swap = true;
+            break;
         }
-        if (!swap)
-            m_positive=!m_positive;
     }
+    if (!swap)
+        m_positive=!m_positive;
 }
 
 Aura::~Aura()
@@ -607,36 +605,48 @@ void Aura::Update(uint32 diff)
         m_duration -= diff;
         if (m_duration < 0)
             m_duration = 0;
-        m_timeCla -= diff;
 
         // all spells with manaPerSecond/manaPerSecondPerLevel have aura in effect 0
+        if(m_timeCla > 0)
+            m_timeCla -= diff;
         if(m_timeCla <= 0)
         {
             if(Unit* caster = GetCaster())
             {
-                Powers powertype = Powers(m_spellProto->powerType);
-                int32 manaPerSecond = m_spellProto->manaPerSecond + m_spellProto->manaPerSecondPerLevel * caster->getLevel();
-                m_timeCla = 1000;
-                if (manaPerSecond)
+                if(int32 manaPerSecond = m_spellProto->manaPerSecond + m_spellProto->manaPerSecondPerLevel * caster->getLevel())
                 {
-                    if(powertype==POWER_HEALTH)
+                    m_timeCla = 1000;
+
+                    Powers powertype = Powers(m_spellProto->powerType);
+                    if(powertype == POWER_HEALTH)
                     {
-                        if (caster->GetHealth()>manaPerSecond)
+                        if (caster->GetHealth() > manaPerSecond)
                             caster->ModifyHealth(-manaPerSecond);
                         else
+                        {
                             m_target->RemoveAura(this);
+                            return;
+                        }
                     }
-                    else if (caster->GetPower(powertype)>=manaPerSecond)
-                        caster->ModifyPower(powertype,-manaPerSecond);
                     else
-                        m_target->RemoveAura(this);
+                    {
+                        if (caster->GetPower(powertype) >= manaPerSecond)
+                            caster->ModifyPower(powertype, -manaPerSecond);
+                        else
+                        {
+                            m_target->RemoveAura(this);
+                            return;
+                        }
+                    }
                 }
             }
         }
     }
 
-    // Channeled aura required check distance from caster except in possessed cases
-    if(IsChanneledSpell(m_spellProto) && m_caster_guid != m_target->GetGUID() && !m_target->isPossessed())
+    // Channeled aura required check distance from caster
+    if(IsChanneledSpell(m_spellProto) && m_caster_guid != m_target->GetGUID()
+        && !IsAreaAura() && !IsPersistent()  // check for these is done in auraeffect
+        /* && !m_target->isPossessed()*/)
     {
         Unit* caster = GetCaster();
         if(!caster)
@@ -647,16 +657,18 @@ void Aura::Update(uint32 diff)
         // Get spell range
         float radius=-1.0f;
         SpellModOp mod;
+        // get part aura with lowest radius
         for (uint8 i=0;i<3;++i)
         {
             if (HasEffect(i) && m_spellProto->EffectRadiusIndex[i])
             {
-                radius = caster->GetSpellRadiusForTarget(m_target, sSpellRadiusStore.LookupEntry(m_spellProto->EffectRadiusIndex[i]));
+                float new_radius = caster->GetSpellRadiusForTarget(m_target, sSpellRadiusStore.LookupEntry(m_spellProto->EffectRadiusIndex[i]));
+                if (radius < 0.0f || radius > new_radius)
+                    radius = new_radius;
                 mod = SPELLMOD_RADIUS;
-                break;
             }
         }
-        if (radius<0)
+        if (radius < 0.0f)
         {
             radius = caster->GetSpellMaxRangeForTarget(m_target, sSpellRangeStore.LookupEntry(m_spellProto->rangeIndex)) ;
             mod = SPELLMOD_RANGE;
@@ -672,16 +684,9 @@ void Aura::Update(uint32 diff)
         }
     }
 
-    for (uint8 i = 0; i<MAX_SPELL_EFFECTS;++i)
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
         if (m_partAuras[i])
-        {
-            if (m_partAuras[i]->IsAreaAura())
-                ((AreaAuraEffect *) m_partAuras[i])->Update(diff);
-            else if(m_partAuras[i]->IsPersistent())
-                ((PersistentAreaAuraEffect *) m_partAuras[i])->Update(diff);
-            else
-                m_partAuras[i]->Update(diff);
-        }
+            m_partAuras[i]->Update(diff);
 }
 
 void AuraEffect::Update(uint32 diff)
@@ -764,28 +769,29 @@ void AreaAuraEffect::Update(uint32 diff)
     }
     else                                                    // aura at non-caster
     {
-        Unit * tmp_target = m_target;
-        Unit* caster = GetCaster();
-        uint32 tmp_spellId = GetId();
-        uint32 tmp_effIndex = GetEffIndex();
-        uint64 tmp_guid = GetCasterGUID();
-
         // WARNING: the aura may get deleted during the update
         // DO NOT access its members after update!
         AuraEffect::Update(diff);
+
+        // Speedup - no need to do more checks
+        if (GetParentAura()->IsRemoved())
+            return;
+
+        // Caster may be deleted due to update
+        Unit* caster = GetCaster();
 
         // remove aura if out-of-range from caster (after teleport for example)
         // or caster is isolated or caster no longer has the aura
         // or caster is (no longer) friendly
         bool needFriendly = (m_areaAuraType == AREA_AURA_ENEMY ? false : true);
         if( !caster || caster->hasUnitState(UNIT_STAT_ISOLATED) ||
-            !caster->HasAuraEffect(tmp_spellId, tmp_effIndex)         ||
-            caster->IsFriendlyTo(tmp_target) != needFriendly
+            !caster->HasAuraEffect(GetId(), m_effIndex)         ||
+            caster->IsFriendlyTo(m_target) != needFriendly
            )
         {
             m_target->RemoveAura(GetParentAura());
         }
-        else if (!caster->IsWithinDistInMap(tmp_target, m_radius))
+        else if (!caster->IsWithinDistInMap(m_target, m_radius))
         {
             if (needFriendly)
             {
@@ -802,17 +808,17 @@ void AreaAuraEffect::Update(uint32 diff)
             m_removeTime = FRIENDLY_AA_REMOVE_TIME;
             if( m_areaAuraType == AREA_AURA_PARTY)         // check if in same sub group
             {
-                if(!tmp_target->IsInPartyWith(caster))
+                if(!m_target->IsInPartyWith(caster))
                     m_target->RemoveAura(GetParentAura());
             }
             else if( m_areaAuraType == AREA_AURA_RAID)
             {
-                if(!tmp_target->IsInRaidWith(caster))
+                if(!m_target->IsInRaidWith(caster))
                     m_target->RemoveAura(GetParentAura());
             }
             else if( m_areaAuraType == AREA_AURA_PET || m_areaAuraType == AREA_AURA_OWNER )
             {
-                if( tmp_target->GetGUID() != caster->GetCharmerOrOwnerGUID() )
+                if( m_target->GetGUID() != caster->GetCharmerOrOwnerGUID() )
                     m_target->RemoveAura(GetParentAura());
             }
         }
@@ -821,29 +827,21 @@ void AreaAuraEffect::Update(uint32 diff)
 
 void PersistentAreaAuraEffect::Update(uint32 diff)
 {
-    bool remove = false;
+    if(Unit *caster = GetCaster())
+    {
+        if(DynamicObject *dynObj = caster->GetDynObject(GetId(), GetEffIndex()))
+        {
+            if(m_target->IsWithinDistInMap(dynObj, dynObj->GetRadius()))
+            {
+                AuraEffect::Update(diff);
+                return;
+            }
+        }
+    }
 
     // remove the aura if its caster or the dynamic object causing it was removed
     // or if the target moves too far from the dynamic object
-    Unit *caster = GetCaster();
-    if (caster)
-    {
-        DynamicObject *dynObj = caster->GetDynObject(GetId(), GetEffIndex());
-        if (dynObj)
-        {
-            if (!m_target->IsWithinDistInMap(dynObj, dynObj->GetRadius()))
-                remove = true;
-        }
-        else
-            remove = true;
-    }
-    else
-        remove = true;
-
-    if(remove)
-        m_target->RemoveAura(GetParentAura());
-
-    AuraEffect::Update(diff);
+    m_target->RemoveAura(GetParentAura());
 }
 
 void AuraEffect::ApplyModifier(bool apply, bool Real)
@@ -1169,25 +1167,26 @@ void Aura::_RemoveAura()
     // Proc on aura remove (only spell flags for now)
     if (caster)
     {
-        uint32 ProcCaster, ProcVictim;
-        if (IsPositiveSpell(GetId()))
-        {
-            ProcCaster = PROC_FLAG_SUCCESSFUL_POSITIVE_SPELL;
-            ProcVictim = PROC_FLAG_TAKEN_POSITIVE_SPELL;
-        }
-        else
-        {
-            ProcCaster = PROC_FLAG_SUCCESSFUL_NEGATIVE_SPELL_HIT;
-            ProcVictim = PROC_FLAG_TAKEN_NEGATIVE_SPELL_HIT;
-        }
         uint32 procEx=0;
         if (m_removeMode == AURA_REMOVE_BY_ENEMY_SPELL)
             procEx = PROC_EX_AURA_REMOVE_DESTROY;
         else if (m_removeMode == AURA_REMOVE_BY_EXPIRE || m_removeMode == AURA_REMOVE_BY_CANCEL)
             procEx = PROC_EX_AURA_REMOVE_EXPIRE;
-        else return;
-
-        caster->ProcDamageAndSpell(m_target,ProcCaster, ProcVictim, procEx, m_procDamage, BASE_ATTACK, m_spellProto);
+        if (procEx)
+        {
+            uint32 ProcCaster, ProcVictim;
+            if (IsPositiveSpell(GetId()))
+            {
+                ProcCaster = PROC_FLAG_SUCCESSFUL_POSITIVE_SPELL;
+                ProcVictim = PROC_FLAG_TAKEN_POSITIVE_SPELL;
+            }
+            else
+            {
+                ProcCaster = PROC_FLAG_SUCCESSFUL_NEGATIVE_SPELL_HIT;
+                ProcVictim = PROC_FLAG_TAKEN_NEGATIVE_SPELL_HIT;
+            }
+            caster->ProcDamageAndSpell(m_target,ProcCaster, ProcVictim, procEx, m_procDamage, BASE_ATTACK, m_spellProto);
+        }
     }
 }
 
@@ -1208,11 +1207,10 @@ void Aura::SetStackAmount(uint8 stackAmount)
                     // Reapply if amount change
                     if (amount!=part->GetAmount())
                     {
-                        bool Real = bool (part->m_spellmod);
                         // Auras which are applying spellmod should have removed spellmods for real
-                        part->ApplyModifier(false,Real);
+                        part->ApplyModifier(false,true);
                         part->SetAmount(amount);
-                        part->ApplyModifier(true, Real);
+                        part->ApplyModifier(true,true);
                     }
                 }
             }
@@ -2267,6 +2265,12 @@ void AuraEffect::HandleAuraDummy(bool apply, bool Real)
     {
         switch(GetId())
         {
+            // Haunting Spirits - perdiodic trigger demon
+            case 7057:
+                m_isPeriodic = true;
+                m_amplitude = irand (0, 60) + 30;
+                m_amplitude *= IN_MILISECONDS;
+                return;
             case 1515:                                      // Tame beast
                 // FIX_ME: this is 2.0.12 threat effect replaced in 2.1.x by dummy aura, must be checked for correctness
                 if( caster && m_target->CanHaveThreatList())
@@ -2425,8 +2429,9 @@ void AuraEffect::HandleAuraDummy(bool apply, bool Real)
                 // Haunt
                 if(m_spellProto->SpellFamilyFlags[1] & 0x40000)
                 {
+                    int32 bp0 = GetParentAura()->GetProcDamage() * m_amount / 100;
                     if(caster)
-                        caster->CastCustomSpell(caster, 48210, &m_currentBasePoints, 0, 0, true);
+                        caster->CastCustomSpell(caster, 48210, &bp0, 0, 0, true, NULL, this);
                     return;
                 }
                 break;
@@ -3073,10 +3078,10 @@ void AuraEffect::HandleAuraTransform(bool apply, bool Real)
         if(GetMiscValue()==0)
         {
             // player applied only
-            if(m_target->GetTypeId()!=TYPEID_PLAYER)
+            if (m_target->GetTypeId()!=TYPEID_PLAYER)
                 return;
 
-            switch(GetId())
+            switch (GetId())
             {
                 // Orb of Deception
                 case 16739:
@@ -3152,16 +3157,19 @@ void AuraEffect::HandleAuraTransform(bool apply, bool Real)
                 if(GetId()==42016 && m_target->GetMountID() && !m_target->GetAurasByType(SPELL_AURA_MOD_INCREASE_FLIGHT_SPEED).empty())
                     m_target->SetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID,16314);
             }
-            m_target->setTransForm(GetId());
         }
 
+        // update active transform spell only not set or not overwriting negative by positive case
+        if (!m_target->getTransForm() || !IsPositiveSpell(GetId()) || IsPositiveSpell(m_target->getTransForm()))
+            m_target->setTransForm(GetId());
+
         // polymorph case
-        if( Real && m_target->GetTypeId() == TYPEID_PLAYER && m_target->IsPolymorphed())
+        if (Real && m_target->GetTypeId() == TYPEID_PLAYER && m_target->IsPolymorphed())
         {
             // for players, start regeneration after 1s (in polymorph fast regeneration case)
             // only if caster is Player (after patch 2.4.2)
-            if(IS_PLAYER_GUID(GetCasterGUID()) )
-                ((Player*)m_target)->setRegenTimer(1000);
+            if (IS_PLAYER_GUID(GetCasterGUID()) )
+                ((Player*)m_target)->setRegenTimer(1*IN_MILISECONDS);
 
             //dismount polymorphed target (after patch 2.4.2)
             if (m_target->IsMounted())
@@ -3170,20 +3178,20 @@ void AuraEffect::HandleAuraTransform(bool apply, bool Real)
     }
     else
     {
+        // ApplyModifier(true) will reapply it if need
+        m_target->setTransForm(0);
+        m_target->SetDisplayId(m_target->GetNativeDisplayId());
+
+        // re-aplly some from still active with preference negative cases
         Unit::AuraEffectList const& otherTransforms = m_target->GetAurasByType(SPELL_AURA_TRANSFORM);
-        if(otherTransforms.empty())
-        {
-            m_target->SetDisplayId(m_target->GetNativeDisplayId());
-            m_target->setTransForm(0);
-        }
-        else
+        if (!otherTransforms.empty())
         {
             // look for other transform auras
             AuraEffect* handledAura = *otherTransforms.begin();
             for(Unit::AuraEffectList::const_iterator i = otherTransforms.begin();i != otherTransforms.end(); ++i)
             {
                 // negative auras are preferred
-                if(!IsPositiveSpell((*i)->GetSpellProto()->Id))
+                if (!IsPositiveSpell((*i)->GetSpellProto()->Id))
                 {
                     handledAura = *i;
                     break;
@@ -3193,9 +3201,9 @@ void AuraEffect::HandleAuraTransform(bool apply, bool Real)
         }
 
         // Dragonmaw Illusion (restore mount model)
-        if(GetId()==42016 && m_target->GetMountID()==16314)
+        if (GetId()==42016 && m_target->GetMountID()==16314)
         {
-            if(!m_target->GetAurasByType(SPELL_AURA_MOUNTED).empty())
+            if (!m_target->GetAurasByType(SPELL_AURA_MOUNTED).empty())
             {
                 uint32 cr_id = m_target->GetAurasByType(SPELL_AURA_MOUNTED).front()->GetMiscValue();
                 if(CreatureInfo const* ci = objmgr.GetCreatureTemplate(cr_id))
@@ -3416,7 +3424,7 @@ void AuraEffect::HandleAuraModScale(bool apply, bool Real)
             ((Creature*)m_target)->AIM_Initialize();
 
             if (((Creature*)m_target)->AI())
-                ((Creature*)m_target)->AI()->AttackStart(caster);
+                ((Creature*)m_target)->AI()->AttackedBy(caster);
         }
     }
 }
@@ -3572,7 +3580,7 @@ void AuraEffect::HandleAuraModPetTalentsPoints(bool Apply, bool Real)
             {
                 ((Creature*)m_target)->AIM_Initialize();
                 if (((Creature*)m_target)->AI())
-                    ((Creature*)m_target)->AI()->AttackStart(caster);
+                    ((Creature*)m_target)->AI()->AttackedBy(caster);
             }
         }
     }
@@ -3813,18 +3821,8 @@ void AuraEffect::HandleAuraModSilence(bool apply, bool Real)
         m_target->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_SILENCED);
         // Stop cast only spells vs PreventionType == SPELL_PREVENTION_TYPE_SILENCE
         for (uint32 i = CURRENT_MELEE_SPELL; i < CURRENT_MAX_SPELL;i++)
-        {
-            Spell* currentSpell = m_target->m_currentSpells[i];
-            if (currentSpell && currentSpell->m_spellInfo->PreventionType == SPELL_PREVENTION_TYPE_SILENCE)
-            {
-                uint32 state = currentSpell->getState();
-                // Stop spells on prepare or casting state
-                if ( state == SPELL_STATE_PREPARING || state == SPELL_STATE_CASTING )
-                {
-                    currentSpell->cancel();
-                }
-            }
-        }
+            if (m_target->m_currentSpells[i] && m_target->m_currentSpells[i]->m_spellInfo->PreventionType == SPELL_PREVENTION_TYPE_SILENCE)
+                m_target->InterruptSpell(i,false);          // Stop spells on prepare or casting state
 
         switch (GetId())
         {
@@ -6170,6 +6168,18 @@ void AuraEffect::PeriodicTick()
             // so 17 is rounded amount for 5 sec tick grow ~ 1 range grow in 3 sec
             if(pt == POWER_RAGE)
                 m_target->ModifyPower(pt, m_amount*3/5);
+            break;
+        }
+        case SPELL_AURA_DUMMY:
+        {
+            // Haunting Spirits
+            if (GetId() == 7057)
+            {
+                m_target->CastSpell((Unit*)NULL , m_amount , true);
+                m_amplitude = irand (0 , 60 ) + 30;
+                m_amplitude *= IN_MILISECONDS;
+                break;
+            }
             break;
         }
         // Here tick dummy auras

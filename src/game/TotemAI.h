@@ -31,18 +31,16 @@ class TRINITY_DLL_DECL TotemAI : public CreatureAI
 {
     public:
 
-        TotemAI(Creature *c);
+        explicit TotemAI(Creature *c);
 
         void MoveInLineOfSight(Unit *);
         void AttackStart(Unit *);
         void EnterEvadeMode();
-        bool IsVisible(Unit *) const;
 
         void UpdateAI(const uint32);
         static int Permissible(const Creature *);
 
     private:
-        Totem &i_totem;
         uint64 i_victimGuid;
 };
 #endif
