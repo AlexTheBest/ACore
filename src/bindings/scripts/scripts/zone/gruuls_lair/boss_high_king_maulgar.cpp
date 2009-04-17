@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -88,11 +88,11 @@ bool CheckAllBossDied(ScriptedInstance* pInstance, Creature* m_creature)
     OlmGUID = pInstance->GetData64(DATA_OLMTHESUMMONER);
     KroshGUID = pInstance->GetData64(DATA_KROSHFIREHAND);
 
-    Maulgar = ((Creature*)Unit::GetUnit((*m_creature), MaulgarGUID));
-    Kiggler = ((Creature*)Unit::GetUnit((*m_creature), KigglerGUID));
-    Blindeye = ((Creature*)Unit::GetUnit((*m_creature), BlindeyeGUID));
-    Olm = ((Creature*)Unit::GetUnit((*m_creature), OlmGUID));
-    Krosh = ((Creature*)Unit::GetUnit((*m_creature), KroshGUID));
+    Maulgar = (Unit::GetCreature((*m_creature), MaulgarGUID));
+    Kiggler = (Unit::GetCreature((*m_creature), KigglerGUID));
+    Blindeye = (Unit::GetCreature((*m_creature), BlindeyeGUID));
+    Olm = (Unit::GetCreature((*m_creature), OlmGUID));
+    Krosh = (Unit::GetCreature((*m_creature), KroshGUID));
 
     if(!Maulgar || !Kiggler || !Blindeye || !Olm || !Krosh)
         return false;
@@ -142,7 +142,7 @@ struct TRINITY_DLL_DECL boss_high_king_maulgarAI : public ScriptedAI
         {
             if(Council[i])
             {
-                pCreature = (Creature*)(Unit::GetUnit((*m_creature), Council[i]));
+                pCreature = (Unit::GetCreature((*m_creature), Council[i]));
                 if(pCreature && !pCreature->isAlive())
                 {
                     pCreature->Respawn();
@@ -268,8 +268,8 @@ struct TRINITY_DLL_DECL boss_high_king_maulgarAI : public ScriptedAI
             DoScriptText(SAY_ENRAGE, m_creature);
 
             m_creature->CastSpell(m_creature, SPELL_DUAL_WIELD, true);
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 0);
-            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY+1, 0);
+            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID, 0);
+            m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID+1, 0);
         }
 
         if(Phase2)
@@ -337,7 +337,7 @@ struct TRINITY_DLL_DECL boss_olm_the_summonerAI : public ScriptedAI
         if(pInstance)
         {
             Creature *Maulgar = NULL;
-            Maulgar = (Creature*)(Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_MAULGAR)));
+            Maulgar = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_MAULGAR)));
 
             if(Maulgar)
                 ((boss_high_king_maulgarAI*)Maulgar->AI())->AddDeath();
@@ -441,7 +441,7 @@ struct TRINITY_DLL_DECL boss_kiggler_the_crazedAI : public ScriptedAI
         if(pInstance)
         {
             Creature *Maulgar = NULL;
-            Maulgar = (Creature*)(Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_MAULGAR)));
+            Maulgar = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_MAULGAR)));
 
             if(Maulgar)
                 ((boss_high_king_maulgarAI*)Maulgar->AI())->AddDeath();
@@ -482,7 +482,7 @@ struct TRINITY_DLL_DECL boss_kiggler_the_crazedAI : public ScriptedAI
             if(target)
                 DoCast(target, SPELL_GREATER_POLYMORPH);
 
-            GreaterPolymorph_Timer = 20000;
+            GreaterPolymorph_Timer = 15000 + rand()%5000;
         }else GreaterPolymorph_Timer -= diff;
 
         //LightningBolt_Timer
@@ -520,13 +520,15 @@ struct TRINITY_DLL_DECL boss_blindeye_the_seerAI : public ScriptedAI
 
     uint32 GreaterPowerWordShield_Timer;
     uint32 Heal_Timer;
+	uint32 PrayerofHealing_Timer;
 
     ScriptedInstance* pInstance;
 
     void Reset()
     {
         GreaterPowerWordShield_Timer = 5000;
-        Heal_Timer = 30000;
+        Heal_Timer = 25000 + rand()%15000;
+		PrayerofHealing_Timer = 45000 + rand()%10000;
 
         //reset encounter
         if (pInstance)
@@ -547,7 +549,7 @@ struct TRINITY_DLL_DECL boss_blindeye_the_seerAI : public ScriptedAI
         if(pInstance)
         {
             Creature *Maulgar = NULL;
-            Maulgar = (Creature*)(Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_MAULGAR)));
+            Maulgar = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_MAULGAR)));
 
             if(Maulgar)
                 ((boss_high_king_maulgarAI*)Maulgar->AI())->AddDeath();
@@ -592,8 +594,15 @@ struct TRINITY_DLL_DECL boss_blindeye_the_seerAI : public ScriptedAI
         if(Heal_Timer < diff)
         {
             DoCast(m_creature, SPELL_HEAL);
-            Heal_Timer = 60000;
+            Heal_Timer = 15000 + rand()%25000;
         }else Heal_Timer -= diff;
+
+        //PrayerofHealing_Timer
+        if (PrayerofHealing_Timer < diff)
+        {
+            DoCast(m_creature, SPELL_PRAYER_OH);
+            PrayerofHealing_Timer = 35000 + rand()%15000;
+        }else PrayerofHealing_Timer -= diff;
 
         DoMeleeAttackIfReady();
     }
@@ -638,7 +647,7 @@ struct TRINITY_DLL_DECL boss_krosh_firehandAI : public ScriptedAI
         if(pInstance)
         {
             Creature *Maulgar = NULL;
-            Maulgar = (Creature*)(Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_MAULGAR)));
+            Maulgar = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_MAULGAR)));
 
             if(Maulgar)
                 ((boss_high_king_maulgarAI*)Maulgar->AI())->AddDeath();

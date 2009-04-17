@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -148,29 +148,32 @@ enum SellFailure
 // -1 from client enchantment slot number
 enum EnchantmentSlot
 {
-    PERM_ENCHANTMENT_SLOT       = 0,
-    TEMP_ENCHANTMENT_SLOT       = 1,
-    SOCK_ENCHANTMENT_SLOT       = 2,
-    SOCK_ENCHANTMENT_SLOT_2     = 3,
-    SOCK_ENCHANTMENT_SLOT_3     = 4,
-    BONUS_ENCHANTMENT_SLOT      = 5,
-    MAX_INSPECTED_ENCHANTMENT_SLOT = 6,
+    PERM_ENCHANTMENT_SLOT           = 0,
+    TEMP_ENCHANTMENT_SLOT           = 1,
+    SOCK_ENCHANTMENT_SLOT           = 2,
+    SOCK_ENCHANTMENT_SLOT_2         = 3,
+    SOCK_ENCHANTMENT_SLOT_3         = 4,
+    BONUS_ENCHANTMENT_SLOT          = 5,
+    PRISMATIC_ENCHANTMENT_SLOT      = 6,                    // added at apply special permanent enchantment
+    MAX_INSPECTED_ENCHANTMENT_SLOT  = 7,
 
-    PROP_ENCHANTMENT_SLOT_0     = 6,                        // used with RandomSuffix
-    PROP_ENCHANTMENT_SLOT_1     = 7,                        // used with RandomSuffix
-    PROP_ENCHANTMENT_SLOT_2     = 8,                        // used with RandomSuffix and RandomProperty
-    PROP_ENCHANTMENT_SLOT_3     = 9,                        // used with RandomProperty
-    PROP_ENCHANTMENT_SLOT_4     = 10,                       // used with RandomProperty
-    MAX_ENCHANTMENT_SLOT        = 11
+    PROP_ENCHANTMENT_SLOT_0         = 7,                    // used with RandomSuffix
+    PROP_ENCHANTMENT_SLOT_1         = 8,                    // used with RandomSuffix
+    PROP_ENCHANTMENT_SLOT_2         = 9,                    // used with RandomSuffix and RandomProperty
+    PROP_ENCHANTMENT_SLOT_3         = 10,                   // used with RandomProperty
+    PROP_ENCHANTMENT_SLOT_4         = 11,                   // used with RandomProperty
+    MAX_ENCHANTMENT_SLOT            = 12
 };
 
-#define MAX_VISIBLE_ITEM_OFFSET   16                        // 16 fields per visible item (creator(2) + enchantments(12) + properties(1) + pad(1))
+#define MAX_VISIBLE_ITEM_OFFSET       18                    // 18 fields per visible item (creator(2) + enchantments(13) + properties(1) + seed(1) + pad(1))
+
+#define MAX_GEM_SOCKETS               MAX_ITEM_PROTO_SOCKETS// (BONUS_ENCHANTMENT_SLOT-SOCK_ENCHANTMENT_SLOT) and item proto size, equal value expected
 
 enum EnchantmentOffset
 {
     ENCHANTMENT_ID_OFFSET       = 0,
     ENCHANTMENT_DURATION_OFFSET = 1,
-    ENCHANTMENT_CHARGES_OFFSET  = 2
+    ENCHANTMENT_CHARGES_OFFSET  = 2                         // now here not only charges, but something new in wotlk
 };
 
 #define MAX_ENCHANTMENT_OFFSET    3
@@ -211,6 +214,7 @@ class TRINITY_DLL_SPEC Item : public Object
 
         void SetBinding(bool val) { ApplyModFlag(ITEM_FIELD_FLAGS,ITEM_FLAGS_BINDED,val); }
         bool IsSoulBound() const { return HasFlag(ITEM_FIELD_FLAGS, ITEM_FLAGS_BINDED); }
+        bool IsAccountBound() const { return HasFlag(ITEM_FIELD_FLAGS, ITEM_FLAGS_BOA); }
         bool IsBindedNotWith(uint64 guid) const { return IsSoulBound() && GetOwnerGUID()!= guid; }
         bool IsBoundByEnchant() const;
         virtual void SaveToDB();
@@ -230,8 +234,9 @@ class TRINITY_DLL_SPEC Item : public Object
 
         uint32 GetCount() const { return GetUInt32Value (ITEM_FIELD_STACK_COUNT); }
         void SetCount(uint32 value) { SetUInt32Value (ITEM_FIELD_STACK_COUNT, value); }
-        uint32 GetMaxStackCount() const { return GetProto()->Stackable; }
+        uint32 GetMaxStackCount() const { return GetProto()->GetMaxStackSize(); }
         uint8 GetGemCountWithID(uint32 GemID) const;
+        uint8 GetGemCountWithLimitCategory(uint32 limitCategory) const;
 
         uint8 GetSlot() const {return m_slot;}
         Bag *GetContainer() { return m_container; }
@@ -256,9 +261,9 @@ class TRINITY_DLL_SPEC Item : public Object
         void SetEnchantmentDuration(EnchantmentSlot slot, uint32 duration);
         void SetEnchantmentCharges(EnchantmentSlot slot, uint32 charges);
         void ClearEnchantment(EnchantmentSlot slot);
-        uint32 GetEnchantmentId(EnchantmentSlot slot)       const { return GetUInt32Value(ITEM_FIELD_ENCHANTMENT + slot*MAX_ENCHANTMENT_OFFSET + ENCHANTMENT_ID_OFFSET);}
-        uint32 GetEnchantmentDuration(EnchantmentSlot slot) const { return GetUInt32Value(ITEM_FIELD_ENCHANTMENT + slot*MAX_ENCHANTMENT_OFFSET + ENCHANTMENT_DURATION_OFFSET);}
-        uint32 GetEnchantmentCharges(EnchantmentSlot slot)  const { return GetUInt32Value(ITEM_FIELD_ENCHANTMENT + slot*MAX_ENCHANTMENT_OFFSET + ENCHANTMENT_CHARGES_OFFSET);}
+        uint32 GetEnchantmentId(EnchantmentSlot slot)       const { return GetUInt32Value(ITEM_FIELD_ENCHANTMENT_1_1 + slot*MAX_ENCHANTMENT_OFFSET + ENCHANTMENT_ID_OFFSET);}
+        uint32 GetEnchantmentDuration(EnchantmentSlot slot) const { return GetUInt32Value(ITEM_FIELD_ENCHANTMENT_1_1 + slot*MAX_ENCHANTMENT_OFFSET + ENCHANTMENT_DURATION_OFFSET);}
+        uint32 GetEnchantmentCharges(EnchantmentSlot slot)  const { return GetUInt32Value(ITEM_FIELD_ENCHANTMENT_1_1 + slot*MAX_ENCHANTMENT_OFFSET + ENCHANTMENT_CHARGES_OFFSET);}
 
         void SendTimeUpdate(Player* owner);
         void UpdateDuration(Player* owner, uint32 diff);
@@ -282,13 +287,10 @@ class TRINITY_DLL_SPEC Item : public Object
             uState = state;
         }
 
-        bool hasQuest(uint32 quest_id) const
-        {
-            ItemPrototype const *itemProto = GetProto();
-            return itemProto && itemProto->StartQuest == quest_id;
-        }
+        bool hasQuest(uint32 quest_id) const { return GetProto()->StartQuest == quest_id; }
         bool hasInvolvedQuest(uint32 /*quest_id*/) const { return false; }
-
+        bool IsPotion() const { return GetProto()->IsPotion(); }
+        bool IsConjuredConsumable() const { return GetProto()->IsConjuredConsumable(); }
     private:
         uint8 m_slot;
         Bag *m_container;

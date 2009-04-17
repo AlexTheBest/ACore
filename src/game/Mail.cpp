@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,8 +29,8 @@
 #include "UpdateMask.h"
 #include "Unit.h"
 #include "Language.h"
-#include "Database/DBCStores.h"
 #include "AuctionHouseBot.h"
+#include "DBCStores.h"
 
 void MailItem::deleteItem( bool inDB )
 {
@@ -54,6 +54,9 @@ void WorldSession::HandleSendMail(WorldPacket & recv_data )
     uint8 unk4;
     recv_data >> mailbox;
     recv_data >> receiver;
+
+    if (!objmgr.IsGameObjectOfTypeInRange(_player, mailbox, GAMEOBJECT_TYPE_MAILBOX))
+        return;
 
     // recheck
     CHECK_PACKET_SIZE(recv_data, 8+(receiver.size()+1)+1+1+4+4+1+4+4+8+1);
@@ -125,9 +128,9 @@ void WorldSession::HandleSendMail(WorldPacket & recv_data )
         return;
     }
 
-    uint32 reqmoney = money + 30;
-    if (items_count)
-        reqmoney = money + (30 * items_count);
+    uint32 cost = items_count ? 30 * items_count : 30;  // price hardcoded in client
+
+    uint32 reqmoney = cost + money;
 
     if (pl->GetMoney() < reqmoney)
     {
@@ -210,6 +213,7 @@ void WorldSession::HandleSendMail(WorldPacket & recv_data )
     }
 
     pl->ModifyMoney( -int32(reqmoney) );
+    pl->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_GOLD_SPENT_FOR_MAIL, cost);
 
     bool needItemDelay = false;
 
@@ -276,6 +280,10 @@ void WorldSession::HandleMarkAsRead(WorldPacket & recv_data )
     uint64 mailbox;
     uint32 mailId;
     recv_data >> mailbox;
+
+    if (!objmgr.IsGameObjectOfTypeInRange(_player, mailbox, GAMEOBJECT_TYPE_MAILBOX))
+        return;
+
     recv_data >> mailId;
     Player *pl = _player;
     Mail *m = pl->GetMail(mailId);
@@ -299,6 +307,10 @@ void WorldSession::HandleMailDelete(WorldPacket & recv_data )
     uint32 mailId;
     recv_data >> mailbox;
     recv_data >> mailId;
+
+    if (!objmgr.IsGameObjectOfTypeInRange(_player, mailbox, GAMEOBJECT_TYPE_MAILBOX))
+        return;
+
     Player* pl = _player;
     pl->m_mailsUpdated = true;
     Mail *m = pl->GetMail(mailId);
@@ -314,6 +326,10 @@ void WorldSession::HandleReturnToSender(WorldPacket & recv_data )
     uint64 mailbox;
     uint32 mailId;
     recv_data >> mailbox;
+
+    if (!objmgr.IsGameObjectOfTypeInRange(_player, mailbox, GAMEOBJECT_TYPE_MAILBOX))
+        return;
+
     recv_data >> mailId;
     Player *pl = _player;
     Mail *m = pl->GetMail(mailId);
@@ -418,6 +434,10 @@ void WorldSession::HandleTakeItem(WorldPacket & recv_data )
     uint32 mailId;
     uint32 itemId;
     recv_data >> mailbox;
+
+    if (!objmgr.IsGameObjectOfTypeInRange(_player, mailbox, GAMEOBJECT_TYPE_MAILBOX))
+        return;
+
     recv_data >> mailId;
     recv_data >> itemId;                                    // item guid low?
     Player* pl = _player;
@@ -509,6 +529,10 @@ void WorldSession::HandleTakeMoney(WorldPacket & recv_data )
     uint32 mailId;
     recv_data >> mailbox;
     recv_data >> mailId;
+
+    if (!objmgr.IsGameObjectOfTypeInRange(_player, mailbox, GAMEOBJECT_TYPE_MAILBOX))
+        return;
+
     Player *pl = _player;
 
     Mail* m = pl->GetMail(mailId);
@@ -540,9 +564,8 @@ void WorldSession::HandleGetMail(WorldPacket & recv_data )
     uint64 mailbox;
     recv_data >> mailbox;
 
-    //GameObject* obj = ObjectAccessor::GetGameObject(_player, mailbox);
-    //if(!obj || !obj->IsMailBox())
-    //    return;
+    if (!objmgr.IsGameObjectOfTypeInRange(_player, mailbox, GAMEOBJECT_TYPE_MAILBOX))
+        return;
 
     Player* pl = _player;
 
@@ -601,7 +624,7 @@ void WorldSession::HandleGetMail(WorldPacket & recv_data )
         data << (uint32) (*itr)->mailTemplateId;            // mail template (MailTemplate.dbc)
         data << (*itr)->subject;                            // Subject string - once 00, when mail type = 3
 
-        data << (uint8) item_count;
+        data << (uint8) item_count;                         // client limit is 0x10
 
         for(uint8 i = 0; i < item_count; ++i)
         {
@@ -612,7 +635,7 @@ void WorldSession::HandleGetMail(WorldPacket & recv_data )
             data << (uint32) (item ? item->GetGUIDLow() : 0);
             // entry
             data << (uint32) (item ? item->GetEntry() : 0);
-            for(uint8 j = 0; j < 6; ++j)
+            for(uint8 j = 0; j < MAX_INSPECTED_ENCHANTMENT_SLOT; ++j)
             {
                 // unsure
                 data << (uint32) (item ? item->GetEnchantmentCharges((EnchantmentSlot)j) : 0);
@@ -626,13 +649,15 @@ void WorldSession::HandleGetMail(WorldPacket & recv_data )
             // unk
             data << (uint32) (item ? item->GetItemSuffixFactor() : 0);
             // stack count
-            data << (uint8)  (item ? item->GetCount() : 0);
+            data << (uint32) (item ? item->GetCount() : 0);
             // charges
             data << (uint32) (item ? item->GetSpellCharges() : 0);
             // durability
             data << (uint32) (item ? item->GetUInt32Value(ITEM_FIELD_MAXDURABILITY) : 0);
             // durability
             data << (uint32) (item ? item->GetUInt32Value(ITEM_FIELD_DURABILITY) : 0);
+            // unknown wotlk
+            data << (uint8)  0;
         }
 
         mails_count += 1;
@@ -675,6 +700,9 @@ void WorldSession::HandleMailCreateTextItem(WorldPacket & recv_data )
     uint32 mailId;
 
     recv_data >> mailbox >> mailId;
+
+    if (!objmgr.IsGameObjectOfTypeInRange(_player, mailbox, GAMEOBJECT_TYPE_MAILBOX))
+        return;
 
     Player *pl = _player;
 

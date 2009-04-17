@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
 #include "ObjectMgr.h"
 
 // Character Dump tables
-#define DUMP_TABLE_COUNT 18
+#define DUMP_TABLE_COUNT 20
 
 struct DumpTable
 {
@@ -36,24 +36,27 @@ struct DumpTable
 
 static DumpTable dumpTables[DUMP_TABLE_COUNT] =
 {
-    { "characters",               DTT_CHARACTER  },
-    { "character_queststatus",    DTT_CHAR_TABLE },
-    { "character_reputation",     DTT_CHAR_TABLE },
-    { "character_spell",          DTT_CHAR_TABLE },
-    { "character_spell_cooldown", DTT_CHAR_TABLE },
-    { "character_action",         DTT_CHAR_TABLE },
-    { "character_aura",           DTT_CHAR_TABLE },
-    { "character_homebind",       DTT_CHAR_TABLE },
-    { "character_inventory",      DTT_INVENTORY  },
-    { "mail",                     DTT_MAIL       },
-    { "mail_items",               DTT_MAIL_ITEM  },
-    { "item_instance",            DTT_ITEM       },
-    { "character_gifts",          DTT_ITEM_GIFT  },
-    { "item_text",                DTT_ITEM_TEXT  },
-    { "character_pet",            DTT_PET        },
-    { "pet_aura",                 DTT_PET_TABLE  },
-    { "pet_spell",                DTT_PET_TABLE  },
-    { "pet_spell_cooldown",       DTT_PET_TABLE  },
+    { "characters",                       DTT_CHARACTER  },
+    { "character_achievement",            DTT_CHAR_TABLE },
+    { "character_achievement_progress",   DTT_CHAR_TABLE },
+    { "character_queststatus",            DTT_CHAR_TABLE },
+    { "character_reputation",             DTT_CHAR_TABLE },
+    { "character_spell",                  DTT_CHAR_TABLE },
+    { "character_spell_cooldown",         DTT_CHAR_TABLE },
+    { "character_action",                 DTT_CHAR_TABLE },
+    { "character_aura",                   DTT_CHAR_TABLE },
+    { "character_homebind",               DTT_CHAR_TABLE },
+//    { "character_ticket",                 DTT_CHAR_TABLE },
+    { "character_inventory",              DTT_INVENTORY  },
+    { "mail",                             DTT_MAIL       },
+    { "mail_items",                       DTT_MAIL_ITEM  },
+    { "item_instance",                    DTT_ITEM       },
+    { "character_gifts",                  DTT_ITEM_GIFT  },
+    { "item_text",                        DTT_ITEM_TEXT  },
+    { "character_pet",                    DTT_PET        },
+    { "pet_aura",                         DTT_PET_TABLE  },
+    { "pet_spell",                        DTT_PET_TABLE  },
+    { "pet_spell_cooldown",               DTT_PET_TABLE  },
 };
 
 // Low level functions

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -259,19 +259,17 @@ struct TRINITY_DLL_DECL npc_pluckyAI : public ScriptedAI
 
         DoMeleeAttackIfReady();
    }
-};
 
-bool ReceiveEmote_npc_plucky( Player *player, Creature *_Creature, uint32 emote )
-{
-    if( (emote == TEXTEMOTE_BECKON || emote == TEXTEMOTE_CHICKEN &&
-        player->GetQuestStatus(QUEST_GET_THE_SCOOP) == QUEST_STATUS_INCOMPLETE) )
+    void ReceiveEmote( Player *player, uint32 emote )
     {
-        _Creature->SetInFront(player);
-        ((npc_pluckyAI*)((Creature*)_Creature)->AI())->TransformHuman(emote);
+        if( (emote == TEXTEMOTE_BECKON || emote == TEXTEMOTE_CHICKEN &&
+            player->GetQuestStatus(QUEST_GET_THE_SCOOP) == QUEST_STATUS_INCOMPLETE) )
+        {
+            m_creature->SetInFront(player);
+            TransformHuman(emote);
+        }
     }
-
-    return true;
-}
+};
 
 bool GossipHello_npc_plucky(Player *player, Creature *_Creature)
 {
@@ -316,7 +314,6 @@ void AddSC_thousand_needles()
     newscript = new Script;
     newscript->Name = "npc_plucky";
     newscript->GetAI = &GetAI_npc_plucky;
-    newscript->pReceiveEmote =  &ReceiveEmote_npc_plucky;
     newscript->pGossipHello =   &GossipHello_npc_plucky;
     newscript->pGossipSelect = &GossipSelect_npc_plucky;
     newscript->RegisterSelf();

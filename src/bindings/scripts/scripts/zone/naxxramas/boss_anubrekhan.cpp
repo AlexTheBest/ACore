@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -16,7 +16,7 @@
 
 /* ScriptData
 SDName: Boss_Anubrekhan
-SD%Complete: 70
+SD%Complete: 100
 SDComment:
 SDCategory: Naxxramas
 EndScriptData */
@@ -38,7 +38,7 @@ EndScriptData */
 #define SPELL_LOCUSTSWARM   28785                           //This is a self buff that triggers the dmg debuff
 #define H_SPELL_LOCUSTSWARM 54021
 
-//invalid
+//spellId invalid
 #define SPELL_SUMMONGUARD   29508                           //Summons 1 crypt guard at targeted location
 
 #define SPELL_SELF_SPAWN_5  29105                           //This spawns 5 corpse scarabs ontop of us (most likely the player casts this on death)
@@ -109,7 +109,7 @@ struct TRINITY_DLL_DECL boss_anubrekhanAI : public ScriptedAI
         {
             //Cast Impale on a random target
             //Do NOT cast it when we are afflicted by locust swarm
-            if (!m_creature->HasAura(SPELL_LOCUSTSWARM,1))
+            if (!m_creature->HasAura(SPELL_LOCUSTSWARM))
             {
                 if (Unit* target = SelectUnit(SELECT_TARGET_RANDOM,0))
                     DoCast(target,SPELL_IMPALE);
