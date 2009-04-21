@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -38,7 +38,7 @@ EndScriptData */
 #define SAY_DEATH       -1555007
 
 #define SPELL_BANISH            30231
-#define SPELL_CORROSIVE_ACID    23313
+#define SPELL_CORROSIVE_ACID    33551
 #define SPELL_FEAR              33547
 #define SPELL_ENRAGE            0                           //need to find proper spell
 
@@ -80,7 +80,7 @@ struct TRINITY_DLL_DECL boss_ambassador_hellmawAI : public ScriptedAI
 
             if (pInstance->GetData(TYPE_OVERSEER) == DONE)
             {
-                if (m_creature->HasAura(SPELL_BANISH,0))
+                if (m_creature->HasAura(SPELL_BANISH))
                     m_creature->RemoveAurasDueToSpell(SPELL_BANISH);
                 Intro = true;
             }
@@ -89,7 +89,7 @@ struct TRINITY_DLL_DECL boss_ambassador_hellmawAI : public ScriptedAI
 
     void MoveInLineOfSight(Unit *who)
     {
-        if (m_creature->HasAura(SPELL_BANISH,0))
+        if (m_creature->HasAura(SPELL_BANISH))
             return;
 
         ScriptedAI::MoveInLineOfSight(who);
@@ -105,7 +105,7 @@ struct TRINITY_DLL_DECL boss_ambassador_hellmawAI : public ScriptedAI
     {
         DoScriptText(SAY_INTRO, m_creature);
 
-        if (m_creature->HasAura(SPELL_BANISH,0))
+        if (m_creature->HasAura(SPELL_BANISH))
             m_creature->RemoveAurasDueToSpell(SPELL_BANISH);
 
         IsBanished = false;
@@ -168,14 +168,14 @@ struct TRINITY_DLL_DECL boss_ambassador_hellmawAI : public ScriptedAI
 
         if (CorrosiveAcid_Timer < diff)
         {
-            DoCast(m_creature,SPELL_CORROSIVE_ACID);
-            CorrosiveAcid_Timer = 25000;
+            DoCast(m_creature->getVictim(),SPELL_CORROSIVE_ACID);
+            CorrosiveAcid_Timer = 15000 + rand()%10000;
         }else CorrosiveAcid_Timer -= diff;
 
         if (Fear_Timer < diff)
         {
             DoCast(m_creature,SPELL_FEAR);
-            Fear_Timer = 35000;
+            Fear_Timer = 20000 + rand()%15000;
         }else Fear_Timer -= diff;
 
         /*if (HeroicMode)

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +28,6 @@
 #include "Opcodes.h"
 #include "Guild.h"
 #include "ArenaTeam.h"
-#include "MapManager.h"
 #include "GossipDef.h"
 #include "SocialMgr.h"
 
@@ -83,7 +82,7 @@ void WorldSession::HandlePetitionBuyOpcode(WorldPacket & recv_data)
     sLog.outDebug("Petitioner with GUID %u tried sell petition: name %s", GUID_LOPART(guidNPC), name.c_str());
 
     // prevent cheating
-    Creature *pCreature = ObjectAccessor::GetNPCIfCanInteractWith(*_player, guidNPC,UNIT_NPC_FLAG_PETITIONER);
+    Creature *pCreature = GetPlayer()->GetNPCIfCanInteractWith(guidNPC,UNIT_NPC_FLAG_PETITIONER);
     if (!pCreature)
     {
         sLog.outDebug("WORLD: HandlePetitionBuyOpcode - Unit (GUID: %u) not found or you can't interact with him.", GUID_LOPART(guidNPC));
@@ -92,7 +91,7 @@ void WorldSession::HandlePetitionBuyOpcode(WorldPacket & recv_data)
 
     // remove fake death
     if(GetPlayer()->hasUnitState(UNIT_STAT_DIED))
-        GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
+        GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
 
     uint32 charterid = 0;
     uint32 cost = 0;
@@ -199,9 +198,9 @@ void WorldSession::HandlePetitionBuyOpcode(WorldPacket & recv_data)
     if(!charter)
         return;
 
-    charter->SetUInt32Value(ITEM_FIELD_ENCHANTMENT, charter->GetGUIDLow());
-    // ITEM_FIELD_ENCHANTMENT is guild/arenateam id
-    // ITEM_FIELD_ENCHANTMENT+1 is current signatures count (showed on item)
+    charter->SetUInt32Value(ITEM_FIELD_ENCHANTMENT_1_1, charter->GetGUIDLow());
+    // ITEM_FIELD_ENCHANTMENT_1_1 is guild/arenateam id
+    // ITEM_FIELD_ENCHANTMENT_1_1+1 is current signatures count (showed on item)
     charter->SetState(ITEM_CHANGED, _player);
     _player->SendNewItem(charter, 1, true, false);
 
@@ -255,7 +254,7 @@ void WorldSession::HandlePetitionShowSignOpcode(WorldPacket & recv_data)
     QueryResult *result = CharacterDatabase.PQuery("SELECT type FROM petition WHERE petitionguid = '%u'", petitionguid_low);
     if(!result)
     {
-        sLog.outError("any petition on server...");
+        sLog.outError("Petition %u is not found for player %u %s", GUID_LOPART(petitionguid), GetPlayer()->GetGUIDLow(), GetPlayer()->GetName());
         return;
     }
     Field *fields = result->Fetch();
@@ -463,7 +462,7 @@ void WorldSession::HandlePetitionSignOpcode(WorldPacket & recv_data)
 
     if(!result)
     {
-        sLog.outError("any petition on server...");
+        sLog.outError("Petition %u is not found for player %u %s", GUID_LOPART(petitionguid), GetPlayer()->GetGUIDLow(), GetPlayer()->GetName());
         return;
     }
 
@@ -565,7 +564,7 @@ void WorldSession::HandlePetitionSignOpcode(WorldPacket & recv_data)
     // update signs count on charter, required testing...
     //Item *item = _player->GetItemByGuid(petitionguid));
     //if(item)
-    //    item->SetUInt32Value(ITEM_FIELD_ENCHANTMENT+1, signs);
+    //    item->SetUInt32Value(ITEM_FIELD_ENCHANTMENT_1_1+1, signs);
 
     // update for owner if online
     if(Player *owner = objmgr.GetPlayer(ownerguid))
@@ -827,7 +826,7 @@ void WorldSession::HandleTurnInPetitionOpcode(WorldPacket & recv_data)
     if(type == 9)                                           // create guild
     {
         Guild* guild = new Guild;
-        if(!guild->create(_player->GetGUID(), name))
+        if(!guild->create(_player, name))
         {
             delete guild;
             delete result;
@@ -907,7 +906,7 @@ void WorldSession::HandlePetitionShowListOpcode(WorldPacket & recv_data)
 
 void WorldSession::SendPetitionShowList(uint64 guid)
 {
-    Creature *pCreature = ObjectAccessor::GetNPCIfCanInteractWith(*_player, guid, UNIT_NPC_FLAG_PETITIONER);
+    Creature *pCreature = GetPlayer()->GetNPCIfCanInteractWith(guid, UNIT_NPC_FLAG_PETITIONER);
     if (!pCreature)
     {
         sLog.outDebug("WORLD: HandlePetitionShowListOpcode - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(guid)));
@@ -916,7 +915,7 @@ void WorldSession::SendPetitionShowList(uint64 guid)
 
     // remove fake death
     if(GetPlayer()->hasUnitState(UNIT_STAT_DIED))
-        GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
+        GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
 
     uint8 count = 0;
     if(pCreature->isTabardDesigner())

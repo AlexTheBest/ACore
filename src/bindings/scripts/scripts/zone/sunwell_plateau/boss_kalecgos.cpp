@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -133,7 +133,7 @@ struct TRINITY_DLL_DECL boss_kalecgosAI : public ScriptedAI
         m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE + UNIT_FLAG_NOT_SELECTABLE);
         m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT + MOVEMENTFLAG_LEVITATING);
         m_creature->SetVisibility(VISIBILITY_ON);
-        m_creature->SetStandState(PLAYER_STATE_SLEEP);
+        m_creature->SetStandState(UNIT_STAND_STATE_SLEEP);
 
         ArcaneBuffetTimer = 8000;
         FrostBreathTimer = 15000;
@@ -157,7 +157,7 @@ struct TRINITY_DLL_DECL boss_kalecgosAI : public ScriptedAI
 
     void Aggro(Unit* who)
     {
-        m_creature->SetStandState(PLAYER_STATE_NONE);
+        m_creature->SetStandState(UNIT_STAND_STATE_STAND);
         DoScriptText(SAY_EVIL_AGGRO, m_creature);
         GameObject *Door = GameObject::GetGameObject(*m_creature, DoorGUID);
         if(Door) Door->SetLootState(GO_ACTIVATED);
@@ -335,7 +335,7 @@ struct TRINITY_DLL_DECL boss_sathrovarrAI : public ScriptedAI
         Map::PlayerList::const_iterator i;
         for(i = PlayerList.begin(); i != PlayerList.end(); ++i)
             if(Player* i_pl = i->getSource())
-                if(i_pl->HasAura(AURA_SPECTRAL_REALM,0))
+                if(i_pl->HasAura(AURA_SPECTRAL_REALM))
                     i_pl->RemoveAurasDueToSpell(AURA_SPECTRAL_REALM);
     }
 
@@ -384,7 +384,7 @@ struct TRINITY_DLL_DECL boss_sathrovarrAI : public ScriptedAI
 
         if(ResetThreat < diff)
         {
-            if ( ( m_creature->getVictim()->HasAura(AURA_SPECTRAL_EXHAUSTION,0)) && (m_creature->getVictim()->GetTypeId() == TYPEID_PLAYER) )
+            if ( ( m_creature->getVictim()->HasAura(AURA_SPECTRAL_EXHAUSTION)) && (m_creature->getVictim()->GetTypeId() == TYPEID_PLAYER) )
             {
                 for(std::list<HostilReference*>::iterator itr = m_creature->getThreatManager().getThreatList().begin(); itr != m_creature->getThreatManager().getThreatList().end(); ++itr)
                 {
@@ -609,7 +609,7 @@ void boss_kalecgosAI::UpdateAI(const uint32 diff)
         {
             //this is a hack. we need to find a victim without aura in core
             Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 0);
-            if( ( target != m_creature->getVictim() ) && target->isAlive() && !(target->HasAura(AURA_SPECTRAL_EXHAUSTION, 0)) )
+            if( ( target != m_creature->getVictim() ) && target->isAlive() && !(target->HasAura(AURA_SPECTRAL_EXHAUSTION)) )
             {
                 DoCast(target, SPELL_SPECTRAL_BLAST);
                 SpectralBlastTimer = 20000+(rand()%5000);
@@ -626,7 +626,7 @@ void boss_kalecgosAI::UpdateAI(const uint32 diff)
 
 bool GOkalocegos_teleporter(Player *player, GameObject* _GO)
 {
-    if(player->HasAura(AURA_SPECTRAL_EXHAUSTION, 0))
+    if(player->HasAura(AURA_SPECTRAL_EXHAUSTION))
         player->GetSession()->SendNotification(GO_FAILED);
     else
         player->CastSpell(player, SPELL_TELEPORT_SPECTRAL, true);

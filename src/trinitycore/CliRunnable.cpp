@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,19 +82,10 @@ bool ChatHandler::HandleAccountDeleteCommand(const char* args)
     }
 
     /// Commands not recommended call from chat, but support anyway
-    if(m_session)
-    {
-        uint32 targetSecurity = accmgr.GetSecurity(account_id);
-
-        /// can delete only for account with less security
-        /// This is also reject self apply in fact
-        if (targetSecurity >= m_session->GetSecurity())
-        {
-            SendSysMessage (LANG_YOURS_SECURITY_IS_LOW);
-            SetSentErrorMessage (true);
-            return false;
-        }
-    }
+    /// can delete only for account with less security
+    /// This is also reject self apply in fact
+    if(HasLowerSecurityAccount (NULL,account_id,true))
+        return false;
 
     AccountOpResult result = accmgr.DeleteAccount(account_id);
     switch(result)
@@ -177,12 +168,15 @@ bool ChatHandler::HandleAccountOnlineListCommand(const char* args)
     ///- Get the list of accounts ID logged to the realm
     QueryResult *resultDB = CharacterDatabase.Query("SELECT name,account FROM characters WHERE online > 0");
     if (!resultDB)
+    {
+        SendSysMessage(LANG_ACCOUNT_LIST_EMPTY);
         return true;
+    }
 
     ///- Display the list of account/characters online
-    SendSysMessage("=====================================================================");
+    SendSysMessage(LANG_ACCOUNT_LIST_BAR);
     SendSysMessage(LANG_ACCOUNT_LIST_HEADER);
-    SendSysMessage("=====================================================================");
+    SendSysMessage(LANG_ACCOUNT_LIST_BAR);
 
     ///- Circle through accounts
     do
@@ -199,7 +193,7 @@ bool ChatHandler::HandleAccountOnlineListCommand(const char* args)
         if(resultLogin)
         {
             Field *fieldsLogin = resultLogin->Fetch();
-            PSendSysMessage("|%15s| %20s | %15s |%4d|%5d|",
+            PSendSysMessage(LANG_ACCOUNT_LIST_LINE,
                 fieldsLogin[0].GetString(),name.c_str(),fieldsLogin[1].GetString(),fieldsLogin[2].GetUInt32(),fieldsLogin[3].GetUInt32());
 
             delete resultLogin;
@@ -211,7 +205,7 @@ bool ChatHandler::HandleAccountOnlineListCommand(const char* args)
 
     delete resultDB;
 
-    SendSysMessage("=====================================================================");
+    SendSysMessage(LANG_ACCOUNT_LIST_BAR);
     return true;
 }
 
@@ -255,6 +249,20 @@ bool ChatHandler::HandleAccountCreateCommand(const char* args)
             return false;
     }
 
+    return true;
+}
+
+/// Set the level of logging
+bool ChatHandler::HandleServerSetLogFileLevelCommand(const char *args)
+{
+    if(!*args)
+        return false;
+
+    char *NewLevel = strtok((char*)args, " ");
+    if (!NewLevel)
+        return false;
+
+    sLog.SetLogFileLevel(NewLevel);
     return true;
 }
 
@@ -318,7 +326,7 @@ void CliRunnable::run()
     char commandbuf[256];
 
     ///- Display the list of available CLI functions then beep
-    sLog.outString();
+    sLog.outString("");
 
     if(sConfig.GetBoolDefault("BeepAtStart", true))
         printf("\a");                                       // \a = Alert
@@ -373,4 +381,3 @@ void CliRunnable::run()
     ///- End the database thread
     WorldDatabase.ThreadEnd();                                  // free mySQL thread resources
 }
-

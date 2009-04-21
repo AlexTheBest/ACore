@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -54,12 +54,12 @@ bool GOHello_go_gauntlet_gate(Player *player, GameObject* _GO)
                 continue;
 
             if (pGroupie->GetQuestStatus(QUEST_DEAD_MAN_PLEA) == QUEST_STATUS_INCOMPLETE &&
-                !pGroupie->HasAura(SPELL_BARON_ULTIMATUM,0) &&
+                !pGroupie->HasAura(SPELL_BARON_ULTIMATUM) &&
                 pGroupie->GetMap() == _GO->GetMap())
                 pGroupie->CastSpell(pGroupie,SPELL_BARON_ULTIMATUM,true);
         }
     } else if (player->GetQuestStatus(QUEST_DEAD_MAN_PLEA) == QUEST_STATUS_INCOMPLETE &&
-                !player->HasAura(SPELL_BARON_ULTIMATUM,0) &&
+                !player->HasAura(SPELL_BARON_ULTIMATUM) &&
                 player->GetMap() == _GO->GetMap())
                 player->CastSpell(player,SPELL_BARON_ULTIMATUM,true);
 
@@ -72,10 +72,10 @@ bool GOHello_go_gauntlet_gate(Player *player, GameObject* _GO)
 ######*/
 
 //Possibly more of these quotes around.
-#define SAY_ZAPPED0 "Thanks to Egan"
-#define SAY_ZAPPED1 "Rivendare must die"
-#define SAY_ZAPPED2 "Who you gonna call?"
-#define SAY_ZAPPED3 "Don't cross those beams!"
+#define SAY_ZAPPED0 -1329000
+#define SAY_ZAPPED1 -1329001
+#define SAY_ZAPPED2 -1329002
+#define SAY_ZAPPED3 -1329003
 
 struct TRINITY_DLL_DECL mob_freed_soulAI : public ScriptedAI
 {
@@ -85,10 +85,10 @@ struct TRINITY_DLL_DECL mob_freed_soulAI : public ScriptedAI
     {
         switch (rand()%4)
         {
-            case 0: DoSay(SAY_ZAPPED0,LANG_UNIVERSAL,NULL); break;
-            case 1: DoSay(SAY_ZAPPED1,LANG_UNIVERSAL,NULL); break;
-            case 2: DoSay(SAY_ZAPPED2,LANG_UNIVERSAL,NULL); break;
-            case 3: DoSay(SAY_ZAPPED3,LANG_UNIVERSAL,NULL); break;
+            case 0: DoScriptText(SAY_ZAPPED0, m_creature); break;
+            case 1: DoScriptText(SAY_ZAPPED1, m_creature); break;
+            case 2: DoScriptText(SAY_ZAPPED2, m_creature); break;
+            case 3: DoScriptText(SAY_ZAPPED3, m_creature); break;
         }
     }
 
@@ -227,39 +227,37 @@ struct TRINITY_DLL_DECL mobs_spectral_ghostly_citizenAI : public ScriptedAI
 
         DoMeleeAttackIfReady();
     }
+
+    void ReciveEmote(Player *player, uint32 emote)
+    {
+        switch(emote)
+        {
+            case TEXTEMOTE_DANCE:
+                EnterEvadeMode();
+                break;
+            case TEXTEMOTE_RUDE:
+                //Should instead cast spell, kicking player back. Spell not found.
+                if (m_creature->IsWithinDistInMap(player, 5))
+                    m_creature->HandleEmoteCommand(EMOTE_ONESHOT_RUDE);
+                else
+                    m_creature->HandleEmoteCommand(EMOTE_ONESHOT_RUDE);
+                break;
+            case TEXTEMOTE_WAVE:
+                m_creature->HandleEmoteCommand(EMOTE_ONESHOT_WAVE);
+                break;
+            case TEXTEMOTE_BOW:
+                m_creature->HandleEmoteCommand(EMOTE_ONESHOT_BOW);
+                break;
+            case TEXTEMOTE_KISS:
+                m_creature->HandleEmoteCommand(EMOTE_ONESHOT_FLEX);
+                break;
+        }
+    }
 };
 
 CreatureAI* GetAI_mobs_spectral_ghostly_citizen(Creature *_Creature)
 {
     return new mobs_spectral_ghostly_citizenAI (_Creature);
-}
-
-bool ReciveEmote_mobs_spectral_ghostly_citizen(Player *player, Creature *_Creature, uint32 emote)
-{
-    switch(emote)
-    {
-        case TEXTEMOTE_DANCE:
-            ((mobs_spectral_ghostly_citizenAI*)_Creature->AI())->EnterEvadeMode();
-            break;
-        case TEXTEMOTE_RUDE:
-            //Should instead cast spell, kicking player back. Spell not found.
-            if (_Creature->IsWithinDistInMap(player, 5))
-                _Creature->HandleEmoteCommand(EMOTE_ONESHOT_RUDE);
-            else
-                _Creature->HandleEmoteCommand(EMOTE_ONESHOT_RUDE);
-            break;
-        case TEXTEMOTE_WAVE:
-            _Creature->HandleEmoteCommand(EMOTE_ONESHOT_WAVE);
-            break;
-        case TEXTEMOTE_BOW:
-            _Creature->HandleEmoteCommand(EMOTE_ONESHOT_BOW);
-            break;
-        case TEXTEMOTE_KISS:
-            _Creature->HandleEmoteCommand(EMOTE_ONESHOT_FLEX);
-            break;
-    }
-
-    return true;
 }
 
 void AddSC_stratholme()
@@ -284,7 +282,6 @@ void AddSC_stratholme()
     newscript = new Script;
     newscript->Name = "mobs_spectral_ghostly_citizen";
     newscript->GetAI = &GetAI_mobs_spectral_ghostly_citizen;
-    newscript->pReceiveEmote = &ReciveEmote_mobs_spectral_ghostly_citizen;
     newscript->RegisterSelf();
 }
 

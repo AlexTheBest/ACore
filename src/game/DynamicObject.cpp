@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,16 +19,11 @@
  */
 
 #include "Common.h"
-#include "GameObject.h"
 #include "UpdateMask.h"
 #include "Opcodes.h"
-#include "WorldPacket.h"
-#include "WorldSession.h"
 #include "World.h"
 #include "ObjectAccessor.h"
 #include "Database/DatabaseEnv.h"
-#include "SpellAuras.h"
-#include "MapManager.h"
 #include "GridNotifiers.h"
 #include "CellImpl.h"
 #include "GridNotifiersImpl.h"
@@ -38,7 +33,7 @@ DynamicObject::DynamicObject() : WorldObject()
     m_objectType |= TYPEMASK_DYNAMICOBJECT;
     m_objectTypeId = TYPEID_DYNAMICOBJECT;
                                                             // 2.3.2 - 0x58
-    m_updateFlag = (UPDATEFLAG_LOWGUID | UPDATEFLAG_HIGHGUID | UPDATEFLAG_HASPOSITION);
+    m_updateFlag = (UPDATEFLAG_LOWGUID | UPDATEFLAG_HIGHGUID | UPDATEFLAG_HAS_POSITION);
 
     m_valuesCount = DYNAMICOBJECT_END;
 }
@@ -58,8 +53,20 @@ void DynamicObject::RemoveFromWorld()
     ///- Remove the dynamicObject from the accessor
     if(IsInWorld())
     {
-        ObjectAccessor::Instance().RemoveObject(this);
+        if(m_effIndex == 4)
+        {
+            if(Unit *caster = GetCaster())
+            {
+                if(caster->GetTypeId() == TYPEID_PLAYER)
+                    ((Player*)caster)->SetViewpoint(this, false);
+            }
+            else
+            {
+                sLog.outCrash("DynamicObject::RemoveFromWorld cannot find viewpoint owner");
+            }
+        }
         WorldObject::RemoveFromWorld();
+        ObjectAccessor::Instance().RemoveObject(this);
     }
 }
 
@@ -67,12 +74,12 @@ bool DynamicObject::Create( uint32 guidlow, Unit *caster, uint32 spellId, uint32
 {
     SetInstanceId(caster->GetInstanceId());
 
-    WorldObject::_Create(guidlow, HIGHGUID_DYNAMICOBJECT, caster->GetMapId());
+    WorldObject::_Create(guidlow, HIGHGUID_DYNAMICOBJECT, caster->GetMapId(), caster->GetPhaseMask());
     Relocate(x,y,z,0);
 
     if(!IsPositionValid())
     {
-        sLog.outError("ERROR: DynamicObject (spell %u eff %u) not created. Suggested coordinates isn't valid (X: %f Y: %f)",spellId,effIndex,GetPositionX(),GetPositionY());
+        sLog.outError("DynamicObject (spell %u eff %u) not created. Suggested coordinates isn't valid (X: %f Y: %f)",spellId,effIndex,GetPositionX(),GetPositionY());
         return false;
     }
 
@@ -81,7 +88,7 @@ bool DynamicObject::Create( uint32 guidlow, Unit *caster, uint32 spellId, uint32
     SetUInt64Value( DYNAMICOBJECT_CASTER, caster->GetGUID() );
     SetUInt32Value( DYNAMICOBJECT_BYTES, 0x00000001 );
     SetUInt32Value( DYNAMICOBJECT_SPELLID, spellId );
-    SetFloatValue( DYNAMICOBJECT_RADIUS, radius * 2);
+    SetFloatValue( DYNAMICOBJECT_RADIUS, radius * 2); //diameter?
     SetFloatValue( DYNAMICOBJECT_POS_X, x );
     SetFloatValue( DYNAMICOBJECT_POS_Y, y );
     SetFloatValue( DYNAMICOBJECT_POS_Z, z );
@@ -139,6 +146,7 @@ void DynamicObject::Update(uint32 p_time)
 void DynamicObject::Delete()
 {
     SendObjectDeSpawnAnim(GetGUID());
+    RemoveFromWorld();
     AddObjectToRemoveList();
 }
 
@@ -147,13 +155,12 @@ void DynamicObject::Delay(int32 delaytime)
     m_aliveDuration -= delaytime;
     for(AffectedSet::iterator iunit= m_affected.begin();iunit != m_affected.end();++iunit)
         if (*iunit)
-            (*iunit)->DelayAura(m_spellId, m_effIndex, delaytime);
+            (*iunit)->DelayAura(m_spellId, GetCaster()->GetGUID() , delaytime);
 }
 
 bool DynamicObject::isVisibleForInState(Player const* u, bool inVisibleList) const
 {
     return IsInWorld() && u->IsInWorld()
-        && (IsWithinDistInMap(u,World::GetMaxVisibleDistanceForObject()+(inVisibleList ? World::GetVisibleObjectGreyDistance() : 0.0f), false)
-        || GetCasterGUID() == u->GetGUID());
+        && (IsWithinDistInMap(u->m_seer,World::GetMaxVisibleDistanceForObject()+(inVisibleList ? World::GetVisibleObjectGreyDistance() : 0.0f), false));
 }
 

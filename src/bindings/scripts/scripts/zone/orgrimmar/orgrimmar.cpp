@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -116,7 +116,18 @@ struct TRINITY_DLL_DECL npc_shenthulAI : public ScriptedAI
 
         DoMeleeAttackIfReady();
     }
+
+    void ReciveEmote_npc_shenthul(Player *player, uint32 emote)
+    {
+        if( emote == TEXTEMOTE_SALUTE && player->GetQuestStatus(QUEST_2460) == QUEST_STATUS_INCOMPLETE )
+            if(CanEmote)
+            {
+                player->AreaExploredOrEventHappens(QUEST_2460);
+                Reset();
+            }
+    }
 };
+
 CreatureAI* GetAI_npc_shenthul(Creature *_Creature)
 {
     return new npc_shenthulAI (_Creature);
@@ -128,17 +139,6 @@ bool QuestAccept_npc_shenthul(Player* player, Creature* creature, Quest const* q
     {
         ((npc_shenthulAI*)creature->AI())->CanTalk = true;
         ((npc_shenthulAI*)creature->AI())->playerGUID = player->GetGUID();
-    }
-    return true;
-}
-
-bool ReciveEmote_npc_shenthul(Player *player, Creature *_Creature, uint32 emote)
-{
-    if( emote == TEXTEMOTE_SALUTE && player->GetQuestStatus(QUEST_2460) == QUEST_STATUS_INCOMPLETE )
-        if( ((npc_shenthulAI*)_Creature->AI())->CanEmote )
-    {
-        player->AreaExploredOrEventHappens(QUEST_2460);
-        ((npc_shenthulAI*)_Creature->AI())->Reset();
     }
     return true;
 }
@@ -263,7 +263,6 @@ void AddSC_orgrimmar()
     newscript->Name="npc_shenthul";
     newscript->GetAI = &GetAI_npc_shenthul;
     newscript->pQuestAccept =  &QuestAccept_npc_shenthul;
-    newscript->pReceiveEmote = &ReciveEmote_npc_shenthul;
     newscript->RegisterSelf();
 
     newscript = new Script;

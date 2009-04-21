@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -76,7 +76,7 @@ struct TRINITY_DLL_DECL boss_ebonrocAI : public ScriptedAI
             ShadowOfEbonroc_Timer = 25000 + rand()%10000;
         }else ShadowOfEbonroc_Timer -= diff;
 
-        if (m_creature->getVictim()->HasAura(SPELL_SHADOWOFEBONROC,0))
+        if (m_creature->getVictim()->HasAura(SPELL_SHADOWOFEBONROC))
         {
             if (Heal_Timer < diff)
             {
