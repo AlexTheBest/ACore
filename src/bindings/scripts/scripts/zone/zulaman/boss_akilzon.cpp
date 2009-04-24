@@ -187,7 +187,7 @@ struct TRINITY_DLL_DECL boss_akilzonAI : public ScriptedAI
 
             {
                 Trinity::AnyAoETargetUnitInObjectRangeCheck u_check(m_creature, m_creature, 999);
-                Trinity::UnitListSearcher<Trinity::AnyAoETargetUnitInObjectRangeCheck> searcher(tempUnitMap, u_check);
+                Trinity::UnitListSearcher<Trinity::AnyAoETargetUnitInObjectRangeCheck> searcher(m_creature, tempUnitMap, u_check);
 
                 TypeContainerVisitor<Trinity::UnitListSearcher<Trinity::AnyAoETargetUnitInObjectRangeCheck>, WorldTypeMapContainer > world_unit_searcher(searcher);
                 TypeContainerVisitor<Trinity::UnitListSearcher<Trinity::AnyAoETargetUnitInObjectRangeCheck>, GridTypeMapContainer >  grid_unit_searcher(searcher);
@@ -431,9 +431,7 @@ struct TRINITY_DLL_DECL mob_soaring_eagleAI : public ScriptedAI
                     m_creature->SetSpeed(MOVE_RUN, 5.0f);
                     TargetGUID = target->GetGUID();
                 }
-                m_creature->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
                 m_creature->GetMotionMaster()->MovePoint(0, x, y, z);
-                m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
                 arrived = false;
             }
         }

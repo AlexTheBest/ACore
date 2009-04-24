@@ -1,4 +1,4 @@
-/* Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+/* Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * Thanks to the original authors: ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  *
@@ -11,16 +11,17 @@
 #include "CreatureAI.h"
 #include "Creature.h"
 
-float GetSpellMaxRange(uint32 id);
+float GetSpellMaxRangeForHostile(uint32 id);
 
-class SummonList : std::list<uint64>
+class SummonList : private std::list<uint64>
 {
 public:
-    SummonList(Creature* creature) : m_creature(creature) {}
-    void Summon(Creature *summon) {push_back(summon->GetGUID());}
-    void Despawn(Creature *summon);
+    explicit SummonList(Creature* creature) : m_creature(creature) {}
+    void Summon(Creature *summon) { push_back(summon->GetGUID()); }
+    void Despawn(Creature *summon) { remove(summon->GetGUID()); }
     void DespawnEntry(uint32 entry);
     void DespawnAll();
+    void DoAction(uint32 entry, uint32 info);
 private:
     Creature *m_creature;
 };
@@ -30,6 +31,16 @@ Unit* FindCreature(uint32 entry, float range, Unit* Finder);
 
 //Get a single gameobject of given entry
 GameObject* FindGameObject(uint32 entry, float range, Unit* Finder);
+
+struct PointMovement
+{
+    uint32 m_uiCreatureEntry;
+    uint32 m_uiPointId;
+    float m_fX;
+    float m_fY;
+    float m_fZ;
+    uint32 m_uiWaitTime;
+};
 
 struct TRINITY_DLL_DECL ScriptedAI : public CreatureAI
 {
@@ -138,9 +149,6 @@ struct TRINITY_DLL_DECL ScriptedAI : public CreatureAI
     //Plays a sound to all nearby players
     void DoPlaySoundToSet(Unit* unit, uint32 sound);
 
-    //Places the entire map into combat with creature
-    void DoZoneInCombat(Unit* pUnit = 0);
-
     //Drops all threat to 0%. Does not remove players from the threat list
     void DoResetThreat();
 
@@ -177,6 +185,10 @@ struct TRINITY_DLL_DECL ScriptedAI : public CreatureAI
 
     //Checks if you can cast the specified spell
     bool CanCast(Unit* Target, SpellEntry const *Spell, bool Triggered = false);
+
+    void SetEquipmentSlots(bool bLoadDefault, int32 uiMainHand = EQUIP_NO_CHANGE, int32 uiOffHand = EQUIP_NO_CHANGE, int32 uiRanged = EQUIP_NO_CHANGE);
+
+    void SetSheathState(SheathState newState);
 };
 
 struct TRINITY_DLL_DECL Scripted_NoMovementAI : public ScriptedAI

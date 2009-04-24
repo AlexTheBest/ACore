@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 #ifndef TRINITYCORE_TOTEM_H
 #define TRINITYCORE_TOTEM_H
 
-#include "Creature.h"
+#include "TemporarySummon.h"
 
 enum TotemType
 {
@@ -32,10 +32,10 @@ enum TotemType
 
 #define SENTRY_TOTEM_ENTRY  3968
 
-class Totem : public Creature
+class Totem : public TempSummon
 {
     public:
-        explicit Totem();
+        explicit Totem(SummonPropertiesEntry const *properties, Unit *owner);
         virtual ~Totem(){};
         void Update( uint32 time );
         void Summon(Unit* owner);
@@ -46,7 +46,7 @@ class Totem : public Creature
         TotemType GetTotemType() const { return m_type; }
         void SetTypeBySummonSpell(SpellEntry const * spellProto);
         void SetDuration(uint32 dur) { m_duration = dur; }
-        void SetOwner(uint64 guid);
+        void SetOwner(Unit *owner);
 
         bool UpdateStats(Stats /*stat*/) { return true; }
         bool UpdateAllStats() { return true; }
@@ -57,7 +57,7 @@ class Totem : public Creature
         void UpdateAttackPowerAndDamage(bool /*ranged*/ ) {}
         void UpdateDamagePhysical(WeaponAttackType /*attType*/) {}
 
-        bool IsImmunedToSpell(SpellEntry const* spellInfo, bool useCharges = false);
+        bool IsImmunedToSpellEffect(SpellEntry const* spellInfo, uint32 index) const;
 
     protected:
         TotemType m_type;

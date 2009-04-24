@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ namespace Trinity
     }
     namespace XP
     {
-        typedef enum XPColorChar { RED, ORANGE, YELLOW, GREEN, GRAY };
+        enum XPColorChar { RED, ORANGE, YELLOW, GREEN, GRAY };
 
         inline uint32 GetGrayLevel(uint32 pl_level)
         {
@@ -80,8 +80,17 @@ namespace Trinity
 
         inline uint32 BaseGain(uint32 pl_level, uint32 mob_level, ContentLevels content)
         {
-            //TODO: need modifier for CONTENT_71_80 different from CONTENT_61_70?
-            const uint32 nBaseExp = content == CONTENT_1_60 ? 45 : 235;
+            uint32 nBaseExp;
+            switch(content)
+            {
+                case CONTENT_1_60:  nBaseExp = 45;  break;
+                case CONTENT_61_70: nBaseExp = 235; break;
+                case CONTENT_71_80: nBaseExp = 580; break;
+                default:
+                    sLog.outError("BaseGain: Unsupported content level %u",content);
+                    nBaseExp = 45;  break;
+            }
+
             if( mob_level >= pl_level )
             {
                 uint32 nLevelDiff = mob_level - pl_level;
@@ -116,66 +125,6 @@ namespace Trinity
                 xp_gain *= 2;
 
             return (uint32)(xp_gain*sWorld.getRate(RATE_XP_KILL));
-        }
-
-        inline uint32 xp_Diff(uint32 lvl)
-        {
-            if( lvl < 29 )
-                return 0;
-            if( lvl == 29 )
-                return 1;
-            if( lvl == 30 )
-                return 3;
-            if( lvl == 31 )
-                return 6;
-            else
-                return (5*(lvl-30));
-        }
-
-        inline uint32 mxp(uint32 lvl)
-        {
-            if (lvl < 60)
-            {
-                return (45 + (5*lvl));
-            }
-            else
-            {
-                return (235 + (5*lvl));
-            }
-        }
-
-        inline uint32 xp_to_level(uint32 lvl)
-        {
-            uint32 xp = 0;
-            if (lvl < 60)
-            {
-                xp = (8*lvl + xp_Diff(lvl)) * mxp(lvl);
-            }
-            else if (lvl == 60)
-            {
-                xp = (155 + mxp(lvl) * (1344 - 70 - ((69 - lvl) * (7 + (69 - lvl) * 8 - 1)/2)));
-            }
-            else if (lvl < 70)
-            {
-                xp = (155 + mxp(lvl) * (1344 - ((69-lvl) * (7 + (69 - lvl) * 8 - 1)/2)));
-            }else
-            {
-                // level higher than 70 is not supported
-                xp = (uint32)(779700 * (pow(sWorld.getRate(RATE_XP_PAST_70), (int32)lvl - 69)));
-                return ((xp < 0x7fffffff) ? xp : 0x7fffffff);
-            }
-
-            // The XP to Level is always rounded to the nearest 100 points (50 rounded to high).
-            xp = ((xp + 50) / 100) * 100;                   // use additional () for prevent free association operations in C++
-
-            if ((lvl > 10) && (lvl < 60))                   // compute discount added in 2.3.x
-            {
-                uint32 discount = (lvl < 28) ? (lvl - 10) : 18;
-                xp = (xp * (100 - discount)) / 100;         // apply discount
-                xp = (xp / 100) * 100;                      // floor to hundreds
-            }
-
-            return xp;
         }
 
         inline float xp_in_group_rate(uint32 count, bool isRaid)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -304,8 +304,11 @@ void ArenaTeam::Roster(WorldSession *session)
 {
     Player *pl = NULL;
 
+    uint8 unk308 = 0;
+
     WorldPacket data(SMSG_ARENA_TEAM_ROSTER, 100);
     data << uint32(GetId());                                // arena team id
+    data << uint8(unk308);                                  // 308 unknown value but affect packet structure
     data << uint32(GetMembersSize());                       // members count
     data << uint32(GetType());                              // arena team type?
 
@@ -313,18 +316,24 @@ void ArenaTeam::Roster(WorldSession *session)
     {
         pl = objmgr.GetPlayer(itr->guid);
 
-        data << uint64(itr->guid);                      // guid
-        data << uint8((pl ? 1 : 0));                    // online flag
-        data << itr->name;                              // member name
+        data << uint64(itr->guid);                          // guid
+        data << uint8((pl ? 1 : 0));                        // online flag
+        data << itr->name;                                  // member name
         data << uint32((itr->guid == GetCaptain() ? 0 : 1));// captain flag 0 captain 1 member
-        data << uint8((pl ? pl->getLevel() : 0));       // unknown, level?
-        data << uint8(itr->Class);                      // class
-        data << uint32(itr->games_week);                // played this week
-        data << uint32(itr->wins_week);                 // wins this week
-        data << uint32(itr->games_season);              // played this season
-        data << uint32(itr->wins_season);               // wins this season
-        data << uint32(itr->personal_rating);           // personal rating
+        data << uint8((pl ? pl->getLevel() : 0));           // unknown, level?
+        data << uint8(itr->Class);                          // class
+        data << uint32(itr->games_week);                    // played this week
+        data << uint32(itr->wins_week);                     // wins this week
+        data << uint32(itr->games_season);                  // played this season
+        data << uint32(itr->wins_season);                   // wins this season
+        data << uint32(itr->personal_rating);               // personal rating
+        if(unk308)
+        {
+            data << float(0.0);                             // 308 unk
+            data << float(0.0);                             // 308 unk
+        }
     }
+
     session->SendPacket(&data);
     sLog.outDebug("WORLD: Sent SMSG_ARENA_TEAM_ROSTER");
 }
@@ -566,6 +575,28 @@ void ArenaTeam::MemberLost(Player * plr, uint32 againstRating)
     }
 }
 
+void ArenaTeam::OfflineMemberLost(uint64 guid, uint32 againstRating)
+{
+    // called for offline player after ending rated arena match!
+    for(MemberList::iterator itr = members.begin(); itr !=  members.end(); ++itr)
+    {
+        if(itr->guid == guid)
+        {
+            // update personal rating
+            float chance = GetChanceAgainst(itr->personal_rating, againstRating);
+            int32 mod = (int32)ceil(32.0f * (0.0f - chance));
+            if (int32(itr->personal_rating) + mod < 0)
+                itr->personal_rating = 0;
+            else
+                itr->personal_rating += mod;
+            // update personal played stats
+            itr->games_week +=1;
+            itr->games_season +=1;
+            return;
+        }
+    }
+}
+
 void ArenaTeam::MemberWon(Player * plr, uint32 againstRating)
 {
     // called for each participant after winning a match
@@ -623,11 +654,13 @@ void ArenaTeam::SaveToDB()
 {
     // save team and member stats to db
     // called after a match has ended, or when calculating arena_points
+    CharacterDatabase.BeginTransaction();
     CharacterDatabase.PExecute("UPDATE arena_team_stats SET rating = '%u',games = '%u',played = '%u',rank = '%u',wins = '%u',wins2 = '%u' WHERE arenateamid = '%u'", stats.rating, stats.games_week, stats.games_season, stats.rank, stats.wins_week, stats.wins_season, GetId());
     for(MemberList::iterator itr = members.begin(); itr !=  members.end(); ++itr)
     {
-        CharacterDatabase.PExecute("UPDATE arena_team_member SET played_week = '%u', wons_week = '%u', played_season = '%u', wons_season = '%u', personal_rating = '%u' WHERE arenateamid = '%u' AND guid = '%u'", itr->games_week, itr->wins_week, itr->games_season, itr->wins_season, itr->personal_rating, Id, itr->guid);
+        CharacterDatabase.PExecute("UPDATE arena_team_member SET played_week = '%u', wons_week = '%u', played_season = '%u', wons_season = '%u', personal_rating = '%u' WHERE arenateamid = '%u' AND guid = '%u'", itr->games_week, itr->wins_week, itr->games_season, itr->wins_season, itr->personal_rating, Id, GUID_LOPART(itr->guid));
     }
+    CharacterDatabase.CommitTransaction();
 }
 
 void ArenaTeam::FinishWeek()
@@ -639,6 +672,19 @@ void ArenaTeam::FinishWeek()
         itr->games_week = 0;
         itr->wins_week = 0;
     }
+}
+
+bool ArenaTeam::IsFighting() const
+{
+    for (MemberList::const_iterator itr = members.begin(); itr != members.end(); ++itr)
+    {
+        if (Player *p = objmgr.GetPlayer(itr->guid))
+        {
+            if (p->GetMap()->IsBattleArena())
+                return true;
+        }
+    }
+    return false;
 }
 
 /*
