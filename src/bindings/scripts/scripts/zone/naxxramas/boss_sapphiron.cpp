@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -63,7 +63,7 @@ struct TRINITY_DLL_DECL boss_sapphironAI : public ScriptedAI
         Icebolt_Count = 0;
         IsInFly = false;
 
-        m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_LEVITATING + MOVEMENTFLAG_ONTRANSPORT);
+        m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
     }
 
     void Aggro(Unit *who)
@@ -103,7 +103,7 @@ struct TRINITY_DLL_DECL boss_sapphironAI : public ScriptedAI
                     {
                         phase = 2;
                         m_creature->HandleEmoteCommand(EMOTE_ONESHOT_LIFTOFF);
-                        m_creature->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING + MOVEMENTFLAG_ONTRANSPORT);
+                        m_creature->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
                         m_creature->GetMotionMaster()->Clear(false);
                         m_creature->GetMotionMaster()->MoveIdle();
                         m_creature->SetHover(true);
@@ -141,7 +141,7 @@ struct TRINITY_DLL_DECL boss_sapphironAI : public ScriptedAI
                     {
                         phase = 1;
                         m_creature->HandleEmoteCommand(EMOTE_ONESHOT_LAND);
-                        m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_LEVITATING + MOVEMENTFLAG_ONTRANSPORT);
+                        m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
                         m_creature->GetMotionMaster()->Clear(false);
                         m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim());
                         m_creature->SetHover(true);

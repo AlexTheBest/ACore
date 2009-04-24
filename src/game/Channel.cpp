@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
 #include "SocialMgr.h"
 
 Channel::Channel(const std::string& name, uint32 channel_id)
-: m_name(name), m_announce(true), m_moderate(false), m_channelId(channel_id), m_ownerGUID(0), m_password(""), m_flags(0)
+: m_announce(true), m_moderate(false), m_name(name), m_flags(0), m_channelId(channel_id), m_ownerGUID(0)
 {
     // set special flags if built-in channel
     ChatChannelsEntry const* ch = GetChannelEntryFor(channel_id);
@@ -455,7 +455,7 @@ void Channel::List(Player* player)
 
             // PLAYER can't see MODERATOR, GAME MASTER, ADMINISTRATOR characters
             // MODERATOR, GAME MASTER, ADMINISTRATOR can see all
-            if( plr && ( plr->GetSession()->GetSecurity() == SEC_PLAYER || gmInWhoList && plr->IsVisibleGloballyFor(player) ) )
+            if (plr && ( plr->GetSession()->GetSecurity() == SEC_PLAYER || (gmInWhoList && plr->IsVisibleGloballyFor(player))))
             {
                 data << uint64(i->first);
                 data << uint8(i->second.flags);             // flags seems to be changed...
@@ -693,12 +693,12 @@ void Channel::SendToOne(WorldPacket *data, uint64 who)
         plr->GetSession()->SendPacket(data);
 }
 
-void Channel::Voice(uint64 guid1, uint64 guid2)
+void Channel::Voice(uint64 /*guid1*/, uint64 /*guid2*/)
 {
 
 }
 
-void Channel::DeVoice(uint64 guid1, uint64 guid2)
+void Channel::DeVoice(uint64 /*guid1*/, uint64 /*guid2*/)
 {
 
 }

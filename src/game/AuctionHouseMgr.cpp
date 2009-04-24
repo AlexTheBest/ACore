@@ -1,25 +1,25 @@
 /*
-* Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
-*
-* This program is free software; you can redistribute it and/or modify
-* it under the terms of the GNU General Public License as published by
-* the Free Software Foundation; either version 2 of the License, or
-* (at your option) any later version.
-*
-* This program is distributed in the hope that it will be useful,
-* but WITHOUT ANY WARRANTY; without even the implied warranty of
-* MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-* GNU General Public License for more details.
-*
-* You should have received a copy of the GNU General Public License
-* along with this program; if not, write to the Free Software
-* Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
-*/
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ */
 
 #include "Common.h"
 #include "Database/DatabaseEnv.h"
-#include "Database/DBCStores.h"
 #include "Database/SQLStorage.h"
+#include "DBCStores.h"
 #include "ProgressBar.h"
 
 #include "AccountMgr.h"
@@ -223,6 +223,8 @@ void AuctionHouseMgr::SendAuctionSuccessfulMail( AuctionEntry * auction )
 
         if (owner)
         {
+            //FIXME: what do if owner offline
+            owner->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_AUCTION_SOLD, auction->bid);
             //send auction owner notification, bidder must be current!
             owner->GetSession()->SendAuctionOwnerNotification( auction );
         }
@@ -257,7 +259,7 @@ void AuctionHouseMgr::SendAuctionExpiredMail( AuctionEntry * auction )
         if ( owner )
             owner->GetSession()->SendAuctionOwnerNotification( auction );
         else
-            RemoveAItem(pItem->GetGUIDLow()); // we have to remove the item, before we delete it !!
+            RemoveAItem(pItem->GetGUIDLow());               // we have to remove the item, before we delete it !!
 
         MailItemsInfo mi;
         mi.AddItem(auction->item_guidlow, auction->item_template, pItem);
@@ -283,7 +285,7 @@ void AuctionHouseMgr::LoadAuctionItems()
     {
         barGoLink bar(1);
         bar.step();
-        sLog.outString("");
+        sLog.outString();
         sLog.outString(">> Loaded 0 auction items");
         return;
     }
@@ -298,8 +300,8 @@ void AuctionHouseMgr::LoadAuctionItems()
         bar.step();
 
         fields = result->Fetch();
-        uint32 item_guid = fields[1].GetUInt32();
-        uint32 item_template = fields[2].GetUInt32();
+        uint32 item_guid        = fields[1].GetUInt32();
+        uint32 item_template    = fields[2].GetUInt32();
 
         ItemPrototype const *proto = objmgr.GetItemPrototype(item_template);
 
@@ -334,7 +336,7 @@ void AuctionHouseMgr::LoadAuctions()
     {
         barGoLink bar(1);
         bar.step();
-        sLog.outString("");
+        sLog.outString();
         sLog.outString(">> Loaded 0 auctions. DB table `auctionhouse` is empty.");
         return;
     }
@@ -347,7 +349,7 @@ void AuctionHouseMgr::LoadAuctions()
     {
         barGoLink bar(1);
         bar.step();
-        sLog.outString("");
+        sLog.outString();
         sLog.outString(">> Loaded 0 auctions. DB table `auctionhouse` is empty.");
         return;
     }
@@ -357,7 +359,7 @@ void AuctionHouseMgr::LoadAuctions()
     {
         barGoLink bar(1);
         bar.step();
-        sLog.outString("");
+        sLog.outString();
         sLog.outString(">> Loaded 0 auctions. DB table `auctionhouse` is empty.");
         return;
     }
@@ -468,17 +470,17 @@ AuctionHouseEntry const* AuctionHouseMgr::GetAuctionHouseEntry(uint32 factionTem
         // but no easy way convert creature faction to player race faction for specific city
         switch(factionTemplateId)
         {
-            case 12: houseid = 1; break; // human
-            case 29: houseid = 6; break; // orc, and generic for horde
-            case 55: houseid = 2; break; // dwarf, and generic for alliance
-            case 68: houseid = 4; break; // undead
-            case 80: houseid = 3; break; // n-elf
-            case 104: houseid = 5; break; // trolls
-            case 120: houseid = 7; break; // booty bay, neutral
-            case 474: houseid = 7; break; // gadgetzan, neutral
-            case 855: houseid = 7; break; // everlook, neutral
+            case   12: houseid = 1; break; // human
+            case   29: houseid = 6; break; // orc, and generic for horde
+            case   55: houseid = 2; break; // dwarf, and generic for alliance
+            case   68: houseid = 4; break; // undead
+            case   80: houseid = 3; break; // n-elf
+            case  104: houseid = 5; break; // trolls
+            case  120: houseid = 7; break; // booty bay, neutral
+            case  474: houseid = 7; break; // gadgetzan, neutral
+            case  855: houseid = 7; break; // everlook, neutral
             case 1604: houseid = 6; break; // b-elfs,
-            default: // for unknown case
+            default:                       // for unknown case
             {
                 FactionTemplateEntry const* u_entry = sFactionTemplateStore.LookupEntry(factionTemplateId);
                 if(!u_entry)
@@ -576,22 +578,22 @@ void AuctionHouseObject::BuildListAuctionItems(WorldPacket& data, Player* player
 
         ItemPrototype const *proto = item->GetProto();
 
-        if (itemClass != (0xffffffff) && proto->Class != itemClass)
+        if (itemClass != 0xffffffff && proto->Class != itemClass)
             continue;
 
-        if (itemSubClass != (0xffffffff) && proto->SubClass != itemSubClass)
+        if (itemSubClass != 0xffffffff && proto->SubClass != itemSubClass)
             continue;
 
-        if (inventoryType != (0xffffffff) && proto->InventoryType != inventoryType)
+        if (inventoryType != 0xffffffff && proto->InventoryType != inventoryType)
             continue;
 
-        if (quality != (0xffffffff) && proto->Quality != quality)
+        if (quality != 0xffffffff && proto->Quality != quality)
             continue;
 
-        if( levelmin != (0x00) && (proto->RequiredLevel < levelmin || levelmax != (0x00) && proto->RequiredLevel > levelmax ) )
+        if (levelmin != 0x00 && (proto->RequiredLevel < levelmin || (levelmax != 0x00 && proto->RequiredLevel > levelmax)))
             continue;
 
-        if( usable != (0x00) && player->CanUseItem( item ) != EQUIP_ERR_OK )
+        if (usable != 0x00 && player->CanUseItem( item ) != EQUIP_ERR_OK)
             continue;
 
         std::string name = proto->Name1;
@@ -609,10 +611,10 @@ void AuctionHouseObject::BuildListAuctionItems(WorldPacket& data, Player* player
             }
         }
 
-        if( !wsearchedname.empty() && !Utf8FitTo(name, wsearchedname) )
+        if (!wsearchedname.empty() && !Utf8FitTo(name, wsearchedname) )
             continue;
 
-        if ((count < 50) && (totalcount >= listfrom))
+        if (count < 50 && totalcount >= listfrom)
         {
             ++count;
             Aentry->BuildAuctionInfo(data);
@@ -630,29 +632,29 @@ bool AuctionEntry::BuildAuctionInfo(WorldPacket & data) const
         sLog.outError("auction to item, that doesn't exist !!!!");
         return false;
     }
-    data << (uint32) Id;
-    data << (uint32) pItem->GetEntry();
+    data << uint32(Id);
+    data << uint32(pItem->GetEntry());
 
     for (uint8 i = 0; i < MAX_INSPECTED_ENCHANTMENT_SLOT; i++)
     {
-        data << (uint32) pItem->GetEnchantmentId(EnchantmentSlot(i));
-        data << (uint32) pItem->GetEnchantmentDuration(EnchantmentSlot(i));
-        data << (uint32) pItem->GetEnchantmentCharges(EnchantmentSlot(i));
+        data << uint32(pItem->GetEnchantmentId(EnchantmentSlot(i)));
+        data << uint32(pItem->GetEnchantmentDuration(EnchantmentSlot(i)));
+        data << uint32(pItem->GetEnchantmentCharges(EnchantmentSlot(i)));
     }
 
-    data << (uint32) pItem->GetItemRandomPropertyId();      //random item property id
-    data << (uint32) pItem->GetItemSuffixFactor();          //SuffixFactor
-    data << (uint32) pItem->GetCount();                     //item->count
-    data << (uint32) pItem->GetSpellCharges();              //item->charge FFFFFFF
-    data << (uint32) 0;                                     //Unknown
-    data << (uint64) owner;                                 //Auction->owner
-    data << (uint32) startbid;                              //Auction->startbid (not sure if useful)
-    data << (uint32) (bid ? GetAuctionOutBid() : 0);
+    data << uint32(pItem->GetItemRandomPropertyId());       //random item property id
+    data << uint32(pItem->GetItemSuffixFactor());           //SuffixFactor
+    data << uint32(pItem->GetCount());                      //item->count
+    data << uint32(pItem->GetSpellCharges());               //item->charge FFFFFFF
+    data << uint32(0);                                      //Unknown
+    data << uint64(owner);                                  //Auction->owner
+    data << uint32(startbid);                               //Auction->startbid (not sure if useful)
+    data << uint32(bid ? GetAuctionOutBid() : 0);
     //minimal outbid
-    data << (uint32) buyout;                                //auction->buyout
-    data << (uint32) (expire_time - time(NULL))* 1000;      //time left
-    data << (uint64) bidder;                                //auction->bidder current
-    data << (uint32) bid;                                   //current bid
+    data << uint32(buyout);                                 //auction->buyout
+    data << uint32((expire_time-time(NULL))*IN_MILISECONDS);//time left
+    data << uint64(bidder) ;                                //auction->bidder current
+    data << uint32(bid);                                    //current bid
     return true;
 }
 
