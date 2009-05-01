@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,16 +20,15 @@
 
 #include "Totem.h"
 #include "WorldPacket.h"
-#include "MapManager.h"
 #include "Log.h"
 #include "Group.h"
 #include "Player.h"
 #include "ObjectMgr.h"
 #include "SpellMgr.h"
 
-Totem::Totem() : Creature()
+Totem::Totem(SummonPropertiesEntry const *properties, Unit *owner) : TempSummon(properties, owner)
 {
-    m_isTotem = true;
+    m_summonMask |= SUMMON_MASK_TOTEM;
     m_duration = 0;
     m_type = TOTEM_PASSIVE;
 }
@@ -37,7 +36,7 @@ Totem::Totem() : Creature()
 void Totem::Update( uint32 time )
 {
     Unit *owner = GetOwner();
-    if (!owner || !owner->isAlive() || !this->isAlive())
+    if (!owner || !owner->isAlive() || !isAlive())
     {
         UnSummon();                                         // remove self
         return;
@@ -54,8 +53,12 @@ void Totem::Update( uint32 time )
     Creature::Update( time );
 }
 
-void Totem::Summon(Unit* owner)
+void Totem::InitSummon(uint32 duration)
 {
+    Unit *owner = GetOwner();
+    if(!owner)
+        return;
+
     CreatureInfo const *cinfo = GetCreatureInfo();
     if (owner->GetTypeId()==TYPEID_PLAYER && cinfo)
     {
@@ -80,26 +83,32 @@ void Totem::Summon(Unit* owner)
             sLog.outErrorDb("Totem::Summon: Missing modelid information for entry %u, team %u, totem will use default values.",GetEntry(),((Player*)owner)->GetTeam());
     }
 
-    // Only add if a display exists.
-    sLog.outDebug("AddObject at Totem.cpp line 49");
-    SetInstanceId(owner->GetInstanceId());
-    owner->GetMap()->Add((Creature*)this);
-
     WorldPacket data(SMSG_GAMEOBJECT_SPAWN_ANIM_OBSOLETE, 8);
     data << GetGUID();
     SendMessageToSet(&data,true);
 
-    AIM_Initialize();
-
-    switch(m_type)
-    {
-        case TOTEM_PASSIVE: CastSpell(this, GetSpell(), true); break;
-        case TOTEM_STATUE:  CastSpell(GetOwner(), GetSpell(), true); break;
-        default: break;
-    }
+    if(m_type == TOTEM_PASSIVE)
+        CastSpell(this, GetSpell(), true);
 
     if(GetEntry() == SENTRY_TOTEM_ENTRY)
         SetReactState(REACT_AGGRESSIVE);
+
+    m_duration = duration;
+
+    SetCreatorGUID(owner->GetGUID());
+    setFaction(owner->getFaction());
+    SetLevel(owner->getLevel());
+
+    // Get spell casted by totem
+    SpellEntry const * totemSpell = sSpellStore.LookupEntry(GetSpell());
+    if (totemSpell)
+    {
+        // If spell have cast time -> so its active totem
+        if (GetSpellCastTime(totemSpell))
+            m_type = TOTEM_ACTIVE;
+    }
+
+    TempSummon::InitSummon(duration);
 }
 
 void Totem::UnSummon()
@@ -108,15 +117,15 @@ void Totem::UnSummon()
 
     CombatStop();
     RemoveAurasDueToSpell(GetSpell());
-    Unit *owner = this->GetOwner();
+    Unit *owner = GetOwner();
     if (owner)
     {
         // clear owenr's totem slot
-        for(int i = 0; i < MAX_TOTEM; ++i)
+        for(int i = SUMMON_SLOT_TOTEM; i < MAX_TOTEM_SLOT; ++i)
         {
-            if(owner->m_TotemSlot[i]==GetGUID())
+            if(owner->m_SummonSlot[i]==GetGUID())
             {
-                owner->m_TotemSlot[i] = 0;
+                owner->m_SummonSlot[i] = 0;
                 break;
             }
         }
@@ -145,52 +154,24 @@ void Totem::UnSummon()
     AddObjectToRemoveList();
 }
 
-void Totem::SetOwner(uint64 guid)
-{
-    SetCreatorGUID(guid);
-    SetOwnerGUID(guid);
-    if (Unit *owner = GetOwner())
-    {
-        this->setFaction(owner->getFaction());
-        this->SetLevel(owner->getLevel());
-    }
-}
-
 Unit *Totem::GetOwner()
 {
-    uint64 ownerid = GetOwnerGUID();
-    if(!ownerid)
-        return NULL;
-    return ObjectAccessor::GetUnit(*this, ownerid);
+    return GetSummoner();
 }
 
-void Totem::SetTypeBySummonSpell(SpellEntry const * spellProto)
+bool Totem::IsImmunedToSpellEffect(SpellEntry const* spellInfo, uint32 index) const
 {
-    // Get spell casted by totem
-    SpellEntry const * totemSpell = sSpellStore.LookupEntry(GetSpell());
-    if (totemSpell)
+    // TODO: possibly all negative auras immuned?
+    switch(spellInfo->EffectApplyAuraName[index])
     {
-        // If spell have cast time -> so its active totem
-        if (GetSpellCastTime(totemSpell))
-            m_type = TOTEM_ACTIVE;
+        case SPELL_AURA_PERIODIC_DAMAGE:
+        case SPELL_AURA_PERIODIC_LEECH:
+        case SPELL_AURA_MOD_FEAR:
+        case SPELL_AURA_TRANSFORM:
+            return true;
+        default:
+            break;
     }
-    if(spellProto->SpellIconID==2056)
-        m_type = TOTEM_STATUE;                              //Jewelery statue
-}
-
-bool Totem::IsImmunedToSpell(SpellEntry const* spellInfo, bool useCharges)
-{
-/*    for (int i=0;i<3;i++)
-    {
-        switch(spellInfo->EffectApplyAuraName[i])
-        {
-            case SPELL_AURA_PERIODIC_DAMAGE:
-            case SPELL_AURA_PERIODIC_LEECH:
-                return true;
-            default:
-                continue;
-        }
-    }*/
-    return Creature::IsImmunedToSpell(spellInfo, useCharges);
+    return Creature::IsImmunedToSpellEffect(spellInfo, index);
 }
 

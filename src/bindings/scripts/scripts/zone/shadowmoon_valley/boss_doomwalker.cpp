@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -83,7 +83,7 @@ struct TRINITY_DLL_DECL boss_doomwalkerAI : public ScriptedAI
         DoScriptText(SAY_DEATH, m_creature);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoScriptText(SAY_AGGRO, m_creature);
     }
@@ -131,7 +131,7 @@ struct TRINITY_DLL_DECL boss_doomwalkerAI : public ScriptedAI
 
             //remove enrage before casting earthquake because enrage + earthquake = 16000dmg over 8sec and all dead
             if (InEnrage)
-                m_creature->RemoveAura(SPELL_ENRAGE, 0);
+                m_creature->RemoveAura(SPELL_ENRAGE);
 
             DoCast(m_creature,SPELL_EARTHQUAKE);
             Quake_Timer = 30000 + rand()%25000;

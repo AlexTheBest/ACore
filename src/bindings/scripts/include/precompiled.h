@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software licensed under GPL version 2
 * Please see the included DOCS/LICENSE.TXT for more information */
 
@@ -12,6 +12,7 @@
 #include "GridNotifiersImpl.h"
 #include "Unit.h"
 #include "GameObject.h"
+#include "TemporarySummon.h"
 #include "sc_creature.h"
 #include "sc_gossip.h"
 #include "sc_instance.h"

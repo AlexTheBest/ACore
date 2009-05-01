@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,13 +20,10 @@
 
 #include "Common.h"
 #include "Database/DatabaseEnv.h"
-#include "WorldPacket.h"
-#include "WorldSession.h"
 #include "World.h"
 #include "Player.h"
 #include "Opcodes.h"
 #include "Chat.h"
-#include "MapManager.h"
 #include "ObjectAccessor.h"
 #include "Language.h"
 #include "AccountMgr.h"
@@ -59,8 +56,8 @@ bool ChatHandler::HandleCommandsCommand(const char* args)
 
 bool ChatHandler::HandleAccountCommand(const char* /*args*/)
 {
-    uint32 gmlevel = m_session->GetSecurity();
-    PSendSysMessage(LANG_ACCOUNT_LEVEL, gmlevel);
+    AccountTypes gmlevel = m_session->GetSecurity();
+    PSendSysMessage(LANG_ACCOUNT_LEVEL, uint32(gmlevel));
     return true;
 }
 
@@ -105,6 +102,7 @@ bool ChatHandler::HandleServerInfoCommand(const char* /*args*/)
     //SendSysMessage(full);
     //PSendSysMessage(LANG_USING_SCRIPT_LIB,sWorld.GetScriptsVersion());
     //PSendSysMessage(LANG_USING_WORLD_DB,sWorld.GetDBVersion());
+    //PSendSysMessage(LANG_USING_EVENT_AI,sWorld.GetCreatureEventAIVersion());
     PSendSysMessage(LANG_CONNECTED_USERS, activeClientsNum, maxActiveClientsNum, queuedClientsNum, maxQueuedClientsNum);
     PSendSysMessage(LANG_UPTIME, str.c_str());
     PSendSysMessage("Update time diff: %u.", updateTime);
@@ -130,7 +128,7 @@ bool ChatHandler::HandleDismountCommand(const char* /*args*/)
     }
 
     m_session->GetPlayer()->Unmount();
-    m_session->GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_MOUNTED);
+    m_session->GetPlayer()->RemoveAurasByType(SPELL_AURA_MOUNTED);
     return true;
 }
 
@@ -139,7 +137,7 @@ bool ChatHandler::HandleSaveCommand(const char* /*args*/)
     Player *player=m_session->GetPlayer();
 
     // save GM account without delay and output message (testing, etc)
-    if(m_session->GetSecurity())
+    if(m_session->GetSecurity() > SEC_PLAYER)
     {
         player->SaveToDB();
         SendSysMessage(LANG_PLAYER_SAVED);
@@ -148,7 +146,7 @@ bool ChatHandler::HandleSaveCommand(const char* /*args*/)
 
     // save or plan save after 20 sec (logout delay) if current next save time more this value and _not_ output any messages to prevent cheat planning
     uint32 save_interval = sWorld.getConfig(CONFIG_INTERVAL_SAVE);
-    if(save_interval==0 || save_interval > 20*1000 && player->GetSaveTimer() <= save_interval - 20*1000)
+    if(save_interval==0 || save_interval > 20*IN_MILISECONDS && player->GetSaveTimer() <= save_interval - 20*IN_MILISECONDS)
         player->SaveToDB();
 
     return true;
@@ -159,10 +157,10 @@ bool ChatHandler::HandleGMListIngameCommand(const char* /*args*/)
     bool first = true;
 
     HashMapHolder<Player>::MapType &m = HashMapHolder<Player>::GetContainer();
-    HashMapHolder<Player>::MapType::iterator itr = m.begin();
+    HashMapHolder<Player>::MapType::const_iterator itr = m.begin();
     for(; itr != m.end(); ++itr)
     {
-        if (itr->second->GetSession()->GetSecurity() &&
+        if (itr->second->GetSession()->GetSecurity() > SEC_PLAYER &&
             (itr->second->isGameMaster() || sWorld.getConfig(CONFIG_GM_IN_GM_LIST)) &&
             (!m_session || itr->second->IsVisibleGloballyFor(m_session->GetPlayer())) )
         {
@@ -172,7 +170,7 @@ bool ChatHandler::HandleGMListIngameCommand(const char* /*args*/)
                 first = false;
             }
 
-            SendSysMessage(itr->second->GetName());
+            SendSysMessage(GetNameLink(itr->second).c_str());
         }
     }
 
@@ -182,7 +180,7 @@ bool ChatHandler::HandleGMListIngameCommand(const char* /*args*/)
     return true;
 }
 
-bool ChatHandler::HandlePasswordCommand(const char* args)
+bool ChatHandler::HandleAccountPasswordCommand(const char* args)
 {
     if(!*args)
         return false;
@@ -233,7 +231,7 @@ bool ChatHandler::HandlePasswordCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleLockAccountCommand(const char* args)
+bool ChatHandler::HandleAccountLockCommand(const char* args)
 {
     if (!*args)
     {
