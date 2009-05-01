@@ -1,4 +1,4 @@
-/* Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+/* Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * Thanks to the original authors: ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  *
@@ -11,16 +11,19 @@
 #include "CreatureAI.h"
 #include "Creature.h"
 
-float GetSpellMaxRange(uint32 id);
+#define HEROIC(n,h) (HeroicMode ? h : n)
 
-class SummonList : std::list<uint64>
+float GetSpellMaxRangeForHostile(uint32 id);
+
+class SummonList : private std::list<uint64>
 {
 public:
-    SummonList(Creature* creature) : m_creature(creature) {}
-    void Summon(Creature *summon) {push_back(summon->GetGUID());}
-    void Despawn(Creature *summon);
+    explicit SummonList(Creature* creature) : m_creature(creature) {}
+    void Summon(Creature *summon) { push_back(summon->GetGUID()); }
+    void Despawn(Creature *summon) { remove(summon->GetGUID()); }
     void DespawnEntry(uint32 entry);
     void DespawnAll();
+    void DoAction(uint32 entry, uint32 info);
 private:
     Creature *m_creature;
 };
@@ -31,9 +34,19 @@ Unit* FindCreature(uint32 entry, float range, Unit* Finder);
 //Get a single gameobject of given entry
 GameObject* FindGameObject(uint32 entry, float range, Unit* Finder);
 
+struct PointMovement
+{
+    uint32 m_uiCreatureEntry;
+    uint32 m_uiPointId;
+    float m_fX;
+    float m_fY;
+    float m_fZ;
+    uint32 m_uiWaitTime;
+};
+
 struct TRINITY_DLL_DECL ScriptedAI : public CreatureAI
 {
-    ScriptedAI(Creature* creature) : CreatureAI(creature), m_creature(creature), InCombat(false), IsFleeing(false) {}
+    explicit ScriptedAI(Creature* creature);
     ~ScriptedAI() {}
 
     //*************
@@ -87,11 +100,10 @@ struct TRINITY_DLL_DECL ScriptedAI : public CreatureAI
     //Pointer to creature we are manipulating
     Creature* m_creature;
 
-    //Bool for if we are in combat or not
-    bool InCombat;
-
     //For fleeing
     bool IsFleeing;
+
+    bool HeroicMode;
 
     //*************
     //Pure virtual functions
@@ -101,7 +113,7 @@ struct TRINITY_DLL_DECL ScriptedAI : public CreatureAI
     void Reset() {}
 
     //Called at creature aggro either by MoveInLOS or Attack Start
-    virtual void Aggro(Unit*) = 0;
+    void EnterCombat(Unit*) {}
 
     //*************
     //AI Helper Functions
@@ -138,9 +150,6 @@ struct TRINITY_DLL_DECL ScriptedAI : public CreatureAI
     //Plays a sound to all nearby players
     void DoPlaySoundToSet(Unit* unit, uint32 sound);
 
-    //Places the entire map into combat with creature
-    void DoZoneInCombat(Unit* pUnit = 0);
-
     //Drops all threat to 0%. Does not remove players from the threat list
     void DoResetThreat();
 
@@ -172,11 +181,17 @@ struct TRINITY_DLL_DECL ScriptedAI : public CreatureAI
     Unit* SelectUnit(SelectAggroTarget target, uint32 position, float dist, bool playerOnly);
     void SelectUnitList(std::list<Unit*> &targetList, uint32 num, SelectAggroTarget target, float dist, bool playerOnly);
 
+    bool HealthBelowPct(uint32 pct) const { return me->GetHealth() * 100 < m_creature->GetMaxHealth() * pct; }
+
     //Returns spells that meet the specified criteria from the creatures spell list
     SpellEntry const* SelectSpell(Unit* Target, int32 School, int32 Mechanic, SelectTarget Targets,  uint32 PowerCostMin, uint32 PowerCostMax, float RangeMin, float RangeMax, SelectEffect Effect);
 
     //Checks if you can cast the specified spell
     bool CanCast(Unit* Target, SpellEntry const *Spell, bool Triggered = false);
+
+    void SetEquipmentSlots(bool bLoadDefault, int32 uiMainHand = EQUIP_NO_CHANGE, int32 uiOffHand = EQUIP_NO_CHANGE, int32 uiRanged = EQUIP_NO_CHANGE);
+
+    void SetSheathState(SheathState newState);
 };
 
 struct TRINITY_DLL_DECL Scripted_NoMovementAI : public ScriptedAI
@@ -196,7 +211,7 @@ struct TRINITY_DLL_DECL NullCreatureAI : public ScriptedAI
     ~NullCreatureAI() {}
 
     void Reset() {}
-    void Aggro(Unit*) {}
+    void EnterCombat(Unit*) {}
     void MoveInLineOfSight(Unit *) {}
     void AttackStart(Unit *) {}
     void EnterEvadeMode() {}

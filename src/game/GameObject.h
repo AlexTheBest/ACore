@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,6 +41,7 @@ struct GameObjectInfo
     uint32  type;
     uint32  displayId;
     char   *name;
+    char   *IconName;
     char   *castBarCaption;
     uint32  faction;
     uint32  flags;
@@ -336,12 +337,12 @@ struct GameObjectInfo
             uint32 mapID;                                   //0
             uint32 difficulty;                              //1
         } dungeonDifficulty;
-        //32 GAMEOBJECT_TYPE_DO_NOT_USE_YET
+        //32 GAMEOBJECT_TYPE_BARBER_CHAIR
         struct
         {
-            uint32 mapID;                                   //0
-            uint32 difficulty;                              //1
-        } doNotUseYet;
+            uint32 chairheight;                             //0
+            uint32 heightOffset;                            //1
+        } barberChair;
         //33 GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING
         struct
         {
@@ -350,6 +351,13 @@ struct GameObjectInfo
             uint32 state1Name;                              //2
             uint32 state2Name;                              //3
         } destructibleBuilding;
+        //34 GAMEOBJECT_TYPE_TRAPDOOR
+        struct
+        {
+            uint32 whenToPause;                             // 0
+            uint32 startOpen;                               // 1
+            uint32 autoClose;                               // 2
+        } trapDoor;
 
         // not use for specific field access (only for output with loop by all filed), also this determinate max union size
         struct                                              // GAMEOBJECT_TYPE_SPELLCASTER
@@ -360,17 +368,35 @@ struct GameObjectInfo
     uint32 ScriptId;
 };
 
+// GCC have alternative #pragma pack() syntax and old gcc version not support pack(pop), also any gcc version not support it at some platform
+#if defined( __GNUC__ )
+#pragma pack()
+#else
+#pragma pack(pop)
+#endif
+
 struct GameObjectLocale
 {
     std::vector<std::string> Name;
     std::vector<std::string> CastBarCaption;
 };
 
+// client side GO show states
+enum GOState
+{
+    GO_STATE_ACTIVE             = 0,                        // show in world as used and not reset (closed door open)
+    GO_STATE_READY              = 1,                        // show in world as ready (closed door close)
+    GO_STATE_ACTIVE_ALTERNATIVE = 2                         // show in world as used in alt way and not reset (closed door open by cannon fire)
+};
+
+#define MAX_GO_STATE              3
+
 // from `gameobject`
 struct GameObjectData
 {
     uint32 id;                                              // entry in gamobject_template
-    uint32 mapid;
+    uint16 mapid;
+    uint16 phaseMask;
     float posX;
     float posY;
     float posZ;
@@ -381,17 +407,10 @@ struct GameObjectData
     float rotation3;
     int32  spawntimesecs;
     uint32 animprogress;
-    uint32 go_state;
+    GOState go_state;
     uint8 spawnMask;
     uint32 ArtKit;
 };
-
-// GCC have alternative #pragma pack() syntax and old gcc version not support pack(pop), also any gcc version not support it at some platform
-#if defined( __GNUC__ )
-#pragma pack()
-#else
-#pragma pack(pop)
-#endif
 
 // For containers:  [GO_NOT_READY]->GO_READY (close)->GO_ACTIVATED (open) ->GO_JUST_DEACTIVATED->GO_READY        -> ...
 // For bobber:      GO_NOT_READY  ->GO_READY (close)->GO_ACTIVATED (open) ->GO_JUST_DEACTIVATED-><deleted>
@@ -419,7 +438,7 @@ class TRINITY_DLL_SPEC GameObject : public WorldObject
         void AddToWorld();
         void RemoveFromWorld();
 
-        bool Create(uint32 guidlow, uint32 name_id, Map *map, float x, float y, float z, float ang, float rotation0, float rotation1, float rotation2, float rotation3, uint32 animprogress, uint32 go_state, uint32 ArtKit = 0);
+        bool Create(uint32 guidlow, uint32 name_id, Map *map, uint32 phaseMask, float x, float y, float z, float ang, float rotation0, float rotation1, float rotation2, float rotation3, uint32 animprogress, GOState go_state, uint32 ArtKit = 0);
         void Update(uint32 p_time);
         static GameObject* GetGameObject(WorldObject& object, uint64 guid);
         GameObjectInfo const* GetGOInfo() const;
@@ -436,23 +455,21 @@ class TRINITY_DLL_SPEC GameObject : public WorldObject
 
         uint32 GetDBTableGUIDLow() const { return m_DBTableGuid; }
 
-        void Say(const char* text, uint32 language, uint64 TargetGuid) { MonsterSay(text,language,TargetGuid); }
-        void Yell(const char* text, uint32 language, uint64 TargetGuid) { MonsterYell(text,language,TargetGuid); }
-        void TextEmote(const char* text, uint64 TargetGuid) { MonsterTextEmote(text,TargetGuid); }
-        void Whisper(const char* text,uint64 receiver) { MonsterWhisper(text,receiver); }
+        void UpdateRotationFields(float rotation2 = 0.0f, float rotation3 = 0.0f);
+
         void Say(int32 textId, uint32 language, uint64 TargetGuid) { MonsterSay(textId,language,TargetGuid); }
         void Yell(int32 textId, uint32 language, uint64 TargetGuid) { MonsterYell(textId,language,TargetGuid); }
         void TextEmote(int32 textId, uint64 TargetGuid) { MonsterTextEmote(textId,TargetGuid); }
         void Whisper(int32 textId, uint64 receiver) { MonsterWhisper(textId,receiver); }
+        void YellToZone(int32 textId, uint32 language, uint64 TargetGuid) { MonsterYellToZone(textId,language,TargetGuid); }
 
         // overwrite WorldObject function for proper name localization
         const char* GetNameForLocaleIdx(int32 locale_idx) const;
 
         void SaveToDB();
-        void SaveToDB(uint32 mapid, uint8 spawnMask);
+        void SaveToDB(uint32 mapid, uint8 spawnMask, uint32 phaseMask);
         bool LoadFromDB(uint32 guid, Map *map);
         void DeleteFromDB();
-        void SetLootState(LootState s) { m_lootState = s; }
         static uint32 GetLootId(GameObjectInfo const* info);
         uint32 GetLootId() const { return GetLootId(GetGOInfo()); }
         uint32 GetLockId() const
@@ -471,6 +488,20 @@ class TRINITY_DLL_SPEC GameObject : public WorldObject
                 case GAMEOBJECT_TYPE_FISHINGHOLE:return GetGOInfo()->fishinghole.lockId;
                 case GAMEOBJECT_TYPE_FLAGDROP:   return GetGOInfo()->flagdrop.lockId;
                 default: return 0;
+            }
+        }
+
+        bool GetDespawnPossibility() const
+        {
+            switch(GetGoType())
+            {
+                case GAMEOBJECT_TYPE_DOOR:       return GetGOInfo()->door.noDamageImmune;
+                case GAMEOBJECT_TYPE_BUTTON:     return GetGOInfo()->button.noDamageImmune;
+                case GAMEOBJECT_TYPE_QUESTGIVER: return GetGOInfo()->questgiver.noDamageImmune;
+                case GAMEOBJECT_TYPE_GOOBER:     return GetGOInfo()->goober.noDamageImmune;
+                case GAMEOBJECT_TYPE_FLAGSTAND:  return GetGOInfo()->flagstand.noDamageImmune;
+                case GAMEOBJECT_TYPE_FLAGDROP:   return GetGOInfo()->flagdrop.noDamageImmune;
+                default: return true;
             }
         }
 
@@ -503,19 +534,20 @@ class TRINITY_DLL_SPEC GameObject : public WorldObject
         void Delete();
         void SetSpellId(uint32 id) { m_spellId = id;}
         uint32 GetSpellId() const { return m_spellId;}
-        void getFishLoot(Loot *loot);
-        GameobjectTypes GetGoType() const { return GameobjectTypes(GetUInt32Value(GAMEOBJECT_TYPE_ID)); }
-        void SetGoType(GameobjectTypes type) { SetUInt32Value(GAMEOBJECT_TYPE_ID, type); }
-        uint32 GetGoState() const { return GetUInt32Value(GAMEOBJECT_STATE); }
-        void SetGoState(uint32 state) { SetUInt32Value(GAMEOBJECT_STATE, state); }
-        uint32 GetGoArtKit() const { return GetUInt32Value(GAMEOBJECT_ARTKIT); }
-        void SetGoArtKit(uint32 artkit);
-        uint32 GetGoAnimProgress() const { return GetUInt32Value(GAMEOBJECT_ANIMPROGRESS); }
-        void SetGoAnimProgress(uint32 animprogress) { SetUInt32Value(GAMEOBJECT_ANIMPROGRESS, animprogress); }
+        void getFishLoot(Loot *loot, Player* loot_owner);
+        GameobjectTypes GetGoType() const { return GameobjectTypes(GetByteValue(GAMEOBJECT_BYTES_1, 1)); }
+        void SetGoType(GameobjectTypes type) { SetByteValue(GAMEOBJECT_BYTES_1, 1, type); }
+        GOState GetGoState() const { return GOState(GetByteValue(GAMEOBJECT_BYTES_1, 0)); }
+        void SetGoState(GOState state) { SetByteValue(GAMEOBJECT_BYTES_1, 0, state); }
+        uint8 GetGoArtKit() const { return GetByteValue(GAMEOBJECT_BYTES_1, 2); }
+        void SetGoArtKit(uint8 artkit);
+        uint8 GetGoAnimProgress() const { return GetByteValue(GAMEOBJECT_BYTES_1, 3); }
+        void SetGoAnimProgress(uint8 animprogress) { SetByteValue(GAMEOBJECT_BYTES_1, 3, animprogress); }
 
         void Use(Unit* user);
 
         LootState getLootState() const { return m_lootState; }
+        void SetLootState(LootState s) { m_lootState = s; }
 
         void AddToSkillupList(uint32 PlayerGuidLow) { m_SkillupList.push_back(PlayerGuidLow); }
         bool IsInSkillupList(uint32 PlayerGuidLow) const
@@ -539,7 +571,10 @@ class TRINITY_DLL_SPEC GameObject : public WorldObject
         bool hasQuest(uint32 quest_id) const;
         bool hasInvolvedQuest(uint32 quest_id) const;
         bool ActivateToQuest(Player *pTarget) const;
-        void UseDoorOrButton(uint32 time_to_restore = 0);   // 0 = use `gameobject`.`spawntimesecs`
+        void UseDoorOrButton(uint32 time_to_restore = 0, bool alternative = false);
+                                                            // 0 = use `gameobject`.`spawntimesecs`
+        void ResetDoorOrButton();
+        // 0 = use `gameobject`.`spawntimesecs`
 
         uint32 GetLinkedGameObjectEntry() const
         {
@@ -578,6 +613,7 @@ class TRINITY_DLL_SPEC GameObject : public WorldObject
         GridReference<GameObject> &GetGridRef() { return m_gridRef; }
 
         void CastSpell(Unit *target, uint32 spell);
+        void SendCustomAnim();
     protected:
         uint32      m_charges;                              // Spell charges for GAMEOBJECT_TYPE_SPELLCASTER (22)
         uint32      m_spellId;
@@ -595,7 +631,7 @@ class TRINITY_DLL_SPEC GameObject : public WorldObject
         uint32 m_DBTableGuid;                               ///< For new or temporary gameobjects is 0 for saved it is lowguid
         GameObjectInfo const* m_goInfo;
     private:
-        void SwitchDoorOrButton(bool activate);
+        void SwitchDoorOrButton(bool activate, bool alternative = false);
 
         GridReference<GameObject> m_gridRef;
 };

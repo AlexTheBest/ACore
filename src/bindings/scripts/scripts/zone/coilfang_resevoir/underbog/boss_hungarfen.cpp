@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -45,7 +45,7 @@ struct TRINITY_DLL_DECL boss_hungarfenAI : public ScriptedAI
         AcidGeyser_Timer = 10000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -114,7 +114,7 @@ struct TRINITY_DLL_DECL mob_underbog_mushroomAI : public ScriptedAI
 
     void AttackStart(Unit* who) { return; }
 
-    void Aggro(Unit* who) { }
+    void EnterCombat(Unit* who) { }
 
     void UpdateAI(const uint32 diff)
     {

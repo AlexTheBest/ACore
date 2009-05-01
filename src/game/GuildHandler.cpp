@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,6 @@
 #include "Log.h"
 #include "Opcodes.h"
 #include "Guild.h"
-#include "MapManager.h"
 #include "GossipDef.h"
 #include "SocialMgr.h"
 
@@ -65,7 +64,7 @@ void WorldSession::HandleGuildCreateOpcode(WorldPacket& recvPacket)
         return;
 
     Guild *guild = new Guild;
-    if(!guild->create(GetPlayer()->GetGUID(),gname))
+    if(!guild->create(GetPlayer(),gname))
     {
         delete guild;
         return;
@@ -375,7 +374,7 @@ void WorldSession::HandleGuildDemoteOpcode(WorldPacket& recvPacket)
 
     guild->ChangeRank(plGuid, (slot->RankId+1));
     // Put record into guildlog
-    guild->LogGuildEvent(GUILD_EVENT_LOG_DEMOTE_PLAYER, GetPlayer()->GetGUIDLow(), GUID_LOPART(plGuid), (slot->RankId));
+    guild->LogGuildEvent(GUILD_EVENT_LOG_DEMOTE_PLAYER, GetPlayer()->GetGUIDLow(), GUID_LOPART(plGuid), slot->RankId);
 
     WorldPacket data(SMSG_GUILD_EVENT, (2+30));             // guess size
     data << (uint8)GE_DEMOTION;
@@ -663,7 +662,7 @@ void WorldSession::HandleGuildRankOpcode(WorldPacket& recvPacket)
     guild->SetRankName(rankId, rankname);
 
     if(rankId==GR_GUILDMASTER)                              // prevent loss leader rights
-        rights |= GR_RIGHT_ALL;
+        rights = GR_RIGHT_ALL;
 
     guild->SetRankRights(rankId, rights);
 
@@ -783,7 +782,7 @@ void WorldSession::HandleGuildSaveEmblemOpcode(WorldPacket& recvPacket)
 
     recvPacket >> vendorGuid;
 
-    Creature *pCreature = ObjectAccessor::GetNPCIfCanInteractWith(*_player, vendorGuid,UNIT_NPC_FLAG_TABARDDESIGNER);
+    Creature *pCreature = GetPlayer()->GetNPCIfCanInteractWith(vendorGuid,UNIT_NPC_FLAG_TABARDDESIGNER);
     if (!pCreature)
     {
         //"That's not an emblem vendor!"
@@ -794,7 +793,7 @@ void WorldSession::HandleGuildSaveEmblemOpcode(WorldPacket& recvPacket)
 
     // remove fake death
     if(GetPlayer()->hasUnitState(UNIT_STAT_DIED))
-        GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
+        GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
 
     recvPacket >> EmblemStyle;
     recvPacket >> EmblemColor;
@@ -906,7 +905,7 @@ void WorldSession::HandleGuildBankQuery( WorldPacket & recv_data )
     uint8  unk;
     recv_data >> GoGuid >> unk;
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     if (uint32 GuildId = GetPlayer()->GetGuildId())
@@ -930,7 +929,7 @@ void WorldSession::HandleGuildBankTabColon( WorldPacket & recv_data )
     uint8 TabId,unk1;
     recv_data >> GoGuid >> TabId >> unk1;
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     uint32 GuildId = GetPlayer()->GetGuildId();
@@ -959,7 +958,7 @@ void WorldSession::HandleGuildBankDeposit( WorldPacket & recv_data )
     if (!money)
         return;
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     uint32 GuildId = GetPlayer()->GetGuildId();
@@ -1007,7 +1006,7 @@ void WorldSession::HandleGuildBankWithdraw( WorldPacket & recv_data )
     if (!money)
         return;
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     uint32 GuildId = GetPlayer()->GetGuildId();
@@ -1109,7 +1108,7 @@ void WorldSession::HandleGuildBankDepositItem( WorldPacket & recv_data )
             return;
     }
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     uint32 GuildId = GetPlayer()->GetGuildId();
@@ -1195,7 +1194,7 @@ void WorldSession::HandleGuildBankDepositItem( WorldPacket & recv_data )
             else                                            // swap
             {
                 gDest.clear();
-                uint8 msg = pGuild->CanStoreItem(BankTabDst,BankTabSlotDst,gDest,pItemSrc->GetCount(),pItemSrc,true);
+                msg = pGuild->CanStoreItem(BankTabDst,BankTabSlotDst,gDest,pItemSrc->GetCount(),pItemSrc,true);
                 if( msg != EQUIP_ERR_OK )
                 {
                     pl->SendEquipError( msg, pItemSrc, NULL );
@@ -1564,7 +1563,7 @@ void WorldSession::HandleGuildBankBuyTab( WorldPacket & recv_data )
     recv_data >> GoGuid;
     recv_data >> TabId;
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     uint32 GuildId = GetPlayer()->GetGuildId();
@@ -1621,7 +1620,7 @@ void WorldSession::HandleGuildBankModifyTab( WorldPacket & recv_data )
     if(IconIndex.empty())
         return;
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     uint32 GuildId = GetPlayer()->GetGuildId();
