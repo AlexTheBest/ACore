@@ -1,4 +1,4 @@
- /* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ /* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -39,6 +39,9 @@ struct TRINITY_DLL_DECL instance_mount_hyjal : public ScriptedInstance
 {
     instance_mount_hyjal(Map *map) : ScriptedInstance(map) {Initialize();};
 
+    uint32 Encounters[ENCOUNTERS];
+    std::string str_data;
+
     uint64 RageWinterchill;
     uint64 Anetheron;
     uint64 Kazrogal;
@@ -51,7 +54,7 @@ struct TRINITY_DLL_DECL instance_mount_hyjal : public ScriptedInstance
     uint64 ElfGate;
 
     uint32 Trash;
-    uint32 Encounters[ENCOUNTERS];
+
 
     uint32 hordeRetreat;
     uint32 allianceRetreat;
@@ -98,29 +101,28 @@ struct TRINITY_DLL_DECL instance_mount_hyjal : public ScriptedInstance
             case 182060:
                 HordeGate = go->GetGUID();
                 if(allianceRetreat)
-                    go->SetGoState(0);
+                    go->SetGoState(GO_STATE_ACTIVE);
                 else
-                    go->SetGoState(1);
+                    go->SetGoState(GO_STATE_READY);
                 break;
             case 182061:
                 ElfGate = go->GetGUID();
                 if(hordeRetreat)
-                    go->SetGoState(0);
+                    go->SetGoState(GO_STATE_ACTIVE);
                 else
-                    go->SetGoState(1);
+                    go->SetGoState(GO_STATE_READY);
                 break;
         }
     }
 
     void OpenDoor(uint64 DoorGUID, bool open)
     {
-        if(GameObject *Door = instance->GetGameObjectInMap(DoorGUID))
-            Door->SetUInt32Value(GAMEOBJECT_STATE, open ? 0 : 1);
+        HandleGameObject(DoorGUID, open, NULL);
     }
 
     void OnCreatureCreate(Creature *creature, uint32 creature_entry)
     {
-        switch(creature_entry)
+        switch(creature->GetEntry())
         {
             case 17767: RageWinterchill = creature->GetGUID(); break;
             case 17808: Anetheron = creature->GetGUID(); break;
@@ -167,7 +169,7 @@ struct TRINITY_DLL_DECL instance_mount_hyjal : public ScriptedInstance
                         if(ArchiYell)break;
                         ArchiYell = true;
 
-                        Creature* pCreature = instance->GetCreatureInMap(Azgalor);
+                        Creature* pCreature = instance->GetCreature(Azgalor);
                         if(pCreature)
                         {
                             Creature* pUnit = pCreature->SummonCreature(21987,pCreature->GetPositionX(),pCreature->GetPositionY(),pCreature->GetPositionZ(),0,TEMPSUMMON_TIMED_DESPAWN,10000);
@@ -229,7 +231,21 @@ struct TRINITY_DLL_DECL instance_mount_hyjal : public ScriptedInstance
          debug_log("TSCR: Instance Hyjal: Instance data updated for event %u (Data=%u)",type,data);
 
         if(data == DONE)
+        {
+            OUT_SAVE_INST_DATA;
+
+            std::ostringstream saveStream;
+            saveStream << Encounters[0] << " " << Encounters[1] << " " << Encounters[2] << " "
+                << Encounters[3] << " " << Encounters[4]
+                << " " << allianceRetreat << " " << hordeRetreat
+                << " " << RaidDamage;
+
+            str_data = saveStream.str();
+
             SaveToDB();
+            OUT_SAVE_INST_DATA_COMPLETE;
+        }
+
     }
 
     uint32 GetData(uint32 type)
@@ -265,19 +281,7 @@ struct TRINITY_DLL_DECL instance_mount_hyjal : public ScriptedInstance
 
     const char* Save()
     {
-        OUT_SAVE_INST_DATA;
-        std::ostringstream stream;
-        stream << Encounters[0] << " " << Encounters[1] << " " << Encounters[2] << " "
-            << Encounters[3] << " " << Encounters[4] << " " << allianceRetreat << " " << hordeRetreat << " " << RaidDamage;
-        char* out = new char[stream.str().length() + 1];
-        strcpy(out, stream.str().c_str());
-        if(out)
-        {
-            OUT_SAVE_INST_DATA_COMPLETE;
-            return out;
-        }
-
-        return NULL;
+        return str_data.c_str();
     }
 
     void Load(const char* in)
@@ -289,8 +293,7 @@ struct TRINITY_DLL_DECL instance_mount_hyjal : public ScriptedInstance
         }
 
         OUT_LOAD_INST_DATA(in);
-        std::istringstream loadStream;
-        loadStream.str(in);
+        std::istringstream loadStream(in);
         loadStream >> Encounters[0] >> Encounters[1] >> Encounters[2] >> Encounters[3] >> Encounters[4] >> allianceRetreat >> hordeRetreat >> RaidDamage;
         for(uint8 i = 0; i < ENCOUNTERS; ++i)
             if(Encounters[i] == IN_PROGRESS)                // Do not load an encounter as IN_PROGRESS - reset it instead.

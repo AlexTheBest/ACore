@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -144,7 +144,7 @@ struct TRINITY_DLL_DECL mob_blood_elf_council_voice_triggerAI : public ScriptedA
         }else error_log(ERROR_INST_DATA);
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void AttackStart(Unit* who) {}
     void MoveInLineOfSight(Unit* who) {}
@@ -243,7 +243,7 @@ struct TRINITY_DLL_DECL mob_illidari_councilAI : public ScriptedAI
         m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, 11686);
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
     void AttackStart(Unit* who) {}
     void MoveInLineOfSight(Unit* who) {}
 
@@ -360,7 +360,7 @@ struct TRINITY_DLL_DECL boss_illidari_councilAI : public ScriptedAI
 
     bool LoadedGUIDs;
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         if(pInstance)
         {

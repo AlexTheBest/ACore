@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,6 @@
 #include "Database/DatabaseEnv.h"
 #include "Opcodes.h"
 #include "WorldPacket.h"
-#include "WorldSession.h"
 #include "Player.h"
 #include "ObjectMgr.h"
 #include "World.h"
@@ -44,10 +43,10 @@ PlayerSocial::~PlayerSocial()
 uint32 PlayerSocial::GetNumberOfSocialsWithFlag(SocialFlag flag)
 {
     uint32 counter = 0;
-    for(PlayerSocialMap::iterator itr = m_playerSocialMap.begin(); itr != m_playerSocialMap.end(); ++itr)
+    for(PlayerSocialMap::const_iterator itr = m_playerSocialMap.begin(); itr != m_playerSocialMap.end(); ++itr)
     {
         if(itr->second.Flags & flag)
-            counter++;
+            ++counter;
     }
     return counter;
 }
@@ -70,7 +69,7 @@ bool PlayerSocial::AddToSocialList(uint32 friend_guid, bool ignore)
     if(ignore)
         flag = SOCIAL_FLAG_IGNORED;
 
-    PlayerSocialMap::iterator itr = m_playerSocialMap.find(friend_guid);
+    PlayerSocialMap::const_iterator itr = m_playerSocialMap.find(friend_guid);
     if(itr != m_playerSocialMap.end())
     {
         CharacterDatabase.PExecute("UPDATE character_social SET flags = (flags | %u) WHERE guid = '%u' AND friend = '%u'", flag, GetPlayerGUID(), friend_guid);
@@ -110,7 +109,7 @@ void PlayerSocial::RemoveFromSocialList(uint32 friend_guid, bool ignore)
 
 void PlayerSocial::SetFriendNote(uint32 friend_guid, std::string note)
 {
-    PlayerSocialMap::iterator itr = m_playerSocialMap.find(friend_guid);
+    PlayerSocialMap::const_iterator itr = m_playerSocialMap.find(friend_guid);
     if(itr == m_playerSocialMap.end())                      // not exist
         return;
 
@@ -158,7 +157,7 @@ void PlayerSocial::SendSocialList()
 
 bool PlayerSocial::HasFriend(uint32 friend_guid)
 {
-    PlayerSocialMap::iterator itr = m_playerSocialMap.find(friend_guid);
+    PlayerSocialMap::const_iterator itr = m_playerSocialMap.find(friend_guid);
     if(itr != m_playerSocialMap.end())
         return itr->second.Flags & SOCIAL_FLAG_FRIEND;
     return false;
@@ -166,7 +165,7 @@ bool PlayerSocial::HasFriend(uint32 friend_guid)
 
 bool PlayerSocial::HasIgnore(uint32 ignore_guid)
 {
-    PlayerSocialMap::iterator itr = m_playerSocialMap.find(ignore_guid);
+    PlayerSocialMap::const_iterator itr = m_playerSocialMap.find(ignore_guid);
     if(itr != m_playerSocialMap.end())
         return itr->second.Flags & SOCIAL_FLAG_IGNORED;
     return false;
@@ -180,13 +179,6 @@ SocialMgr::SocialMgr()
 SocialMgr::~SocialMgr()
 {
 
-}
-
-void SocialMgr::RemovePlayerSocial(uint32 guid)
-{
-    SocialMap::iterator itr = m_socialMap.find(guid);
-    if(itr != m_socialMap.end())
-        m_socialMap.erase(itr);
 }
 
 void SocialMgr::GetFriendInfo(Player *player, uint32 friendGUID, FriendInfo &friendInfo)
@@ -204,7 +196,7 @@ void SocialMgr::GetFriendInfo(Player *player, uint32 friendGUID, FriendInfo &fri
         return;
 
     uint32 team = player->GetTeam();
-    uint32 security = player->GetSession()->GetSecurity();
+    AccountTypes security = player->GetSession()->GetSecurity();
     bool allowTwoSideWhoList = sWorld.getConfig(CONFIG_ALLOW_TWO_SIDE_WHO_LIST);
     bool gmInWhoList = sWorld.getConfig(CONFIG_GM_IN_WHO_LIST) || security > SEC_PLAYER;
 
@@ -275,14 +267,14 @@ void SocialMgr::BroadcastToFriendListers(Player *player, WorldPacket *packet)
         return;
 
     uint32 team     = player->GetTeam();
-    uint32 security = player->GetSession()->GetSecurity();
+    AccountTypes security = player->GetSession()->GetSecurity();
     uint32 guid     = player->GetGUIDLow();
     bool gmInWhoList = sWorld.getConfig(CONFIG_GM_IN_WHO_LIST);
     bool allowTwoSideWhoList = sWorld.getConfig(CONFIG_ALLOW_TWO_SIDE_WHO_LIST);
 
-    for(SocialMap::iterator itr = m_socialMap.begin(); itr != m_socialMap.end(); ++itr)
+    for(SocialMap::const_iterator itr = m_socialMap.begin(); itr != m_socialMap.end(); ++itr)
     {
-        PlayerSocialMap::iterator itr2 = itr->second.m_playerSocialMap.find(guid);
+        PlayerSocialMap::const_iterator itr2 = itr->second.m_playerSocialMap.find(guid);
         if(itr2 != itr->second.m_playerSocialMap.end() && (itr2->second.Flags & SOCIAL_FLAG_FRIEND))
         {
             Player *pFriend = ObjectAccessor::FindPlayer(MAKE_NEW_GUID(itr->first, 0, HIGHGUID_PLAYER));

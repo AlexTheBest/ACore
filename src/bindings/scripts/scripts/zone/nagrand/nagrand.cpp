@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -49,7 +49,7 @@ struct TRINITY_DLL_DECL mob_shattered_rumblerAI : public ScriptedAI
         Spawn = false;
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void SpellHit(Unit *Hitter, const SpellEntry *Spellkind)
     {
@@ -124,7 +124,7 @@ struct TRINITY_DLL_DECL mob_lumpAI : public ScriptedAI
                 m_creature->DeleteThreatList();
                 m_creature->CombatStop();
                 m_creature->setFaction(1080);               //friendly
-                m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_SIT);
+                m_creature->SetStandState(UNIT_STAND_STATE_SIT);
                 DoScriptText(LUMP_DEFEAT, m_creature);
 
                 bReset = true;
@@ -132,13 +132,13 @@ struct TRINITY_DLL_DECL mob_lumpAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
-        if (m_creature->HasAura(SPELL_VISUAL_SLEEP,0))
-            m_creature->RemoveAura(SPELL_VISUAL_SLEEP,0);
+        if (m_creature->HasAura(SPELL_VISUAL_SLEEP))
+            m_creature->RemoveAura(SPELL_VISUAL_SLEEP);
 
         if (!m_creature->IsStandState())
-            m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_NONE);
+             m_creature->SetStandState(UNIT_STAND_STATE_STAND);
 
         switch(rand()%2)
         {
@@ -227,10 +227,10 @@ struct TRINITY_DLL_DECL mob_sunspring_villagerAI : public ScriptedAI
     void Reset()
     {
         m_creature->SetUInt32Value(UNIT_DYNAMIC_FLAGS, 32);
-        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1,7);   // lay down
+        m_creature->SetStandState(UNIT_STAND_STATE_DEAD);
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void SpellHit(Unit *caster, const SpellEntry *spell)
     {
@@ -526,7 +526,7 @@ struct TRINITY_DLL_DECL npc_creditmarker_visit_with_ancestorsAI : public Scripte
 
     void Reset() {}
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void MoveInLineOfSight(Unit *who)
     {
@@ -585,7 +585,7 @@ struct TRINITY_DLL_DECL mob_sparrowhawkAI : public ScriptedAI
         ScriptedAI::AttackStart(who);
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void MoveInLineOfSight(Unit *who)
     {

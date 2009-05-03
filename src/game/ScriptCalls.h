@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,8 +58,10 @@ typedef bool(TRINITY_IMPORT * scriptCallAreaTrigger)( Player *player, AreaTrigge
 typedef bool(TRINITY_IMPORT * scriptCallItemQuestAccept)(Player *player, Item *, Quest const*);
 typedef bool(TRINITY_IMPORT * scriptCallGOQuestAccept)(Player *player, GameObject *, Quest const*);
 typedef bool(TRINITY_IMPORT * scriptCallGOChooseReward)(Player *player, GameObject *, Quest const*, uint32 opt );
-typedef bool(TRINITY_IMPORT * scriptCallReceiveEmote) ( Player *player, Creature *_Creature, uint32 emote );
 typedef bool(TRINITY_IMPORT * scriptCallItemUse) (Player *player, Item *_Item, SpellCastTargets const& targets);
+typedef bool(TRINITY_IMPORT * scriptCallEffectDummyGameObj) (Unit *caster, uint32 spellId, uint32 effIndex, GameObject *gameObjTarget);
+typedef bool(TRINITY_IMPORT * scriptCallEffectDummyCreature) (Unit *caster, uint32 spellId, uint32 effIndex, Creature *crTarget);
+typedef bool(TRINITY_IMPORT * scriptCallEffectDummyItem) (Unit *caster, uint32 spellId, uint32 effIndex, Item *itemTarget);
 typedef CreatureAI* (TRINITY_IMPORT * scriptCallGetAI) ( Creature *_Creature );
 typedef InstanceData* (TRINITY_IMPORT * scriptCallCreateInstanceData) (Map *map);
 
@@ -86,8 +88,10 @@ typedef struct
     scriptCallAreaTrigger scriptAreaTrigger;
     scriptCallItemQuestAccept ItemQuestAccept;
     scriptCallGOQuestAccept GOQuestAccept;
-    scriptCallReceiveEmote ReceiveEmote;
     scriptCallItemUse ItemUse;
+    scriptCallEffectDummyGameObj  EffectDummyGameObj;
+    scriptCallEffectDummyCreature EffectDummyCreature;
+    scriptCallEffectDummyItem     EffectDummyItem;
     scriptCallGetAI GetAI;
     scriptCallCreateInstanceData CreateInstanceData;
 

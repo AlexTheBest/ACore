@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,9 +25,8 @@
 
 class BattleGround;
 
-#define EY_MAX_TEAM_SCORE         2000
-#define BG_EY_FLAG_RESPAWN_TIME   10000                     //10 seconds
-#define BG_EY_FPOINTS_TICK_TIME   2000                      //2 seconds
+#define BG_EY_FLAG_RESPAWN_TIME         (10*IN_MILISECONDS) //10 seconds
+#define BG_EY_FPOINTS_TICK_TIME         (2*IN_MILISECONDS)  //2 seconds
 
 enum BG_EY_WorldStates
 {
@@ -73,11 +72,11 @@ enum BG_EY_ProgressBarConsts
 enum BG_EY_Sounds
 {
     //strange ids, but sure about them
-    BG_EY_SOUND_FLAG_PICKED_UP_ALLIANCE   = 8212,
-    BG_EY_SOUND_FLAG_CAPTURED_HORDE       = 8213,
-    BG_EY_SOUND_FLAG_PICKED_UP_HORDE      = 8174,
-    BG_EY_SOUND_FLAG_CAPTURED_ALLIANCE    = 8173,
-    BG_EY_SOUND_FLAG_RESET                = 8192
+    BG_EY_SOUND_FLAG_PICKED_UP_ALLIANCE = 8212,
+    BG_EY_SOUND_FLAG_CAPTURED_HORDE     = 8213,
+    BG_EY_SOUND_FLAG_PICKED_UP_HORDE    = 8174,
+    BG_EY_SOUND_FLAG_CAPTURED_ALLIANCE  = 8173,
+    BG_EY_SOUND_FLAG_RESET              = 8192
 };
 
 enum BG_EY_Spells
@@ -88,18 +87,18 @@ enum BG_EY_Spells
 
 enum EYBattleGroundObjectEntry
 {
-    BG_OBJECT_A_DOOR_EY_ENTRY         = 184719,             //Alliance door
-    BG_OBJECT_H_DOOR_EY_ENTRY         = 184720,             //Horde door
-    BG_OBJECT_FLAG1_EY_ENTRY          = 184493,             //Netherstorm flag (generic)
-    BG_OBJECT_FLAG2_EY_ENTRY          = 184141,             //Netherstorm flag (flagstand)
-    BG_OBJECT_FLAG3_EY_ENTRY          = 184142,             //Netherstorm flag (flagdrop)
-    BG_OBJECT_A_BANNER_EY_ENTRY       = 184381,             //Visual Banner (Alliance)
-    BG_OBJECT_H_BANNER_EY_ENTRY       = 184380,             //Visual Banner (Horde)
-    BG_OBJECT_N_BANNER_EY_ENTRY       = 184382,             //Visual Banner (Neutral)
-    BG_OBJECT_BE_TOWER_CAP_EY_ENTRY   = 184080,             //BE Tower Cap Pt
-    BG_OBJECT_FR_TOWER_CAP_EY_ENTRY   = 184081,             //Fel Reaver Cap Pt
-    BG_OBJECT_HU_TOWER_CAP_EY_ENTRY   = 184082,             //Human Tower Cap Pt
-    BG_OBJECT_DR_TOWER_CAP_EY_ENTRY   = 184083              //Draenei Tower Cap Pt
+    BG_OBJECT_A_DOOR_EY_ENTRY           = 184719,           //Alliance door
+    BG_OBJECT_H_DOOR_EY_ENTRY           = 184720,           //Horde door
+    BG_OBJECT_FLAG1_EY_ENTRY            = 184493,           //Netherstorm flag (generic)
+    BG_OBJECT_FLAG2_EY_ENTRY            = 184141,           //Netherstorm flag (flagstand)
+    BG_OBJECT_FLAG3_EY_ENTRY            = 184142,           //Netherstorm flag (flagdrop)
+    BG_OBJECT_A_BANNER_EY_ENTRY         = 184381,           //Visual Banner (Alliance)
+    BG_OBJECT_H_BANNER_EY_ENTRY         = 184380,           //Visual Banner (Horde)
+    BG_OBJECT_N_BANNER_EY_ENTRY         = 184382,           //Visual Banner (Neutral)
+    BG_OBJECT_BE_TOWER_CAP_EY_ENTRY     = 184080,           //BE Tower Cap Pt
+    BG_OBJECT_FR_TOWER_CAP_EY_ENTRY     = 184081,           //Fel Reaver Cap Pt
+    BG_OBJECT_HU_TOWER_CAP_EY_ENTRY     = 184082,           //Human Tower Cap Pt
+    BG_OBJECT_DR_TOWER_CAP_EY_ENTRY     = 184083            //Draenei Tower Cap Pt
 };
 
 enum EYBattleGroundPointsTrigger
@@ -131,7 +130,7 @@ enum EYBattleGroundPoints
     DRAENEI_RUINS   = 2,
     MAGE_TOWER      = 3,
 
-    EY_PLAYERS_OUT_OF_POINTS = 4,
+    EY_PLAYERS_OUT_OF_POINTS  = 4,
     EY_POINTS_MAX             = 4
 };
 
@@ -212,6 +211,15 @@ enum EYBattleGroundObjectTypes
     BG_EY_OBJECT_MAX                            = 59
 };
 
+#define BG_EY_NotEYWeekendHonorTicks    330
+#define BG_EY_EYWeekendHonorTicks       200
+
+enum BG_EY_Score
+{
+    BG_EY_WARNING_NEAR_VICTORY_SCORE    = 1800,
+    BG_EY_MAX_TEAM_SCORE                = 2000
+};
+
 enum BG_EY_FlagState
 {
     BG_EY_FLAG_STATE_ON_BASE      = 0,
@@ -239,23 +247,32 @@ struct BattleGroundEYPointIconsStruct
 struct BattleGroundEYLoosingPointStruct
 {
     BattleGroundEYLoosingPointStruct(uint32 _SpawnNeutralObjectType, uint32 _DespawnObjectTypeAlliance, uint32 _MessageIdAlliance, uint32 _DespawnObjectTypeHorde, uint32 _MessageIdHorde)
-        : SpawnNeutralObjectType(_SpawnNeutralObjectType), DespawnObjectTypeAlliance(_DespawnObjectTypeAlliance), MessageIdAlliance(_MessageIdAlliance), DespawnObjectTypeHorde(_DespawnObjectTypeHorde), MessageIdHorde(_MessageIdHorde) {}
+        : SpawnNeutralObjectType(_SpawnNeutralObjectType),
+        DespawnObjectTypeAlliance(_DespawnObjectTypeAlliance), MessageIdAlliance(_MessageIdAlliance),
+        DespawnObjectTypeHorde(_DespawnObjectTypeHorde), MessageIdHorde(_MessageIdHorde)
+    {}
+
     uint32 SpawnNeutralObjectType;
     uint32 DespawnObjectTypeAlliance;
+    uint32 MessageIdAlliance;
     uint32 DespawnObjectTypeHorde;
     uint32 MessageIdHorde;
-    uint32 MessageIdAlliance;
 };
 
 struct BattleGroundEYCapturingPointStruct
 {
     BattleGroundEYCapturingPointStruct(uint32 _DespawnNeutralObjectType, uint32 _SpawnObjectTypeAlliance, uint32 _MessageIdAlliance, uint32 _SpawnObjectTypeHorde, uint32 _MessageIdHorde, uint32 _GraveYardId)
-        : DespawnNeutralObjectType(_DespawnNeutralObjectType), SpawnObjectTypeAlliance(_SpawnObjectTypeAlliance), MessageIdAlliance(_MessageIdAlliance), SpawnObjectTypeHorde(_SpawnObjectTypeHorde), MessageIdHorde(_MessageIdHorde), GraveYardId(_GraveYardId) {}
+        : DespawnNeutralObjectType(_DespawnNeutralObjectType),
+        SpawnObjectTypeAlliance(_SpawnObjectTypeAlliance), MessageIdAlliance(_MessageIdAlliance),
+        SpawnObjectTypeHorde(_SpawnObjectTypeHorde), MessageIdHorde(_MessageIdHorde),
+        GraveYardId(_GraveYardId)
+    {}
+
     uint32 DespawnNeutralObjectType;
     uint32 SpawnObjectTypeAlliance;
+    uint32 MessageIdAlliance;
     uint32 SpawnObjectTypeHorde;
     uint32 MessageIdHorde;
-    uint32 MessageIdAlliance;
     uint32 GraveYardId;
 };
 
@@ -300,10 +317,12 @@ class BattleGroundEY : public BattleGround
     public:
         BattleGroundEY();
         ~BattleGroundEY();
-        void Update(time_t diff);
+        void Update(uint32 diff);
 
         /* inherited from BattlegroundClass */
         virtual void AddPlayer(Player *plr);
+        virtual void StartingEventCloseDoors();
+        virtual void StartingEventOpenDoors();
 
         /* BG Flags */
         uint64 GetFlagPickerGUID() const    { return m_FlagKeeper; }
@@ -317,10 +336,11 @@ class BattleGroundEY : public BattleGround
         void HandleBuffUse(uint64 const& buff_guid);
         void HandleAreaTrigger(Player *Source, uint32 Trigger);
         void HandleKillPlayer(Player *player, Player *killer);
-        virtual WorldSafeLocsEntry const* GetClosestGraveYard(float x, float y, float z, uint32 team);
+        virtual WorldSafeLocsEntry const* GetClosestGraveYard(Player* player);
         virtual bool SetupBattleGround();
-        virtual void ResetBGSubclass();
+        virtual void Reset();
         void UpdateTeamScore(uint32 Team);
+        void EndBattleGround(uint32 winner);
         void UpdatePlayerScore(Player *Source, uint32 type, uint32 value);
         virtual void FillInitialWorldStates(WorldPacket& data);
         void SetDroppedFlagGUID(uint64 guid)       { m_DroppedFlagGUID = guid;}
@@ -370,6 +390,7 @@ class BattleGroundEY : public BattleGround
         uint8 m_CurrentPointPlayersCount[2*EY_POINTS_MAX];
 
         int32 m_PointAddingTimer;
+        uint32 m_HonorTics;
 };
 #endif
 

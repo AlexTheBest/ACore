@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -248,7 +248,7 @@ struct TRINITY_DLL_DECL boss_lady_vashjAI : public ScriptedAI
             pInstance->SetData(DATA_LADYVASHJEVENT, IN_PROGRESS);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if (pInstance)
         {
@@ -370,7 +370,7 @@ struct TRINITY_DLL_DECL boss_lady_vashjAI : public ScriptedAI
                 Unit *target = NULL;
                 target = SelectUnit(SELECT_TARGET_RANDOM, 0);
 
-                if(target && !target->HasAura(SPELL_STATIC_CHARGE_TRIGGER, 0))
+                if(target && !target->HasAura(SPELL_STATIC_CHARGE_TRIGGER))
                                                             //cast Static Charge every 2 seconds for 20 seconds
                         DoCast(target, SPELL_STATIC_CHARGE_TRIGGER);
 
@@ -576,12 +576,7 @@ struct TRINITY_DLL_DECL boss_lady_vashjAI : public ScriptedAI
         }
     }
 };
-class TRINITY_DLL_DECL VashjSurgeAura : public Aura
-{
-    public:
-        VashjSurgeAura(SpellEntry *spell, uint32 eff, int32 *bp, Unit *target, Unit *caster) : Aura(spell, eff, bp, target, caster, NULL)
-            {}
-};
+
 //Enchanted Elemental
 //If one of them reaches Vashj he will increase her damage done by 5%.
 struct TRINITY_DLL_DECL mob_enchanted_elementalAI : public ScriptedAI
@@ -627,7 +622,7 @@ struct TRINITY_DLL_DECL mob_enchanted_elementalAI : public ScriptedAI
             Vashj = Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_LADYVASHJ));
     }
 
-    void Aggro(Unit *who) { return; }
+    void EnterCombat(Unit *who) { return; }
 
     void MoveInLineOfSight(Unit *who){return;}
 
@@ -665,13 +660,14 @@ struct TRINITY_DLL_DECL mob_enchanted_elementalAI : public ScriptedAI
                     SpellEntry *spell = (SpellEntry *)GetSpellStore()->LookupEntry(SPELL_SURGE);
                     if( spell )
                     {
-                        for(uint32 i = 0;i<3;i++)
+                        uint8 eff_mask=0;
+                        for (int i=0; i<3; i++)
                         {
                             if (!spell->Effect[i])
                                 continue;
-
-                            Vashj->AddAura(new VashjSurgeAura(spell, i, NULL, Vashj, Vashj));
+                            eff_mask|=1<<i;
                         }
+                        Vashj->AddAura(new Aura(spell, eff_mask, NULL, Vashj, Vashj));
                     }
                     m_creature->DealDamage(m_creature, m_creature->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
                 }
@@ -711,14 +707,14 @@ struct TRINITY_DLL_DECL mob_tainted_elementalAI : public ScriptedAI
         if(pInstance)
         {
             Creature *Vashj = NULL;
-            Vashj = (Creature*)(Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_LADYVASHJ)));
+            Vashj = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_LADYVASHJ)));
 
             if(Vashj)
                 ((boss_lady_vashjAI*)Vashj->AI())->EventTaintedElementalDeath();
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         m_creature->AddThreat(who, 0.1f);
     }
@@ -768,7 +764,7 @@ struct TRINITY_DLL_DECL mob_toxic_sporebatAI : public ScriptedAI
 
     void Reset()
     {
-        m_creature->AddUnitMovementFlag(/*MOVEMENTFLAG_ONTRANSPORT + */MOVEMENTFLAG_LEVITATING);
+        m_creature->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
         m_creature->setFaction(14);
         movement_timer = 0;
         ToxicSpore_Timer = 5000;
@@ -776,7 +772,7 @@ struct TRINITY_DLL_DECL mob_toxic_sporebatAI : public ScriptedAI
         Check_Timer = 1000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
 
     }
@@ -797,10 +793,6 @@ struct TRINITY_DLL_DECL mob_toxic_sporebatAI : public ScriptedAI
 
     void UpdateAI (const uint32 diff)
     {
-
-        /*if(!m_creature->isInCombat())
-            m_creature->SetInCombatState(false);*/
-
         //Random movement
         if (movement_timer < diff)
         {
@@ -906,7 +898,7 @@ struct TRINITY_DLL_DECL mob_shield_generator_channelAI : public ScriptedAI
         m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
     }
 
-    void Aggro(Unit *who) { return; }
+    void EnterCombat(Unit *who) { return; }
 
     void MoveInLineOfSight(Unit *who) { return; }
 
@@ -923,7 +915,7 @@ struct TRINITY_DLL_DECL mob_shield_generator_channelAI : public ScriptedAI
             if(Vashj && Vashj->isAlive())
             {
                 //start visual channel
-                if (!Casted || !Vashj->HasAura(SPELL_MAGIC_BARRIER,0))
+                if (!Casted || !Vashj->HasAura(SPELL_MAGIC_BARRIER))
                 {
                     m_creature->CastSpell(Vashj,SPELL_MAGIC_BARRIER,true);
                     Casted = true;
@@ -945,7 +937,7 @@ bool ItemUse_item_tainted_core(Player *player, Item* _Item, SpellCastTargets con
     }
 
     Creature *Vashj = NULL;
-    Vashj = (Creature*)(Unit::GetUnit((*player), pInstance->GetData64(DATA_LADYVASHJ)));
+    Vashj = (Unit::GetCreature((*player), pInstance->GetData64(DATA_LADYVASHJ)));
     if(Vashj && ((boss_lady_vashjAI*)Vashj->AI())->Phase == 2)
     {
         if(targets.getGOTarget() && targets.getGOTarget()->GetTypeId()==TYPEID_GAMEOBJECT)

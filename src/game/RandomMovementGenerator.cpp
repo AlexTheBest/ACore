@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 #include "DestinationHolderImp.h"
 #include "Map.h"
 #include "Util.h"
+#include "CreatureGroups.h"
 
 #define RUNNING_CHANCE_RANDOMMV 20                                  //will be "1 / RUNNING_CHANCE_RANDOMMV"
 
@@ -113,6 +114,12 @@ RandomMovementGenerator<Creature>::_setRandomLocation(Creature &creature)
     {
         i_nextMoveTime.Reset(urand(500+i_destinationHolder.GetTotalTravelTime(),5000+i_destinationHolder.GetTotalTravelTime()));
         creature.SetUnitMovementFlags(MOVEMENTFLAG_WALK_MODE);
+    }
+
+    //Call for creature group update
+    if(creature.GetFormation() && creature.GetFormation()->getLeader() == &creature)
+    {
+        creature.GetFormation()->LeaderMoveTo(nx, ny, nz);
     }
 }
 

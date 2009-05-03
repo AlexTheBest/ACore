@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,6 +22,7 @@
 #define __SPELL_H
 
 #include "GridDefines.h"
+#include "SharedDefines.h"
 
 class Unit;
 class Player;
@@ -44,26 +45,51 @@ enum SpellCastTargetFlags
     TARGET_FLAG_RESURRECTABLE    = 0x8000*/
 
     TARGET_FLAG_SELF            = 0x00000000,
+    TARGET_FLAG_UNUSED1         = 0x00000001,               // not used in any spells as of 3.0.3 (can be set dynamically)
     TARGET_FLAG_UNIT            = 0x00000002,               // pguid
+    TARGET_FLAG_UNUSED2         = 0x00000004,               // not used in any spells as of 3.0.3 (can be set dynamically)
+    TARGET_FLAG_UNUSED3         = 0x00000008,               // not used in any spells as of 3.0.3 (can be set dynamically)
     TARGET_FLAG_ITEM            = 0x00000010,               // pguid
     TARGET_FLAG_SOURCE_LOCATION = 0x00000020,               // 3 float
     TARGET_FLAG_DEST_LOCATION   = 0x00000040,               // 3 float
-    TARGET_FLAG_OBJECT_UNK      = 0x00000080,               // ?
+    TARGET_FLAG_OBJECT_UNK      = 0x00000080,               // used in 7 spells only
+    TARGET_FLAG_CASTER          = 0x00000100,               // looks like self target (480 spells)
     TARGET_FLAG_PVP_CORPSE      = 0x00000200,               // pguid
-    TARGET_FLAG_OBJECT          = 0x00000800,               // pguid
-    TARGET_FLAG_TRADE_ITEM      = 0x00001000,               // pguid
-    TARGET_FLAG_STRING          = 0x00002000,               // string
-    TARGET_FLAG_UNK1            = 0x00004000,               // ?
-    TARGET_FLAG_CORPSE          = 0x00008000,               // pguid
-    TARGET_FLAG_UNK2            = 0x00010000                // pguid
+    TARGET_FLAG_UNIT_CORPSE     = 0x00000400,               // 10 spells (gathering professions)
+    TARGET_FLAG_OBJECT          = 0x00000800,               // pguid, 2 spells
+    TARGET_FLAG_TRADE_ITEM      = 0x00001000,               // pguid, 0 spells
+    TARGET_FLAG_STRING          = 0x00002000,               // string, 0 spells
+    TARGET_FLAG_UNK1            = 0x00004000,               // 199 spells, opening object/lock
+    TARGET_FLAG_CORPSE          = 0x00008000,               // pguid, resurrection spells
+    TARGET_FLAG_UNK2            = 0x00010000,               // pguid, not used in any spells as of 3.0.3 (can be set dynamically)
+    TARGET_FLAG_GLYPH           = 0x00020000                // used in glyph spells
 };
 
 enum SpellCastFlags
 {
+    CAST_FLAG_NONE               = 0x00000000,
+    CAST_FLAG_UNKNOWN0           = 0x00000001,              // may be pending spell cast
     CAST_FLAG_UNKNOWN1           = 0x00000002,
+    CAST_FLAG_UNKNOWN11          = 0x00000004,
+    CAST_FLAG_UNKNOWN12          = 0x00000008,
     CAST_FLAG_UNKNOWN2           = 0x00000010,
-    CAST_FLAG_AMMO               = 0x00000020,
-    CAST_FLAG_UNKNOWN3           = 0x00000100
+    CAST_FLAG_AMMO               = 0x00000020,              // Projectiles visual
+    CAST_FLAG_UNKNOWN8           = 0x00000040,
+    CAST_FLAG_UNKNOWN9           = 0x00000080,
+    CAST_FLAG_UNKNOWN3           = 0x00000100,
+    CAST_FLAG_UNKNOWN13          = 0x00000200,
+    CAST_FLAG_UNKNOWN14          = 0x00000400,
+    CAST_FLAG_POWER_LEFT_SELF    = 0x00000800,              // wotlk
+    CAST_FLAG_UNKNOWN15          = 0x00001000,
+    CAST_FLAG_UNKNOWN16          = 0x00002000,
+    CAST_FLAG_UNKNOWN17          = 0x00004000,
+    CAST_FLAG_UNKNOWN18          = 0x00008000,
+    CAST_FLAG_UNKNOWN19          = 0x00010000,
+    CAST_FLAG_UNKNOWN4           = 0x00020000,              // wotlk
+    CAST_FLAG_UNKNOWN10          = 0x00040000,
+    CAST_FLAG_UNKNOWN5           = 0x00080000,              // wotlk
+    CAST_FLAG_UNKNOWN20          = 0x00100000,
+    CAST_FLAG_UNKNOWN7           = 0x00200000               // wotlk, rune cooldown list
 };
 
 enum SpellRangeFlag
@@ -191,9 +217,11 @@ struct SpellValue
         for(uint32 i = 0; i < 3; ++i)
             EffectBasePoints[i] = proto->EffectBasePoints[i];
         MaxAffectedTargets = proto->MaxAffectedTargets;
+        RadiusMod = 1.0f;
     }
     int32     EffectBasePoints[3];
     uint32    MaxAffectedTargets;
+    float     RadiusMod;
 };
 
 enum SpellState
@@ -216,6 +244,7 @@ enum ReplenishType
 
 enum SpellTargets
 {
+    SPELL_TARGETS_NONE      = 0,
     SPELL_TARGETS_ALLY,
     SPELL_TARGETS_ENEMY,
     SPELL_TARGETS_ENTRY,
@@ -244,6 +273,7 @@ class Spell
         void EffectHealthLeech(uint32 i);
         void EffectQuestComplete(uint32 i);
         void EffectCreateItem(uint32 i);
+        void EffectCreateItem2(uint32 i);
         void EffectPersistentAA(uint32 i);
         void EffectEnergize(uint32 i);
         void EffectOpenLock(uint32 i);
@@ -252,16 +282,15 @@ class Spell
         void EffectProficiency(uint32 i);
         void EffectApplyAreaAura(uint32 i);
         void EffectSummonType(uint32 i);
-        void EffectSummon(uint32 i);
         void EffectLearnSpell(uint32 i);
         void EffectDispel(uint32 i);
         void EffectDualWield(uint32 i);
         void EffectPickPocket(uint32 i);
         void EffectAddFarsight(uint32 i);
-        void EffectSummonPossessed(uint32 i);
         void EffectSummonWild(uint32 i);
-        void EffectSummonGuardian(uint32 i);
         void EffectHealMechanical(uint32 i);
+        void EffectJump(uint32 i);
+        void EffectJump2(uint32 i);
         void EffectTeleUnitsFaceCaster(uint32 i);
         void EffectLearnSkill(uint32 i);
         void EffectAddHonor(uint32 i);
@@ -286,7 +315,7 @@ class Spell
         void EffectStuck(uint32 i);
         void EffectSummonPlayer(uint32 i);
         void EffectActivateObject(uint32 i);
-        void EffectSummonTotem(uint32 i);
+        void EffectApplyGlyph(uint32 i);
         void EffectEnchantHeldItem(uint32 i);
         void EffectSummonObject(uint32 i);
         void EffectResurrect(uint32 i);
@@ -303,6 +332,8 @@ class Spell
         void EffectSkinning(uint32 i);
         void EffectCharge(uint32 i);
         void EffectProspecting(uint32 i);
+        void EffectMilling(uint32 i);
+        void EffectRenamePet(uint32 i);
         void EffectSendTaxi(uint32 i);
         void EffectSummonCritter(uint32 i);
         void EffectKnockBack(uint32 i);
@@ -329,22 +360,28 @@ class Spell
         void EffectKillCredit(uint32 i);
         void EffectQuestFail(uint32 i);
         void EffectRedirectThreat(uint32 i);
+        void EffectActivateRune(uint32 i);
+        void EffectTitanGrip(uint32 i);
+        void EffectEnchantItemPrismatic(uint32 i);
 
         Spell( Unit* Caster, SpellEntry const *info, bool triggered, uint64 originalCasterGUID = 0, Spell** triggeringContainer = NULL, bool skipCheck = false );
         ~Spell();
 
-        void prepare(SpellCastTargets * targets, Aura* triggeredByAura = NULL);
+        void prepare(SpellCastTargets const* targets, AuraEffect* triggeredByAura = NULL);
         void cancel();
         void update(uint32 difftime);
         void cast(bool skipCheck = false);
         void finish(bool ok = true);
         void TakePower();
+        void TakeAmmo();
+
+        void TakeRunePower();
         void TakeReagents();
         void TakeCastItem();
         void TriggerSpell();
-        uint8 CanCast(bool strict);
-        int16 PetCanCast(Unit* target);
-        bool CanAutoCast(Unit* target);
+
+        SpellCastResult CheckCast(bool strict);
+        SpellCastResult CheckPetCast(Unit* target);
 
         // handlers
         void handle_immediate();
@@ -353,10 +390,11 @@ class Spell
         void _handle_immediate_phase();
         void _handle_finish_phase();
 
-        uint8 CheckItems();
-        uint8 CheckRange(bool strict);
-        uint8 CheckPower();
-        uint8 CheckCasterAuras() const;
+        SpellCastResult CheckItems();
+        SpellCastResult CheckRange(bool strict);
+        SpellCastResult CheckPower();
+        SpellCastResult CheckRuneCost(uint32 runeCostID);
+        SpellCastResult CheckCasterAuras() const;
 
         int32 CalculateDamage(uint8 i, Unit* target) { return m_caster->CalculateSpellDamage(m_spellInfo,i,m_currentBasePoints[i],target); }
         int32 CalculatePowerCost();
@@ -364,24 +402,22 @@ class Spell
         bool HaveTargetsForEffect(uint8 effect) const;
         void Delayed();
         void DelayedChannel();
-        inline uint32 getState() const { return m_spellState; }
+        uint32 getState() const { return m_spellState; }
         void setState(uint32 state) { m_spellState = state; }
 
         void DoCreateItem(uint32 i, uint32 itemtype);
-
         void WriteSpellGoTargets( WorldPacket * data );
         void WriteAmmoToPacket( WorldPacket * data );
         void FillTargetMap();
 
         void SetTargetMap(uint32 i, uint32 cur);
 
-        Unit* SelectMagnetTarget();
-        bool CheckTarget(Unit* target, uint32 eff);
-
+        bool CheckTarget( Unit* target, uint32 eff );
+        bool CanAutoCast(Unit* target);
         void CheckSrc() { if(!m_targets.HasSrc()) m_targets.setSrc(m_caster); }
         void CheckDst() { if(!m_targets.HasDst()) m_targets.setDestination(m_caster); }
 
-        void SendCastResult(uint8 result);
+        void SendCastResult(SpellCastResult result);
         void SendSpellStart();
         void SendSpellGo();
         void SendSpellCooldown();
@@ -401,6 +437,8 @@ class Spell
         Item* m_CastItem;
         uint64 m_castItemGUID;
         uint8 m_cast_count;
+        uint32 m_glyphIndex;
+        uint32 m_preCastSpell;
         SpellCastTargets m_targets;
 
         int32 GetCastTime() const { return m_casttime; }
@@ -437,8 +475,6 @@ class Spell
 
         void UpdatePointers();                              // must be used at call Spell code after time delay (non triggered spell cast/update spell call/etc)
 
-        bool IsAffectedBy(SpellEntry const *spellInfo, uint32 effectId);
-
         bool CheckTargetCreatureType(Unit* target) const;
 
         void AddTriggeredSpell(SpellEntry const* spell) { m_TriggerSpells.push_back(spell); }
@@ -446,6 +482,7 @@ class Spell
         void CleanupTargetList();
 
         void SetSpellValue(SpellValueMod mod, int32 value);
+        //void SetSpellValue(SpellValueMod mod, float value);
     protected:
 
         void SendLoot(uint64 guid, LootType loottype);
@@ -468,9 +505,17 @@ class Spell
         int32 m_casttime;                                   // Calculated spell cast time initialized only in Spell::prepare
         bool m_canReflect;                                  // can reflect this spell?
         bool m_autoRepeat;
+        uint8 m_runesState;
 
         uint8 m_delayAtDamageCount;
-        int32 GetNextDelayAtDamageMsTime() { return m_delayAtDamageCount < 5 ? 1000 - (m_delayAtDamageCount++)* 200 : 200; }
+        bool isDelayableNoMore()
+        {
+            if(m_delayAtDamageCount >= 2)
+                return true;
+
+            m_delayAtDamageCount++;
+            return false;
+        }
 
         // Delayed spells system
         uint64 m_delayStart;                                // time of spell delay start, filled by event handler, zero = just started
@@ -481,6 +526,7 @@ class Spell
         bool m_referencedFromCurrentSpell;                  // mark as references to prevent deleted and access by dead pointers
         bool m_executedCurrently;                           // mark as executed to prevent deleted and access by dead pointers
         bool m_needSpellLog;                                // need to send spell log?
+        bool m_needComboPoints;
         uint8 m_applyMultiplierMask;                        // by effect: damage multiplier needed?
         float m_damageMultipliers[3];                       // by effect: damage multiplier
 
@@ -489,6 +535,7 @@ class Spell
         Item* itemTarget;
         GameObject* gameObjTarget;
         int32 damage;
+        Aura * m_spellAura; // only used in DoAllEffectOnTarget
 
         // this is set in Spell Hit, but used in Apply Aura handler
         DiminishingLevels m_diminishLevel;
@@ -505,7 +552,6 @@ class Spell
         //******************************************
         // Spell trigger system
         //******************************************
-        bool   m_canTrigger;                  // Can start trigger (m_IsTriggeredSpell can`t use for this)
         uint32 m_procAttacker;                // Attacker trigger flags
         uint32 m_procVictim;                  // Victim   trigger flags
         void   prepareDataForTriggerSystem();
@@ -514,8 +560,6 @@ class Spell
         // Spell target subsystem
         //*****************************************
         // Targets store structures and data
-        uint32 m_countOfHit;
-        uint32 m_countOfMiss;
         struct TargetInfo
         {
             uint64 targetGUID;
@@ -551,11 +595,12 @@ class Spell
         void AddGOTarget(uint64 goGUID, uint32 effIndex);
         void AddItemTarget(Item* target, uint32 effIndex);
         void DoAllEffectOnTarget(TargetInfo *target);
-        void DoSpellHitOnUnit(Unit *unit, uint32 effectMask);
+        SpellMissInfo DoSpellHitOnUnit(Unit *unit, uint32 effectMask);
+        void DoTriggersOnSpellHit(Unit *unit);
         void DoAllEffectOnTarget(GOTargetInfo *target);
         void DoAllEffectOnTarget(ItemTargetInfo *target);
-        bool IsAliveUnitPresentInTargetList();
-        void SearchAreaTarget(std::list<Unit*> &unitList, float radius, const uint32 type, SpellTargets TargetType, uint32 entry = 0);
+        bool UpdateChanneledTargetList();
+        void SearchAreaTarget(std::list<Unit*> &unitList, float radius, SpellNotifyPushType type, SpellTargets TargetType, uint32 entry = 0);
         void SearchChainTarget(std::list<Unit*> &unitList, float radius, uint32 unMaxTargets, SpellTargets TargetType);
         WorldObject* SearchNearbyTarget(float range, SpellTargets TargetType);
         bool IsValidSingleTargetEffect(Unit const* target, Targets type) const;
@@ -565,6 +610,11 @@ class Spell
         void SpellDamageSchoolDmg(uint32 i);
         void SpellDamageWeaponDmg(uint32 i);
         void SpellDamageHeal(uint32 i);
+
+        void GetSummonPosition(float &x, float &y, float &z, float radius = 0.0f, uint32 count = 0);
+        void SummonGuardian (uint32 entry, SummonPropertiesEntry const *properties);
+
+        SpellCastResult CanOpenLock(uint32 effIndex, uint32 lockid, SkillType& skillid, int32& reqSkillValue, int32& skillValue);
         // -------------------------------------------
 
         //List For Triggered Spells
@@ -597,84 +647,78 @@ namespace Trinity
     {
         std::list<Unit*> *i_data;
         Spell &i_spell;
-        const uint32& i_push_type;
+        SpellNotifyPushType i_push_type;
         float i_radius, i_radiusSq;
         SpellTargets i_TargetType;
-        Unit* i_caster;
+        Unit* i_source;
         uint32 i_entry;
         float i_x, i_y, i_z;
 
-        SpellNotifierCreatureAndPlayer(Spell &spell, std::list<Unit*> &data, float radius, const uint32 &type,
+        SpellNotifierCreatureAndPlayer(Spell &spell, std::list<Unit*> &data, float radius, SpellNotifyPushType type,
             SpellTargets TargetType = SPELL_TARGETS_ENEMY, uint32 entry = 0, float x = 0, float y = 0, float z = 0)
             : i_data(&data), i_spell(spell), i_push_type(type), i_radius(radius), i_radiusSq(radius*radius)
             , i_TargetType(TargetType), i_entry(entry), i_x(x), i_y(y), i_z(z)
         {
-            i_caster = spell.GetCaster();
+            i_source = spell.GetCaster();
+            assert(i_source);
         }
 
         template<class T> inline void Visit(GridRefManager<T>  &m)
         {
-            assert(i_data);
-
-            if(!i_caster)
-                return;
-
             for(typename GridRefManager<T>::iterator itr = m.begin(); itr != m.end(); ++itr)
             {
-                if( !itr->getSource()->isAlive() || (itr->getSource()->GetTypeId() == TYPEID_PLAYER && ((Player*)itr->getSource())->isInFlight()))
-                    continue;
+                Unit *target = (Unit*)itr->getSource();
 
                 switch (i_TargetType)
                 {
-                    case SPELL_TARGETS_ALLY:
-                        if (!itr->getSource()->isAttackableByAOE() || !i_caster->IsFriendlyTo( itr->getSource() ))
-                            continue;
-                        break;
                     case SPELL_TARGETS_ENEMY:
-                    {
-                        if(itr->getSource()->GetTypeId()==TYPEID_UNIT && ((Creature*)itr->getSource())->isTotem())
+                        if(target->GetTypeId() == TYPEID_UNIT && ((Creature*)target)->isTotem())
                             continue;
-                        if(!itr->getSource()->isAttackableByAOE())
+                        if(!target->isAttackableByAOE())
                             continue;
-
-                        Unit* check = i_caster->GetCharmerOrOwnerOrSelf();
-
-                        if( check->GetTypeId()==TYPEID_PLAYER )
+                        if(i_source->IsControlledByPlayer())
                         {
-                            if (check->IsFriendlyTo( itr->getSource() ))
+                            if(i_source->IsFriendlyTo(target))
                                 continue;
                         }
                         else
                         {
-                            if (!check->IsHostileTo( itr->getSource() ))
+                            if(!i_source->IsHostileTo(target))
                                 continue;
                         }
-                    }break;
-                    case SPELL_TARGETS_ENTRY:
-                    {
-                        if(itr->getSource()->GetEntry()!= i_entry)
+                        break;
+                    case SPELL_TARGETS_ALLY:
+                        if(!target->isAttackableByAOE() || !i_source->IsFriendlyTo(target))
                             continue;
-                    }break;
-                    default: continue;
+                        break;
+                    case SPELL_TARGETS_ENTRY:
+                        if(target->GetEntry()!= i_entry)
+                            continue;
+                        break;
+                    default:
+                        continue;
                 }
 
                 switch(i_push_type)
                 {
+                    case PUSH_SRC_CENTER:
+                    case PUSH_DST_CENTER:
+                    case PUSH_CHAIN:
+                    default:
+                        if((target->GetDistanceSq(i_x, i_y, i_z) < i_radiusSq))
+                            i_data->push_back(target);
+                        break;
                     case PUSH_IN_FRONT:
-                        if(i_caster->isInFront((Unit*)(itr->getSource()), i_radius, M_PI/3 ))
-                            i_data->push_back(itr->getSource());
+                        if(i_source->isInFront(target, i_radius, M_PI/3))
+                            i_data->push_back(target);
                         break;
                     case PUSH_IN_BACK:
-                        if(i_caster->isInBack((Unit*)(itr->getSource()), i_radius, M_PI/3 ))
-                            i_data->push_back(itr->getSource());
+                        if(i_source->isInBack(target, i_radius, M_PI/3))
+                            i_data->push_back(target);
                         break;
                     case PUSH_IN_LINE:
-                        if(i_caster->isInLine((Unit*)(itr->getSource()), i_radius ))
-                            i_data->push_back(itr->getSource());
-                        break;
-                    default:
-                        if((itr->getSource()->GetDistanceSq(i_x, i_y, i_z) < i_radiusSq))
-                            i_data->push_back(itr->getSource());
+                        if(i_source->isInLine(target, i_radius))
+                            i_data->push_back(target);
                         break;
                 }
             }
