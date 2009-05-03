@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
 class TRINITY_DLL_DECL PassiveAI : public CreatureAI
 {
     public:
-        PassiveAI(Creature *c) : CreatureAI(c) {}
+        explicit PassiveAI(Creature *c) : CreatureAI(c) {}
         ~PassiveAI() {}
 
         void MoveInLineOfSight(Unit *) {}
@@ -39,7 +39,7 @@ class TRINITY_DLL_DECL PassiveAI : public CreatureAI
 class TRINITY_DLL_DECL PossessedAI : public PassiveAI
 {
     public:
-        PossessedAI(Creature *c) : PassiveAI(c) {}
+        explicit PossessedAI(Creature *c) : PassiveAI(c) {}
 
         void AttackStart(Unit *target);
         void UpdateAI(const uint32);
@@ -52,7 +52,7 @@ class TRINITY_DLL_DECL PossessedAI : public PassiveAI
 class TRINITY_DLL_DECL NullCreatureAI : public PassiveAI
 {
     public:
-        NullCreatureAI(Creature *c) : PassiveAI(c) {}
+        explicit NullCreatureAI(Creature *c) : PassiveAI(c) {}
 
         void UpdateAI(const uint32) {}
         void EnterEvadeMode() {}
@@ -61,7 +61,7 @@ class TRINITY_DLL_DECL NullCreatureAI : public PassiveAI
 class TRINITY_DLL_DECL CritterAI : public PassiveAI
 {
     public:
-        CritterAI(Creature *c) : PassiveAI(c) {}
+        explicit CritterAI(Creature *c) : PassiveAI(c) {}
 
         void DamageTaken(Unit *done_by, uint32 & /*damage*/);
         void EnterEvadeMode();

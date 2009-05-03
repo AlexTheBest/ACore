@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -51,7 +51,7 @@ struct TRINITY_DLL_DECL mob_stolen_soulAI : public ScriptedAI
         Class_Timer = 1000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     { }
 
     void SetMyClass(uint8 myclass)
@@ -184,7 +184,7 @@ struct TRINITY_DLL_DECL boss_exarch_maladaarAI : public ScriptedAI
     }
 
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         switch (rand()%3)
         {
@@ -299,7 +299,7 @@ CreatureAI* GetAI_boss_exarch_maladaar(Creature *_Creature)
 }
 
 #define SPELL_AV_MORTAL_STRIKE          16856
-#define SPELL_AV_MORTAL_STRIKE          16856
+#define SPELL_AV_SUNDER_ARMOR           16145
 
 struct TRINITY_DLL_DECL mob_avatar_of_martyredAI : public ScriptedAI
 {
@@ -312,7 +312,7 @@ struct TRINITY_DLL_DECL mob_avatar_of_martyredAI : public ScriptedAI
         Mortal_Strike_timer = 10000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 

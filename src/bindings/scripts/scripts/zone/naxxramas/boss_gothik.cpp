@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -41,8 +41,10 @@ EndScriptData */
 #define SPELL_SHADOW_MARK           27825
 
 //Unrelenting Rider
-#define SPELL_UNHOLY_AURA           28340
-#define SPELL_SHADOWBOLT            19729                   //Search thru targets and find those who have the SHADOW_MARK to cast this on
+#define SPELL_UNHOLY_AURA           55606
+#define H_SPELL_UNHOLY_AURA         55608
+#define SPELL_SHADOWBOLT_VOLLEY     27831                   //Search thru targets and find those who have the SHADOW_MARK to cast this on
+#define H_SPELL_SHADOWBOLT_VOLLEY   55638
 
 //Spectral Trainee
 #define SPELL_ARCANE_EXPLOSION      27989

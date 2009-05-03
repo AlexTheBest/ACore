@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -52,7 +52,7 @@ struct TRINITY_DLL_DECL boss_renatakiAI : public ScriptedAI
         Ambushed = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -65,9 +65,9 @@ struct TRINITY_DLL_DECL boss_renatakiAI : public ScriptedAI
         if (Invisible_Timer < diff)
         {
             m_creature->InterruptSpell(CURRENT_GENERIC_SPELL);
-            m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 0);
-            m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_INFO , 218171138);
-            m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_INFO  + 1, 3);
+            m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_SLOT_ID, 0);
+            //m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_INFO , 218171138);
+            //m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_INFO  + 1, 3);
             m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
             m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID,11686);
             Invisible = true;
@@ -99,9 +99,9 @@ struct TRINITY_DLL_DECL boss_renatakiAI : public ScriptedAI
                 m_creature->InterruptSpell(CURRENT_GENERIC_SPELL);
                 m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID,15268);
                 m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-                m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 31818);
-                m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_INFO , 218171138);
-                m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_INFO  + 1, 3);
+                m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_SLOT_ID, 31818);
+                //m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_INFO , 218171138);
+                //m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_INFO  + 1, 3);
                 m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                 Invisible = false;
 

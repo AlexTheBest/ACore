@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,19 +18,26 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include "TemporarySummon.h"
-#include "WorldPacket.h"
-#include "MapManager.h"
 #include "Log.h"
 #include "ObjectAccessor.h"
 #include "CreatureAI.h"
+#include "ObjectMgr.h"
+#include "TemporarySummon.h"
 
-TemporarySummon::TemporarySummon( uint64 summoner ) :
-Creature(), m_type(TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN), m_timer(0), m_lifetime(0), m_summoner(summoner)
+TempSummon::TempSummon(SummonPropertiesEntry const *properties, Unit *owner) :
+Creature(), m_type(TEMPSUMMON_MANUAL_DESPAWN), m_timer(0), m_lifetime(0)
+, m_Properties(properties)
 {
+    m_summonerGUID = owner ? owner->GetGUID() : 0;
+    m_summonMask |= SUMMON_MASK_SUMMON;
 }
 
-void TemporarySummon::Update( uint32 diff )
+Unit* TempSummon::GetSummoner() const
+{
+    return m_summonerGUID ? ObjectAccessor::GetUnit(*this, m_summonerGUID) : NULL;
+}
+
+void TempSummon::Update( uint32 diff )
 {
     if (m_deathState == DEAD)
     {
@@ -159,30 +166,164 @@ void TemporarySummon::Update( uint32 diff )
     Creature::Update( diff );
 }
 
-void TemporarySummon::Summon(TempSummonType type, uint32 lifetime)
+void TempSummon::InitSummon(uint32 duration)
+{
+    assert(!isPet());
+
+    m_timer = duration;
+    m_lifetime = duration;
+
+    if(m_type == TEMPSUMMON_MANUAL_DESPAWN)
+        m_type = (duration == 0) ? TEMPSUMMON_DEAD_DESPAWN : TEMPSUMMON_TIMED_DESPAWN;
+
+    Unit* owner = GetSummoner();
+    if(owner)
+    {
+        if(owner->GetTypeId()==TYPEID_UNIT && ((Creature*)owner)->IsAIEnabled)
+            ((Creature*)owner)->AI()->JustSummoned(this);
+
+        if(GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_TRIGGER && m_spells[0])
+        {
+            setFaction(owner->getFaction());
+            if(m_spells[1] && GetMap()->IsHeroic())
+                CastSpell(this, m_spells[1], false, 0, 0, m_summonerGUID);
+            else
+                CastSpell(this, m_spells[0], false, 0, 0, m_summonerGUID);
+        }
+    }
+
+    if(!m_Properties)
+        return;
+
+    if(uint32 slot = m_Properties->Slot)
+    {
+        if(owner)
+        {
+            if(owner->m_SummonSlot[slot] && owner->m_SummonSlot[slot] != GetGUID())
+            {
+                Creature *oldSummon = GetMap()->GetCreature(owner->m_SummonSlot[slot]);
+                if(oldSummon && oldSummon->isSummon())
+                    ((TempSummon*)oldSummon)->UnSummon();
+            }
+            owner->m_SummonSlot[slot] = GetGUID();
+        }
+    }
+
+    if(m_Properties->Faction)
+        setFaction(m_Properties->Faction);
+}
+
+void TempSummon::SetTempSummonType(TempSummonType type)
 {
     m_type = type;
-    m_timer = lifetime;
-    m_lifetime = lifetime;
-
-    MapManager::Instance().GetMap(GetMapId(), this)->Add((Creature*)this);
-
-    AIM_Initialize();
 }
 
-void TemporarySummon::UnSummon()
+void TempSummon::UnSummon()
 {
+    assert(!isPet());
+
+    Unit* owner = GetSummoner();
+    if(owner && owner->GetTypeId() == TYPEID_UNIT && ((Creature*)owner)->IsAIEnabled)
+        ((Creature*)owner)->AI()->SummonedCreatureDespawn(this);
+
     CleanupsBeforeDelete();
     AddObjectToRemoveList();
-
-    Unit* sum = m_summoner ? ObjectAccessor::GetUnit(*this, m_summoner) : NULL;
-    if (sum  && sum->GetTypeId() == TYPEID_UNIT && ((Creature*)sum)->IsAIEnabled)
-    {
-        ((Creature*)sum)->AI()->SummonedCreatureDespawn(this);
-    }
 }
 
-void TemporarySummon::SaveToDB()
+void TempSummon::RemoveFromWorld()
+{
+    if(!IsInWorld())
+        return;
+
+    if(m_Properties)
+    {
+        if(uint32 slot = m_Properties->Slot)
+        {
+            if(Unit* owner = GetSummoner())
+            {
+                if(owner->m_SummonSlot[slot] = GetGUID())
+                    owner->m_SummonSlot[slot] = 0;
+            }
+        }
+    }
+
+    //if(GetOwnerGUID())
+    //    sLog.outError("Unit %u has owner guid when removed from world", GetEntry());
+
+    Creature::RemoveFromWorld();
+}
+
+void TempSummon::SaveToDB()
 {
 }
 
+bool TempSummon::SetOwner(Unit *owner, bool apply)
+{
+    if(apply)
+    {
+        if(!AddUInt64Value(UNIT_FIELD_SUMMONEDBY, owner->GetGUID()))
+        {
+            sLog.outCrash("Unit %u is summoned by %u but it already has a owner", GetEntry(), owner->GetEntry());
+            return false;
+        }
+        if(owner->GetTypeId() == TYPEID_PLAYER)
+        {
+            m_ControlledByPlayer = true;
+            SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
+        }
+    }
+    else
+    {
+        if(!RemoveUInt64Value(UNIT_FIELD_SUMMONEDBY, owner->GetGUID()))
+        {
+            sLog.outCrash("Unit %u is unsummoned by %u but it has another owner", GetEntry(), owner->GetEntry());
+            return false;
+        }
+    }
+
+    return true;
+}
+
+Minion::Minion(SummonPropertiesEntry const *properties, Unit *owner) : TempSummon(properties, owner)
+, m_owner(owner)
+{
+    m_summonMask |= SUMMON_MASK_MINION;
+}
+
+void Minion::InitSummon(uint32 duration)
+{
+    TempSummon::InitSummon(duration);
+
+    SetReactState(REACT_PASSIVE);
+
+    SetCreatorGUID(m_owner->GetGUID());
+    setFaction(m_owner->getFaction());
+
+    m_owner->SetMinion(this, true);
+}
+
+void Minion::RemoveFromWorld()
+{
+    if(!IsInWorld())
+        return;
+
+    m_owner->SetMinion(this, false);
+    TempSummon::RemoveFromWorld();
+}
+
+Guardian::Guardian(SummonPropertiesEntry const *properties, Unit *owner) : Minion(properties, owner)
+, m_bonusdamage(0)
+{
+    m_summonMask |= SUMMON_MASK_GUARDIAN;
+    InitCharmInfo();
+}
+
+void Guardian::InitSummon(uint32 duration)
+{
+    if(m_owner->GetTypeId() == TYPEID_PLAYER)
+        m_charmInfo->InitCharmCreateSpells();
+
+    Minion::InitSummon(duration);
+
+    SetReactState(REACT_AGGRESSIVE);
+}
