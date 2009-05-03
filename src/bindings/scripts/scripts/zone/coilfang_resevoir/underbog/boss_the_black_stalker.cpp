@@ -63,7 +63,7 @@ struct TRINITY_DLL_DECL boss_the_black_stalkerAI : public ScriptedAI
         Striders.clear();
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void JustSummoned(Creature *summon)
     {
@@ -121,7 +121,7 @@ struct TRINITY_DLL_DECL boss_the_black_stalkerAI : public ScriptedAI
             {
                 if(Unit* target = (Unit*)Unit::GetUnit(*m_creature, LevitatedTarget))
                 {
-                    if(!target->HasAura(SPELL_LEVITATE,0))
+                    if(!target->HasAura(SPELL_LEVITATE))
                     {
                         LevitatedTarget = 0;
                         return;

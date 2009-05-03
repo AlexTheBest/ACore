@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,14 +22,23 @@
 #include "Player.h"
 #include "BattleGround.h"
 #include "BattleGroundRL.h"
-#include "Creature.h"
 #include "ObjectMgr.h"
-#include "MapManager.h"
 #include "Language.h"
+#include "WorldPacket.h"
 
 BattleGroundRL::BattleGroundRL()
 {
     m_BgObjects.resize(BG_RL_OBJECT_MAX);
+
+    m_StartDelayTimes[BG_STARTING_EVENT_FIRST]  = BG_START_DELAY_1M;
+    m_StartDelayTimes[BG_STARTING_EVENT_SECOND] = BG_START_DELAY_30S;
+    m_StartDelayTimes[BG_STARTING_EVENT_THIRD]  = BG_START_DELAY_15S;
+    m_StartDelayTimes[BG_STARTING_EVENT_FOURTH] = BG_START_DELAY_NONE;
+    //we must set messageIds
+    m_StartMessageIds[BG_STARTING_EVENT_FIRST]  = LANG_ARENA_ONE_MINUTE;
+    m_StartMessageIds[BG_STARTING_EVENT_SECOND] = LANG_ARENA_THIRTY_SECONDS;
+    m_StartMessageIds[BG_STARTING_EVENT_THIRD]  = LANG_ARENA_FIFTEEN_SECONDS;
+    m_StartMessageIds[BG_STARTING_EVENT_FOURTH] = LANG_ARENA_HAS_BEGUN;
 }
 
 BattleGroundRL::~BattleGroundRL()
@@ -37,73 +46,29 @@ BattleGroundRL::~BattleGroundRL()
 
 }
 
-void BattleGroundRL::Update(time_t diff)
+void BattleGroundRL::Update(uint32 diff)
 {
     BattleGround::Update(diff);
 
-    if (GetStatus() == STATUS_WAIT_JOIN && GetPlayersSize())
-    {
-        ModifyStartDelayTime(diff);
-
-        if (!(m_Events & 0x01))
-        {
-            m_Events |= 0x01;
-
-            // setup here, only when at least one player has ported to the map
-            if(!SetupBattleGround())
-            {
-                EndNow();
-                return;
-            }
-
-            for(uint32 i = BG_RL_OBJECT_DOOR_1; i <= BG_RL_OBJECT_DOOR_2; i++)
-                SpawnBGObject(i, RESPAWN_IMMEDIATELY);
-
-            SetStartDelayTime(START_DELAY1);
-            SendMessageToAll(LANG_ARENA_ONE_MINUTE);
-        }
-        // After 30 seconds, warning is signalled
-        else if (GetStartDelayTime() <= START_DELAY2 && !(m_Events & 0x04))
-        {
-            m_Events |= 0x04;
-            SendMessageToAll(LANG_ARENA_THIRTY_SECONDS);
-        }
-        // After 15 seconds, warning is signalled
-        else if (GetStartDelayTime() <= START_DELAY3 && !(m_Events & 0x08))
-        {
-            m_Events |= 0x08;
-            SendMessageToAll(LANG_ARENA_FIFTEEN_SECONDS);
-        }
-        // delay expired (1 minute)
-        else if (GetStartDelayTime() <= 0 && !(m_Events & 0x10))
-        {
-            m_Events |= 0x10;
-
-            for(uint32 i = BG_RL_OBJECT_DOOR_1; i <= BG_RL_OBJECT_DOOR_2; i++)
-                DoorOpen(i);
-
-            for(uint32 i = BG_RL_OBJECT_BUFF_1; i <= BG_RL_OBJECT_BUFF_2; i++)
-                SpawnBGObject(i, 60);
-
-            SendMessageToAll(LANG_ARENA_BEGUN);
-            SetStatus(STATUS_IN_PROGRESS);
-            SetStartDelayTime(0);
-
-            for(BattleGroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
-                if(Player *plr = objmgr.GetPlayer(itr->first))
-                    plr->RemoveAurasDueToSpell(SPELL_ARENA_PREPARATION);
-
-            if(!GetPlayersCountByTeam(ALLIANCE) && GetPlayersCountByTeam(HORDE))
-                EndBattleGround(HORDE);
-            else if(GetPlayersCountByTeam(ALLIANCE) && !GetPlayersCountByTeam(HORDE))
-                EndBattleGround(ALLIANCE);
-        }
-    }
-
-    /*if(GetStatus() == STATUS_IN_PROGRESS)
+    /*if (GetStatus() == STATUS_IN_PROGRESS)
     {
         // update something
     }*/
+}
+
+void BattleGroundRL::StartingEventCloseDoors()
+{
+    for(uint32 i = BG_RL_OBJECT_DOOR_1; i <= BG_RL_OBJECT_DOOR_2; ++i)
+        SpawnBGObject(i, RESPAWN_IMMEDIATELY);
+}
+
+void BattleGroundRL::StartingEventOpenDoors()
+{
+    for(uint32 i = BG_RL_OBJECT_DOOR_1; i <= BG_RL_OBJECT_DOOR_2; ++i)
+        DoorOpen(i);
+
+    for(uint32 i = BG_RL_OBJECT_BUFF_1; i <= BG_RL_OBJECT_BUFF_2; ++i)
+        SpawnBGObject(i, 60);
 }
 
 void BattleGroundRL::AddPlayer(Player *plr)
@@ -120,24 +85,21 @@ void BattleGroundRL::AddPlayer(Player *plr)
 
 void BattleGroundRL::RemovePlayer(Player* /*plr*/, uint64 /*guid*/)
 {
-    if(GetStatus() == STATUS_WAIT_LEAVE)
+    if (GetStatus() == STATUS_WAIT_LEAVE)
         return;
 
     UpdateWorldState(0xbb8, GetAlivePlayersCountByTeam(ALLIANCE));
     UpdateWorldState(0xbb9, GetAlivePlayersCountByTeam(HORDE));
 
-    if(!GetAlivePlayersCountByTeam(ALLIANCE) && GetPlayersCountByTeam(HORDE))
-        EndBattleGround(HORDE);
-    else if(GetPlayersCountByTeam(ALLIANCE) && !GetAlivePlayersCountByTeam(HORDE))
-        EndBattleGround(ALLIANCE);
+    CheckArenaWinConditions();
 }
 
 void BattleGroundRL::HandleKillPlayer(Player *player, Player *killer)
 {
-    if(GetStatus() != STATUS_IN_PROGRESS)
+    if (GetStatus() != STATUS_IN_PROGRESS)
         return;
 
-    if(!killer)
+    if (!killer)
     {
         sLog.outError("Killer player not found");
         return;
@@ -148,16 +110,7 @@ void BattleGroundRL::HandleKillPlayer(Player *player, Player *killer)
     UpdateWorldState(0xbb8, GetAlivePlayersCountByTeam(ALLIANCE));
     UpdateWorldState(0xbb9, GetAlivePlayersCountByTeam(HORDE));
 
-    if(!GetAlivePlayersCountByTeam(ALLIANCE))
-    {
-        // all opponents killed
-        EndBattleGround(HORDE);
-    }
-    else if(!GetAlivePlayersCountByTeam(HORDE))
-    {
-        // all opponents killed
-        EndBattleGround(ALLIANCE);
-    }
+    CheckArenaWinConditions();
 }
 
 bool BattleGroundRL::HandlePlayerUnderMap(Player *player)
@@ -169,7 +122,7 @@ bool BattleGroundRL::HandlePlayerUnderMap(Player *player)
 void BattleGroundRL::HandleAreaTrigger(Player *Source, uint32 Trigger)
 {
     // this is wrong way to implement these things. On official it done by gameobject spell cast.
-    if(GetStatus() != STATUS_IN_PROGRESS)
+    if (GetStatus() != STATUS_IN_PROGRESS)
         return;
 
     //uint32 SpellId = 0;
@@ -185,7 +138,7 @@ void BattleGroundRL::HandleAreaTrigger(Player *Source, uint32 Trigger)
             break;
     }
 
-    //if(buff_guid)
+    //if (buff_guid)
     //    HandleTriggerBuff(buff_guid,Source);
 }
 
@@ -196,15 +149,16 @@ void BattleGroundRL::FillInitialWorldStates(WorldPacket &data)
     data << uint32(0xbba) << uint32(1);           // 9
 }
 
-void BattleGroundRL::ResetBGSubclass()
+void BattleGroundRL::Reset()
 {
-
+    //call parent's reset
+    BattleGround::Reset();
 }
 
 bool BattleGroundRL::SetupBattleGround()
 {
     // gates
-    if(    !AddObject(BG_RL_OBJECT_DOOR_1, BG_RL_OBJECT_TYPE_DOOR_1, 1293.561, 1601.938, 31.60557, -1.457349, 0, 0, -0.6658813, 0.7460576, RESPAWN_IMMEDIATELY)
+    if (!AddObject(BG_RL_OBJECT_DOOR_1, BG_RL_OBJECT_TYPE_DOOR_1, 1293.561, 1601.938, 31.60557, -1.457349, 0, 0, -0.6658813, 0.7460576, RESPAWN_IMMEDIATELY)
         || !AddObject(BG_RL_OBJECT_DOOR_2, BG_RL_OBJECT_TYPE_DOOR_2, 1278.648, 1730.557, 31.60557, 1.684245, 0, 0, 0.7460582, 0.6658807, RESPAWN_IMMEDIATELY)
     // buffs
         || !AddObject(BG_RL_OBJECT_BUFF_1, BG_RL_OBJECT_TYPE_BUFF_1, 1328.719971, 1632.719971, 36.730400, -1.448624, 0, 0, 0.6626201, -0.7489557, 120)

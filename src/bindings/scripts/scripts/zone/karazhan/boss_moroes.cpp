@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -108,7 +108,7 @@ struct TRINITY_DLL_DECL boss_moroesAI : public ScriptedAI
             pInstance->SetData(DATA_MOROES_EVENT, IN_PROGRESS);
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         StartEvent();
 
@@ -147,7 +147,7 @@ struct TRINITY_DLL_DECL boss_moroesAI : public ScriptedAI
 
             for (Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
             {
-                if (i->getSource()->isAlive() && i->getSource()->HasAura(SPELL_GARROTE,0))
+                if (i->getSource()->isAlive() && i->getSource()->HasAura(SPELL_GARROTE))
                     i->getSource()->RemoveAurasDueToSpell(SPELL_GARROTE);
             }
         }
@@ -243,13 +243,13 @@ struct TRINITY_DLL_DECL boss_moroesAI : public ScriptedAI
     {
         for(uint8 i = 0; i < 4; ++i)
         {
-            Unit* Temp = NULL;
+            Creature* Temp = NULL;
             if (AddGUID[i])
             {
-                Temp = Unit::GetUnit((*m_creature),AddGUID[i]);
+                Temp = Unit::GetCreature(*m_creature, AddGUID[i]);
                 if (Temp && Temp->isAlive())
                 {
-                    ((Creature*)Temp)->AI()->AttackStart(m_creature->getVictim());
+                    Temp->AI()->AttackStart(m_creature->getVictim());
                     DoZoneInCombat(Temp);
                 }else
                     EnterEvadeMode();
@@ -320,6 +320,8 @@ struct TRINITY_DLL_DECL boss_moroesAI : public ScriptedAI
                     m_creature->setFaction(16);
                     m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                     m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
+                    m_creature->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_TAUNT, true);
+                    m_creature->ApplySpellImmune(0, IMMUNITY_EFFECT,SPELL_EFFECT_ATTACK_ME, true);
                     m_creature->AI()->AttackStart(m_creature->getVictim());
                     InVanish = false;
                 }else Wait_Timer -= diff;
@@ -382,7 +384,7 @@ struct TRINITY_DLL_DECL boss_moroes_guestAI : public ScriptedAI
             pInstance->SetData(DATA_MOROES_EVENT, NOT_STARTED);
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void AcquireGUID()
     {
@@ -540,7 +542,7 @@ struct TRINITY_DLL_DECL boss_baron_rafe_dreugerAI : public boss_moroes_guestAI
 struct TRINITY_DLL_DECL boss_lady_catriona_von_indiAI : public boss_moroes_guestAI
 {
     //Holy Priest
-    boss_lady_catriona_von_indiAI(Creature *c) : boss_moroes_guestAI(c) {}
+    boss_lady_catriona_von_indiAI(Creature *c) : boss_moroes_guestAI(c) {Reset();}
 
     uint32 DispelMagic_Timer;
     uint32 GreaterHeal_Timer;
@@ -610,7 +612,7 @@ struct TRINITY_DLL_DECL boss_lady_catriona_von_indiAI : public boss_moroes_guest
 struct TRINITY_DLL_DECL boss_lady_keira_berrybuckAI : public boss_moroes_guestAI
 {
     //Holy Pally
-    boss_lady_keira_berrybuckAI(Creature *c) : boss_moroes_guestAI(c)  {}
+    boss_lady_keira_berrybuckAI(Creature *c) : boss_moroes_guestAI(c) {Reset();}
 
     uint32 Cleanse_Timer;
     uint32 GreaterBless_Timer;
@@ -727,7 +729,7 @@ struct TRINITY_DLL_DECL boss_lord_robin_darisAI : public boss_moroes_guestAI
 struct TRINITY_DLL_DECL boss_lord_crispin_ferenceAI : public boss_moroes_guestAI
 {
     //Arms Warr
-    boss_lord_crispin_ferenceAI(Creature *c) : boss_moroes_guestAI(c) {}
+    boss_lord_crispin_ferenceAI(Creature *c) : boss_moroes_guestAI(c) {Reset();}
 
     uint32 Disarm_Timer;
     uint32 HeroicStrike_Timer;

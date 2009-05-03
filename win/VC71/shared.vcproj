@@ -145,12 +145,6 @@
 				RelativePath="..\..\src\shared\Database\DatabaseMysql.h">
 			</File>
 			<File
-				RelativePath="..\..\src\shared\Database\DatabaseSqlite.cpp">
-			</File>
-			<File
-				RelativePath="..\..\src\shared\Database\DatabaseSqlite.h">
-			</File>
-			<File
 				RelativePath="..\..\src\shared\Database\Field.cpp">
 			</File>
 			<File
@@ -167,12 +161,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\shared\Database\QueryResultMysql.h">
-			</File>
-			<File
-				RelativePath="..\..\src\shared\Database\QueryResultSqlite.cpp">
-			</File>
-			<File
-				RelativePath="..\..\src\shared\Database\QueryResultSqlite.h">
 			</File>
 			<File
 				RelativePath="..\..\src\shared\Database\SqlDelayThread.cpp">
@@ -195,34 +183,13 @@
 			<Filter
 				Name="DataStores">
 				<File
-					RelativePath="..\..\src\shared\Database\dbcfile.cpp">
+					RelativePath="..\..\src\shared\Database\DBCFileLoader.cpp">
 				</File>
 				<File
-					RelativePath="..\..\src\shared\Database\dbcfile.h">
+					RelativePath="..\..\src\shared\Database\DBCFileLoader.h">
 				</File>
 				<File
-					RelativePath="..\..\src\shared\Database\DBCfmt.cpp">
-					<FileConfiguration
-						Name="Release|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)/$(InputName)1.obj"/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Debug|Win32">
-						<Tool
-							Name="VCCLCompilerTool"
-							ObjectFile="$(IntDir)/$(InputName)1.obj"/>
-					</FileConfiguration>
-				</File>
-				<File
-					RelativePath="..\..\src\shared\Database\DBCStores.cpp">
-				</File>
-				<File
-					RelativePath="..\..\src\shared\Database\DBCStores.h">
-				</File>
-				<File
-					RelativePath="..\..\src\shared\Database\DBCStructure.h">
+					RelativePath="..\..\src\shared\Database\DBCStore.h">
 				</File>
 			</Filter>
 		</Filter>
@@ -238,12 +205,6 @@
 		<Filter
 			Name="Util">
 			<File
-				RelativePath="..\..\src\shared\Base.cpp">
-			</File>
-			<File
-				RelativePath="..\..\src\shared\Base.h">
-			</File>
-			<File
 				RelativePath="..\..\src\shared\ByteBuffer.h">
 			</File>
 			<File
@@ -251,12 +212,6 @@
 			</File>
 			<File
 				RelativePath="..\..\dep\include\mersennetwister\MersenneTwister.h">
-			</File>
-			<File
-				RelativePath="..\..\src\shared\Mthread.cpp">
-			</File>
-			<File
-				RelativePath="..\..\src\shared\Mthread.h">
 			</File>
 			<File
 				RelativePath="..\..\src\shared\ProgressBar.cpp">
@@ -427,7 +382,7 @@
 		    >
 		    <Tool
 			Name="VCCustomBuildTool"
-			Description="Getting Version... :)"
+			Description="Getting Version..."
 			CommandLine="cd $(InputDir)&#x0D;&#x0A;&quot;$(TargetDir)\..\genrevision__$(PlatformName)_$(ConfigurationName)\genrevision.exe&quot; &quot;..\..&quot;&#x0D;&#x0A;"
 			AdditionalDependencies="$(SolutionDir)../.hg/branch.cache"
 			Outputs="revision.h"
@@ -438,7 +393,7 @@
 		    >
 		    <Tool
 			Name="VCCustomBuildTool"
-			Description="Getting Version... :)"
+			Description="Getting Version..."
 			CommandLine="cd $(InputDir)&#x0D;&#x0A;&quot;$(TargetDir)\..\genrevision__$(PlatformName)_$(ConfigurationName)\genrevision.exe&quot; &quot;..\..&quot;&#x0D;&#x0A;"
 			AdditionalDependencies="$(SolutionDir)../.hg/branch.cache"
 			Outputs="revision.h"

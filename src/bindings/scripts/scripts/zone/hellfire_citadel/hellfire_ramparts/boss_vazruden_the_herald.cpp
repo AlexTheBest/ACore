@@ -85,7 +85,7 @@ struct TRINITY_DLL_DECL boss_nazanAI : public ScriptedAI
         UnsummonCheck = 5000;
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void JustSummoned(Creature *summoned)
     {
@@ -133,7 +133,7 @@ struct TRINITY_DLL_DECL boss_nazanAI : public ScriptedAI
                 flight = false;
                 BellowingRoar_Timer = 6000;
                 ConeOfFire_Timer = 12000;
-                m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT + MOVEMENTFLAG_LEVITATING);
+                m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
                 m_creature->AddUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
                 m_creature->GetMotionMaster()->Clear();
                 if(Unit *victim = SelectUnit(SELECT_TARGET_NEAREST,0))
@@ -190,7 +190,7 @@ struct TRINITY_DLL_DECL boss_vazrudenAI : public ScriptedAI
         WipeSaid = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         switch(rand()%3)
         {
@@ -319,7 +319,7 @@ struct TRINITY_DLL_DECL boss_vazruden_the_heraldAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(phase==0)
         {
@@ -336,7 +336,7 @@ struct TRINITY_DLL_DECL boss_vazruden_the_heraldAI : public ScriptedAI
         if(summoned->GetEntry() == ENTRY_NAZAN)
         {
             ((boss_nazanAI *)summoned->AI())->VazrudenGUID = VazrudenGUID;
-            summoned->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT + MOVEMENTFLAG_LEVITATING);
+            summoned->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
             summoned->SetSpeed(MOVE_FLIGHT, 2.5);
             if(victim)
                 ((ScriptedAI*)summoned->AI())->AttackStart(victim,false);
@@ -419,7 +419,7 @@ struct TRINITY_DLL_DECL mob_hellfire_sentryAI : public ScriptedAI
         KidneyShot_Timer = 3000+rand()%4000;
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void JustDied(Unit* who)
     {

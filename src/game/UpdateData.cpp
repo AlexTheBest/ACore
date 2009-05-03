@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -108,7 +108,7 @@ bool UpdateData::BuildPacket(WorldPacket *packet, bool hasTransport)
     ByteBuffer buf(m_data.size() + 10 + m_outOfRangeGUIDs.size()*8);
 
     buf << (uint32) (!m_outOfRangeGUIDs.empty() ? m_blockCount + 1 : m_blockCount);
-    buf << (uint8) (hasTransport ? 1 : 0);
+    //buf << (uint8) (hasTransport ? 1 : 0);
 
     if(!m_outOfRangeGUIDs.empty())
     {
@@ -116,7 +116,7 @@ bool UpdateData::BuildPacket(WorldPacket *packet, bool hasTransport)
         buf << (uint32) m_outOfRangeGUIDs.size();
 
         for(std::set<uint64>::const_iterator i = m_outOfRangeGUIDs.begin();
-            i != m_outOfRangeGUIDs.end(); i++)
+            i != m_outOfRangeGUIDs.end(); ++i)
         {
             //buf.appendPackGUID(*i);
             buf << (uint8)0xFF;

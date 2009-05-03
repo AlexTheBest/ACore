@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -71,6 +71,52 @@ void CreatureAI::OnCharmed(bool apply)
     me->IsAIEnabled = false;
 }
 
+void CreatureAI::DoZoneInCombat(Creature* creature)
+{
+    if (!creature)
+        creature = me;
+
+    Map *map = creature->GetMap();
+    if (!map->IsDungeon())                                  //use IsDungeon instead of Instanceable, in case battlegrounds will be instantiated
+    {
+        sLog.outError("DoZoneInCombat call for map that isn't an instance (creature entry = %d)", creature->GetTypeId() == TYPEID_UNIT ? ((Creature*)creature)->GetEntry() : 0);
+        return;
+    }
+
+    if(!creature->getVictim())
+    {
+        if(Unit *target = creature->SelectNearestTarget())
+            AttackStart(target);
+        else if(creature->isSummon())
+        {
+            if(Unit *summoner = ((TempSummon*)creature)->GetSummoner())
+            {
+                if(summoner->getVictim()
+                    && (creature->IsFriendlyTo(summoner) || creature->IsHostileTo(summoner->getVictim())))
+                    AttackStart(summoner->getVictim());
+            }
+        }
+    }
+
+    if (!creature->CanHaveThreatList() || creature->getThreatManager().isThreatListEmpty())
+    {
+        sLog.outError("DoZoneInCombat called for creature that either cannot have threat list or has empty threat list (creature entry = %d)", creature->GetTypeId() == TYPEID_UNIT ? ((Creature*)creature)->GetEntry() : 0);
+        return;
+    }
+
+    Map::PlayerList const &PlayerList = map->GetPlayers();
+    for(Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
+    {
+        if (Player* i_pl = i->getSource())
+            if (i_pl->isAlive())
+            {
+                creature->SetInCombatWith(i_pl);
+                i_pl->SetInCombatWith(creature);
+                creature->AddThreat(i_pl, 0.0f);
+            }
+    }
+}
+
 void CreatureAI::MoveInLineOfSight(Unit *who)
 {
     if(me->getVictim())
@@ -112,9 +158,9 @@ void SimpleCharmedAI::UpdateAI(const uint32 /*diff*/)
     //kill self if charm aura has infinite duration
     if(charmer->IsInEvadeMode())
     {
-        Unit::AuraList const& auras = me->GetAurasByType(SPELL_AURA_MOD_CHARM);
-        for(Unit::AuraList::const_iterator iter = auras.begin(); iter != auras.end(); ++iter)
-            if((*iter)->GetCasterGUID() == charmer->GetGUID() && (*iter)->IsPermanent())
+        Unit::AuraEffectList const& auras = me->GetAurasByType(SPELL_AURA_MOD_CHARM);
+        for(Unit::AuraEffectList::const_iterator iter = auras.begin(); iter != auras.end(); ++iter)
+            if((*iter)->GetCasterGUID() == charmer->GetGUID() && (*iter)->GetParentAura()->IsPermanent())
             {
                 charmer->Kill(me);
                 return;
@@ -129,3 +175,8 @@ void SimpleCharmedAI::UpdateAI(const uint32 /*diff*/)
         AttackStart(charmer->SelectNearestTarget());
 }
 
+/*void CreatureAI::AttackedBy( Unit* attacker )
+{
+    if(!m_creature->getVictim())
+        AttackStart(attacker);
+}*/

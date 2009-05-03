@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@
 #include "Dynamic/ObjectRegistry.h"
 #include "Dynamic/FactoryHolder.h"
 
+class WorldObject;
 class Unit;
 class Creature;
 class Player;
@@ -70,12 +71,88 @@ enum SelectAggroTarget
     SELECT_TARGET_FARTHEST,
 };
 
+enum SCEquip
+{
+    EQUIP_NO_CHANGE = -1,
+    EQUIP_UNEQUIP   = 0
+};
+
+class EventMap : private std::map<uint32, uint32>
+{
+    private:
+        uint32 m_time, m_phase;
+    public:
+        explicit EventMap() : m_phase(0), m_time(0) {}
+
+        void Reset() { clear(); m_time = 0; m_phase = 0; }
+
+        void Update(uint32 time) { m_time += time; }
+
+        void SetPhase(uint32 phase)
+        {
+            if(phase && phase < 9)
+                m_phase = (1 << (phase + 24));
+        }
+
+        void ScheduleEvent(uint32 eventId, uint32 time, uint32 gcd = 0, uint32 phase = 0)
+        {
+            time += m_time;
+            if(gcd && gcd < 9)
+                eventId |= (1 << (gcd + 16));
+            if(phase && phase < 9)
+                eventId |= (1 << (phase + 24));
+            iterator itr = find(time);
+            while(itr != end())
+            {
+                ++time;
+                itr = find(time);
+            }
+            insert(std::make_pair(time, eventId));
+        }
+
+        uint32 ExecuteEvent()
+        {
+            while(!empty())
+            {
+                if(begin()->first > m_time)
+                    return 0;
+                else if(m_phase && (begin()->second & 0xFF000000) && !(begin()->second & m_phase))
+                    erase(begin());
+                else
+                {
+                    uint32 eventId = (begin()->second & 0x0000FFFF);
+                    erase(begin());
+                    return eventId;
+                }
+            }
+            return 0;
+        }
+
+        void DelayEvents(uint32 time, uint32 gcd)
+        {
+            time += m_time;
+            gcd = (1 << (gcd + 16));
+            for(iterator itr = begin(); itr != end();)
+            {
+                if(itr->first >= time)
+                    break;
+                if(itr->second & gcd)
+                {
+                    ScheduleEvent(time, itr->second);
+                    erase(itr++);
+                }
+                else
+                    ++itr;
+            }
+        }
+};
+
 class TRINITY_DLL_SPEC UnitAI
 {
     protected:
-        Unit *me;
+        Unit* const me;
     public:
-        UnitAI(Unit *u) : me(u) {}
+        explicit UnitAI(Unit *u) : me(u) {}
         virtual void AttackStart(Unit *);
         virtual void UpdateAI(const uint32 diff) = 0;
 
@@ -96,9 +173,9 @@ class TRINITY_DLL_SPEC UnitAI
 class TRINITY_DLL_SPEC PlayerAI : public UnitAI
 {
     protected:
-        Player *me;
+        Player* const me;
     public:
-        PlayerAI(Player *p) : UnitAI((Unit*)p), me(p) {}
+        explicit PlayerAI(Player *p) : UnitAI((Unit*)p), me(p) {}
 
         void OnCharmed(bool apply);
 };
@@ -112,21 +189,29 @@ class TRINITY_DLL_SPEC SimpleCharmedAI : public PlayerAI
 class TRINITY_DLL_SPEC CreatureAI : public UnitAI
 {
     protected:
-        Creature *me;
+        Creature* const me;
+        Creature* const m_creature;
 
         bool UpdateVictim();
     public:
-        CreatureAI(Creature *c) : UnitAI((Unit*)c), me(c) {}
+        explicit CreatureAI(Creature *c) : UnitAI((Unit*)c), me(c), m_creature(c) {}
 
         virtual ~CreatureAI() {}
 
-        // Called if IsVisible(Unit *who) is true at each *who move
+        ///== Reactions At =================================
+
+        // Called if IsVisible(Unit *who) is true at each *who move, reaction at visibility zone enter
         virtual void MoveInLineOfSight(Unit *);
 
-        // Called at stopping attack by any attacker
+        // Called for reaction at stopping attack at no attackers or targets
         virtual void EnterEvadeMode();
 
+        // Called for reaction at enter to combat if not in combat yet (enemy can be NULL)
+        virtual void EnterCombat(Unit* /*enemy*/) {}
+
         // Called at any Damage from any attacker (before damage apply)
+        // Note: it for recalculation damage or special reaction at damage
+        // for attack reaction use AttackedBy called for not DOT damage in Unit::DealDamage also
         virtual void DamageTaken(Unit *done_by, uint32 & /*damage*/) {}
 
         // Called when the creature is killed
@@ -146,8 +231,8 @@ class TRINITY_DLL_SPEC CreatureAI : public UnitAI
         // Called when spell hits a target
         virtual void SpellHitTarget(Unit* target, const SpellEntry*) {}
 
-        // Called when vitim entered water and creature can not enter water
-        virtual bool canReachByRangeAttack(Unit*) { return false; }
+        // Called when the creature is target of hostile action: swing, hostile spell landed, fear/etc)
+        //virtual void AttackedBy(Unit* attacker);
 
         // Called when creature is spawned or respawned (for reseting variables)
         virtual void JustRespawned() {}
@@ -156,6 +241,36 @@ class TRINITY_DLL_SPEC CreatureAI : public UnitAI
         virtual void MovementInform(uint32 /*MovementType*/, uint32 /*Data*/) {}
 
         void OnCharmed(bool apply);
+
+        // Called at reaching home after evade
+        virtual void JustReachedHome() {}
+
+        void DoZoneInCombat(Creature* pUnit = NULL);
+
+        // Called at text emote receive from player 
+        virtual void ReceiveEmote(Player* pPlayer, uint32 text_emote) {}
+
+        ///== Triggered Actions Requested ==================
+
+        // Called when creature attack expected (if creature can and no have current victim)
+        // Note: for reaction at hostile action must be called AttackedBy function.
+        //virtual void AttackStart(Unit *) {}
+
+        // Called at World update tick
+        //virtual void UpdateAI(const uint32 diff ) {}
+
+        ///== State checks =================================
+
+        // Is unit visible for MoveInLineOfSight
+        //virtual bool IsVisible(Unit *) const { return false; }
+
+        // Called when victim entered water and creature can not enter water
+        virtual bool canReachByRangeAttack(Unit*) { return false; }
+
+        ///== Fields =======================================
+
+        // Pointer to controlled by AI creature
+        //Creature* const m_creature;
 };
 
 struct SelectableAI : public FactoryHolder<CreatureAI>, public Permissible<Creature>

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -99,7 +99,7 @@ struct TRINITY_DLL_DECL boss_nexusprince_shaffarAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         switch(rand()%3)
         {
@@ -201,7 +201,7 @@ CreatureAI* GetAI_boss_nexusprince_shaffar(Creature *_Creature)
 
 struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
 {
-    mob_ethereal_beaconAI(Creature *c) : ScriptedAI(c)
+    mob_ethereal_beaconAI(Creature *c) : ScriptedAI(c), CanEvade(false)
     {
         HeroicMode = m_creature->GetMap()->IsHeroic();
         CanEvade = false;
@@ -222,7 +222,7 @@ struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
         ArcaneBolt_Timer = 1000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
