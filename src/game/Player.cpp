@@ -3289,6 +3289,20 @@ void Player::removeSpell(uint32 spell_id, bool disabled, bool update_action_bar_
     }
 }
 
+
+void Player::RemoveSpellCooldown( uint32 spell_id, bool update /* = false */ )
+{
+    m_spellCooldowns.erase(spell_id);
+
+    if(update)
+    {
+        WorldPacket data(SMSG_CLEAR_COOLDOWN, (4+8));
+        data << uint32(spell_id);
+        data << uint64(GetGUID());
+        SendDirectMessage(&data);
+    }
+}
+
 void Player::RemoveArenaSpellCooldowns()
 {
     // remove cooldowns on spells that has < 15 min CD
@@ -9848,14 +9862,17 @@ uint8 Player::CanEquipItem( uint8 slot, uint16 &dest, Item *pItem, bool swap, bo
                 {
                     if( Item* pBag = GetItemByPos( INVENTORY_SLOT_BAG_0, i ) )
                     {
-                        if( ItemPrototype const* pBagProto = pBag->GetProto() )
+                        if( pBag != pItem )
                         {
-                            if( pBagProto->Class==pProto->Class && (!swap || pBag->GetSlot() != eslot ) )
+                            if( ItemPrototype const* pBagProto = pBag->GetProto() )
                             {
-                                if(pBagProto->SubClass == ITEM_SUBCLASS_AMMO_POUCH)
-                                    return EQUIP_ERR_CAN_EQUIP_ONLY1_AMMOPOUCH;
-                                else
-                                    return EQUIP_ERR_CAN_EQUIP_ONLY1_QUIVER;
+                                if( pBagProto->Class==pProto->Class && (!swap || pBag->GetSlot() != eslot ) )
+                                {
+                                    if(pBagProto->SubClass == ITEM_SUBCLASS_AMMO_POUCH)
+                                        return EQUIP_ERR_CAN_EQUIP_ONLY1_AMMOPOUCH;
+                                    else
+                                        return EQUIP_ERR_CAN_EQUIP_ONLY1_QUIVER;
+                                }
                             }
                         }
                     }
