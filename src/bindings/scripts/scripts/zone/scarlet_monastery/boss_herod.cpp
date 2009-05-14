@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -55,7 +55,7 @@ struct TRINITY_DLL_DECL boss_herodAI : public ScriptedAI
         Whirlwind_Timer = 60000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoScriptText(SAY_AGGRO, m_creature);
         DoCast(m_creature,SPELL_RUSHINGCHARGE);
@@ -105,46 +105,23 @@ struct TRINITY_DLL_DECL boss_herodAI : public ScriptedAI
     }
 };
 
-CreatureAI* GetAI_boss_herod(Creature *_Creature)
+CreatureAI* GetAI_boss_herod(Creature* pCreature)
 {
-    return new boss_herodAI (_Creature);
+    return new boss_herodAI(pCreature);
 }
-
-float Location[12][3]=
-{
-    {1945.81, -431.54, 16.36},
-    {1946.21, -436.41, 16.36},
-    {1950.01, -444.11, 14.63},
-    {1956.08, -449.34, 13.12},
-    {1966.59, -450.55, 11.27},
-    {1976.09, -447.51, 11.27},
-    {1983.42, -435.85, 11.27},
-    {1978.17, -428.81, 11.27},
-    {1973.97, -422.08, 9.04},
-    {1963.84, -418.90, 6.17},
-    {1961.22, -422.74, 6.17},
-    {1964.80, -431.26, 6.17}
-};
-
-uint32 Wait[12][1]=
-{
-    {0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{0},{600000}
-};
 
 struct TRINITY_DLL_DECL mob_scarlet_traineeAI : public npc_escortAI
 {
-    mob_scarlet_traineeAI(Creature *c) : npc_escortAI(c) {}
+    mob_scarlet_traineeAI(Creature *c) : npc_escortAI(c)
+    {
+        Start_Timer = urand(1000,6000);
+    }
 
     uint32 Start_Timer;
 
-    void WaypointReached(uint32 i) { }
-
-    void Reset()
-    {
-        Start_Timer = urand(1500,4500);
-    }
-
-    void Aggro(Unit* who) { }
+    void Reset() { }
+    void WaypointReached(uint32 uiPoint) { }
+    void EnterCombat(Unit* who) { }
 
     void UpdateAI(const uint32 diff)
     {
@@ -161,14 +138,13 @@ struct TRINITY_DLL_DECL mob_scarlet_traineeAI : public npc_escortAI
     }
 };
 
-CreatureAI* GetAI_mob_scarlet_trainee(Creature* _Creature)
+CreatureAI* GetAI_mob_scarlet_trainee(Creature* pCreature)
 {
-    mob_scarlet_traineeAI* thisAI = new mob_scarlet_traineeAI(_Creature);
+    mob_scarlet_traineeAI* thisAI = new mob_scarlet_traineeAI(pCreature);
 
-    for(uint32 i = 0; i < 12; ++i)
-        thisAI->AddWaypoint(i, Location[i][0], Location[i][1], Location[i][2], Wait[i][0]);
+    thisAI->FillPointMovementListForCreature();
 
-    return ((CreatureAI*)thisAI);
+    return (CreatureAI*)thisAI;
 }
 
 void AddSC_boss_herod()

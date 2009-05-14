@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -131,10 +131,10 @@ bool WinServiceUninstall()
             serviceName, SERVICE_QUERY_STATUS | DELETE);
         if (service)
         {
-            SERVICE_STATUS serviceStatus;
-            if (QueryServiceStatus(service, &serviceStatus))
+            SERVICE_STATUS serviceStatus2;
+            if (QueryServiceStatus(service, &serviceStatus2))
             {
-                if (serviceStatus.dwCurrentState == SERVICE_STOPPED)
+                if (serviceStatus2.dwCurrentState == SERVICE_STOPPED)
                     DeleteService(service);
             }
             CloseServiceHandle(service);

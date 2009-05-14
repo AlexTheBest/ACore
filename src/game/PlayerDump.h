@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 
 #ifndef _PLAYER_DUMP_H
 #define _PLAYER_DUMP_H
+
 #include <string>
 #include <map>
 #include <set>
@@ -28,10 +29,10 @@ enum DumpTableType
 {
     DTT_CHARACTER,      //                                  // characters
 
-    DTT_CHAR_TABLE,     //                                  // character_action, character_aura, character_homebind,
-                                                            // character_queststatus, character_reputation,
-                                                            // character_spell, character_spell_cooldown, character_ticket,
-                                                            // character_tutorial
+    DTT_CHAR_TABLE,     //                                  // character_achievement, character_achievement_progress,
+                                                            // character_action, character_aura, character_homebind,
+                                                            // character_queststatus, character_reputation, character_spell,
+                                                            // character_spell_cooldown, character_ticket, character_tutorial
 
     DTT_INVENTORY,      //    -> item guids collection      // character_inventory
 

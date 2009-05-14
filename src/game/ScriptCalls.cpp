@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -78,8 +78,10 @@ bool LoadScriptingModule(char const* libName)
         ||!(testScript->scriptAreaTrigger   =(scriptCallAreaTrigger         )TRINITY_GET_PROC_ADDR(testScript->hScriptsLib,"AreaTrigger"         ))
         ||!(testScript->ItemQuestAccept     =(scriptCallItemQuestAccept     )TRINITY_GET_PROC_ADDR(testScript->hScriptsLib,"ItemQuestAccept"     ))
         ||!(testScript->GOQuestAccept       =(scriptCallGOQuestAccept       )TRINITY_GET_PROC_ADDR(testScript->hScriptsLib,"GOQuestAccept"       ))
-        ||!(testScript->ReceiveEmote        =(scriptCallReceiveEmote        )TRINITY_GET_PROC_ADDR(testScript->hScriptsLib,"ReceiveEmote"        ))
         ||!(testScript->ItemUse             =(scriptCallItemUse             )TRINITY_GET_PROC_ADDR(testScript->hScriptsLib,"ItemUse"             ))
+        ||!(testScript->EffectDummyGameObj  =(scriptCallEffectDummyGameObj  )TRINITY_GET_PROC_ADDR(testScript->hScriptsLib,"EffectDummyGameObj"  ))
+        ||!(testScript->EffectDummyCreature =(scriptCallEffectDummyCreature )TRINITY_GET_PROC_ADDR(testScript->hScriptsLib,"EffectDummyCreature" ))
+        ||!(testScript->EffectDummyItem     =(scriptCallEffectDummyItem     )TRINITY_GET_PROC_ADDR(testScript->hScriptsLib,"EffectDummyItem"     ))
         ||!(testScript->GetAI               =(scriptCallGetAI               )TRINITY_GET_PROC_ADDR(testScript->hScriptsLib,"GetAI"               ))
         ||!(testScript->CreateInstanceData  =(scriptCallCreateInstanceData  )TRINITY_GET_PROC_ADDR(testScript->hScriptsLib,"CreateInstanceData"  ))
         )
@@ -90,7 +92,8 @@ bool LoadScriptingModule(char const* libName)
         return false;
     }
 
-    printf("Scripts Library %s was successfully loaded.\n",name.c_str());
+    sLog.outString();
+    sLog.outString( ">>> Scripts Library %s was successfully loaded.\n", name.c_str() );
 
     //heh we are still there :P we have a valid library
     //we reload script

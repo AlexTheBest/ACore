@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -26,6 +26,18 @@ EndScriptData */
 
 #define ENCOUNTERS              4
 
+enum
+{
+    SAY_BOSS_DIE_AD         = -1033007,
+    SAY_BOSS_DIE_AS         = -1033008,
+
+    NPC_ASH                 = 3850,
+    NPC_ADA                 = 3849,
+
+    GO_COURTYARD_DOOR       = 18895,                        //door to open when talking to NPC's
+    GO_SORCERER_DOOR        = 18972,                        //door to open when Fenrus the Devourer
+    GO_ARUGAL_DOOR          = 18971                         //door to open when Wolf Master Nandos
+};
 struct TRINITY_DLL_DECL instance_shadowfang_keep : public ScriptedInstance
 {
     instance_shadowfang_keep(Map *map) : ScriptedInstance(map) {Initialize();};
@@ -33,12 +45,18 @@ struct TRINITY_DLL_DECL instance_shadowfang_keep : public ScriptedInstance
     uint32 Encounter[ENCOUNTERS];
     std::string str_data;
 
+    uint64 uiAshGUID;
+    uint64 uiAdaGUID;
+
     uint64 DoorCourtyardGUID;
     uint64 DoorSorcererGUID;
     uint64 DoorArugalGUID;
 
     void Initialize()
     {
+        uiAshGUID = 0;
+        uiAdaGUID = 0;
+
         DoorCourtyardGUID = 0;
         DoorSorcererGUID = 0;
         DoorArugalGUID = 0;
@@ -63,28 +81,52 @@ struct TRINITY_DLL_DECL instance_shadowfang_keep : public ScriptedInstance
         return NULL;
     }
 
+    void OnCreatureCreate(Creature* pCreature, uint32 uiCreature)
+    {
+        switch(pCreature->GetEntry())
+        {
+            case NPC_ASH: uiAshGUID = pCreature->GetGUID(); break;
+            case NPC_ADA: uiAdaGUID = pCreature->GetGUID(); break;
+        }
+    }
+
     void OnObjectCreate(GameObject *go)
     {
         switch(go->GetEntry())
         {
-        case 18895: DoorCourtyardGUID = go->GetGUID(); break;
-        case 18972: DoorSorcererGUID = go->GetGUID(); break;
-        case 18971: DoorArugalGUID = go->GetGUID(); break;
+            case GO_COURTYARD_DOOR:
+                DoorCourtyardGUID = go->GetGUID();
+                if (Encounter[0] == DONE)
+                    go->SetGoState(GO_STATE_ACTIVE);
+                break;
+            case GO_SORCERER_DOOR:
+                DoorSorcererGUID = go->GetGUID();
+                if (Encounter[2] == DONE)
+                    go->SetGoState(GO_STATE_ACTIVE);
+                break;
+            case GO_ARUGAL_DOOR:
+                DoorArugalGUID = go->GetGUID();
+                if (Encounter[3] == DONE)
+                    go->SetGoState(GO_STATE_ACTIVE);
+                break;
         }
     }
 
-    void HandleGameObject(uint64 guid, uint32 state)
+    void DoSpeech()
     {
-        Player *player = GetPlayerInMap();
+        Player* pPlayer = GetPlayerInMap();
 
-        if (!player || !guid)
+        if (pPlayer)
         {
-            debug_log("TSCR: Instance Shadowfang Keep: HandleGameObject fail");
-            return;
-        }
+            Unit* pAda = Unit::GetUnit(*pPlayer,uiAdaGUID);
+            Unit* pAsh = Unit::GetUnit(*pPlayer,uiAshGUID);
 
-        if (GameObject *go = GameObject::GetGameObject(*player,guid))
-            go->SetGoState(state);
+            if (pAda && pAda->isAlive() && pAsh && pAsh->isAlive())
+            {
+                DoScriptText(SAY_BOSS_DIE_AD,pAda);
+                DoScriptText(SAY_BOSS_DIE_AS,pAsh);
+            }
+        }
     }
 
     void SetData(uint32 type, uint32 data)
@@ -97,6 +139,8 @@ struct TRINITY_DLL_DECL instance_shadowfang_keep : public ScriptedInstance
                 Encounter[0] = data;
                 break;
             case TYPE_RETHILGORE:
+                if (data == DONE)
+                    DoSpeech();
                 Encounter[1] = data;
                 break;
             case TYPE_FENRUS:
@@ -141,7 +185,7 @@ struct TRINITY_DLL_DECL instance_shadowfang_keep : public ScriptedInstance
         return 0;
     }
 
-    const char* Save()
+    std::string GetSaveData()
     {
         return str_data.c_str();
     }
@@ -160,8 +204,10 @@ struct TRINITY_DLL_DECL instance_shadowfang_keep : public ScriptedInstance
         loadStream >> Encounter[0] >> Encounter[1] >> Encounter[2] >> Encounter[3];
 
         for(uint8 i = 0; i < ENCOUNTERS; ++i)
+        {
             if (Encounter[i] == IN_PROGRESS)
                 Encounter[i] = NOT_STARTED;
+        }
 
         OUT_LOAD_INST_DATA_COMPLETE;
     }

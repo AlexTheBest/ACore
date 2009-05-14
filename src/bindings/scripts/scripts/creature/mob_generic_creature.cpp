@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -40,7 +40,7 @@ struct TRINITY_DLL_DECL generic_creatureAI : public ScriptedAI
         IsSelfRooted = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if (!m_creature->IsWithinMeleeRange(who))
         {
@@ -56,7 +56,7 @@ struct TRINITY_DLL_DECL generic_creatureAI : public ScriptedAI
         else GlobalCooldown = 0;
 
         //Buff timer (only buff when we are alive and not in combat
-        if (!InCombat && m_creature->isAlive())
+        if (!m_creature->isInCombat() && m_creature->isAlive())
             if (BuffTimer < diff )
             {
                 //Find a spell that targets friendly and applies an aura (these are generally buffs)
@@ -156,11 +156,41 @@ struct TRINITY_DLL_DECL generic_creatureAI : public ScriptedAI
         }
     }
 };
+
 CreatureAI* GetAI_generic_creature(Creature *_Creature)
 {
     return new generic_creatureAI (_Creature);
 }
 
+struct TRINITY_DLL_DECL trigger_periodicAI : public NullCreatureAI
+{
+    trigger_periodicAI(Creature* c) : NullCreatureAI(c)
+    {
+        spell = me->m_spells[0] ? GetSpellStore()->LookupEntry(me->m_spells[0]) : NULL;
+        interval = me->m_spells[1] ? me->m_spells[1] : 1000;
+        timer = interval;
+    }
+
+    uint32 timer, interval;
+    const SpellEntry * spell;
+
+    void UpdateAI(const uint32 diff)
+    {
+        if(timer < diff)
+        {
+            if(spell)
+                me->CastSpell(me, spell, true);
+            timer = interval;
+        }
+        else
+            timer -= diff;
+    }
+};
+
+CreatureAI* GetAI_trigger_periodic(Creature *_Creature)
+{
+    return new trigger_periodicAI (_Creature);
+}
 
 void AddSC_generic_creature()
 {
@@ -168,6 +198,11 @@ void AddSC_generic_creature()
     newscript = new Script;
     newscript->Name="generic_creature";
     newscript->GetAI = &GetAI_generic_creature;
+    newscript->RegisterSelf();
+
+    newscript = new Script;
+    newscript->Name="trigger_periodic";
+    newscript->GetAI = &GetAI_trigger_periodic;
     newscript->RegisterSelf();
 }
 
