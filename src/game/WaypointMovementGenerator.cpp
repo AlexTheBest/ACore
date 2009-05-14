@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 //Creature-specific headers
 #include "Creature.h"
 #include "CreatureAI.h"
+#include "CreatureGroups.h"
 //Player-specific
 #include "Player.h"
 
@@ -54,7 +55,7 @@ bool WaypointMovementGenerator<Creature>::GetDestination(float &x, float &y, flo
 {
     if(i_destinationHolder.HasArrived())
         return false;
-
+    
     i_destinationHolder.GetDestination(x, y, z);
     return true;
 }
@@ -99,7 +100,7 @@ WaypointMovementGenerator<Creature>::Initialize(Creature &u)
     //i_nextMoveTime.Reset(0);
     StopedByPlayer = false;
     if(!path_id)
-        path_id = u.GetWaypointPath();
+        path_id = u.GetWaypointPathId();
     waypoints = WaypointMgr.GetPath(path_id);
     i_currentNode = 0;
     if(waypoints && waypoints->size())
@@ -109,6 +110,10 @@ WaypointMovementGenerator<Creature>::Initialize(Creature &u)
         InitTraveller(u, *node);
         i_destinationHolder.SetDestination(traveller, node->x, node->y, node->z);
         i_nextMoveTime.Reset(i_destinationHolder.GetTotalTravelTime());
+
+        //Call for creature group update
+        if(u.GetFormation() && u.GetFormation()->getLeader() == &u)
+            u.GetFormation()->LeaderMoveTo(node->x, node->y, node->z);
     }
     else
         node = NULL;
@@ -180,6 +185,10 @@ WaypointMovementGenerator<Creature>::Update(Creature &unit, const uint32 &diff)
             InitTraveller(unit, *node);
             i_destinationHolder.SetDestination(traveller, node->x, node->y, node->z);
             i_nextMoveTime.Reset(i_destinationHolder.GetTotalTravelTime());
+
+            //Call for creature group update
+            if(unit.GetFormation() && unit.GetFormation()->getLeader() == &unit)
+                unit.GetFormation()->LeaderMoveTo(node->x, node->y, node->z);
         }
         else
         {
@@ -217,14 +226,12 @@ template bool WaypointMovementGenerator<Player>::Update(Player &, const uint32 &
 template void WaypointMovementGenerator<Player>::MovementInform(Player &);
 
 //----------------------------------------------------//
-void
-FlightPathMovementGenerator::LoadPath(Player &)
+void FlightPathMovementGenerator::SetWaypointPathId(Player &)
 {
     objmgr.GetTaxiPathNodes(i_pathId, i_path,i_mapIds);
 }
 
-uint32
-FlightPathMovementGenerator::GetPathAtMapEnd() const
+uint32 FlightPathMovementGenerator::GetPathAtMapEnd() const
 {
     if(i_currentNode >= i_mapIds.size())
         return i_mapIds.size();
@@ -239,13 +246,13 @@ FlightPathMovementGenerator::GetPathAtMapEnd() const
     return i_mapIds.size();
 }
 
-void
-FlightPathMovementGenerator::Initialize(Player &player)
+void FlightPathMovementGenerator::Initialize(Player &player)
 {
     player.getHostilRefManager().setOnlineOfflineState(false);
     player.addUnitState(UNIT_STAT_IN_FLIGHT);
     player.SetFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_TAXI_FLIGHT);
-    LoadPath(player);
+    player.AddUnitMovementFlag(MOVEMENTFLAG_FLYING2);
+    SetWaypointPathId(player);
     Traveller<Player> traveller(player);
     // do not send movement, it was sent already
     i_destinationHolder.SetDestination(traveller, i_path[i_currentNode].x, i_path[i_currentNode].y, i_path[i_currentNode].z, false);
@@ -255,14 +262,16 @@ FlightPathMovementGenerator::Initialize(Player &player)
 
 void FlightPathMovementGenerator::Finalize(Player & player)
 {
+    // remove flag to prevent send object build movement packets for flight state and crash (movement generator already not at top of stack)
+    player.clearUnitState(UNIT_STAT_IN_FLIGHT);
 
     float x, y, z;
     i_destinationHolder.GetLocationNow(player.GetMapId(), x, y, z);
     player.SetPosition(x, y, z, player.GetOrientation());
 
-    player.clearUnitState(UNIT_STAT_IN_FLIGHT);
     player.Unmount();
     player.RemoveFlag(UNIT_FIELD_FLAGS,UNIT_FLAG_DISABLE_MOVE | UNIT_FLAG_TAXI_FLIGHT);
+    player.RemoveUnitMovementFlag(MOVEMENTFLAG_FLYING2);
 
     if(player.m_taxi.empty())
     {
@@ -275,8 +284,7 @@ void FlightPathMovementGenerator::Finalize(Player & player)
     }
 }
 
-bool
-FlightPathMovementGenerator::Update(Player &player, const uint32 &diff)
+bool FlightPathMovementGenerator::Update(Player &player, const uint32 &diff)
 {
     if( MovementInProgress() )
     {
@@ -311,8 +319,7 @@ FlightPathMovementGenerator::Update(Player &player, const uint32 &diff)
     return false;
 }
 
-void
-FlightPathMovementGenerator::SetCurrentNodeAfterTeleport()
+void FlightPathMovementGenerator::SetCurrentNodeAfterTeleport()
 {
     if(i_mapIds.empty())
         return;
@@ -481,7 +488,7 @@ int CreatePathAStar(gentity_t *bot, int from, int to, short int *pathlist)
                     break;
             }
 
-            for (i = 0; i < nodes[atNode].enodenum; i++)    //loop through all the links for this node
+            for (i = 0; i < nodes[atNode].enodenum; ++i)    //loop through all the links for this node
             {
                 newnode = nodes[atNode].links[i].targetNode;
 
@@ -539,7 +546,7 @@ int CreatePathAStar(gentity_t *bot, int from, int to, short int *pathlist)
                         parent[newnode] = atNode;           //set the new parent for this node
                         gcost[newnode] = gc;                //and the new g cost
 
-                        for (i = 1; i < numOpen; i++)       //loop through all the items on the open list
+                        for (i = 1; i < numOpen; ++i)       //loop through all the items on the open list
                         {
                             if (openlist[i] == newnode)     //find this node in the list
                             {

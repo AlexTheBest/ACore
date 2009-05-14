@@ -1,7 +1,7 @@
 /*
-* Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+* Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
 *
-* Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+* Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,6 @@
 #include "MovementGenerator.h"
 #include "DestinationHolder.h"
 #include "Traveller.h"
-#include "MapManager.h"
 
 template<class T>
 class TRINITY_DLL_SPEC FleeingMovementGenerator
@@ -57,8 +56,8 @@ class TRINITY_DLL_SPEC FleeingMovementGenerator
         float i_last_distance_from_caster;
         float i_to_distance_from_caster;
         float i_cur_angle;
-        TimeTracker i_nextCheckTime;
         uint64 i_frightGUID;
+        TimeTracker i_nextCheckTime;
 
         DestinationHolder< Traveller<T> > i_destinationHolder;
 };

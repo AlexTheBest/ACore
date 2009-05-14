@@ -1,7 +1,7 @@
 /*
 * Copyright (C) 2005-2008,2007 MaNGOS <http://getmangos.com/>
 *
-* Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+* Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
 *
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
@@ -134,7 +134,7 @@ class ReactorRunnable : protected ACE_Task_Base
             if (m_NewSockets.empty ())
                 return;
 
-            for (SocketSet::iterator i = m_NewSockets.begin (); i != m_NewSockets.end (); ++i)
+            for (SocketSet::const_iterator i = m_NewSockets.begin (); i != m_NewSockets.end (); ++i)
             {
                 WorldSocket* sock = (*i);
 
@@ -176,14 +176,14 @@ class ReactorRunnable : protected ACE_Task_Base
                     if ((*i)->Update () == -1)
                     {
                         t = i;
-                        i++;
+                        ++i;
                         (*t)->CloseSocket ();
                         (*t)->RemoveReference ();
                         --m_Connections;
                         m_Sockets.erase (t);
                     }
                     else
-                        i++;
+                        ++i;
                 }
             }
 

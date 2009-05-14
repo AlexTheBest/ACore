@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,6 +45,16 @@ class SqlResultQueue;
 class QueryResult;
 class WorldSocket;
 
+// ServerMessages.dbc
+enum ServerMessageType
+{
+    SERVER_MSG_SHUTDOWN_TIME      = 1,
+    SERVER_MSG_RESTART_TIME       = 2,
+    SERVER_MSG_STRING             = 3,
+    SERVER_MSG_SHUTDOWN_CANCELLED = 4,
+    SERVER_MSG_RESTART_CANCELLED  = 5
+};
+
 enum ShutdownMask
 {
     SHUTDOWN_MASK_RESTART = 1,
@@ -68,7 +78,8 @@ enum WorldTimers
     WUPDATE_UPTIME      = 4,
     WUPDATE_CORPSES     = 5,
     WUPDATE_EVENTS      = 6,
-    WUPDATE_COUNT       = 7
+    WUPDATE_CLEANDB     = 7,
+    WUPDATE_COUNT       = 8
 };
 
 /// Configuration elements
@@ -104,9 +115,12 @@ enum WorldConfigs
     CONFIG_CHARACTERS_CREATING_DISABLED,
     CONFIG_CHARACTERS_PER_ACCOUNT,
     CONFIG_CHARACTERS_PER_REALM,
+    CONFIG_HEROIC_CHARACTERS_PER_REALM,
+    CONFIG_MIN_LEVEL_FOR_HEROIC_CHARACTER_CREATING,
     CONFIG_SKIP_CINEMATICS,
     CONFIG_MAX_PLAYER_LEVEL,
     CONFIG_START_PLAYER_LEVEL,
+    CONFIG_START_HEROIC_PLAYER_LEVEL,
     CONFIG_START_PLAYER_MONEY,
     CONFIG_MAX_HONOR_POINTS,
     CONFIG_START_HONOR_POINTS,
@@ -114,21 +128,22 @@ enum WorldConfigs
     CONFIG_START_ARENA_POINTS,
     CONFIG_INSTANCE_IGNORE_LEVEL,
     CONFIG_INSTANCE_IGNORE_RAID,
-    CONFIG_BATTLEGROUND_CAST_DESERTER,
-    CONFIG_BATTLEGROUND_QUEUE_ANNOUNCER_ENABLE,
-    CONFIG_BATTLEGROUND_QUEUE_ANNOUNCER_PLAYERONLY,
     CONFIG_INSTANCE_RESET_TIME_HOUR,
     CONFIG_INSTANCE_UNLOAD_DELAY,
     CONFIG_CAST_UNSTUCK,
     CONFIG_MAX_PRIMARY_TRADE_SKILL,
     CONFIG_MIN_PETITION_SIGNS,
     CONFIG_GM_LOGIN_STATE,
+    CONFIG_GM_VISIBLE_STATE,
+    CONFIG_GM_ACCEPT_TICKETS,
     CONFIG_GM_CHAT,
     CONFIG_GM_WISPERING_TO,
     CONFIG_GM_IN_GM_LIST,
     CONFIG_GM_IN_WHO_LIST,
     CONFIG_GM_LOG_TRADE,
     CONFIG_START_GM_LEVEL,
+    CONFIG_GM_LOWER_SECURITY,
+    CONFIG_GM_ALLOW_ACHIEVEMENT_GAINS,
     CONFIG_GROUP_VISIBILITY,
     CONFIG_MAIL_DELIVERY_DELAY,
     CONFIG_UPTIME_UPDATE,
@@ -181,12 +196,20 @@ enum WorldConfigs
     CONFIG_LISTEN_RANGE_SAY,
     CONFIG_LISTEN_RANGE_TEXTEMOTE,
     CONFIG_LISTEN_RANGE_YELL,
+    CONFIG_SKILL_MILLING,
+    CONFIG_BATTLEGROUND_CAST_DESERTER,
+    CONFIG_BATTLEGROUND_QUEUE_ANNOUNCER_ENABLE,
+    CONFIG_BATTLEGROUND_QUEUE_ANNOUNCER_PLAYERONLY,
+    CONFIG_BATTLEGROUND_INVITATION_TYPE,
+    CONFIG_BATTLEGROUND_PREMATURE_FINISH_TIMER,
+    CONFIG_BATTLEGROUND_PREMADE_GROUP_WAIT_FOR_MATCH,
     CONFIG_ARENA_MAX_RATING_DIFFERENCE,
     CONFIG_ARENA_RATING_DISCARD_TIMER,
     CONFIG_ARENA_AUTO_DISTRIBUTE_POINTS,
     CONFIG_ARENA_AUTO_DISTRIBUTE_INTERVAL_DAYS,
-    CONFIG_BATTLEGROUND_PREMATURE_FINISH_TIMER,
-
+    CONFIG_ARENA_QUEUE_ANNOUNCER_ENABLE,
+    CONFIG_ARENA_SEASON_ID,
+    CONFIG_ARENA_SEASON_IN_PROGRESS,
     CONFIG_MAX_WHO,
     CONFIG_BG_START_MUSIC,
     CONFIG_START_ALL_SPELLS,
@@ -203,8 +226,18 @@ enum WorldConfigs
     CONFIG_INTERVAL_LOG_UPDATE,
     CONFIG_MIN_LOG_UPDATE,
     CONFIG_ENABLE_SINFO_LOGIN,
-    CONFIG_PREMATURE_BG_REWARD,
-
+    CONFIG_OFFHAND_CHECK_AT_TALENTS_RESET,
+    CONFIG_CHATLOG_CHANNEL,
+    CONFIG_CHATLOG_WHISPER,
+    CONFIG_CHATLOG_SYSCHAN,
+    CONFIG_CHATLOG_PARTY,
+    CONFIG_CHATLOG_RAID,
+    CONFIG_CHATLOG_GUILD,
+    CONFIG_CHATLOG_PUBLIC,
+    CONFIG_CHATLOG_ADDON,
+    CONFIG_CHATLOG_BGROUND,
+    CONFIG_LOGDB_CLEARINTERVAL,
+    CONFIG_LOGDB_CLEARTIME,
     CONFIG_VALUE_COUNT
 };
 
@@ -215,6 +248,8 @@ enum Rates
     RATE_POWER_MANA,
     RATE_POWER_RAGE_INCOME,
     RATE_POWER_RAGE_LOSS,
+    RATE_POWER_RUNICPOWER_INCOME,
+    RATE_POWER_RUNICPOWER_LOSS,
     RATE_POWER_FOCUS,
     RATE_SKILL_DISCOVERY,
     RATE_DROP_ITEM_POOR,
@@ -229,8 +264,9 @@ enum Rates
     RATE_XP_KILL,
     RATE_XP_QUEST,
     RATE_XP_EXPLORE,
-    RATE_XP_PAST_70,
     RATE_REPUTATION_GAIN,
+    RATE_REPUTATION_LOWLEVEL_KILL,
+    RATE_REPUTATION_LOWLEVEL_QUEST,
     RATE_CREATURE_NORMAL_HP,
     RATE_CREATURE_ELITE_ELITE_HP,
     RATE_CREATURE_ELITE_RAREELITE_HP,
@@ -258,7 +294,6 @@ enum Rates
     RATE_MINING_AMOUNT,
     RATE_MINING_NEXT,
     RATE_TALENT,
-    RATE_LOYALTY,
     RATE_CORPSE_DECAY_LOOTED,
     RATE_INSTANCE_RESET_TIME,
     RATE_TARGET_POS_RECALCULATION_RANGE,
@@ -330,12 +365,11 @@ enum RealmZone
 #define SCRIPT_COMMAND_CLOSE_DOOR           12              // source = unit, datalong=db_guid, datalong2=reset_delay
 #define SCRIPT_COMMAND_ACTIVATE_OBJECT      13              // source = unit, target=GO
 #define SCRIPT_COMMAND_REMOVE_AURA          14              // source (datalong2!=0) or target (datalong==0) unit, datalong = spell_id
-#define SCRIPT_COMMAND_CAST_SPELL           15              // source (datalong2!=0) or target (datalong==0) unit, datalong = spell_id
-#define SCRIPT_COMMAND_LOAD_PATH            16              // source = unit, path = datalong, repeatable datalong2
-#define SCRIPT_COMMAND_CALLSCRIPT_TO_UNIT   17              // datalong scriptid, lowguid datalong2, dataint table
-#define SCRIPT_COMMAND_PLAYSOUND            18              // datalong soundid, datalong2 play only self
-#define SCRIPT_COMMAND_KILL                 19              // datalong removecorpse
-
+#define SCRIPT_COMMAND_CAST_SPELL           15              // source/target cast spell at target/source (script->datalong2: 0: s->t 1: s->s 2: t->t 3: t->s
+#define SCRIPT_COMMAND_PLAY_SOUND           16              // source = any object, target=any/player, datalong (sound_id), datalong2 (bitmask: 0/1=anyone/target, 0/2=with distance dependent, so 1|2 = 3 is target with distance dependent)
+#define SCRIPT_COMMAND_LOAD_PATH            20              // source = unit, path = datalong, repeatable datalong2
+#define SCRIPT_COMMAND_CALLSCRIPT_TO_UNIT   21              // datalong scriptid, lowguid datalong2, dataint table
+#define SCRIPT_COMMAND_KILL                 22              // datalong removecorpse
 
 /// Storage class for commands issued for delayed execution
 struct CliCommandHolder
@@ -381,6 +415,12 @@ class World
         Weather* FindWeather(uint32 id) const;
         Weather* AddWeather(uint32 zone_id);
         void RemoveWeather(uint32 zone_id);
+
+        /// Deny clients?
+        bool IsClosed() { return m_isClosed; }
+
+        /// Close world
+        void SetClosed(bool val) { m_isClosed = val; }
 
         /// Get the active session server limit (or security level limitations)
         uint32 GetPlayerAmountLimit() const { return m_playerLimit >= 0 ? m_playerLimit : 0; }
@@ -445,7 +485,7 @@ class World
         void SendGlobalGMMessage(WorldPacket *packet, WorldSession *self = 0, uint32 team = 0);
         void SendZoneMessage(uint32 zone, WorldPacket *packet, WorldSession *self = 0, uint32 team = 0);
         void SendZoneText(uint32 zone, const char *text, WorldSession *self = 0, uint32 team = 0);
-        void SendServerMessage(uint32 type, const char *text = "", Player* player = NULL);
+        void SendServerMessage(ServerMessageType type, const char *text = "", Player* player = NULL);
 
         /// Are we in the middle of a shutdown?
         bool IsShutdowning() const { return m_ShutdownTimer > 0; }
@@ -456,9 +496,9 @@ class World
         static void StopNow(uint8 exitcode) { m_stopEvent = true; m_ExitCode = exitcode; }
         static bool IsStopped() { return m_stopEvent; }
 
-        void Update(time_t diff);
+        void Update(uint32 diff);
 
-        void UpdateSessions( time_t diff );
+        void UpdateSessions( uint32 diff );
         /// Set a server rate (see #Rates)
         void setRate(Rates rate,float value) { rate_values[rate]=value; }
         /// Get a server rate (see #Rates)
@@ -520,6 +560,7 @@ class World
         //used World DB version
         void LoadDBVersion();
         char const* GetDBVersion() { return m_DBVersion.c_str(); }
+        char const* GetCreatureEventAIVersion() { return m_CreatureEventAIVersion.c_str(); }
 
         //used Script version
         void SetScriptsVersion(char const* version) { m_ScriptsVersion = version ? version : "unknown scripting library"; }
@@ -539,6 +580,8 @@ class World
         static uint8 m_ExitCode;
         uint32 m_ShutdownTimer;
         uint32 m_ShutdownMask;
+
+        bool m_isClosed;
 
         time_t m_startTime;
         time_t m_gameTime;
@@ -583,7 +626,7 @@ class World
         static float m_VisibleObjectGreyDistance;
 
         // CLI command holder to be thread safe
-        ZThread::LockedQueue<CliCommandHolder*, ZThread::FastMutex> cliCmdQueue;
+        ACE_Based::LockedQueue<CliCommandHolder*,ACE_Thread_Mutex> cliCmdQueue;
         SqlResultQueue *m_resultQueue;
 
         // next daily quests reset time
@@ -594,10 +637,11 @@ class World
 
         //sessions that are added async
         void AddSession_(WorldSession* s);
-        ZThread::LockedQueue<WorldSession*, ZThread::FastMutex> addSessQueue;
+        ACE_Based::LockedQueue<WorldSession*, ACE_Thread_Mutex> addSessQueue;
 
         //used versions
         std::string m_DBVersion;
+        std::string m_CreatureEventAIVersion;
         std::string m_ScriptsVersion;
 };
 

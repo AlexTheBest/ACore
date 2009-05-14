@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -183,7 +183,7 @@ struct TRINITY_DLL_DECL boss_chromaggusAI : public ScriptedAI
         Enraged = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -259,11 +259,11 @@ struct TRINITY_DLL_DECL boss_chromaggusAI : public ScriptedAI
                     DoCast(pUnit, SpellAfflict, true);
 
                     //Chromatic mutation if target is effected by all afflictions
-                    if (pUnit->HasAura(SPELL_BROODAF_BLUE,0)
-                        && pUnit->HasAura(SPELL_BROODAF_BLACK,0)
-                        && pUnit->HasAura(SPELL_BROODAF_RED,0)
-                        && pUnit->HasAura(SPELL_BROODAF_BRONZE,0)
-                        && pUnit->HasAura(SPELL_BROODAF_GREEN,0))
+                    if (pUnit->HasAura(SPELL_BROODAF_BLUE)
+                        && pUnit->HasAura(SPELL_BROODAF_BLACK)
+                        && pUnit->HasAura(SPELL_BROODAF_RED)
+                        && pUnit->HasAura(SPELL_BROODAF_BRONZE)
+                        && pUnit->HasAura(SPELL_BROODAF_GREEN))
                     {
                         //target->RemoveAllAuras();
                         //DoCast(target,SPELL_CHROMATIC_MUT_1);

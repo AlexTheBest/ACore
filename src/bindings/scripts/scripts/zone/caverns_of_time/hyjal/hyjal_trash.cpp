@@ -139,8 +139,6 @@ float HordeOverrunWP[21][3]=//waypoints in the horde base used in the end in the
     {5429.91,-2718.44,1493.42}//20 end 2
 };
 
-void hyjal_trashAI::Reset(){}
-
 hyjal_trashAI::hyjal_trashAI(Creature *c) : npc_escortAI(c)
 {
     pInstance = ((ScriptedInstance*)c->GetInstanceData());
@@ -165,8 +163,6 @@ void hyjal_trashAI::DamageTaken(Unit *done_by, uint32 &damage)
             pInstance->SetData(DATA_RAIDDAMAGE,damage);//store raid's damage
     }
 }
-
-void hyjal_trashAI::Aggro(Unit *who){}
 
 void hyjal_trashAI::UpdateAI(const uint32 diff)
 {
@@ -407,7 +403,7 @@ struct mob_giant_infernalAI : public hyjal_trashAI
         imol = false;
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void WaypointReached(uint32 i)
     {
@@ -441,7 +437,7 @@ struct mob_giant_infernalAI : public hyjal_trashAI
             {
                 trigger->SetVisibility(VISIBILITY_OFF);
                 trigger->setFaction(m_creature->getFaction());
-                trigger->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT + MOVEMENTFLAG_LEVITATING);
+                trigger->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
                 trigger->CastSpell(m_creature,SPELL_METEOR,true);
             }
             m_creature->GetMotionMaster()->Clear();
@@ -553,7 +549,7 @@ struct mob_abominationAI : public hyjal_trashAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -583,7 +579,7 @@ struct mob_abominationAI : public hyjal_trashAI
                 }
             }
         }
-        if(!m_creature->HasAura(SPELL_DISEASE_CLOUD,0))
+        if(!m_creature->HasAura(SPELL_DISEASE_CLOUD))
             DoCast(m_creature,SPELL_DISEASE_CLOUD);
         if (!UpdateVictim())
             return;
@@ -654,7 +650,7 @@ struct mob_ghoulAI : public hyjal_trashAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -728,7 +724,7 @@ struct mob_necromancerAI : public hyjal_trashAI
 
     void JustSummoned(Creature* summon)
     {
-        Unit* target = SelectUnit(SELECT_TARGET_RANDOM,0,30,true);
+        Unit* target = SelectTarget(SELECT_TARGET_RANDOM,0,30,true);
         if(target && summon)
             summon->Attack(target,false);
         summons.Summon(summon);
@@ -773,7 +769,7 @@ struct mob_necromancerAI : public hyjal_trashAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -865,7 +861,7 @@ struct mob_bansheeAI : public hyjal_trashAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -960,7 +956,7 @@ struct mob_crypt_fiendAI : public hyjal_trashAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -1046,7 +1042,7 @@ struct mob_fel_stalkerAI : public hyjal_trashAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -1115,7 +1111,7 @@ struct mob_frost_wyrmAI : public hyjal_trashAI
     {
         FrostBreathTimer = 5000;
         MoveTimer = 0;
-        m_creature->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT + MOVEMENTFLAG_LEVITATING);
+        m_creature->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
     }
 
     void WaypointReached(uint32 i)
@@ -1144,7 +1140,7 @@ struct mob_frost_wyrmAI : public hyjal_trashAI
         m_creature->Relocate(x,y,z,0);
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -1231,7 +1227,7 @@ struct mob_gargoyleAI : public hyjal_trashAI
         Zpos = 10.0;
         StrikeTimer = 2000+rand()%5000;
         MoveTimer = 0;
-        m_creature->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT + MOVEMENTFLAG_LEVITATING);
+        m_creature->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
     }
 
     void WaypointReached(uint32 i)
@@ -1374,7 +1370,7 @@ struct TRINITY_DLL_DECL alliance_riflemanAI : public Scripted_NoMovementAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 

@@ -58,7 +58,7 @@ struct TRINITY_DLL_DECL boss_rage_winterchillAI : public hyjal_trashAI
             pInstance->SetData(DATA_RAGEWINTERCHILLEVENT, NOT_STARTED);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(pInstance && IsEvent)
             pInstance->SetData(DATA_RAGEWINTERCHILLEVENT, IN_PROGRESS);
@@ -169,7 +169,7 @@ struct TRINITY_DLL_DECL boss_rage_winterchillAI : public hyjal_trashAI
         }else NovaTimer -= diff;
         if(IceboltTimer < diff)
         {
-            DoCast(SelectUnit(SELECT_TARGET_RANDOM,0,40,true), SPELL_ICEBOLT);
+            DoCast(SelectTarget(SELECT_TARGET_RANDOM,0,40,true), SPELL_ICEBOLT);
             IceboltTimer = 11000+rand()%20000;
         }else IceboltTimer -= diff;
 
