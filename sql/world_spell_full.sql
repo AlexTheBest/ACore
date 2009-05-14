@@ -153,7 +153,7 @@ INSERT INTO creature_template (entry, spell1, flags_extra, scriptname) VALUES
 (17662, 30914, 128, ''), # Broggok Poison Cloud
 (25879, 46262, 128, ''), # Void Zone Periodic
 (16363, 28158, 128, ''), # Grobbulus Cloud
-(29379, 54362, 128, ''), # Grobbulus Cloud (H)
+(29379, 54362, 128, '') # Grobbulus Cloud (H)
 ON DUPLICATE KEY UPDATE
 spell1 = VALUES(spell1),
 flags_extra = VALUES(flags_extra),
@@ -476,4 +476,11 @@ DELETE FROM spell_target_position WHERE `id` IN (46019, 46020, 53360);
 INSERT INTO spell_target_position () VALUES (46019, 580, 1704.34, 928.17, -74.558, 0);
 INSERT INTO spell_target_position () VALUES (46020, 580, 1704.34, 928.17, 53.079, 0);
 INSERT INTO spell_target_position () VALUES (53360, 571, 5807.829, 587.960, 660.939, 1.663);
+
+-- --------
+-- PROC
+-- --------
+DELETE FROM `spell_proc_event` WHERE `entry` IN (42370);
+INSERT INTO `spell_proc_event` (`entry`, `SchoolMask`, `SpellFamilyName`, `SpellFamilyMask`, `procFlags`, `procEx`, `ppmRate`, `CustomChance`, `Cooldown`) VALUES
+(42370, 0x00, 11, 0x00000080, 0x00000000, 0x00000000, 0.000000, 0.000000, 0); -- Merciless Totem of the Third Wind --
 

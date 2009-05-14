@@ -5612,8 +5612,26 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                 // Glyph of Prayer of Healing
                 case 55680:
                 {
-                    basepoints0 = int32(damage * 20 / 100 / 2);   // divided in two ticks
                     triggered_spell_id = 56161;
+
+                    SpellEntry const* GoPoH = sSpellStore.LookupEntry(triggered_spell_id);
+                    if(!GoPoH)
+                        return false;
+
+                    int EffIndex = 0;
+                    for(int i = 0; i < MAX_SPELL_EFFECTS; i++)
+                    {
+                        if(GoPoH->Effect[i] == SPELL_EFFECT_APPLY_AURA)
+                        {
+                            EffIndex = i;
+                            break;
+                        }
+                    }
+                    int32 tickcount = GetSpellMaxDuration(GoPoH) / GoPoH->EffectAmplitude[EffIndex];
+                    if(!tickcount)
+                        return false;
+
+                    basepoints0 = damage * triggerAmount / tickcount / 100;
                     break;
                 }
                 // Improved Shadowform
@@ -9958,7 +9976,7 @@ void Unit::SetInCombatState(bool PvP, Unit* enemy)
             ((Creature*)this)->SetHomePosition(GetPositionX(), GetPositionY(), GetPositionZ(), GetOrientation());
         if(enemy)
         {
-            if(!((Creature*)this)->HasReactState(REACT_PASSIVE) && ((Creature*)this)->IsAIEnabled)
+            if(((Creature*)this)->IsAIEnabled)
                 ((Creature*)this)->AI()->EnterCombat(enemy);
             if(((Creature*)this)->GetFormation())
                 ((Creature*)this)->GetFormation()->MemberAttackStart((Creature*)this, enemy);
