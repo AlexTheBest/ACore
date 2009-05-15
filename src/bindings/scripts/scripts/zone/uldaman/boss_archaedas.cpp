@@ -94,7 +94,7 @@ struct TRINITY_DLL_DECL boss_archaedasAI : public ScriptedAI
     }
 
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         m_creature->setFaction (14);
         m_creature->RemoveFlag (UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
@@ -236,7 +236,7 @@ struct TRINITY_DLL_DECL mob_archaedas_minionsAI : public ScriptedAI
         m_creature->RemoveAllAuras();
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         m_creature->setFaction (14);
         m_creature->RemoveAllAuras();
@@ -374,7 +374,7 @@ struct TRINITY_DLL_DECL mob_stonekeepersAI : public ScriptedAI
         m_creature->RemoveAllAuras();
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         m_creature->setFaction (14);
         m_creature->RemoveFlag (UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);

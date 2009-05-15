@@ -1,4 +1,4 @@
- /* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ /* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -39,155 +39,140 @@ EndContentData */
 ## npc_draenei_survivor
 ######*/
 
-#define HEAL1        -1000248
-#define HEAL2        -1000249
-#define HEAL3        -1000250
-#define HEAL4        -1000251
+#define SAY_HEAL1        -1000248
+#define SAY_HEAL2        -1000249
+#define SAY_HEAL3        -1000250
+#define SAY_HEAL4        -1000251
 
-#define HELP1        -1000252
-#define HELP2        -1000253
-#define HELP3        -1000254
-#define HELP4        -1000255
+#define SAY_HELP1        -1000252
+#define SAY_HELP2        -1000253
+#define SAY_HELP3        -1000254
+#define SAY_HELP4        -1000255
+
+#define SPELL_IRRIDATION    35046
+#define SPELL_STUNNED       28630
 
 struct TRINITY_DLL_DECL npc_draenei_survivorAI : public ScriptedAI
 {
     npc_draenei_survivorAI(Creature *c) : ScriptedAI(c) {}
 
-    uint32 UnSpawnTimer;
-    uint32 ResetlifeTimer;
-    uint32 SayingTimer;
-    uint32 HealSayTimer;
-    bool UnSpawn;
-    bool say;
-    bool HealSay;
-    bool isRun;
-    bool isMove;
+    uint64 pCaster;
+
+    uint32 SayThanksTimer;
+    uint32 RunAwayTimer;
+    uint32 SayHelpTimer;
+
+    bool CanSayHelp;
 
     void Reset()
     {
-        UnSpawnTimer = 2500;
-        ResetlifeTimer= 60000;
-        SayingTimer    = 5000;
-        HealSayTimer = 6000;
-        say = false;
-        isRun = false;
-        isMove = false;
-        UnSpawn    = false;
-        HealSay = false;
+        pCaster = 0;
+
+        SayThanksTimer = 0;
+        RunAwayTimer = 0;
+        SayHelpTimer = 10000;
+
+        CanSayHelp = true;
+
+        m_creature->CastSpell(m_creature, SPELL_IRRIDATION, true);
+
+        m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
         m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IN_COMBAT);
-        //cast red shining
-        m_creature->CastSpell(m_creature, 29152, false, NULL);
-        //set creature health
         m_creature->SetHealth(int(m_creature->GetMaxHealth()*.1));
-        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, 3);
+        m_creature->SetStandState(UNIT_STAND_STATE_SLEEP);
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
-    void MoveInLineOfSight(Unit *who)                       //MoveInLineOfSight is called if creature could see you, updated all 100 ms
+    void MoveInLineOfSight(Unit *who)
     {
-        if (!who)
-            return;
-
-        if(who->GetTypeId() == TYPEID_PLAYER && m_creature->IsFriendlyTo(who) && m_creature->IsWithinDistInMap(who, 15) && say && !isRun)
+        if (CanSayHelp && who->GetTypeId() == TYPEID_PLAYER && m_creature->IsFriendlyTo(who) && m_creature->IsWithinDistInMap(who, 25.0f))
         {
-            switch (rand()%4)                               //Random switch between 4 texts
+            //Random switch between 4 texts
+            switch (rand()%4)
             {
-                case 0:
-                    DoScriptText(HELP1, m_creature);
-                    SayingTimer = 15000;
-                    say = false;
-                    break;
-                case 1:
-                    DoScriptText(HELP2, m_creature);
-                    SayingTimer = 15000;
-                    say = false;
-                    break;
-                case 2:
-                    DoScriptText(HELP3, m_creature);
-                    SayingTimer = 15000;
-                    say = false;
-                    break;
-                case 3:
-                    DoScriptText(HELP4, m_creature);
-                    SayingTimer = 15000;
-                    say = false;
-                    break;
-            }
-        }
-        else
-        {
-            isRun = false;
+                 case 0: DoScriptText(SAY_HELP1, m_creature, who); break;
+                 case 1: DoScriptText(SAY_HELP2, m_creature, who); break;
+                 case 2: DoScriptText(SAY_HELP3, m_creature, who); break;
+                 case 3: DoScriptText(SAY_HELP4, m_creature, who); break;
+             }
+
+            SayHelpTimer = 20000;
+            CanSayHelp = false;
         }
     }
 
-    void UpdateAI(const uint32 diff)                        //Is also called each ms for Creature AI Updates...
+    void SpellHit(Unit *Caster, const SpellEntry *Spell)
     {
-        if (m_creature->GetHealth() > 50)
+        if (Spell->SpellFamilyFlags[2] & 0x080000000)
         {
-            if(ResetlifeTimer < diff)
-            {
-                ResetlifeTimer = 60000;
-                m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_IN_COMBAT);
-                //set creature health
-                m_creature->SetHealth(int(m_creature->GetMaxHealth()*.1));
-                // ley down
-                m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1,3);
-            }
-            else ResetlifeTimer -= diff;
-        }
+            m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
+            m_creature->SetStandState(UNIT_STAND_STATE_STAND);
 
-        if(HealSay)
-        {
-            if (HealSayTimer < diff)
-            {
-                UnSpawn = true;
-                isRun = true;
-                isMove = true;
-            }else HealSayTimer -= diff;
-        }
+            m_creature->CastSpell(m_creature, SPELL_STUNNED, true);
 
-        if(UnSpawn)
+            pCaster = Caster->GetGUID();
+
+            SayThanksTimer = 5000;
+        }
+    }
+
+    void UpdateAI(const uint32 diff)
+    {
+        if (SayThanksTimer)
         {
-            if(isMove)
+            if (SayThanksTimer <= diff)
             {
+                m_creature->RemoveAurasDueToSpell(SPELL_IRRIDATION);
+
+                if (Player *pPlayer = Unit::GetPlayer(pCaster))
+                {
+                    if (pPlayer->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    switch (rand()%4)
+                    {
+                        case 0: DoScriptText(SAY_HEAL1, m_creature, pPlayer); break;
+                        case 1: DoScriptText(SAY_HEAL2, m_creature, pPlayer); break;
+                        case 2: DoScriptText(SAY_HEAL3, m_creature, pPlayer); break;
+                        case 3: DoScriptText(SAY_HEAL4, m_creature, pPlayer); break;
+                    }
+
+                    pPlayer->TalkedToCreature(m_creature->GetEntry(),m_creature->GetGUID());
+                }
+
                 m_creature->GetMotionMaster()->Clear();
                 m_creature->GetMotionMaster()->MovePoint(0, -4115.053711f, -13754.831055f, 73.508949f);
-                isMove = false;
-            }
 
-            if (UnSpawnTimer < diff)
-            {
-                m_creature->StopMoving();
-                EnterEvadeMode();
-                //set creature health
-                m_creature->SetHealth(int(m_creature->GetMaxHealth()*.1));
-                return;
-            }else UnSpawnTimer -= diff;
+                RunAwayTimer = 10000;
+                SayThanksTimer = 0;
+            }else SayThanksTimer -= diff;
+
+            return;
         }
 
-        if(SayingTimer < diff)
+        if (RunAwayTimer)
         {
-            say = true;
-        }else SayingTimer -= diff;
-    }
-
-    void SpellHit(Unit *Hitter, const SpellEntry *Spellkind)//Called if you cast a spell and do some things if Specified spell is true!
-    {
-        if (Hitter && Spellkind->Id == 28880)
-        {
-            m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, 0);
-            m_creature->SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_CONFUSED);
-            m_creature->HandleEmoteCommand(ANIM_RISE);
-            switch (rand()%4)                               //This switch doesn't work at all, creature say nothing!
+            if (RunAwayTimer <= diff)
             {
-                case 0: DoScriptText(HEAL1, m_creature, Hitter); break;
-                case 1: DoScriptText(HEAL2, m_creature, Hitter); break;
-                case 2: DoScriptText(HEAL3, m_creature, Hitter); break;
-                case 3: DoScriptText(HEAL4, m_creature, Hitter); break;
-            }
-            HealSay    = true;
+                m_creature->RemoveAllAuras();
+                m_creature->GetMotionMaster()->Clear();
+                m_creature->GetMotionMaster()->MoveIdle();
+                m_creature->setDeathState(JUST_DIED);
+                m_creature->SetHealth(0);
+                m_creature->CombatStop();
+                m_creature->DeleteThreatList();
+                m_creature->RemoveCorpse();
+            }else RunAwayTimer -= diff;
+
+            return;
         }
+
+        if (SayHelpTimer < diff)
+        {
+            CanSayHelp = true;
+            SayHelpTimer = 20000;
+        }else SayHelpTimer -= diff;
     }
 };
 CreatureAI* GetAI_npc_draenei_survivor(Creature *_Creature)
@@ -221,11 +206,11 @@ struct TRINITY_DLL_DECL npc_engineer_spark_overgrindAI : public ScriptedAI
         m_creature->setFaction(875);
     }
 
-    void Aggro(Unit *who) { }
+    void EnterCombat(Unit *who) { }
 
     void UpdateAI(const uint32 diff)
     {
-        if( !InCombat )
+        if( !m_creature->isInCombat() )
         {
             if (Emote_Timer < diff)
             {
@@ -288,12 +273,12 @@ struct TRINITY_DLL_DECL npc_injured_draeneiAI : public ScriptedAI
         m_creature->SetHealth(int(m_creature->GetMaxHealth()*.15));
         switch (rand()%2)
         {
-            case 0: m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, 1); break;
-            case 1: m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, 3); break;
+            case 0: m_creature->SetStandState(UNIT_STAND_STATE_SIT); break;
+            case 1: m_creature->SetStandState(UNIT_STAND_STATE_SLEEP); break;
         }
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void MoveInLineOfSight(Unit *who)
     {
@@ -322,7 +307,7 @@ CreatureAI* GetAI_npc_injured_draenei(Creature *_Creature)
 #define SAY_END2                -1000115
 #define EMOTE_HUG               -1000116
 
-#define QUEST_A_CRY_FOR_HELP    9528
+#define QUEST_A_CRY_FOR_SAY_HELP    9528
 
 struct TRINITY_DLL_DECL npc_magwinAI : public npc_escortAI
 {
@@ -351,12 +336,12 @@ struct TRINITY_DLL_DECL npc_magwinAI : public npc_escortAI
             DoScriptText(EMOTE_HUG, m_creature, player);
             DoScriptText(SAY_END2, m_creature, player);
             if (player && player->GetTypeId() == TYPEID_PLAYER)
-                ((Player*)player)->GroupEventHappens(QUEST_A_CRY_FOR_HELP,m_creature);
+                ((Player*)player)->GroupEventHappens(QUEST_A_CRY_FOR_SAY_HELP,m_creature);
             break;
         }
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         DoScriptText(SAY_AGGRO, m_creature, who);
     }
@@ -373,7 +358,7 @@ struct TRINITY_DLL_DECL npc_magwinAI : public npc_escortAI
         {
             Player* player = Unit::GetPlayer(PlayerGUID);
             if (player)
-                ((Player*)player)->FailQuest(QUEST_A_CRY_FOR_HELP);
+                ((Player*)player)->FailQuest(QUEST_A_CRY_FOR_SAY_HELP);
         }
     }
 
@@ -385,7 +370,7 @@ struct TRINITY_DLL_DECL npc_magwinAI : public npc_escortAI
 
 bool QuestAccept_npc_magwin(Player* player, Creature* creature, Quest const* quest)
 {
-    if (quest->GetQuestId() == QUEST_A_CRY_FOR_HELP)
+    if (quest->GetQuestId() == QUEST_A_CRY_FOR_SAY_HELP)
     {
         creature->setFaction(113);
         ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
@@ -393,41 +378,11 @@ bool QuestAccept_npc_magwin(Player* player, Creature* creature, Quest const* que
     return true;
 }
 
-CreatureAI* GetAI_npc_magwinAI(Creature *_Creature)
+CreatureAI* GetAI_npc_magwinAI(Creature* pCreature)
 {
-    npc_magwinAI* magwinAI = new npc_magwinAI(_Creature);
+    npc_magwinAI* magwinAI = new npc_magwinAI(pCreature);
 
-    magwinAI->AddWaypoint(0, -4784.532227, -11051.060547, 3.484263);
-    magwinAI->AddWaypoint(1, -4805.509277, -11037.293945, 3.043942);
-    magwinAI->AddWaypoint(2, -4827.826172, -11034.398438, 1.741959);
-    magwinAI->AddWaypoint(3, -4852.630859, -11033.695313, 2.208656);
-    magwinAI->AddWaypoint(4, -4876.791992, -11034.517578, 3.175228);
-    magwinAI->AddWaypoint(5, -4895.486816, -11038.306641, 9.390890);
-    magwinAI->AddWaypoint(6, -4915.464844, -11048.402344, 12.369793);
-    magwinAI->AddWaypoint(7, -4937.288086, -11067.041992, 13.857983);
-    magwinAI->AddWaypoint(8, -4966.577637, -11067.507813, 15.754786);
-    magwinAI->AddWaypoint(9, -4993.799805, -11056.544922, 19.175295);
-    magwinAI->AddWaypoint(10, -5017.836426, -11052.569336, 22.476587);
-    magwinAI->AddWaypoint(11, -5039.706543, -11058.459961, 25.831593);
-    magwinAI->AddWaypoint(12, -5057.289063, -11045.474609, 26.972496);
-    magwinAI->AddWaypoint(13, -5078.828125, -11037.601563, 29.053417);
-    magwinAI->AddWaypoint(14, -5104.158691, -11039.195313, 29.440195);
-    magwinAI->AddWaypoint(15, -5120.780273, -11039.518555, 30.142139);
-    magwinAI->AddWaypoint(16, -5140.833008, -11039.810547, 28.788074);
-    magwinAI->AddWaypoint(17, -5161.201660, -11040.050781, 27.879545, 4000);
-    magwinAI->AddWaypoint(18, -5171.842285, -11046.803711, 27.183821);
-    magwinAI->AddWaypoint(19, -5185.995117, -11056.359375, 20.234867);
-    magwinAI->AddWaypoint(20, -5198.485840, -11065.065430, 18.872593);
-    magwinAI->AddWaypoint(21, -5214.062500, -11074.653320, 19.215731);
-    magwinAI->AddWaypoint(22, -5220.157227, -11088.377930, 19.818476);
-    magwinAI->AddWaypoint(23, -5233.652832, -11098.846680, 18.349432);
-    magwinAI->AddWaypoint(24, -5250.163086, -11111.653320, 16.438959);
-    magwinAI->AddWaypoint(25, -5268.194336, -11125.639648, 12.668313);
-    magwinAI->AddWaypoint(26, -5286.270508, -11130.669922, 6.912246);
-    magwinAI->AddWaypoint(27, -5317.449707, -11137.392578, 4.963446);
-    magwinAI->AddWaypoint(28, -5334.854492, -11154.384766, 6.742664);
-    magwinAI->AddWaypoint(29, -5353.874512, -11171.595703, 6.903912, 20000);
-    magwinAI->AddWaypoint(30, -5354.240000, -11171.940000, 6.890000);
+    magwinAI->FillPointMovementListForCreature();
 
     return (CreatureAI*)magwinAI;
 }
@@ -461,7 +416,8 @@ bool GossipSelect_npc_susurrus(Player *player, Creature *_Creature, uint32 sende
         nodes.resize(2);
         nodes[0] = 92;                                      //from susurrus
         nodes[1] = 91;                                      //end at exodar
-        player->ActivateTaxiPathTo(nodes,11686);            //TaxiPath 506. Using invisible model, possible Trinity must allow 0(from dbc) for cases like this.
+//        player->ActivateTaxiPathTo(nodes,11686);            //TaxiPath 506. Using invisible model, possible Trinity must allow 0(from dbc) for cases like this.
+        player->ActivateTaxiPathTo(nodes);
     }
     return true;
 }
@@ -505,7 +461,7 @@ struct TRINITY_DLL_DECL npc_geezleAI : public ScriptedAI
         StartEvent();
     }
 
-    void Aggro(Unit* who){}
+    void EnterCombat(Unit* who){}
 
     void StartEvent()
     {
@@ -570,7 +526,7 @@ struct TRINITY_DLL_DECL npc_geezleAI : public ScriptedAI
         cell.SetNoCreate();
 
         Trinity::AllGameObjectsWithEntryInGrid go_check(GO_NAGA_FLAG);
-        Trinity::GameObjectListSearcher<Trinity::AllGameObjectsWithEntryInGrid> go_search(FlagList, go_check);
+		Trinity::GameObjectListSearcher<Trinity::AllGameObjectsWithEntryInGrid> go_search(m_creature, FlagList, go_check);
         TypeContainerVisitor
             <Trinity::GameObjectListSearcher<Trinity::AllGameObjectsWithEntryInGrid>, GridTypeMapContainer> go_visit(go_search);
         CellLock<GridReadGuard> cell_lock(cell, pair);
@@ -629,7 +585,7 @@ struct TRINITY_DLL_DECL mob_nestlewood_owlkinAI : public ScriptedAI
         Hitted = false;
     }
 
-    void Aggro(Unit *who){}
+    void EnterCombat(Unit *who){}
 
     void SpellHit(Unit* caster, const SpellEntry* spell)
     {

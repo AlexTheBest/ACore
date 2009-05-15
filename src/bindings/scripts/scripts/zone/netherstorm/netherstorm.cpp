@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -83,7 +83,7 @@ struct TRINITY_DLL_DECL npc_manaforge_control_consoleAI : public ScriptedAI
         Creature* add = NULL;
     }
 
-    void Aggro(Unit *who) { return; }
+    void EnterCombat(Unit *who) { return; }
 
     /*void SpellHit(Unit *caster, const SpellEntry *spell)
     {
@@ -391,7 +391,7 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
         isEvent = false;
     }
 
-    void Aggro(Unit *who) { }
+    void EnterCombat(Unit *who) { }
 
     //Select any creature in a grid
     Creature* SelectCreatureInGrid(uint32 entry, float range)
@@ -404,7 +404,7 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
         cell.SetNoCreate();
 
         Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck creature_check(*m_creature, entry, true, range);
-        Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(pCreature, creature_check);
+		Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(m_creature, pCreature, creature_check);
 
         TypeContainerVisitor<Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck>, GridTypeMapContainer> creature_searcher(searcher);
 
@@ -441,8 +441,8 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
         ardonis->SendUpdateToPlayer(player);
 
         //Set them to kneel
-        m_creature->SetStandState(PLAYER_STATE_KNEEL);
-        ardonis->SetStandState(PLAYER_STATE_KNEEL);
+		m_creature->SetStandState(UNIT_STAND_STATE_KNEEL);
+		ardonis->SetStandState(UNIT_STAND_STATE_KNEEL);
     }
 
     //Set them back to each other
@@ -466,8 +466,8 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
             ardonis->SendUpdateToPlayer(player);
 
             //Set state
-            m_creature->SetStandState(PLAYER_STATE_NONE);
-            ardonis->SetStandState(PLAYER_STATE_NONE);
+			m_creature->SetStandState(UNIT_STAND_STATE_STAND);
+			ardonis->SetStandState(UNIT_STAND_STATE_STAND);
         }
     }
 
@@ -639,7 +639,7 @@ Creature* SearchDawnforge(Player *source, uint32 entry, float range)
     cell.SetNoCreate();
 
     Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck creature_check(*source, entry, true, range);
-    Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(pCreature, creature_check);
+	Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(source, pCreature, creature_check);
 
     TypeContainerVisitor<Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck>, GridTypeMapContainer> creature_searcher(searcher);
 
@@ -652,7 +652,7 @@ Creature* SearchDawnforge(Player *source, uint32 entry, float range)
 bool AreaTrigger_at_commander_dawnforge(Player *player, AreaTriggerEntry *at)
 {
     //if player lost aura or not have at all, we should not try start event.
-    if (!player->HasAura(SPELL_SUNFURY_DISGUISE,0))
+    if (!player->HasAura(SPELL_SUNFURY_DISGUISE))
         return false;
 
     if (player->isAlive() && player->GetQuestStatus(QUEST_INFO_GATHERING) == QUEST_STATUS_INCOMPLETE)
@@ -814,7 +814,7 @@ struct TRINITY_DLL_DECL mob_phase_hunterAI : public ScriptedAI
         ManaBurnTimer = 5000 + (rand()%3 * 1000); // 5-8 sec cd
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(Player *player = who->GetCharmerOrOwnerPlayerOrPlayerItself())
             PlayerGUID = player->GetGUID();
@@ -858,7 +858,7 @@ struct TRINITY_DLL_DECL mob_phase_hunterAI : public ScriptedAI
                 DoScriptText(EMOTE_WEAK, m_creature);
                 Weak = true;
             }
-            if(Weak && !Drained && m_creature->HasAura(34219, 0))
+            if(Weak && !Drained && m_creature->HasAura(34219))
             {
                 Drained = true;
 
@@ -961,7 +961,7 @@ struct TRINITY_DLL_DECL npc_bessyAI : public npc_escortAI
         summoned->AI()->AttackStart(m_creature);
     }
 
-    void Aggro(Unit* who){}
+    void EnterCombat(Unit* who){}
 
     void Reset()
     {

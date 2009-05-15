@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -44,7 +44,7 @@ struct TRINITY_DLL_DECL mob_treantAI  : public ScriptedAI
         check_Timer = 0;
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void MoveInLineOfSight(Unit*) {}
 
@@ -130,7 +130,7 @@ struct TRINITY_DLL_DECL boss_warp_splinterAI : public ScriptedAI
         m_creature->SetSpeed( MOVE_RUN, 0.7f, true);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoScriptText(SAY_AGGRO, m_creature);
     }

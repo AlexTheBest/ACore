@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,8 +22,8 @@
 #define TRINITY_INSTANCE_DATA_H
 
 #include "Common.h"
-#include "GameObject.h"
-#include "Map.h"
+//#include "GameObject.h"
+//#include "Map.h"
 
 class Map;
 class Unit;
@@ -37,16 +37,40 @@ enum EncounterState
     IN_PROGRESS   = 1,
     FAIL          = 2,
     DONE          = 3,
-    SPECIAL       = 4
+    SPECIAL       = 4,
+    TO_BE_DECIDED = 5,
 };
 
 typedef std::set<GameObject*> DoorSet;
 
+enum DoorType
+{
+    DOOR_TYPE_ROOM = 0,
+    DOOR_TYPE_PASSAGE,
+    MAX_DOOR_TYPES,
+};
+
 struct BossInfo
 {
-    BossInfo() : state(NOT_STARTED) {}
+    BossInfo() : state(TO_BE_DECIDED) {}
     EncounterState state;
-    DoorSet roomDoor, passageDoor;
+    DoorSet door[MAX_DOOR_TYPES];
+};
+
+struct DoorInfo
+{
+    explicit DoorInfo(BossInfo *_bossInfo, DoorType _type)
+        : bossInfo(_bossInfo), type(_type) {}
+    BossInfo *bossInfo;
+    DoorType type;
+};
+
+typedef std::multimap<uint32 /*entry*/, DoorInfo> DoorInfoMap;
+
+struct DoorData
+{
+    uint32 entry, bossId;
+    DoorType type;
 };
 
 class TRINITY_DLL_SPEC InstanceData
@@ -62,10 +86,10 @@ class TRINITY_DLL_SPEC InstanceData
         virtual void Initialize() {}
 
         //On load
-        virtual void Load(const char* /*data*/) {}
+        virtual void Load(const char * data) { LoadBossState(data); }
 
         //When save is needed, this function generates the data
-        virtual const char* Save() { return ""; }
+        virtual std::string GetSaveData() { return GetBossSaveData(); }
 
         void SaveToDB();
 
@@ -80,13 +104,14 @@ class TRINITY_DLL_SPEC InstanceData
         virtual void OnPlayerEnter(Player *) {}
 
         //Called when a gameobject is created
-        virtual void OnObjectCreate(GameObject *) {}
+        virtual void OnObjectCreate(GameObject *go, bool add) { OnObjectCreate(go); }
 
         //called on creature creation
-        virtual void OnCreatureCreate(Creature * /*creature*/, uint32 /*creature_entry*/) {}
+        virtual void OnCreatureCreate(Creature *, bool add);
 
-        virtual void OnCreatureRemove(Creature*) {}
-        virtual void OnObjectRemove(GameObject*) {}
+        //All-purpose data storage 64 bit
+        virtual uint64 GetData64(uint32 /*Data*/) { return 0; }
+        virtual void SetData64(uint32 /*Data*/, uint64 /*Value*/) { }
 
         //All-purpose data storage 32 bit
         virtual uint32 GetData(uint32) { return 0; }
@@ -97,25 +122,22 @@ class TRINITY_DLL_SPEC InstanceData
         //use HandleGameObject(GUID,boolen,NULL); in any other script
         void HandleGameObject(uint64 GUID, bool open, GameObject *go = NULL);
 
+        virtual void SetBossState(uint32 id, EncounterState state);
     protected:
-        void AddBossRoomDoor(uint32 id, GameObject *door);
-        void AddBossPassageDoor(uint32 id, GameObject *door);
-        void RemoveBossRoomDoor(uint32 id, GameObject *door);
-        void RemoveBossPassageDoor(uint32 id, GameObject *door);
+        void LoadDoorData(const DoorData *data);
 
-        void SetBossState(uint32 id, EncounterState state);
+        void SetBossNumber(uint32 number) { bosses.resize(number); }
+        void AddDoor(GameObject *door, bool add);
+        void UpdateDoorState(GameObject *door);
 
-        std::string GetBossSave()
-        {
-            std::ostringstream saveStream;
-            for(std::vector<BossInfo>::iterator i = bosses.begin(); i != bosses.end(); ++i)
-                saveStream << (uint32)i->state << " ";
-            return saveStream.str();
-        }        
-
+        std::string LoadBossState(const char * data);
+        std::string GetBossSaveData();
     private:
         std::vector<BossInfo> bosses;
+        DoorInfoMap doors;
 
+        virtual void OnObjectCreate(GameObject *) {}
+        virtual void OnCreatureCreate(Creature *, uint32 entry) {}
 };
 #endif
 

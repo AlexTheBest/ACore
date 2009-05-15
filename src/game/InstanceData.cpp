@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,21 +21,24 @@
 #include "InstanceData.h"
 #include "Database/DatabaseEnv.h"
 #include "Map.h"
+#include "GameObject.h"
+#include "Creature.h"
 
 void InstanceData::SaveToDB()
 {
-    if(!Save()) return;
-    std::string data = Save();
+    std::string data = GetSaveData();
+    if(data.empty())
+        return;
     CharacterDatabase.escape_string(data);
     CharacterDatabase.PExecute("UPDATE instance SET data = '%s' WHERE id = '%d'", data.c_str(), instance->GetInstanceId());
 }
 
-void InstanceData::HandleGameObject(uint64 GUID, bool open, GameObject *go) 
-{            
+void InstanceData::HandleGameObject(uint64 GUID, bool open, GameObject *go)
+{
     if(!go)
-        go = instance->GetGameObjectInMap(GUID);
+        go = instance->GetGameObject(GUID);
     if(go)
-        go->SetGoState(open ? 0 : 1);
+        go->SetGoState(open ? GO_STATE_ACTIVE : GO_STATE_READY);
     else
         debug_log("TSCR: InstanceData: HandleGameObject failed");
 }
@@ -49,48 +52,72 @@ bool InstanceData::IsEncounterInProgress() const
     return false;
 }
 
-void InstanceData::AddBossRoomDoor(uint32 id, GameObject *door)
+//This will be removed in the future, just compitiable with Mangos
+void InstanceData::OnCreatureCreate(Creature *creature, bool add)
 {
-    if(id < bosses.size())
+    OnCreatureCreate(creature, creature->GetEntry());
+}
+
+void InstanceData::LoadDoorData(const DoorData *data)
+{
+    while(data->entry)
     {
-        BossInfo *bossInfo = &bosses[id];
-        bossInfo->roomDoor.insert(door);
-        // Room door is only closed when encounter is in progress
-        if(bossInfo->state == IN_PROGRESS)
-            door->SetGoState(1);
+        if(data->bossId < bosses.size())
+            doors.insert(std::make_pair(data->entry, DoorInfo(&bosses[data->bossId], data->type)));
+
+        ++data;
+    }
+    sLog.outDebug("InstanceData::LoadDoorData: %u doors loaded.", doors.size());
+}
+
+void InstanceData::UpdateDoorState(GameObject *door)
+{
+    DoorInfoMap::iterator lower = doors.lower_bound(door->GetEntry());
+    DoorInfoMap::iterator upper = doors.upper_bound(door->GetEntry());
+    if(lower == upper)
+        return;
+
+    bool open = true;
+    for(DoorInfoMap::iterator itr = lower; itr != upper; ++itr)
+    {
+        if(itr->second.type == DOOR_TYPE_ROOM)
+        {
+            if(itr->second.bossInfo->state == IN_PROGRESS)
+            {
+                open = false;
+                break;
+            }
+        }
+        else if(itr->second.type == DOOR_TYPE_PASSAGE)
+        {
+            if(itr->second.bossInfo->state != DONE)
+            {
+                open = false;
+                break;
+            }
+        }
+    }
+
+    door->SetGoState(open ? GO_STATE_ACTIVE : GO_STATE_READY);
+}
+
+void InstanceData::AddDoor(GameObject *door, bool add)
+{
+    DoorInfoMap::iterator lower = doors.lower_bound(door->GetEntry());
+    DoorInfoMap::iterator upper = doors.upper_bound(door->GetEntry());
+    if(lower == upper)
+        return;
+
+    for(DoorInfoMap::iterator itr = lower; itr != upper; ++itr)
+    {
+        if(add)
+            itr->second.bossInfo->door[itr->second.type].insert(door);
         else
-            door->SetGoState(0);
+            itr->second.bossInfo->door[itr->second.type].erase(door);
     }
-}
 
-void InstanceData::AddBossPassageDoor(uint32 id, GameObject *door)
-{
-    if(id < bosses.size())
-    {
-        BossInfo *bossInfo = &bosses[id];
-        bossInfo->passageDoor.insert(door);
-        // Passage door is only opened when boss is defeated
-        if(bossInfo->state == DONE)
-            door->SetGoState(0);
-        else
-            door->SetGoState(1);
-    }
-}
-
-void InstanceData::RemoveBossRoomDoor(uint32 id, GameObject *door)
-{
-    if(id < bosses.size())
-    {
-        bosses[id].roomDoor.erase(door);
-    }
-}
-
-void InstanceData::RemoveBossPassageDoor(uint32 id, GameObject *door)
-{
-    if(id < bosses.size())
-    {
-        bosses[id].passageDoor.erase(door);
-    }
+    if(add)
+        UpdateDoorState(door);
 }
 
 void InstanceData::SetBossState(uint32 id, EncounterState state)
@@ -98,34 +125,41 @@ void InstanceData::SetBossState(uint32 id, EncounterState state)
     if(id < bosses.size())
     {
         BossInfo *bossInfo = &bosses[id];
-
-        bossInfo->state = state;
-        switch(state)
+        if(bossInfo->state == TO_BE_DECIDED) // loading
+            bossInfo->state = state;
+        else
         {
-        case NOT_STARTED:
-            // Open all room doors, close all passage doors
-            for(DoorSet::iterator i = bossInfo->roomDoor.begin(); i != bossInfo->roomDoor.end(); ++i)
-                (*i)->SetGoState(0);
-            for(DoorSet::iterator i = bossInfo->passageDoor.begin(); i != bossInfo->passageDoor.end(); ++i)
-                (*i)->SetGoState(1);
-            break;
-        case IN_PROGRESS:
-            // Close all doors
-            for(DoorSet::iterator i = bossInfo->roomDoor.begin(); i != bossInfo->roomDoor.end(); ++i)
-                (*i)->SetGoState(1);
-            for(DoorSet::iterator i = bossInfo->passageDoor.begin(); i != bossInfo->passageDoor.end(); ++i)
-                (*i)->SetGoState(1);
-            break;
-        case DONE:
-            // Open all doors
-            for(DoorSet::iterator i = bossInfo->roomDoor.begin(); i != bossInfo->roomDoor.end(); ++i)
-                (*i)->SetGoState(0);
-            for(DoorSet::iterator i = bossInfo->passageDoor.begin(); i != bossInfo->passageDoor.end(); ++i)
-                (*i)->SetGoState(0);
-            break;
-        default:
-            break;
+            if(bossInfo->state == state)
+                return;
+            bossInfo->state = state;
+            SaveToDB();
         }
+        
+        for(uint32 type = 0; type < MAX_DOOR_TYPES; ++type)
+            for(DoorSet::iterator i = bossInfo->door[type].begin(); i != bossInfo->door[type].end(); ++i)
+                UpdateDoorState(*i);
     }
 }
 
+std::string InstanceData::LoadBossState(const char * data)
+{
+    if(!data) return NULL;
+    std::istringstream loadStream(data);
+    uint32 buff;
+    uint32 bossId = 0;
+    for(std::vector<BossInfo>::iterator i = bosses.begin(); i != bosses.end(); ++i, ++bossId)
+    {
+        loadStream >> buff;
+        if(buff < TO_BE_DECIDED)
+            SetBossState(bossId, (EncounterState)buff);
+    }
+    return loadStream.str();
+}
+
+std::string InstanceData::GetBossSaveData()
+{
+    std::ostringstream saveStream;
+    for(std::vector<BossInfo>::iterator i = bosses.begin(); i != bosses.end(); ++i)
+        saveStream << (uint32)i->state << " ";
+    return saveStream.str();
+}   

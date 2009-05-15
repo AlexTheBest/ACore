@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,24 +62,17 @@
 #include "Platform/Define.h"
 
 #if COMPILER == COMPILER_MICROSOFT
-
-#pragma warning(disable:4996)
-
+#   pragma warning(disable:4996)                            // 'function': was declared deprecated
 #ifndef __SHOW_STUPID_WARNINGS__
-
-#pragma warning(disable:4244)
-
-#pragma warning(disable:4267)
-
-#pragma warning(disable:4800)
-
-#pragma warning(disable:4018)
-
-#pragma warning(disable:4311)
-
-#pragma warning(disable:4305)
-
-#pragma warning(disable:4005)
+#   pragma warning(disable:4005)                            // 'identifier' : macro redefinition
+#   pragma warning(disable:4018)                            // 'expression' : signed/unsigned mismatch
+#   pragma warning(disable:4244)                            // 'argument' : conversion from 'type1' to 'type2', possible loss of data
+#   pragma warning(disable:4267)                            // 'var' : conversion from 'size_t' to 'type', possible loss of data
+#   pragma warning(disable:4305)                            // 'identifier' : truncation from 'type1' to 'type2'
+#   pragma warning(disable:4311)                            // 'variable' : pointer truncation from 'type' to 'type'
+#   pragma warning(disable:4355)                            // 'this' : used in base member initializer list
+#   pragma warning(disable:4800)                            // 'type' : forcing value to bool 'true' or 'false' (performance warning)
+#   pragma warning(disable:4522)                            //warning when class has 2 constructosr
 #endif                                                      // __SHOW_STUPID_WARNINGS__
 #endif                                                      // __GNUC__
 
@@ -91,6 +84,7 @@
 #include <math.h>
 #include <errno.h>
 #include <signal.h>
+#include <assert.h>
 
 #if PLATFORM == PLATFORM_WINDOWS
 #define STRCASECMP stricmp
@@ -106,10 +100,13 @@
 #include <sstream>
 #include <algorithm>
 
-#include <zthread/FastMutex.h>
-#include <zthread/LockedQueue.h>
-#include <zthread/Runnable.h>
-#include <zthread/Thread.h>
+#include "LockedQueue.h"
+#include "Threading.h"
+
+#include <ace/Guard_T.h>
+#include <ace/RW_Thread_Mutex.h>
+#include <ace/Thread_Mutex.h>
+
 
 #if PLATFORM == PLATFORM_WINDOWS
 #  define FD_SETSIZE 4096
@@ -161,7 +158,9 @@ enum TimeConstants
     MINUTE = 60,
     HOUR   = MINUTE*60,
     DAY    = HOUR*24,
-    MONTH  = DAY*30
+    MONTH  = DAY*30,
+    YEAR   = MONTH*12,
+    IN_MILISECONDS = 1000
 };
 
 enum AccountTypes
