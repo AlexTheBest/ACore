@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -203,7 +203,7 @@ bool OutdoorPvPZM::SetupOutdoorPvP()
 
     // add the zones affected by the pvp buff
     for(int i = 0; i < OutdoorPvPZMBuffZonesNum; ++i)
-        sOutdoorPvPMgr.AddZone(OutdoorPvPZMBuffZones[i],this);
+        RegisterZone(OutdoorPvPZMBuffZones[i]);
 
     m_OutdoorPvPObjectives.push_back(new OutdoorPvPObjectiveZM_Beacon(this,ZM_BEACON_WEST));
     m_OutdoorPvPObjectives.push_back(new OutdoorPvPObjectiveZM_Beacon(this,ZM_BEACON_EAST));
@@ -224,49 +224,6 @@ void OutdoorPvPZM::HandleKillImpl(Player *plr, Unit * killed)
         plr->CastSpell(plr,ZM_HordePlayerKillReward,true);
 }
 
-void OutdoorPvPZM::BuffTeam(uint32 team)
-{
-    if(team == ALLIANCE)
-    {
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[0].begin(); itr != m_PlayerGuids[0].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->CastSpell(plr,ZM_CAPTURE_BUFF,true);
-        }
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[1].begin(); itr != m_PlayerGuids[1].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(ZM_CAPTURE_BUFF);
-        }
-    }
-    else if(team == HORDE)
-    {
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[1].begin(); itr != m_PlayerGuids[1].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->CastSpell(plr,ZM_CAPTURE_BUFF,true);
-        }
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[0].begin(); itr != m_PlayerGuids[0].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(ZM_CAPTURE_BUFF);
-        }
-    }
-    else
-    {
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[0].begin(); itr != m_PlayerGuids[0].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(ZM_CAPTURE_BUFF);
-        }
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[1].begin(); itr != m_PlayerGuids[1].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(ZM_CAPTURE_BUFF);
-        }
-    }
-}
-
 bool OutdoorPvPObjectiveZM_GraveYard::Update(uint32 diff)
 {
     bool retval = m_State != m_OldState;
@@ -279,7 +236,7 @@ int32 OutdoorPvPObjectiveZM_GraveYard::HandleOpenGo(Player *plr, uint64 guid)
     uint32 retval = OutdoorPvPObjective::HandleOpenGo(plr, guid);
     if(retval>=0)
     {
-        if(plr->HasAura(ZM_BATTLE_STANDARD_A,0) && m_GraveYardState != ZM_GRAVEYARD_A)
+        if(plr->HasAura(ZM_BATTLE_STANDARD_A) && m_GraveYardState != ZM_GRAVEYARD_A)
         {
             if(m_GraveYardState == ZM_GRAVEYARD_H)
                 sWorld.SendZoneText(ZM_GRAVEYARD_ZONE,objmgr.GetTrinityStringForDBCLocale(LANG_OPVP_ZM_LOOSE_GY_H));
@@ -288,11 +245,11 @@ int32 OutdoorPvPObjectiveZM_GraveYard::HandleOpenGo(Player *plr, uint64 guid)
             AddObject(0,ZM_Banner_A.entry,ZM_Banner_A.map,ZM_Banner_A.x,ZM_Banner_A.y,ZM_Banner_A.z,ZM_Banner_A.o,ZM_Banner_A.rot0,ZM_Banner_A.rot1,ZM_Banner_A.rot2,ZM_Banner_A.rot3);
             objmgr.RemoveGraveYardLink(ZM_GRAVEYARD_ID, ZM_GRAVEYARD_ZONE, HORDE);          // rem gy
             objmgr.AddGraveYardLink(ZM_GRAVEYARD_ID, ZM_GRAVEYARD_ZONE, ALLIANCE, false);   // add gy
-            ((OutdoorPvPZM*)m_PvP)->BuffTeam(ALLIANCE);
+            m_PvP->TeamApplyBuff(TEAM_ALLIANCE, ZM_CAPTURE_BUFF);
             plr->RemoveAurasDueToSpell(ZM_BATTLE_STANDARD_A);
             sWorld.SendZoneText(ZM_GRAVEYARD_ZONE,objmgr.GetTrinityStringForDBCLocale(LANG_OPVP_ZM_CAPTURE_GY_A));
         }
-        else if(plr->HasAura(ZM_BATTLE_STANDARD_H,0) && m_GraveYardState != ZM_GRAVEYARD_H)
+        else if(plr->HasAura(ZM_BATTLE_STANDARD_H) && m_GraveYardState != ZM_GRAVEYARD_H)
         {
             if(m_GraveYardState == ZM_GRAVEYARD_A)
                 sWorld.SendZoneText(ZM_GRAVEYARD_ZONE,objmgr.GetTrinityStringForDBCLocale(LANG_OPVP_ZM_LOOSE_GY_A));
@@ -301,7 +258,7 @@ int32 OutdoorPvPObjectiveZM_GraveYard::HandleOpenGo(Player *plr, uint64 guid)
             AddObject(0,ZM_Banner_H.entry,ZM_Banner_H.map,ZM_Banner_H.x,ZM_Banner_H.y,ZM_Banner_H.z,ZM_Banner_H.o,ZM_Banner_H.rot0,ZM_Banner_H.rot1,ZM_Banner_H.rot2,ZM_Banner_H.rot3);
             objmgr.RemoveGraveYardLink(ZM_GRAVEYARD_ID, ZM_GRAVEYARD_ZONE, ALLIANCE);          // rem gy
             objmgr.AddGraveYardLink(ZM_GRAVEYARD_ID, ZM_GRAVEYARD_ZONE, HORDE, false);   // add gy
-            ((OutdoorPvPZM*)m_PvP)->BuffTeam(HORDE);
+            m_PvP->TeamApplyBuff(TEAM_HORDE, ZM_CAPTURE_BUFF);
             plr->RemoveAurasDueToSpell(ZM_BATTLE_STANDARD_H);
             sWorld.SendZoneText(ZM_GRAVEYARD_ZONE,objmgr.GetTrinityStringForDBCLocale(LANG_OPVP_ZM_CAPTURE_GY_H));
         }

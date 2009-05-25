@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -123,7 +123,7 @@ struct TRINITY_DLL_DECL boss_shahrazAI : public ScriptedAI
         Enraged = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(pInstance)
             pInstance->SetData(DATA_MOTHERSHAHRAZEVENT, IN_PROGRESS);
@@ -276,7 +276,7 @@ struct TRINITY_DLL_DECL boss_shahrazAI : public ScriptedAI
         }else SaberTimer -= diff;
 
         //Enrage
-        if(!m_creature->HasAura(SPELL_BERSERK, 0))
+        if(!m_creature->HasAura(SPELL_BERSERK))
             if(EnrageTimer < diff)
         {
             DoCast(m_creature, SPELL_BERSERK);

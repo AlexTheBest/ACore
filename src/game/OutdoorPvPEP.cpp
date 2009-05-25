@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -768,7 +768,7 @@ bool OutdoorPvPObjectiveEP_PWT::HandleGossipOption(Player *plr, uint64 guid, uin
             nodes[1] = dst;
 
             plr->PlayerTalkClass->CloseGossip();
-            plr->ActivateTaxiPathTo(nodes, 0, cr);
+            plr->ActivateTaxiPathTo(nodes, cr);
             // leave the opvp, seems like moveinlineofsight isn't called when entering a taxi
             HandlePlayerLeave(plr);
         }
@@ -789,7 +789,7 @@ OutdoorPvPEP::OutdoorPvPEP()
 bool OutdoorPvPEP::SetupOutdoorPvP()
 {
     for(int i = 0; i < EPBuffZonesNum; ++i)
-        sOutdoorPvPMgr.AddZone(EPBuffZones[i],this);
+        RegisterZone(EPBuffZones[i]);
 
     m_OutdoorPvPObjectives.push_back(new OutdoorPvPObjectiveEP_EWT(this));
     m_OutdoorPvPObjectives.push_back(new OutdoorPvPObjectiveEP_PWT(this));
@@ -853,24 +853,24 @@ void OutdoorPvPEP::HandlePlayerLeaveZone(Player * plr, uint32 zone)
 
 void OutdoorPvPEP::BuffTeams()
 {
-    for(std::set<uint64>::iterator itr = m_PlayerGuids[0].begin(); itr != m_PlayerGuids[0].end(); ++itr)
+    for(PlayerSet::iterator itr = m_players[0].begin(); itr != m_players[0].end(); ++itr)
     {
-        if(Player * plr = objmgr.GetPlayer(*itr))
+        Player * plr = *itr;
         {
             for(int i = 0; i < 4; ++i)
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(EP_AllianceBuffs[i]);
+                plr->RemoveAurasDueToSpell(EP_AllianceBuffs[i]);
             if(m_AllianceTowersControlled && m_AllianceTowersControlled < 5)
-                if(plr->IsInWorld()) plr->CastSpell(plr,EP_AllianceBuffs[m_AllianceTowersControlled-1],true);
+                plr->CastSpell(plr,EP_AllianceBuffs[m_AllianceTowersControlled-1],true);
         }
     }
-    for(std::set<uint64>::iterator itr = m_PlayerGuids[1].begin(); itr != m_PlayerGuids[1].end(); ++itr)
+    for(PlayerSet::iterator itr = m_players[1].begin(); itr != m_players[1].end(); ++itr)
     {
-        if(Player * plr = objmgr.GetPlayer(*itr))
+        Player * plr = *itr;
         {
             for(int i = 0; i < 4; ++i)
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(EP_HordeBuffs[i]);
+                plr->RemoveAurasDueToSpell(EP_HordeBuffs[i]);
             if(m_HordeTowersControlled && m_HordeTowersControlled < 5)
-                if(plr->IsInWorld()) plr->CastSpell(plr,EP_HordeBuffs[m_HordeTowersControlled-1],true);
+                plr->CastSpell(plr,EP_HordeBuffs[m_HordeTowersControlled-1],true);
         }
     }
 }

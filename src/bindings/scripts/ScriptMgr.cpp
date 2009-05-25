@@ -5,10 +5,9 @@
 #include "precompiled.h"
 #include "Config/Config.h"
 #include "Database/DatabaseEnv.h"
-#include "Database/DBCStores.h"
+#include "DBCStores.h"
 #include "ObjectMgr.h"
 #include "ProgressBar.h"
-#include "scripts/creature/mob_event_ai.h"
 
 #define _FULLVERSION "TrinityScript"
 
@@ -16,7 +15,6 @@
 # define _TRINITY_SCRIPT_CONFIG  "trinitycore.conf"
 #endif _TRINITY_SCRIPT_CONFIG
 
-//*** Global data ***
 int num_sc_scripts;
 Script *m_scripts[MAX_SCRIPTS];
 
@@ -32,36 +30,13 @@ struct StringTextData
     uint32 Emote;
 };
 
-// Enums used by StringTextData::Type
-enum ChatType
-{
-    CHAT_TYPE_SAY               = 0,
-    CHAT_TYPE_YELL              = 1,
-    CHAT_TYPE_TEXT_EMOTE        = 2,
-    CHAT_TYPE_BOSS_EMOTE        = 3,
-    CHAT_TYPE_WHISPER           = 4,
-    CHAT_TYPE_BOSS_WHISPER      = 5,
-};
-
 #define TEXT_SOURCE_RANGE   -1000000                        //the amount of entries each text source has available
 
 // Text Maps
 UNORDERED_MAP<int32, StringTextData> TextMap;
 
-//*** End Global data ***
-
-//*** EventAI data ***
-//Event AI structure. Used exclusivly by mob_event_ai.cpp (60 bytes each)
-UNORDERED_MAP<uint32, std::vector<EventAI_Event> > EventAI_Event_Map;
-
-//Event AI summon structure. Used exclusivly by mob_event_ai.cpp.
-UNORDERED_MAP<uint32, EventAI_Summon> EventAI_Summon_Map;
-
-//Event AI error prevention structure. Used at runtime to prevent error log spam of same creature id.
-//UNORDERED_MAP<uint32, EventAI_CreatureError> EventAI_CreatureErrorPreventionList;
-
-uint32 EAI_ErrorLevel;
-//*** End EventAI data ***
+// Waypoint map (escorts)
+UNORDERED_MAP<uint32, std::vector<PointMovement> > PointMovementMap;
 
 void FillSpellSummary();
 void LoadOverridenSQLData();
@@ -78,13 +53,15 @@ extern void AddSC_boss_taerar();
 extern void AddSC_boss_ysondre();
 
 // -- Creature --
-extern void AddSC_mob_event();
 extern void AddSC_generic_creature();
 
 // -- Custom --
-extern void AddSC_custom_example();
-extern void AddSC_custom_gossip_codebox();
-extern void AddSC_test();
+
+// -- Examples --
+extern void AddSC_example_creature();
+extern void AddSC_example_escort();
+extern void AddSC_example_gossip_codebox();
+extern void AddSC_example_misc();
 
 // -- GO --
 extern void AddSC_go_scripts();
@@ -96,11 +73,11 @@ extern void AddSC_guards();
 
 // -- Item --
 extern void AddSC_item_scripts();
-extern void AddSC_item_test();
 
 // -- NPC --
 extern void AddSC_npc_professions();
 extern void AddSC_npcs_special();
+extern void AddSC_npc_taxi();
 
 // -- Servers --
 
@@ -136,6 +113,11 @@ extern void AddSC_boss_blackheart_the_inciter();
 extern void AddSC_boss_grandmaster_vorpil();
 extern void AddSC_boss_murmur();
 extern void AddSC_instance_shadow_labyrinth();
+
+//Azjol-Nerub
+//--Ahn'kahet
+extern void AddSC_instance_ahnkahet();
+extern void AddSC_boss_elder_nadox();
 
 //Azshara
 extern void AddSC_boss_azuregos();
@@ -211,6 +193,9 @@ extern void AddSC_blasted_lands();
 //Bloodmyst Isle
 extern void AddSC_bloodmyst_isle();
 
+//Borean Tundra
+extern void AddSC_borean_tundra();
+
 //Burning steppes
 extern void AddSC_burning_steppes();
 
@@ -269,6 +254,9 @@ extern void AddSC_instance_deadmines();
 //Deadwind pass
 //Desolace
 //Dire Maul
+
+extern void AddSC_dragonblight();
+
 //Dun Morogh
 extern void AddSC_dun_morogh();
 
@@ -283,6 +271,7 @@ extern void AddSC_eversong_woods();
 //Exodar
 //Eastern Plaguelands
 extern void AddSC_eastern_plaguelands();
+extern void AddSC_the_scarlet_enclave();
 
 //Elwynn Forest
 extern void AddSC_elwynn_forest();
@@ -323,6 +312,7 @@ extern void AddSC_instance_shattered_halls();
 extern void AddSC_boss_watchkeeper_gargolmar();
 extern void AddSC_boss_omor_the_unscarred();
 extern void AddSC_boss_vazruden_the_herald();
+extern void AddSC_instance_ramparts();
 
 //Hellfire Peninsula
 extern void AddSC_boss_doomlordkazzak();
@@ -394,15 +384,19 @@ extern void AddSC_nagrand();
 extern void AddSC_boss_anubrekhan();
 extern void AddSC_boss_maexxna();
 extern void AddSC_boss_patchwerk();
+extern void AddSC_boss_grobbulus();
 extern void AddSC_boss_razuvious();
-extern void AddSC_boss_highlord_mograine();
 extern void AddSC_boss_kelthuzad();
-extern void AddSC_boss_faerlina();
 extern void AddSC_boss_loatheb();
 extern void AddSC_boss_noth();
 extern void AddSC_boss_gluth();
 extern void AddSC_boss_sapphiron();
 extern void AddSC_boss_four_horsemen();
+extern void AddSC_boss_faerlina();
+extern void AddSC_boss_heigan();
+extern void AddSC_boss_gothik();
+extern void AddSC_boss_thaddius();
+extern void AddSC_instance_naxxramas();
 
 //Netherstorm
 extern void AddSC_netherstorm();
@@ -416,6 +410,7 @@ extern void AddSC_orgrimmar();
 //Ragefire Chasm
 //Razorfen Downs
 extern void AddSC_boss_amnennar_the_coldbringer();
+extern void AddSC_razorfen_downs();
 
 //Razorfen Kraul
 extern void AddSC_razorfen_kraul();
@@ -513,6 +508,8 @@ extern void AddSC_sunwell_plateau();
 extern void AddSC_tanaris();
 
 //Teldrassil
+ extern void AddSC_teldrassil();
+ 
 //Tempest Keep
 //--Arcatraz
 extern void AddSC_arcatraz();
@@ -574,6 +571,14 @@ extern void AddSC_undercity();
 extern void AddSC_ungoro_crater();
 
 //Upper blackrock spire
+
+//Utgarde Keep
+extern void AddSC_boss_keleseth();
+extern void AddSC_boss_skarvald_dalronn();
+extern void AddSC_boss_ingvar_the_plunderer();
+extern void AddSC_instance_utgarde_keep();
+extern void AddSC_utgarde_keep();
+
 //Wailing caverns
 
 //Western plaguelands
@@ -618,21 +623,29 @@ extern void AddSC_boss_zuljin();
 extern void AddSC_instance_zulaman();
 extern void AddSC_zulaman();
 
+//Northrend
+//Dungeon
+//Vault of Archavon
+extern void AddSC_boss_archavon();
+
+//Region
+extern void AddSC_wintergrasp();
+
 // -------------------
 void LoadDatabase()
 {
     //Get db string from file
-    char const* dbstring = NULL;
+    std::string dbstring = TScriptConfig.GetStringDefault("WorldDatabaseInfo", "");
 
-    if (!TScriptConfig.GetString("WorldDatabaseInfo", &dbstring) )
+    if (dbstring.empty() )
     {
         error_log("TSCR: Missing world database info from configuration file. Load database aborted.");
         return;
     }
 
     //Initialize connection to DB
-    if (dbstring && TScriptDB.Initialize(dbstring) )
-        outstring_log("TSCR: TrinityScript database: %s",dbstring);
+    if (!dbstring.empty() && TScriptDB.Initialize(dbstring.c_str()) )
+        outstring_log("TSCR: TrinityScript database: %s",dbstring.c_str());
     else
     {
         error_log("TSCR: Unable to connect to Database. Load database aborted.");
@@ -660,72 +673,6 @@ void LoadDatabase()
 
     // Drop Existing Text Map, only done once and we are ready to add data from multiple sources.
     TextMap.clear();
-
-    // Load EventAI Text
-    outstring_log("TSCR: Loading EventAI Texts...");
-    LoadTrinityStrings(TScriptDB,"eventai_texts",-1,1+(TEXT_SOURCE_RANGE));
-
-    // Gather Additional data from EventAI Texts
-    //result = TScriptDB.PQuery("SELECT entry, sound, type, language, emote FROM eventai_texts");
-    result = TScriptDB.PQuery("SELECT entry, sound, type, language FROM eventai_texts");
-
-    outstring_log("TSCR: Loading EventAI Texts additional data...");
-    if (result)
-    {
-        barGoLink bar(result->GetRowCount());
-        uint32 count = 0;
-
-        do
-        {
-            bar.step();
-            Field* fields = result->Fetch();
-            StringTextData temp;
-
-            int32 i             = fields[0].GetInt32();
-            temp.SoundId        = fields[1].GetInt32();
-            temp.Type           = fields[2].GetInt32();
-            temp.Language       = fields[3].GetInt32();
-            temp.Emote          = 0;//fields[4].GetInt32();
-
-            if (i >= 0)
-            {
-                error_db_log("TSCR: Entry %i in table `eventai_texts` is not a negative value.",i);
-                continue;
-            }
-
-            if (i <= TEXT_SOURCE_RANGE)
-            {
-                error_db_log("TSCR: Entry %i in table `eventai_texts` is out of accepted entry range for table.",i);
-                continue;
-            }
-
-            if (temp.SoundId)
-            {
-                if (!GetSoundEntriesStore()->LookupEntry(temp.SoundId))
-                    error_db_log("TSCR: Entry %i in table `eventai_texts` has soundId %u but sound does not exist.",i,temp.SoundId);
-            }
-
-            if (!GetLanguageDescByID(temp.Language))
-                error_db_log("TSCR: Entry %i in table `eventai_texts` using Language %u but Language does not exist.",i,temp.Language);
-
-            if (temp.Type > CHAT_TYPE_BOSS_WHISPER)
-                error_db_log("TSCR: Entry %i in table `eventai_texts` has Type %u but this Chat Type does not exist.",i,temp.Type);
-
-            TextMap[i] = temp;
-            ++count;
-        } while (result->NextRow());
-
-        delete result;
-
-        outstring_log("");
-        outstring_log(">> TSCR: Loaded %u additional EventAI Texts data.", count);
-    }else
-    {
-        barGoLink bar(1);
-        bar.step();
-        outstring_log("");
-        outstring_log(">> Loaded 0 additional EventAI Texts data. DB table `eventai_texts` is empty.");
-    }
 
     // Load Script Text
     outstring_log("TSCR: Loading Script Texts...");
@@ -773,7 +720,7 @@ void LoadDatabase()
             if (!GetLanguageDescByID(temp.Language))
                 error_db_log("TSCR: Entry %i in table `script_texts` using Language %u but Language does not exist.",i,temp.Language);
 
-            if (temp.Type > CHAT_TYPE_BOSS_WHISPER)
+            if (temp.Type > CHAT_TYPE_ZONE_YELL)
                 error_db_log("TSCR: Entry %i in table `script_texts` has Type %u but this Chat Type does not exist.",i,temp.Type);
 
             TextMap[i] = temp;
@@ -838,7 +785,7 @@ void LoadDatabase()
             if (!GetLanguageDescByID(temp.Language))
                 error_db_log("TSCR: Entry %i in table `custom_texts` using Language %u but Language does not exist.",i,temp.Language);
 
-            if (temp.Type > CHAT_TYPE_BOSS_WHISPER)
+            if (temp.Type > CHAT_TYPE_ZONE_YELL)
                 error_db_log("TSCR: Entry %i in table `custom_texts` has Type %u but this Chat Type does not exist.",i,temp.Type);
 
             TextMap[i] = temp;
@@ -857,455 +804,66 @@ void LoadDatabase()
         outstring_log(">> Loaded 0 additional Custom Texts data. DB table `custom_texts` is empty.");
     }
 
-    //Gather additional data for EventAI
-    result = TScriptDB.PQuery("SELECT id, position_x, position_y, position_z, orientation, spawntimesecs FROM eventai_summons");
+    // Drop Existing Waypoint list
+    PointMovementMap.clear();
+    uint64 uiCreatureCount = 0;
 
-    //Drop Existing EventSummon Map
-    EventAI_Summon_Map.clear();
-
-    outstring_log("TSCR: Loading EventAI Summons...");
+    // Load Waypoints
+    result = TScriptDB.PQuery("SELECT COUNT(entry) FROM script_waypoint GROUP BY entry");
     if (result)
     {
-        barGoLink bar(result->GetRowCount());
-        uint32 Count = 0;
-
-        do
-        {
-            bar.step();
-            Field *fields = result->Fetch();
-
-            EventAI_Summon temp;
-
-            uint32 i = fields[0].GetUInt32();
-            temp.position_x = fields[1].GetFloat();
-            temp.position_y = fields[2].GetFloat();
-            temp.position_z = fields[3].GetFloat();
-            temp.orientation = fields[4].GetFloat();
-            temp.SpawnTimeSecs = fields[5].GetUInt32();
-
-            //Add to map
-            EventAI_Summon_Map[i] = temp;
-            ++Count;
-        }while (result->NextRow());
-
+        uiCreatureCount = result->GetRowCount();
         delete result;
-
-        outstring_log("");
-        outstring_log(">> Loaded %u EventAI summon definitions", Count);
-    }else
-    {
-        barGoLink bar(1);
-        bar.step();
-        outstring_log("");
-        outstring_log(">> Loaded 0 EventAI Summon definitions. DB table `eventai_summons` is empty.");
     }
 
-    //Gather event data
-    result = TScriptDB.PQuery("SELECT id, creature_id, event_type, event_inverse_phase_mask, event_chance, event_flags, "
-        "event_param1, event_param2, event_param3, event_param4, "
-        "action1_type, action1_param1, action1_param2, action1_param3, "
-        "action2_type, action2_param1, action2_param2, action2_param3, "
-        "action3_type, action3_param1, action3_param2, action3_param3 "
-        "FROM eventai_scripts");
+    outstring_log("TSCR: Loading Script Waypoints for %u creature(s)...", uiCreatureCount);
 
-    //Drop Existing EventAI List
-    EventAI_Event_Map.clear();
+    result = TScriptDB.PQuery("SELECT entry, pointid, location_x, location_y, location_z, waittime FROM script_waypoint ORDER BY pointid");
 
-    outstring_log("TSCR: Loading EventAI scripts...");
     if (result)
     {
         barGoLink bar(result->GetRowCount());
-        uint32 Count = 0;
+        uint32 uiNodeCount = 0;
 
         do
         {
             bar.step();
-            Field *fields = result->Fetch();
+            Field* pFields = result->Fetch();
+            PointMovement pTemp;
 
-            EventAI_Event temp;
+            pTemp.m_uiCreatureEntry  = pFields[0].GetUInt32();
+            uint32 uiCreatureEntry   = pTemp.m_uiCreatureEntry;
+            pTemp.m_uiPointId        = pFields[1].GetUInt32();
+            pTemp.m_fX               = pFields[2].GetFloat();
+            pTemp.m_fY               = pFields[3].GetFloat();
+            pTemp.m_fZ               = pFields[4].GetFloat();
+            pTemp.m_uiWaitTime       = pFields[5].GetUInt32();
 
-            temp.event_id = fields[0].GetUInt32();
-            uint32 i = temp.event_id;
-            temp.creature_id = fields[1].GetUInt32();
-            uint32 creature_id = temp.creature_id;
-            temp.event_type = fields[2].GetUInt16();
-            temp.event_inverse_phase_mask = fields[3].GetUInt32();
-            temp.event_chance = fields[4].GetUInt8();
-            temp.event_flags = fields[5].GetUInt8();
-            temp.event_param1 = fields[6].GetUInt32();
-            temp.event_param2 = fields[7].GetUInt32();
-            temp.event_param3 = fields[8].GetUInt32();
-            temp.event_param4 = fields[9].GetUInt32();
-
-            //Creature does not exist in database
-            if (!GetCreatureTemplateStore(temp.creature_id))
-                error_db_log("TSCR: Event %u has script for non-existing creature.", i);
-
-            //Report any errors in event
-            if (temp.event_type >= EVENT_T_END)
-                error_db_log("TSCR: Event %u has incorrect event type. Maybe DB requires updated version of SD2.", i);
-
-            //No chance of this event occuring
-            if (temp.event_chance == 0)
-                error_db_log("TSCR: Event %u has 0 percent chance. Event will never trigger!", i);
-
-            //Chance above 100, force it to be 100
-            if (temp.event_chance > 100)
+            CreatureInfo const* pCInfo = GetCreatureTemplateStore(pTemp.m_uiCreatureEntry);
+            if (!pCInfo)
             {
-                error_db_log("TSCR: Creature %u are using event %u with more than 100 percent chance. Adjusting to 100 percent.", temp.creature_id, i);
-                temp.event_chance = 100;
+                error_db_log("TSCR: DB table script_waypoint has waypoint for non-existant creature entry %u", pTemp.m_uiCreatureEntry);
+                continue;
             }
 
-            //Individual event checks
-            switch (temp.event_type)
-            {
-                case EVENT_T_HP:
-                case EVENT_T_MANA:
-                case EVENT_T_TARGET_HP:
-                    {
-                        if (temp.event_param2 > 100)
-                            error_db_log("TSCR: Creature %u are using percentage event(%u) with param2 (MinPercent) > 100. Event will never trigger! ", temp.creature_id, i);
+            if (!pCInfo->ScriptID)
+                error_db_log("TSCR: DB table script_waypoint has waypoint for creature entry %u, but creature does not have ScriptName defined and then useless.", pTemp.m_uiCreatureEntry);
 
-                        if (temp.event_param1 <= temp.event_param2)
-                            error_db_log("TSCR: Creature %u are using percentage event(%u) with param1 <= param2 (MaxPercent <= MinPercent). Event will never trigger! ", temp.creature_id, i);
-
-                        if (temp.event_flags & EFLAG_REPEATABLE && !temp.event_param3 && !temp.event_param4)
-                        {
-                            error_db_log("TSCR: Creature %u has param3 and param4=0 (RepeatMin/RepeatMax) but cannot be repeatable without timers. Removing EFLAG_REPEATABLE for event %u.", temp.creature_id, i);
-                            temp.event_flags &= ~EFLAG_REPEATABLE;
-                        }
-                    }
-                    break;
-
-                case EVENT_T_SPELLHIT:
-                    {
-                        if (temp.event_param1)
-                        {
-                            SpellEntry const* pSpell = GetSpellStore()->LookupEntry(temp.event_param1);
-                            if (!pSpell)
-                            {
-                                error_db_log("TSCR: Creature %u has non-existant SpellID(%u) defined in event %u.", temp.creature_id, temp.event_param1, i);
-                                continue;
-                            }
-
-                            if (temp.event_param2_s != -1 && temp.event_param2 != pSpell->SchoolMask)
-                                error_db_log("TSCR: Creature %u has param1(spellId %u) but param2 is not -1 and not equal to spell's school mask. Event %u can never trigger.", temp.creature_id, temp.event_param1, i);
-                        }
-
-                        //TODO: fix this system with SPELL_SCHOOL_MASK. Current complicate things, using int32(-1) instead of just 0
-                        //SPELL_SCHOOL_MASK_NONE = 0 and does not exist, thus it can not ever trigger or be used in SpellHit()
-                        if (temp.event_param2_s != -1 && temp.event_param2_s > SPELL_SCHOOL_MASK_ALL)
-                            error_db_log("TSCR: Creature %u is using invalid SpellSchoolMask(%u) defined in event %u.", temp.creature_id, temp.event_param2, i);
-
-                        if (temp.event_param4 < temp.event_param3)
-                            error_db_log("TSCR: Creature %u are using repeatable event(%u) with param4 < param3 (RepeatMax < RepeatMin). Event will never repeat.", temp.creature_id, i);
-                    }
-                    break;
-
-                case EVENT_T_RANGE:
-                case EVENT_T_OOC_LOS:
-                case EVENT_T_FRIENDLY_HP:
-                case EVENT_T_FRIENDLY_IS_CC:
-                case EVENT_T_FRIENDLY_MISSING_BUFF:
-                    {
-                        if (temp.event_param4 < temp.event_param3)
-                            error_db_log("TSCR: Creature %u are using repeatable event(%u) with param4 < param3 (RepeatMax < RepeatMin). Event will never repeat.", temp.creature_id, i);
-                    }
-                    break;
-
-                case EVENT_T_TIMER:
-                case EVENT_T_TIMER_OOC:
-                    {
-                        if (temp.event_param2 < temp.event_param1)
-                            error_db_log("TSCR: Creature %u are using timed event(%u) with param2 < param1 (InitialMax < InitialMin). Event will never repeat.", temp.creature_id, i);
-
-                        if (temp.event_param4 < temp.event_param3)
-                            error_db_log("TSCR: Creature %u are using repeatable event(%u) with param4 < param3 (RepeatMax < RepeatMin). Event will never repeat.", temp.creature_id, i);
-                    }
-                    break;
-
-                case EVENT_T_KILL:
-                case EVENT_T_TARGET_CASTING:
-                    {
-                        if (temp.event_param2 < temp.event_param1)
-                            error_db_log("TSCR: Creature %u are using event(%u) with param2 < param1 (RepeatMax < RepeatMin). Event will never repeat.", temp.creature_id, i);
-                    }
-                    break;
-
-                case EVENT_T_AGGRO:
-                case EVENT_T_DEATH:
-                case EVENT_T_EVADE:
-                case EVENT_T_SPAWNED:
-                case EVENT_T_REACHED_HOME:
-                    {
-                        if (temp.event_flags & EFLAG_REPEATABLE)
-                        {
-                            error_db_log("TSCR: Creature %u has EFLAG_REPEATABLE set. Event can never be repeatable. Removing flag for event %u.", temp.creature_id, i);
-                            temp.event_flags &= ~EFLAG_REPEATABLE;
-                        }
-                    }
-                    break;
-            }
-
-            for (uint32 j = 0; j < MAX_ACTIONS; j++)
-            {
-                temp.action[j].type = fields[10+(j*4)].GetUInt16();
-                temp.action[j].param1 = fields[11+(j*4)].GetUInt32();
-                temp.action[j].param2 = fields[12+(j*4)].GetUInt32();
-                temp.action[j].param3 = fields[13+(j*4)].GetUInt32();
-
-                //Report any errors in actions
-                switch (temp.action[j].type)
-                {
-                    case ACTION_T_TEXT:
-                        {
-                            if (temp.action[j].param1_s < 0)
-                            {
-                                if (TextMap.find(temp.action[j].param1_s) == TextMap.end())
-                                    error_db_log("TSCR: Event %u Action %u param1 refrences non-existing entry in texts table.", i, j+1);
-                            }
-                            if (temp.action[j].param2_s < 0)
-                            {
-                                if (TextMap.find(temp.action[j].param2_s) == TextMap.end())
-                                    error_db_log("TSCR: Event %u Action %u param2 refrences non-existing entry in texts table.", i, j+1);
-
-                                if (!temp.action[j].param1_s)
-                                    error_db_log("TSCR: Event %u Action %u has param2, but param1 is not set. Required for randomized text.", i, j+1);
-                            }
-                            if (temp.action[j].param3_s < 0)
-                            {
-                                if (TextMap.find(temp.action[j].param3_s) == TextMap.end())
-                                    error_db_log("TSCR: Event %u Action %u param3 refrences non-existing entry in texts table.", i, j+1);
-
-                                if (!temp.action[j].param1_s || !temp.action[j].param2_s)
-                                    error_db_log("TSCR: Event %u Action %u has param3, but param1 and/or param2 is not set. Required for randomized text.", i, j+1);
-                            }
-                        }
-                        break;
-                    case ACTION_T_SET_FACTION:
-                        /*if (temp.action[j].param1 !=0 && !GetFactionStore()->LookupEntry(temp.action[j].param1))
-                        {
-                            error_db_log("TSCR: Event %u Action %u uses non-existant FactionId %u.", i, j+1, temp.action[j].param1);
-                            temp.action[j].param1 = 0;
-                        }*/
-                        break;
-                    case ACTION_T_MORPH_TO_ENTRY_OR_MODEL:
-                        if (temp.action[j].param1 !=0 || temp.action[j].param2 !=0)
-                        {
-                            if (temp.action[j].param1 && !GetCreatureTemplateStore(temp.action[j].param1))
-                            {
-                                error_db_log("TSCR: Event %u Action %u uses non-existant Creature entry %u.", i, j+1, temp.action[j].param1);
-                                temp.action[j].param1 = 0;
-                            }
-
-                            /*if (temp.action[j].param2 && !GetCreatureDisplayStore()->LookupEntry(temp.action[j].param2))
-                            {
-                                error_db_log("TSCR: Event %u Action %u uses non-existant ModelId %u.", i, j+1, temp.action[j].param2);
-                                temp.action[j].param2 = 0;
-                            }*/
-                        }
-                        break;
-                    case ACTION_T_SOUND:
-                        if (!GetSoundEntriesStore()->LookupEntry(temp.action[j].param1))
-                            error_db_log("TSCR: Event %u Action %u uses non-existant SoundID %u.", i, j+1, temp.action[j].param1);
-                        break;
-
-                    /*case ACTION_T_RANDOM_SOUND:
-                        {
-                            if(!GetSoundEntriesStore()->LookupEntry(temp.action[j].param1))
-                                error_db_log("TSCR: Event %u Action %u param1 uses non-existant SoundID %u.", i, j+1, temp.action[j].param1);
-                            if(!GetSoundEntriesStore()->LookupEntry(temp.action[j].param2))
-                                error_db_log("TSCR: Event %u Action %u param2 uses non-existant SoundID %u.", i, j+1, temp.action[j].param2);
-                            if(!GetSoundEntriesStore()->LookupEntry(temp.action[j].param3))
-                                error_db_log("TSCR: Event %u Action %u param3 uses non-existant SoundID %u.", i, j+1, temp.action[j].param3);
-                        }
-                        break;*/
-
-                    case ACTION_T_CAST:
-                        {
-                            const SpellEntry *spell = GetSpellStore()->LookupEntry(temp.action[j].param1);
-                            if (!spell)
-                                error_db_log("TSCR: Event %u Action %u uses non-existant SpellID %u.", i, j+1, temp.action[j].param1);
-                            else
-                            {
-                                if (spell->RecoveryTime > 0 && temp.event_flags & EFLAG_REPEATABLE)
-                                {
-                                    //output as debug for now, also because there's no general rule all spells have RecoveryTime
-                                    if (temp.event_param3 < spell->RecoveryTime)
-                                        debug_log("TSCR: Event %u Action %u uses SpellID %u but cooldown is longer(%u) than minumum defined in event param3(%u).", i, j+1,temp.action[j].param1, spell->RecoveryTime, temp.event_param3);
-                                }
-                            }
-
-                            if (temp.action[j].param2 >= TARGET_T_END)
-                                error_db_log("TSCR: Event %u Action %u uses incorrect Target type", i, j+1);
-                        }
-                        break;
-
-                    case ACTION_T_REMOVEAURASFROMSPELL:
-                        {
-                            if (!GetSpellStore()->LookupEntry(temp.action[j].param2))
-                                error_db_log("TSCR: Event %u Action %u uses non-existant SpellID %u.", i, j+1, temp.action[j].param2);
-
-                            if (temp.action[j].param1 >= TARGET_T_END)
-                                error_db_log("TSCR: Event %u Action %u uses incorrect Target type", i, j+1);
-                        }
-                        break;
-                    case ACTION_T_QUEST_EVENT:
-                        {
-                            if (Quest const* qid = GetQuestTemplateStore(temp.action[j].param1))
-                            {
-                                if (!qid->HasFlag(QUEST_TRINITY_FLAGS_EXPLORATION_OR_EVENT))
-                                    error_db_log("TSCR: Event %u Action %u. SpecialFlags for quest entry %u does not include |2, Action will not have any effect.", i, j+1, temp.action[j].param1);
-                            }
-                            else
-                                error_db_log("TSCR: Event %u Action %u uses non-existant Quest entry %u.", i, j+1, temp.action[j].param1);
-
-                            if (temp.action[j].param2 >= TARGET_T_END)
-                                error_db_log("TSCR: Event %u Action %u uses incorrect Target type", i, j+1);
-                        }
-                        break;
-                    case ACTION_T_QUEST_EVENT_ALL:
-                        {
-                            if (Quest const* qid = GetQuestTemplateStore(temp.action[j].param1))
-                            {
-                                if (!qid->HasFlag(QUEST_TRINITY_FLAGS_EXPLORATION_OR_EVENT))
-                                    error_db_log("TSCR: Event %u Action %u. SpecialFlags for quest entry %u does not include |2, Action will not have any effect.", i, j+1, temp.action[j].param1);
-                            }
-                            else
-                                error_db_log("TSCR: Event %u Action %u uses non-existant Quest entry %u.", i, j+1, temp.action[j].param1);
-                        }
-                        break;
-                    case ACTION_T_CASTCREATUREGO:
-                        {
-                            if (!GetCreatureTemplateStore(temp.action[j].param1))
-                                error_db_log("TSCR: Event %u Action %u uses non-existant creature entry %u.", i, j+1, temp.action[j].param1);
-
-                            if (!GetSpellStore()->LookupEntry(temp.action[j].param2))
-                                error_db_log("TSCR: Event %u Action %u uses non-existant SpellID %u.", i, j+1, temp.action[j].param2);
-
-                            if (temp.action[j].param3 >= TARGET_T_END)
-                                error_db_log("TSCR: Event %u Action %u uses incorrect Target type", i, j+1);
-                        }
-                        break;
-                    case ACTION_T_CASTCREATUREGO_ALL:
-                        {
-                            if (!GetQuestTemplateStore(temp.action[j].param1))
-                                error_db_log("TSCR: Event %u Action %u uses non-existant Quest entry %u.", i, j+1, temp.action[j].param1);
-
-                            if (!GetSpellStore()->LookupEntry(temp.action[j].param2))
-                                error_db_log("TSCR: Event %u Action %u uses non-existant SpellID %u.", i, j+1, temp.action[j].param2);
-                        }
-                        break;
-
-                    //2nd param target
-                    case ACTION_T_SUMMON_ID:
-                        {
-                            if (!GetCreatureTemplateStore(temp.action[j].param1))
-                                error_db_log("TSCR: Event %u Action %u uses non-existant creature entry %u.", i, j+1, temp.action[j].param1);
-
-                            if (EventAI_Summon_Map.find(temp.action[j].param3) == EventAI_Summon_Map.end())
-                                error_db_log("TSCR: Event %u Action %u summons missing EventAI_Summon %u", i, j+1, temp.action[j].param3);
-
-                            if (temp.action[j].param2 >= TARGET_T_END)
-                                error_db_log("TSCR: Event %u Action %u uses incorrect Target type", i, j+1);
-                        }
-                        break;
-                    case ACTION_T_KILLED_MONSTER:
-                        {
-                            if (!GetCreatureTemplateStore(temp.action[j].param1))
-                                error_db_log("TSCR: Event %u Action %u uses non-existant creature entry %u.", i, j+1, temp.action[j].param1);
-
-                            if (temp.action[j].param2 >= TARGET_T_END)
-                                error_db_log("TSCR: Event %u Action %u uses incorrect Target type", i, j+1);
-                        }
-                        break;
-                    case ACTION_T_SUMMON:
-                        {
-                            if (!GetCreatureTemplateStore(temp.action[j].param1))
-                                error_db_log("TSCR: Event %u Action %u uses non-existant creature entry %u.", i, j+1, temp.action[j].param1);
-
-                            if (temp.action[j].param2 >= TARGET_T_END)
-                                error_db_log("TSCR: Event %u Action %u uses incorrect Target type", i, j+1);
-                        }
-                        break;
-                    case ACTION_T_THREAT_SINGLE_PCT:
-                    case ACTION_T_SET_UNIT_FLAG:
-                    case ACTION_T_REMOVE_UNIT_FLAG:
-                        if (temp.action[j].param2 >= TARGET_T_END)
-                            error_db_log("TSCR: Event %u Action %u uses incorrect Target type", i, j+1);
-                        break;
-
-                    //3rd param target
-                    case ACTION_T_SET_UNIT_FIELD:
-                        if (temp.action[j].param1 < OBJECT_END || temp.action[j].param1 >= UNIT_END)
-                            error_db_log("TSCR: Event %u Action %u param1 (UNIT_FIELD*). Index out of range for intended use.", i, j+1);
-                        if (temp.action[j].param3 >= TARGET_T_END)
-                            error_db_log("TSCR: Event %u Action %u uses incorrect Target type", i, j+1);
-                        break;
-
-                    case ACTION_T_SET_PHASE:
-                        if (temp.action[j].param1 > 31)
-                            error_db_log("TSCR: Event %u Action %u attempts to set phase > 31. Phase mask cannot be used past phase 31.", i, j+1);
-                        break;
-
-                    case ACTION_T_INC_PHASE:
-                        if (!temp.action[j].param1)
-                            error_db_log("TSCR: Event %u Action %u is incrementing phase by 0. Was this intended?", i, j+1);
-                        break;
-
-                    case ACTION_T_SET_INST_DATA:
-                        {
-                            if (!(temp.event_flags & EFLAG_NORMAL) && !(temp.event_flags & EFLAG_HEROIC))
-                                error_db_log("TSCR: Event %u Action %u. Cannot set instance data without event flags (normal/heroic).", i, j+1);
-
-                            if (temp.action[j].param2 > SPECIAL)
-                                error_db_log("TSCR: Event %u Action %u attempts to set instance data above encounter state 4. Custom case?", i, j+1);
-                        }
-                        break;
-                    case ACTION_T_SET_INST_DATA64:
-                        {
-                            if (!(temp.event_flags & EFLAG_NORMAL) && !(temp.event_flags & EFLAG_HEROIC))
-                                error_db_log("TSCR: Event %u Action %u. Cannot set instance data without event flags (normal/heroic).", i, j+1);
-
-                            if (temp.action[j].param2 >= TARGET_T_END)
-                                error_db_log("TSCR: Event %u Action %u uses incorrect Target type", i, j+1);
-                        }
-                        break;
-                    case ACTION_T_UPDATE_TEMPLATE:
-                        {
-                            if (!GetCreatureTemplateStore(temp.action[j].param1))
-                                error_db_log("TSCR: Event %u Action %u uses non-existant creature entry %u.", i, j+1, temp.action[j].param1);
-                        }
-                        break;
-                    case ACTION_T_RANDOM_SAY:
-                    case ACTION_T_RANDOM_YELL:
-                    case ACTION_T_RANDOM_TEXTEMOTE:
-                        error_db_log("TSCR: Event %u Action %u currently unused ACTION type. Did you forget to update database?", i, j+1);
-                        break;
-
-                    default:
-                        if (temp.action[j].type >= ACTION_T_END)
-                            error_db_log("TSCR: Event %u Action %u has incorrect action type. Maybe DB requires updated version of SD2.", i, j+1);
-                        break;
-                }
-            }
-
-            //Add to list
-            EventAI_Event_Map[creature_id].push_back(temp);
-
-            ++Count;
+            PointMovementMap[uiCreatureEntry].push_back(pTemp);
+            ++uiNodeCount;
         } while (result->NextRow());
 
         delete result;
 
         outstring_log("");
-        outstring_log(">> Loaded %u EventAI scripts", Count);
-    }else
+        outstring_log(">> Loaded %u Script Waypoint nodes.", uiNodeCount);
+    }
+    else
     {
         barGoLink bar(1);
         bar.step();
         outstring_log("");
-        outstring_log(">> Loaded 0 EventAI scripts. DB table `eventai_scripts` is empty.");
+        outstring_log(">> Loaded 0 Script Waypoints. DB table `script_waypoint` is empty.");
     }
 
     //Free database thread and resources
@@ -1325,7 +883,7 @@ void ScriptsFree()
     delete []SpellSummary;
 
     // Free resources before library unload
-    for(int i=0;i<num_sc_scripts;i++)
+    for(int i=0;i<MAX_SCRIPTS;i++)
         delete m_scripts[i];
 
     num_sc_scripts = 0;
@@ -1354,25 +912,6 @@ void ScriptsInit(char const* cfg_file = "trinitycore.conf")
     }
     else outstring_log("TSCR: Using configuration file %s",cfg_file);
 
-    EAI_ErrorLevel = TScriptConfig.GetIntDefault("EAIErrorLevel", 1);
-
-    switch (EAI_ErrorLevel)
-    {
-        case 0:
-            outstring_log("TSCR: EventAI Error Reporting level set to 0 (Startup Errors only)");
-            break;
-        case 1:
-            outstring_log("TSCR: EventAI Error Reporting level set to 1 (Startup errors and Runtime event errors)");
-            break;
-        case 2:
-            outstring_log("TSCR: EventAI Error Reporting level set to 2 (Startup errors, Runtime event errors, and Creation errors)");
-            break;
-        default:
-            outstring_log("TSCR: Unknown EventAI Error Reporting level. Defaulting to 1 (Startup errors and Runtime event errors)");
-            EAI_ErrorLevel = 1;
-            break;
-    }
-
     outstring_log("");
 
     //Load database (must be called after TScriptConfig.SetSource). In case it failed, no need to even try load.
@@ -1400,13 +939,15 @@ void ScriptsInit(char const* cfg_file = "trinitycore.conf")
     AddSC_boss_ysondre();
 
     // -- Creature --
-    AddSC_mob_event();
     AddSC_generic_creature();
 
     // -- Custom --
-    AddSC_custom_example();
-    AddSC_custom_gossip_codebox();
-    AddSC_test();
+
+    // -- Examples --
+    AddSC_example_creature();
+    AddSC_example_escort();
+    AddSC_example_gossip_codebox();
+    AddSC_example_misc();
 
     // -- GO --
     AddSC_go_scripts();
@@ -1418,11 +959,11 @@ void ScriptsInit(char const* cfg_file = "trinitycore.conf")
 
     // -- Item --
     AddSC_item_scripts();
-    AddSC_item_test();
 
     // -- NPC --
     AddSC_npc_professions();
     AddSC_npcs_special();
+    AddSC_npc_taxi();
 
     // -- Servers --
 
@@ -1458,6 +999,11 @@ void ScriptsInit(char const* cfg_file = "trinitycore.conf")
     AddSC_boss_grandmaster_vorpil();
     AddSC_boss_murmur();
     AddSC_instance_shadow_labyrinth();
+
+    //Azjol-Nerub
+    //--Ahn'kahet
+    AddSC_instance_ahnkahet();
+    AddSC_boss_elder_nadox();
 
     //Azshara
     AddSC_boss_azuregos();
@@ -1533,6 +1079,9 @@ void ScriptsInit(char const* cfg_file = "trinitycore.conf")
     //Bloodmyst Isle
     AddSC_bloodmyst_isle();
 
+    //Borean Tundra
+    AddSC_borean_tundra();
+
     //Burning steppes
     AddSC_burning_steppes();
 
@@ -1590,6 +1139,9 @@ void ScriptsInit(char const* cfg_file = "trinitycore.conf")
     //Deadwind pass
     //Desolace
     //Dire Maul
+
+    AddSC_dragonblight();
+
     //Dun Morogh
     AddSC_dun_morogh();
 
@@ -1604,6 +1156,7 @@ void ScriptsInit(char const* cfg_file = "trinitycore.conf")
     //Exodar
     //Eastern Plaguelands
     AddSC_eastern_plaguelands();
+    AddSC_the_scarlet_enclave();
 
     //Elwynn Forest
     AddSC_elwynn_forest();
@@ -1644,6 +1197,7 @@ void ScriptsInit(char const* cfg_file = "trinitycore.conf")
     AddSC_boss_watchkeeper_gargolmar();
     AddSC_boss_omor_the_unscarred();
     AddSC_boss_vazruden_the_herald();
+    AddSC_instance_ramparts();
 
     //Hellfire Peninsula
     AddSC_boss_doomlordkazzak();
@@ -1713,17 +1267,21 @@ void ScriptsInit(char const* cfg_file = "trinitycore.conf")
 
     //Naxxramas
     AddSC_boss_anubrekhan();
+    AddSC_boss_faerlina();
     AddSC_boss_maexxna();
     AddSC_boss_patchwerk();
+    AddSC_boss_grobbulus();
     AddSC_boss_razuvious();
-    AddSC_boss_highlord_mograine();
     AddSC_boss_kelthuzad();
-    AddSC_boss_faerlina();
     AddSC_boss_loatheb();
     AddSC_boss_noth();
     AddSC_boss_gluth();
     AddSC_boss_sapphiron();
     AddSC_boss_four_horsemen();
+    AddSC_boss_heigan();
+    AddSC_boss_gothik();
+    AddSC_boss_thaddius();
+    AddSC_instance_naxxramas();
 
     //Netherstorm
     AddSC_netherstorm();
@@ -1737,6 +1295,7 @@ void ScriptsInit(char const* cfg_file = "trinitycore.conf")
     //Ragefire Chasm
     //Razorfen Downs
     AddSC_boss_amnennar_the_coldbringer();
+    AddSC_razorfen_downs();
 
     //Razorfen Kraul
     AddSC_razorfen_kraul();
@@ -1834,6 +1393,8 @@ void ScriptsInit(char const* cfg_file = "trinitycore.conf")
     AddSC_tanaris();
 
     //Teldrassil
+    AddSC_teldrassil();
+
     //Tempest Keep
     //--Arcatraz
     AddSC_arcatraz();
@@ -1895,6 +1456,14 @@ void ScriptsInit(char const* cfg_file = "trinitycore.conf")
     AddSC_ungoro_crater();
 
     //Upper blackrock spire
+
+    //Utgarde Keep
+    AddSC_boss_keleseth();
+    AddSC_boss_skarvald_dalronn();
+    AddSC_boss_ingvar_the_plunderer();
+    AddSC_instance_utgarde_keep();
+    AddSC_utgarde_keep();
+
     //Wailing caverns
 
     //Western plaguelands
@@ -1938,6 +1507,14 @@ void ScriptsInit(char const* cfg_file = "trinitycore.conf")
     AddSC_boss_zuljin();
     AddSC_instance_zulaman();
     AddSC_zulaman();
+
+    //Northrend
+    //Dungeon
+    //Vault of Archavon
+    AddSC_boss_archavon();
+
+    //Region
+    AddSC_wintergrasp();
 
     // -------------------
 
@@ -2022,6 +1599,9 @@ void DoScriptText(int32 textEntry, WorldObject* pSource, Unit* target)
                     pSource->MonsterWhisper(textEntry, target->GetGUID(), true);
                 else error_log("TSCR: DoScriptText entry %i cannot whisper without target unit (TYPEID_PLAYER).", textEntry);
             }break;
+        case CHAT_TYPE_ZONE_YELL:
+            pSource->MonsterYellToZone(textEntry, (*i).second.Language, target ? target->GetGUID() : 0);
+            break;
     }
 }
 
@@ -2036,8 +1616,11 @@ void Script::RegisterSelf()
         m_scripts[id] = this;
         ++num_sc_scripts;
     }
-    else
+    else if(Name.find("example") == std::string::npos)
+    {
         error_db_log("CRASH ALERT! TrinityScript: RegisterSelf, but script named %s does not have ScriptName assigned in database.",(this)->Name.c_str());
+        delete this;
+    }
 }
 
 //********************************
@@ -2248,12 +1831,34 @@ bool ItemUse( Player *player, Item* _Item, SpellCastTargets const& targets)
 }
 
 TRINITY_DLL_EXPORT
-bool ReceiveEmote( Player *player, Creature *_Creature, uint32 emote )
+bool EffectDummyCreature(Unit *caster, uint32 spellId, uint32 effIndex, Creature *crTarget )
 {
-    Script *tmpscript = m_scripts[_Creature->GetScriptId()];
-    if (!tmpscript || !tmpscript->pReceiveEmote) return false;
+    Script *tmpscript = m_scripts[crTarget->GetScriptId()];
 
-    return tmpscript->pReceiveEmote(player, _Creature, emote);
+    if (!tmpscript || !tmpscript->pEffectDummyCreature) return false;
+
+    return tmpscript->pEffectDummyCreature(caster, spellId,effIndex,crTarget);
+}
+
+TRINITY_DLL_EXPORT
+bool EffectDummyGameObj(Unit *caster, uint32 spellId, uint32 effIndex, GameObject *gameObjTarget )
+{
+    Script *tmpscript = m_scripts[gameObjTarget->GetGOInfo()->ScriptId];
+
+    if (!tmpscript || !tmpscript->pEffectDummyGameObj) return false;
+
+    return tmpscript->pEffectDummyGameObj(caster, spellId,effIndex,gameObjTarget);
+}
+
+
+TRINITY_DLL_EXPORT
+bool EffectDummyItem(Unit *caster, uint32 spellId, uint32 effIndex, Item *itemTarget )
+{
+    Script *tmpscript = m_scripts[itemTarget->GetProto()->ScriptId];
+
+    if (!tmpscript || !tmpscript->pEffectDummyItem) return false;
+
+    return tmpscript->pEffectDummyItem(caster, spellId,effIndex,itemTarget);
 }
 
 TRINITY_DLL_EXPORT

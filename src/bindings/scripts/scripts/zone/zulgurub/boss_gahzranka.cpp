@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -23,7 +23,7 @@ EndScriptData */
 
 #include "precompiled.h"
 
-#define SPELL_FROSTBREATH            21099
+#define SPELL_FROSTBREATH            16099
 #define SPELL_MASSIVEGEYSER          22421                  //Not working. Cause its a summon...
 #define SPELL_SLAM                   24326
 
@@ -41,7 +41,7 @@ struct TRINITY_DLL_DECL boss_gahzrankaAI : public ScriptedAI
         Slam_Timer = 17000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 

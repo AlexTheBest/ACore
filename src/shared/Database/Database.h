@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,8 +21,7 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
-#include "zthread/Thread.h"
-#include "../src/zthread/ThreadImpl.h"
+#include "Threading.h"
 #include "Utilities/UnorderedMap.h"
 #include "Database/SqlDelayThread.h"
 
@@ -30,10 +29,10 @@ class SqlTransaction;
 class SqlResultQueue;
 class SqlQueryHolder;
 
-typedef UNORDERED_MAP<ZThread::ThreadImpl*, SqlTransaction*> TransactionQueues;
-typedef UNORDERED_MAP<ZThread::ThreadImpl*, SqlResultQueue*> QueryQueues;
+typedef UNORDERED_MAP<ACE_Based::Thread* , SqlTransaction*> TransactionQueues;
+typedef UNORDERED_MAP<ACE_Based::Thread* , SqlResultQueue*> QueryQueues;
 
-#define MAX_QUERY_LEN   1024
+#define MAX_QUERY_LEN   32*1024
 
 class TRINITY_DLL_SPEC Database
 {
@@ -43,7 +42,7 @@ class TRINITY_DLL_SPEC Database
         TransactionQueues m_tranQueues;                     ///< Transaction queues from diff. threads
         QueryQueues m_queryQueues;                          ///< Query queues from diff threads
         SqlDelayThread* m_threadBody;                       ///< Pointer to delay sql executer
-        ZThread::Thread* m_delayThread;                     ///< Pointer to executer thread
+        ACE_Based::Thread* m_delayThread;                   ///< Pointer to executer thread
 
     public:
 

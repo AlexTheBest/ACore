@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,32 +22,35 @@
 #define TRINITY_AGGRESSORAI_H
 
 #include "CreatureAI.h"
-#include "Timer.h"
+#include "CreatureAIImpl.h"
 
 class Creature;
 
 class TRINITY_DLL_DECL AggressorAI : public CreatureAI
 {
-    enum AggressorState
-    {
-        STATE_NORMAL = 1,
-        STATE_LOOK_AT_VICTIM = 2
-    };
-
     public:
-
-        AggressorAI(Creature *c);
-
-        void EnterEvadeMode();
+        explicit AggressorAI(Creature *c) : CreatureAI(c) {}
 
         void UpdateAI(const uint32);
         static int Permissible(const Creature *);
-
-    private:
-        Creature &i_creature;
-        uint64 i_victimGuid;
-        AggressorState i_state;
-        TimeTracker i_tracker;
 };
-#endif
 
+typedef std::vector<uint32> SpellVct;
+
+class TRINITY_DLL_SPEC SpellAI : public CreatureAI
+{
+    public:
+        explicit SpellAI(Creature *c) : CreatureAI(c) {}
+
+        void InitializeAI();
+        void Reset();
+        void EnterCombat(Unit* who);
+        void JustDied(Unit *killer);
+        void UpdateAI(const uint32 diff);
+        static int Permissible(const Creature *);
+    private:
+        EventMap events;
+        SpellVct spells;
+};
+
+#endif

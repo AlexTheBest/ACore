@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,6 +17,7 @@
  */
 
 #include "OutdoorPvP.h"
+#include "OutdoorPvPImpl.h"
 #include "OutdoorPvPMgr.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
@@ -83,7 +84,7 @@ bool OutdoorPvPObjective::AddObject(uint32 type, uint32 entry, uint32 map, float
     data.spawntimesecs  = 0;
     data.animprogress   = 100;
     data.spawnMask      = 1;
-    data.go_state       = 1;
+    data.go_state       = GO_STATE_READY;
 
     objmgr.AddGameobjectToGrid(guid, &data);
 
@@ -95,7 +96,7 @@ bool OutdoorPvPObjective::AddObject(uint32 type, uint32 entry, uint32 map, float
     if(!pMap)
         return true;
     GameObject * go = new GameObject;
-    if(!go->Create(guid,entry, pMap,x,y,z,o,rotation0,rotation1,rotation2,rotation3,100,1))
+    if(!go->Create(guid,entry, pMap,PHASEMASK_NORMAL,x,y,z,o,rotation0,rotation1,rotation2,rotation3,100,GO_STATE_READY))
     {
         sLog.outError("Gameobject template %u not found in database.", entry);
         delete go;
@@ -156,14 +157,12 @@ bool OutdoorPvPObjective::AddCreature(uint32 type, uint32 entry, uint32 teamval,
     if(!pMap)
         return true;
     Creature* pCreature = new Creature;
-    if (!pCreature->Create(guid, pMap, entry, teamval))
+    if (!pCreature->Create(guid, pMap, PHASEMASK_NORMAL, entry, teamval))
     {
         sLog.outError("Can't create creature entry: %u",entry);
         delete pCreature;
-        return true;
+        return false;
     }
-
-    pCreature->AIM_Initialize();
 
     pCreature->Relocate(x, y, z, o);
 
@@ -240,7 +239,7 @@ bool OutdoorPvPObjective::AddCapturePoint(uint32 entry, uint32 map, float x, flo
     data.spawntimesecs  = 1;
     data.animprogress   = 100;
     data.spawnMask      = 1;
-    data.go_state       = 1;
+    data.go_state       = GO_STATE_READY;
 
     objmgr.AddGameobjectToGrid(guid, &data);
 
@@ -257,7 +256,7 @@ bool OutdoorPvPObjective::AddCapturePoint(uint32 entry, uint32 map, float x, flo
         return true;
     // add GO...
     GameObject * go = new GameObject;
-    if(!go->Create(guid,entry, pMap,x,y,z,o,rotation0,rotation1,rotation2,rotation3,100,1))
+    if(!go->Create(guid,entry, pMap,PHASEMASK_NORMAL,x,y,z,o,rotation0,rotation1,rotation2,rotation3,100,GO_STATE_READY))
     {
         sLog.outError("Gameobject template %u not found in database.", entry);
         delete go;
@@ -270,15 +269,14 @@ bool OutdoorPvPObjective::AddCapturePoint(uint32 entry, uint32 map, float x, flo
     }
     // add creature...
     Creature* pCreature = new Creature;
-    if (!pCreature->Create(creature_guid, pMap, OPVP_TRIGGER_CREATURE_ENTRY, 0))
+    if (!pCreature->Create(creature_guid, pMap, PHASEMASK_NORMAL, OPVP_TRIGGER_CREATURE_ENTRY, 0))
     {
         sLog.outError("Can't create creature entry: %u",entry);
         delete pCreature;
+        return false;
     }
     else
     {
-        pCreature->AIM_Initialize();
-
         pCreature->Relocate(x, y, z, o);
 
         if(!pCreature->IsPositionValid())
@@ -317,8 +315,8 @@ bool OutdoorPvPObjective::DelCreature(uint32 type)
     // explicit removal from map
     // beats me why this is needed, but with the recent removal "cleanup" some creatures stay in the map if "properly" deleted
     // so this is a big fat workaround, if AddObjectToRemoveList and DoDelayedMovesAndRemoves worked correctly, this wouldn't be needed
-    if(Map * map = MapManager::Instance().FindMap(cr->GetMapId()))
-        map->Remove(cr,false);
+    //if(Map * map = MapManager::Instance().FindMap(cr->GetMapId()))
+    //    map->Remove(cr,false);
     // delete respawn time for this creature
     WorldDatabase.PExecute("DELETE FROM creature_respawn WHERE guid = '%u'", guid);
     cr->AddObjectToRemoveList();
@@ -375,8 +373,8 @@ bool OutdoorPvPObjective::DelCapturePoint()
             // explicit removal from map
             // beats me why this is needed, but with the recent removal "cleanup" some creatures stay in the map if "properly" deleted
             // so this is a big fat workaround, if AddObjectToRemoveList and DoDelayedMovesAndRemoves worked correctly, this wouldn't be needed
-            if(Map * map = MapManager::Instance().FindMap(cr->GetMapId()))
-                map->Remove(cr,false);
+            //if(Map * map = MapManager::Instance().FindMap(cr->GetMapId()))
+            //    map->Remove(cr,false);
             // delete respawn time for this creature
             WorldDatabase.PExecute("DELETE FROM creature_respawn WHERE guid = '%u'", guid);
             cr->AddObjectToRemoveList();
@@ -413,10 +411,7 @@ OutdoorPvP::~OutdoorPvP()
 
 void OutdoorPvP::HandlePlayerEnterZone(Player * plr, uint32 zone)
 {
-    if(plr->GetTeam()==ALLIANCE)
-        m_PlayerGuids[0].insert(plr->GetGUID());
-    else
-        m_PlayerGuids[1].insert(plr->GetGUID());
+    m_players[TEAM_ID(plr->GetTeam())].insert(plr);
 }
 
 void OutdoorPvP::HandlePlayerLeaveZone(Player * plr, uint32 zone)
@@ -425,13 +420,10 @@ void OutdoorPvP::HandlePlayerLeaveZone(Player * plr, uint32 zone)
     for(OutdoorPvPObjectiveSet::iterator itr = m_OutdoorPvPObjectives.begin(); itr != m_OutdoorPvPObjectives.end(); ++itr)
         (*itr)->HandlePlayerLeave(plr);
     // remove the world state information from the player (we can't keep everyone up to date, so leave out those who are not in the concerning zones)
-    if(zone != plr->GetZoneId())
+    if(!plr->GetSession()->PlayerLogout())
         SendRemoveWorldStates(plr);
-    if(plr->GetTeam()==ALLIANCE)
-        m_PlayerGuids[0].erase(plr->GetGUID());
-    else
-        m_PlayerGuids[1].erase(plr->GetGUID());
-    sLog.outDebug("player left an outdoorpvp zone");
+    m_players[TEAM_ID(plr->GetTeam())].erase(plr);
+    sLog.outDebug("Player %s left an outdoorpvp zone");
 }
 
 bool OutdoorPvP::Update(uint32 diff)
@@ -572,14 +564,8 @@ void OutdoorPvP::SendUpdateWorldState(uint32 field, uint32 value)
     for(int i = 0; i < 2; ++i)
     {
         // send to all players present in the area
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[i].begin(); itr != m_PlayerGuids[i].end(); ++itr)
-        {
-            Player * plr = objmgr.GetPlayer(*itr);
-            if(plr)
-            {
-                plr->SendUpdateWorldState(field,value);
-            }
-        }
+        for(PlayerSet::iterator itr = m_players[i].begin(); itr != m_players[i].end(); ++itr)
+            (*itr)->SendUpdateWorldState(field,value);
     }
 }
 
@@ -779,3 +765,28 @@ bool OutdoorPvP::HandleAreaTrigger(Player *plr, uint32 trigger)
     return false;
 }
 
+void OutdoorPvP::RegisterZone(uint32 zoneId)
+{
+    sOutdoorPvPMgr.AddZone(zoneId, this);
+}
+
+bool OutdoorPvP::HasPlayer(Player *plr) const
+{
+    return m_players[TEAM_ID(plr->GetTeam())].find(plr) != m_players[TEAM_ID(plr->GetTeam())].end();
+}
+
+void OutdoorPvP::TeamCastSpell(TeamId team, int32 spellId)
+{
+    if(spellId > 0)
+        for(PlayerSet::iterator itr = m_players[team].begin(); itr != m_players[team].end(); ++itr)
+            (*itr)->CastSpell(*itr, (uint32)spellId, true);
+    else
+        for(PlayerSet::iterator itr = m_players[team].begin(); itr != m_players[team].end(); ++itr)
+            (*itr)->RemoveAura((uint32)-spellId); // by stack?
+}
+
+void OutdoorPvP::TeamApplyBuff(TeamId team, uint32 spellId, uint32 spellId2)
+{
+    TeamCastSpell(team, spellId);
+    TeamCastSpell(OTHER_TEAM(team), spellId2 ? -(int32)spellId2 : -(int32)spellId);
+}
