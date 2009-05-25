@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -28,27 +28,25 @@ EndScriptData */
 
 #define GENERIC_CREATURE_COOLDOWN 5000
 
+#define SAY_GUARD_SIL_AGGRO1        -1070001
+#define SAY_GUARD_SIL_AGGRO2        -1070002
+#define SAY_GUARD_SIL_AGGRO3        -1070003
+
 void guardAI::Reset()
 {
     GlobalCooldown = 0;
     BuffTimer = 0;                                          //Rebuff as soon as we can
 }
 
-void guardAI::Aggro(Unit *who)
+void guardAI::EnterCombat(Unit *who)
 {
     if (m_creature->GetEntry() == 15184)
     {
         switch(rand()%3)
         {
-        case 0:
-            DoSay("Taste blade, mongrel!", LANG_UNIVERSAL,NULL);
-            break;
-        case 1:
-            DoSay("Please tell me that you didn't just do what I think you just did. Please tell me that I'm not going to have to hurt you...", LANG_UNIVERSAL,NULL);
-            break;
-        case 2:
-            DoSay("As if we don't have enough problems, you go and create more!", LANG_UNIVERSAL,NULL);
-            break;
+            case 0: DoScriptText(SAY_GUARD_SIL_AGGRO1, m_creature, who); break;
+			case 1: DoScriptText(SAY_GUARD_SIL_AGGRO1, m_creature, who); break;
+			case 2: DoScriptText(SAY_GUARD_SIL_AGGRO1, m_creature, who); break;
         }
     }
 
@@ -71,7 +69,7 @@ void guardAI::UpdateAI(const uint32 diff)
     else GlobalCooldown = 0;
 
     //Buff timer (only buff when we are alive and not in combat
-    if (m_creature->isAlive() && !InCombat)
+    if (m_creature->isAlive() && !m_creature->isInCombat())
         if (BuffTimer < diff )
     {
         //Find a spell that targets friendly and applies an aura (these are generally buffs)

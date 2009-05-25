@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,49 +81,6 @@ uint32 OutdoorPvPObjectiveNA::GetAliveGuardsCount()
         }
     }
     return cnt;
-}
-
-void OutdoorPvPNA::BuffTeam(uint32 team)
-{
-    if(team == ALLIANCE)
-    {
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[0].begin(); itr != m_PlayerGuids[0].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->CastSpell(plr,NA_CAPTURE_BUFF,true);
-        }
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[1].begin(); itr != m_PlayerGuids[1].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(NA_CAPTURE_BUFF);
-        }
-    }
-    else if(team == HORDE)
-    {
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[1].begin(); itr != m_PlayerGuids[1].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->CastSpell(plr,NA_CAPTURE_BUFF,true);
-        }
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[0].begin(); itr != m_PlayerGuids[0].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(NA_CAPTURE_BUFF);
-        }
-    }
-    else
-    {
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[0].begin(); itr != m_PlayerGuids[0].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(NA_CAPTURE_BUFF);
-        }
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[1].begin(); itr != m_PlayerGuids[1].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(NA_CAPTURE_BUFF);
-        }
-    }
 }
 
 void OutdoorPvPObjectiveNA::SpawnNPCsForTeam(uint32 team)
@@ -222,7 +179,7 @@ void OutdoorPvPObjectiveNA::FactionTakeOver(uint32 team)
     this->UpdateWyvernRoostWorldState(NA_ROOST_N);
     this->UpdateWyvernRoostWorldState(NA_ROOST_W);
     this->UpdateWyvernRoostWorldState(NA_ROOST_E);
-    ((OutdoorPvPNA*)m_PvP)->BuffTeam(team);
+    m_PvP->TeamApplyBuff(TEAM_ID(team), NA_CAPTURE_BUFF);
 }
 
 bool OutdoorPvPObjectiveNA::HandlePlayerEnter(Player *plr)
@@ -256,7 +213,7 @@ bool OutdoorPvPNA::SetupOutdoorPvP()
 {
 //    m_TypeId = OUTDOOR_PVP_NA; _MUST_ be set in ctor, because of spawns cleanup
     // add the zones affected by the pvp buff
-    sOutdoorPvPMgr.AddZone(NA_BUFF_ZONE,this);
+    RegisterZone(NA_BUFF_ZONE);
 
     // halaa
     m_obj = new OutdoorPvPObjectiveNA(this);

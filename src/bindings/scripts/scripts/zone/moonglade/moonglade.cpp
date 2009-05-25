@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -71,12 +71,7 @@ bool GossipSelect_npc_bunthen_plainswind(Player *player, Creature *_Creature, ui
             player->CLOSE_GOSSIP_MENU();
             if (player->getClass() == CLASS_DRUID && player->GetTeam() == HORDE)
             {
-                std::vector<uint32> nodes;
-
-                nodes.resize(2);
-                nodes[0] = 63;                              // Nighthaven, Moonglade
-                nodes[1] = 22;                              // Thunder Bluff, Mulgore
-                player->ActivateTaxiPathTo(nodes);
+                player->ActivateTaxiPathTo(316);
             }
             break;
         }
@@ -177,14 +172,7 @@ bool GossipSelect_npc_silva_filnaveth(Player *player, Creature *_Creature, uint3
         {
             player->CLOSE_GOSSIP_MENU();
             if (player->getClass() == CLASS_DRUID && player->GetTeam() == ALLIANCE)
-            {
-                std::vector<uint32> nodes;
-
-                nodes.resize(2);
-                nodes[0] = 62;                              // Nighthaven, Moonglade
-                nodes[1] = 27;                              // Rut'theran Village, Teldrassil
-                player->ActivateTaxiPathTo(nodes);
-            }
+                player->ActivateTaxiPathTo(315);
             break;
         }
         case GOSSIP_ACTION_INFO_DEF + 2:
@@ -317,7 +305,7 @@ public:
         npc_escortAI::EnterEvadeMode();
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         uint32 rnd = rand()%2;
         switch(rnd)
@@ -353,13 +341,16 @@ public:
             return;
         }
 
-        if(!InCombat && !Event_onWait && checkPlayer_Timer < diff)
+        if(!m_creature->isInCombat() && !Event_onWait)
         {
-            Player *player = (Player *)Unit::GetUnit((*m_creature), PlayerGUID);
-            if(player && player->isInCombat() && player->getAttackerForHelper())
-                AttackStart(player->getAttackerForHelper());
-            checkPlayer_Timer = 1000;
-        } else if(!InCombat && !Event_onWait) checkPlayer_Timer -= diff;
+            if(checkPlayer_Timer < diff)
+            {
+                Player *player = (Player *)Unit::GetUnit((*m_creature), PlayerGUID);
+                if(player && player->isInCombat() && player->getAttackerForHelper())
+                    AttackStart(player->getAttackerForHelper());
+                checkPlayer_Timer = 1000;
+            }else checkPlayer_Timer -= diff;
+        }
 
         if(Event_onWait && Event_Timer < diff)
         {

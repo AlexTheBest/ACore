@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -25,8 +25,6 @@ EndScriptData */
 npc_manaforge_control_console
 go_manaforge_control_console
 npc_commander_dawnforge
-npc_protectorate_nether_drake
-npc_veronia
 npc_bessy
 EndContentData */
 
@@ -83,7 +81,7 @@ struct TRINITY_DLL_DECL npc_manaforge_control_consoleAI : public ScriptedAI
         Creature* add = NULL;
     }
 
-    void Aggro(Unit *who) { return; }
+    void EnterCombat(Unit *who) { return; }
 
     /*void SpellHit(Unit *caster, const SpellEntry *spell)
     {
@@ -391,7 +389,7 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
         isEvent = false;
     }
 
-    void Aggro(Unit *who) { }
+    void EnterCombat(Unit *who) { }
 
     //Select any creature in a grid
     Creature* SelectCreatureInGrid(uint32 entry, float range)
@@ -404,7 +402,7 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
         cell.SetNoCreate();
 
         Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck creature_check(*m_creature, entry, true, range);
-        Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(pCreature, creature_check);
+		Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(m_creature, pCreature, creature_check);
 
         TypeContainerVisitor<Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck>, GridTypeMapContainer> creature_searcher(searcher);
 
@@ -441,8 +439,8 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
         ardonis->SendUpdateToPlayer(player);
 
         //Set them to kneel
-        m_creature->SetStandState(PLAYER_STATE_KNEEL);
-        ardonis->SetStandState(PLAYER_STATE_KNEEL);
+		m_creature->SetStandState(UNIT_STAND_STATE_KNEEL);
+		ardonis->SetStandState(UNIT_STAND_STATE_KNEEL);
     }
 
     //Set them back to each other
@@ -466,8 +464,8 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
             ardonis->SendUpdateToPlayer(player);
 
             //Set state
-            m_creature->SetStandState(PLAYER_STATE_NONE);
-            ardonis->SetStandState(PLAYER_STATE_NONE);
+			m_creature->SetStandState(UNIT_STAND_STATE_STAND);
+			ardonis->SetStandState(UNIT_STAND_STATE_STAND);
         }
     }
 
@@ -639,7 +637,7 @@ Creature* SearchDawnforge(Player *source, uint32 entry, float range)
     cell.SetNoCreate();
 
     Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck creature_check(*source, entry, true, range);
-    Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(pCreature, creature_check);
+	Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(source, pCreature, creature_check);
 
     TypeContainerVisitor<Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck>, GridTypeMapContainer> creature_searcher(searcher);
 
@@ -652,7 +650,7 @@ Creature* SearchDawnforge(Player *source, uint32 entry, float range)
 bool AreaTrigger_at_commander_dawnforge(Player *player, AreaTriggerEntry *at)
 {
     //if player lost aura or not have at all, we should not try start event.
-    if (!player->HasAura(SPELL_SUNFURY_DISGUISE,0))
+    if (!player->HasAura(SPELL_SUNFURY_DISGUISE))
         return false;
 
     if (player->isAlive() && player->GetQuestStatus(QUEST_INFO_GATHERING) == QUEST_STATUS_INCOMPLETE)
@@ -666,39 +664,6 @@ bool AreaTrigger_at_commander_dawnforge(Player *player, AreaTriggerEntry *at)
             return true;
     }
     return false;
-}
-
-/*######
-## npc_protectorate_nether_drake
-######*/
-
-#define GOSSIP_ITEM "I'm ready to fly! Take me up, dragon!"
-
-bool GossipHello_npc_protectorate_nether_drake(Player *player, Creature *_Creature)
-{
-    //On Nethery Wings
-    if (player->GetQuestStatus(10438) == QUEST_STATUS_INCOMPLETE && player->HasItemCount(29778,1) )
-        player->ADD_GOSSIP_ITEM(0, GOSSIP_ITEM, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
-
-    player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
-
-    return true;
-}
-
-bool GossipSelect_npc_protectorate_nether_drake(Player *player, Creature *_Creature, uint32 sender, uint32 action )
-{
-    if (action == GOSSIP_ACTION_INFO_DEF+1)
-    {
-        player->CLOSE_GOSSIP_MENU();
-
-        std::vector<uint32> nodes;
-
-        nodes.resize(2);
-        nodes[0] = 152;                                     //from drake
-        nodes[1] = 153;                                     //end at drake
-        player->ActivateTaxiPathTo(nodes);                  //TaxiPath 627 (possibly 627+628(152->153->154->155) )
-    }
-    return true;
 }
 
 /*######
@@ -745,36 +710,6 @@ bool QuestAccept_npc_professor_dabiri(Player *player, Creature *creature, Quest 
 }
 
 /*######
-## npc_veronia
-######*/
-
-#define GOSSIP_HV "Fly me to Manaforge Coruu please"
-
-bool GossipHello_npc_veronia(Player *player, Creature *_Creature)
-{
-    if (_Creature->isQuestGiver())
-        player->PrepareQuestMenu( _Creature->GetGUID() );
-
-    //Behind Enemy Lines
-    if (player->GetQuestStatus(10652) && !player->GetQuestRewardStatus(10652))
-        player->ADD_GOSSIP_ITEM(0, GOSSIP_HV, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
-
-    player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
-
-    return true;
-}
-
-bool GossipSelect_npc_veronia(Player *player, Creature *_Creature, uint32 sender, uint32 action )
-{
-    if (action == GOSSIP_ACTION_INFO_DEF)
-    {
-        player->CLOSE_GOSSIP_MENU();
-        player->CastSpell(player,34905,true);               //TaxiPath 606
-    }
-    return true;
-}
-
-/*######
 ## mob_phase_hunter
 ######*/
 
@@ -814,7 +749,7 @@ struct TRINITY_DLL_DECL mob_phase_hunterAI : public ScriptedAI
         ManaBurnTimer = 5000 + (rand()%3 * 1000); // 5-8 sec cd
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(Player *player = who->GetCharmerOrOwnerPlayerOrPlayerItself())
             PlayerGUID = player->GetGUID();
@@ -858,7 +793,7 @@ struct TRINITY_DLL_DECL mob_phase_hunterAI : public ScriptedAI
                 DoScriptText(EMOTE_WEAK, m_creature);
                 Weak = true;
             }
-            if(Weak && !Drained && m_creature->HasAura(34219, 0))
+            if(Weak && !Drained && m_creature->HasAura(34219))
             {
                 Drained = true;
 
@@ -961,7 +896,7 @@ struct TRINITY_DLL_DECL npc_bessyAI : public npc_escortAI
         summoned->AI()->AttackStart(m_creature);
     }
 
-    void Aggro(Unit* who){}
+    void EnterCombat(Unit* who){}
 
     void Reset()
     {
@@ -1038,22 +973,10 @@ void AddSC_netherstorm()
     newscript->RegisterSelf();
 
     newscript = new Script;
-    newscript->Name="npc_protectorate_nether_drake";
-    newscript->pGossipHello =   &GossipHello_npc_protectorate_nether_drake;
-    newscript->pGossipSelect =  &GossipSelect_npc_protectorate_nether_drake;
-    newscript->RegisterSelf();
-
-    newscript = new Script;
     newscript->Name = "npc_professor_dabiri";
     newscript->pGossipHello =   &GossipHello_npc_professor_dabiri;
     newscript->pGossipSelect =  &GossipSelect_npc_professor_dabiri;
     newscript->pQuestAccept = &QuestAccept_npc_professor_dabiri;
-    newscript->RegisterSelf();
-
-    newscript = new Script;
-    newscript->Name="npc_veronia";
-    newscript->pGossipHello =   &GossipHello_npc_veronia;
-    newscript->pGossipSelect =  &GossipSelect_npc_veronia;
     newscript->RegisterSelf();
 
     newscript = new Script;

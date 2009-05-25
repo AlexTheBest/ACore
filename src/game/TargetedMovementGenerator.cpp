@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,6 @@
 #include "TargetedMovementGenerator.h"
 #include "Errors.h"
 #include "Creature.h"
-#include "MapManager.h"
 #include "DestinationHolderImp.h"
 #include "World.h"
 
@@ -52,15 +51,29 @@ TargetedMovementGenerator<T>::_setTargetLocation(T &owner)
     if( owner.hasUnitState(UNIT_STAT_ROOT | UNIT_STAT_STUNNED | UNIT_STAT_DISTRACTED) )
         return;
 
-    // prevent redundant micro-movement for pets, other followers.
-    //if(i_offset && i_target->IsWithinDistInMap(&owner,2*i_offset))
-    //    return;
-
     float x, y, z;
+    Traveller<T> traveller(owner);
+    // prevent redundant micro-movement for pets, other followers.
+    if(i_offset ? i_target->IsWithinDistInMap(&owner, i_offset + 1.0f) : i_target->IsWithinMeleeRange(&owner))
+    {
+        owner.GetPosition(x, y, z);
+        i_destinationHolder.SetDestination(traveller, x, y, z, false);
+        return;
+    }
+
+    // chaser is on the way, and target did not move much
+    if(GetDestination(x, y, z) && i_target->IsWithinDist3d(x, y, z, 0.3f))
+        return;
+
     if(!i_offset)
     {
         // to nearest random contact position
         i_target->GetRandomContactPoint( &owner, x, y, z, 0, MELEE_RANGE - 0.5f );
+    }
+    else if(!i_angle && !owner.hasUnitState(UNIT_STAT_FOLLOW))
+    {
+        // caster chase
+        i_target->GetContactPoint(&owner, x, y, z, i_offset * urand(80, 100) * 0.01f);
     }
     else
     {
@@ -84,24 +97,24 @@ TargetedMovementGenerator<T>::_setTargetLocation(T &owner)
         if( i_destinationHolder.HasDestination() && i_destinationHolder.GetDestinationDiff(x,y,z) < bothObjectSize )
             return;
     */
-    Traveller<T> traveller(owner);
     i_destinationHolder.SetDestination(traveller, x, y, z);
     owner.addUnitState(UNIT_STAT_CHASE);
     if (owner.GetTypeId() == TYPEID_UNIT && ((Creature*)&owner)->canFly())
         owner.AddUnitMovementFlag(MOVEMENTFLAG_FLYING2);
+    i_destinationHolder.StartTravel(traveller);
 }
 
 template<class T>
 void
 TargetedMovementGenerator<T>::Initialize(T &owner)
 {
-    if(!&owner)
-        return;
-    owner.RemoveUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
+    if (owner.GetTypeId() == TYPEID_UNIT && ((Creature*)&owner)->HasSearchedAssistance())
+        owner.AddUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
+    else
+        owner.RemoveUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
 
     if (owner.GetTypeId() == TYPEID_UNIT && ((Creature*)&owner)->canFly())
         owner.AddUnitMovementFlag(MOVEMENTFLAG_FLYING2);
-
     _setTargetLocation(owner);
 }
 
@@ -133,7 +146,7 @@ TargetedMovementGenerator<T>::Update(T &owner, const uint32 & time_diff)
         return true;
 
     // prevent movement while casting spells with cast time or channel time
-    if ( owner.IsNonMeleeSpellCasted(false, false,  true))
+    if(owner.hasUnitState(UNIT_STAT_CASTING))
     {
         if (!owner.IsStopped())
             owner.StopMoving();
@@ -148,7 +161,7 @@ TargetedMovementGenerator<T>::Update(T &owner, const uint32 & time_diff)
 
     if( !i_destinationHolder.HasDestination() )
         _setTargetLocation(owner);
-    if( owner.IsStopped() && !i_destinationHolder.HasArrived() )
+    else if( owner.IsStopped() && !i_destinationHolder.HasArrived() )
     {
         owner.addUnitState(UNIT_STAT_CHASE);
         if (owner.GetTypeId() == TYPEID_UNIT && ((Creature*)&owner)->canFly())
@@ -170,8 +183,7 @@ TargetedMovementGenerator<T>::Update(T &owner, const uint32 & time_diff)
 
         // try to counter precision differences
         //if( i_destinationHolder.GetDistance2dFromDestSq(*i_target.getTarget()) >= dist * dist)
-        if(i_offset ? !i_target->IsWithinDistInMap(&owner,2*i_offset)
-            : !i_target->IsWithinMeleeRange(&owner))
+        if(i_offset ? !i_target->IsWithinDistInMap(&owner, i_offset + 1.0f) : !i_target->IsWithinMeleeRange(&owner))
         {
             owner.SetInFront(i_target.getTarget());         // Set new Angle For Map::
             _setTargetLocation(owner);                      //Calculate New Dest and Send data To Player

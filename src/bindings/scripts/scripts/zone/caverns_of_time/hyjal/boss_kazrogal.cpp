@@ -58,7 +58,7 @@ struct TRINITY_DLL_DECL boss_kazrogalAI : public hyjal_trashAI
             pInstance->SetData(DATA_KAZROGALEVENT, NOT_STARTED);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(pInstance && IsEvent)
             pInstance->SetData(DATA_KAZROGALEVENT, IN_PROGRESS);
@@ -145,7 +145,7 @@ struct TRINITY_DLL_DECL boss_kazrogalAI : public hyjal_trashAI
             WarStompTimer = 60000;
         }else WarStompTimer -= diff;
 
-        if(m_creature->HasAura(SPELL_MARK,0))
+        if(m_creature->HasAura(SPELL_MARK))
             m_creature->RemoveAurasDueToSpell(SPELL_MARK);
         if(MarkTimer < diff)
         {

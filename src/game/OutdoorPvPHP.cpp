@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -70,7 +70,7 @@ bool OutdoorPvPHP::SetupOutdoorPvP()
     m_HordeTowersControlled = 0;
     // add the zones affected by the pvp buff
     for(int i = 0; i < OutdoorPvPHPBuffZonesNum; ++i)
-        sOutdoorPvPMgr.AddZone(OutdoorPvPHPBuffZones[i],this);
+        RegisterZone(OutdoorPvPHPBuffZones[i]);
 
     m_OutdoorPvPObjectives.push_back(new OutdoorPvPObjectiveHP(this,HP_TOWER_BROKEN_HILL));
 
@@ -117,11 +117,14 @@ bool OutdoorPvPHP::Update(uint32 diff)
     if(changed = OutdoorPvP::Update(diff))
     {
         if(m_AllianceTowersControlled == 3)
-            BuffTeam(ALLIANCE);
+            TeamApplyBuff(TEAM_ALLIANCE, AllianceBuff, HordeBuff);
         else if(m_HordeTowersControlled == 3)
-            BuffTeam(HORDE);
+            TeamApplyBuff(TEAM_HORDE, HordeBuff, AllianceBuff);
         else
-            BuffTeam(0);
+        {
+            TeamCastSpell(TEAM_ALLIANCE, -AllianceBuff);
+            TeamCastSpell(TEAM_HORDE, -HordeBuff);
+        }
         SendUpdateWorldState(HP_UI_TOWER_COUNT_A, m_AllianceTowersControlled);
         SendUpdateWorldState(HP_UI_TOWER_COUNT_H, m_HordeTowersControlled);
     }
@@ -326,49 +329,6 @@ void OutdoorPvPObjectiveHP::HandlePlayerLeave(Player *plr)
 {
     plr->SendUpdateWorldState(HP_UI_TOWER_SLIDER_DISPLAY, 0);
     OutdoorPvPObjective::HandlePlayerLeave(plr);
-}
-
-void OutdoorPvPHP::BuffTeam(uint32 team)
-{
-    if(team == ALLIANCE)
-    {
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[0].begin(); itr != m_PlayerGuids[0].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->CastSpell(plr,AllianceBuff,true);
-        }
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[1].begin(); itr != m_PlayerGuids[1].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(HordeBuff);
-        }
-    }
-    else if(team == HORDE)
-    {
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[1].begin(); itr != m_PlayerGuids[1].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->CastSpell(plr,HordeBuff,true);
-        }
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[0].begin(); itr != m_PlayerGuids[0].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(AllianceBuff);
-        }
-    }
-    else
-    {
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[0].begin(); itr != m_PlayerGuids[0].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(AllianceBuff);
-        }
-        for(std::set<uint64>::iterator itr = m_PlayerGuids[1].begin(); itr != m_PlayerGuids[1].end(); ++itr)
-        {
-            if(Player * plr = objmgr.GetPlayer(*itr))
-                if(plr->IsInWorld()) plr->RemoveAurasDueToSpell(HordeBuff);
-        }
-    }
 }
 
 void OutdoorPvPHP::HandleKillImpl(Player *plr, Unit * killed)

@@ -28,7 +28,6 @@
 #include "GameSystem/GridReference.h"
 #include "ObjectDefines.h"
 #include "GridDefines.h"
-#include "CreatureAI.h"
 #include "Map.h"
 
 #include <set>
@@ -36,6 +35,7 @@
 
 #define CONTACT_DISTANCE            0.5f
 #define INTERACTION_DISTANCE        5.0f
+#define ATTACK_DISTANCE             5.0f
 #define MAX_VISIBILITY_DISTANCE  (5*SIZE_OF_GRID_CELL/2.0f) // max distance for visible object show, limited by active zone for player based at cell size (active zone = 5x5 cells)
 #define DEFAULT_VISIBILITY_DISTANCE (SIZE_OF_GRID_CELL)     // default visible distance
 
@@ -50,13 +50,14 @@ enum TypeMask
     TYPEMASK_OBJECT         = 0x0001,
     TYPEMASK_ITEM           = 0x0002,
     TYPEMASK_CONTAINER      = 0x0006,                       // TYPEMASK_ITEM | 0x0004
-    TYPEMASK_UNIT           = 0x0008,
+    TYPEMASK_UNIT           = 0x0008,   //creature or player
     TYPEMASK_PLAYER         = 0x0010,
     TYPEMASK_GAMEOBJECT     = 0x0020,
     TYPEMASK_DYNAMICOBJECT  = 0x0040,
     TYPEMASK_CORPSE         = 0x0080,
     TYPEMASK_AIGROUP        = 0x0100,
-    TYPEMASK_AREATRIGGER    = 0x0200
+    TYPEMASK_AREATRIGGER    = 0x0200,
+    TYPEMASK_SEER           = TYPEMASK_UNIT | TYPEMASK_DYNAMICOBJECT
 };
 
 enum TypeID
@@ -72,6 +73,7 @@ enum TypeID
     TYPEID_AIGROUP       = 8,
     TYPEID_AREATRIGGER   = 9
 };
+#define MAX_TYPEID         10
 
 uint32 GuidHigh2TypeId(uint32 guid_hi);
 
@@ -87,6 +89,12 @@ enum TempSummonType
     TEMPSUMMON_MANUAL_DESPAWN              = 8              // despawns when UnSummon() is called
 };
 
+enum PhaseMasks
+{
+    PHASEMASK_NORMAL   = 0x00000001,
+    PHASEMASK_ANYWHERE = 0xFFFFFFFF
+};
+
 class WorldPacket;
 class UpdateData;
 class ByteBuffer;
@@ -96,6 +104,9 @@ class Player;
 class UpdateMask;
 class InstanceData;
 class GameObject;
+class TempSummon;
+class Vehicle;
+class CreatureAI;
 
 typedef UNORDERED_MAP<Player*, UpdateData> UpdateDataMapType;
 
@@ -117,7 +128,7 @@ class TRINITY_DLL_SPEC Object
     public:
         virtual ~Object ( );
 
-        const bool& IsInWorld() const { return m_inWorld; }
+        const bool IsInWorld() const { return m_inWorld; }
         virtual void AddToWorld()
         {
             if(m_inWorld)
@@ -193,7 +204,7 @@ class TRINITY_DLL_SPEC Object
             return *(((uint8*)&m_uint32Values[ index ])+offset);
         }
 
-        uint8 GetUInt16Value( uint16 index, uint8 offset) const
+        uint16 GetUInt16Value( uint16 index, uint8 offset) const
         {
             ASSERT( index < m_valuesCount || PrintIndexError( index , false) );
             ASSERT( offset < 2 );
@@ -209,6 +220,9 @@ class TRINITY_DLL_SPEC Object
         void SetInt16Value(  uint16 index, uint8 offset, int16 value ) { SetUInt16Value(index,offset,(uint16)value); }
         void SetStatFloatValue( uint16 index, float value);
         void SetStatInt32Value( uint16 index, int32 value);
+
+        bool AddUInt64Value( uint16 index, const uint64 &value );
+        bool RemoveUInt64Value( uint16 index, const uint64 &value );
 
         void ApplyModUInt32Value(uint16 index, int32 val, bool apply);
         void ApplyModInt32Value(uint16 index, int32 val, bool apply);
@@ -318,7 +332,7 @@ class TRINITY_DLL_SPEC Object
         virtual void _SetUpdateBits(UpdateMask *updateMask, Player *target) const;
 
         virtual void _SetCreateBits(UpdateMask *updateMask, Player *target) const;
-        void _BuildMovementUpdate(ByteBuffer * data, uint8 flags, uint32 flags2 ) const;
+        void _BuildMovementUpdate(ByteBuffer * data, uint8 flags) const;
         void _BuildValuesUpdate(uint8 updatetype, ByteBuffer *data, UpdateMask *updateMask, Player *target ) const;
 
         uint16 m_objectType;
@@ -357,7 +371,15 @@ class TRINITY_DLL_SPEC WorldObject : public Object
 
         virtual void Update ( uint32 /*time_diff*/ ) { }
 
-        void _Create( uint32 guidlow, HighGuid guidhigh, uint32 mapid );
+        void _Create( uint32 guidlow, HighGuid guidhigh, uint32 mapid, uint32 phaseMask);
+
+        void Relocate(WorldObject *obj)
+        {
+            m_positionX = obj->GetPositionX();
+            m_positionY = obj->GetPositionY();
+            m_positionZ = obj->GetPositionZ();
+            m_orientation = obj->GetOrientation();
+        }
 
         void Relocate(float x, float y, float z, float orientation)
         {
@@ -423,8 +445,14 @@ class TRINITY_DLL_SPEC WorldObject : public Object
         void SetInstanceId(uint32 val) { m_InstanceId = val; m_map = NULL; }
         uint32 GetInstanceId() const { return m_InstanceId; }
 
+        virtual void SetPhaseMask(uint32 newPhaseMask, bool update);
+        uint32 GetPhaseMask() const { return m_phaseMask; }
+        bool InSamePhase(WorldObject const* obj) const { return InSamePhase(obj->GetPhaseMask()); }
+        bool InSamePhase(uint32 phasemask) const { return (GetPhaseMask() & phasemask); }
+
         uint32 GetZoneId() const;
         uint32 GetAreaId() const;
+        void GetZoneAndAreaId(uint32& zoneid, uint32& areaid) const;
 
         InstanceData* GetInstanceData();
 
@@ -434,27 +462,47 @@ class TRINITY_DLL_SPEC WorldObject : public Object
         virtual const char* GetNameForLocaleIdx(int32 /*locale_idx*/) const { return GetName(); }
 
         float GetDistance( const WorldObject* obj ) const;
-        float GetDistance(const float x, const float y, const float z) const;
+        float GetDistance(float x, float y, float z) const;
         float GetDistanceSq(const float &x, const float &y, const float &z) const;
+        float GetDistanceSq(const WorldObject *obj) const;
         float GetDistance2d(const WorldObject* obj) const;
-        float GetDistance2d(const float x, const float y) const;
+        float GetDistance2d(float x, float y) const;
         float GetExactDistance2d(const float x, const float y) const;
         float GetDistanceZ(const WorldObject* obj) const;
-        bool IsInMap(const WorldObject* obj) const { return GetMapId()==obj->GetMapId() && GetInstanceId()==obj->GetInstanceId(); }
-        bool IsWithinDistInMap(const WorldObject* obj, const float dist2compare, const bool is3D = true) const;
-        bool IsWithinLOS(const float x, const float y, const float z ) const;
+        bool IsInMap(const WorldObject* obj) const
+        {
+            return IsInWorld() && obj->IsInWorld() && GetMapId()==obj->GetMapId() &&
+                GetInstanceId()==obj->GetInstanceId() && InSamePhase(obj);
+        }
+        bool IsWithinDist3d(float x, float y, float z, float dist2compare) const;
+        bool IsWithinDist2d(float x, float y, float dist2compare) const;
+        bool _IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D) const;
+        bool IsWithinDist(WorldObject const* obj, float dist2compare, bool is3D = true) const
+                                                            // use only if you will sure about placing both object at same map
+        {
+            return obj && _IsWithinDist(obj,dist2compare,is3D);
+        }
+        bool IsWithinDistInMap(WorldObject const* obj, float dist2compare, bool is3D = true) const
+        {
+            return obj && IsInMap(obj) && _IsWithinDist(obj,dist2compare,is3D);
+        }
+        bool IsWithinLOS(float x, float y, float z) const;
         bool IsWithinLOSInMap(const WorldObject* obj) const;
+        bool GetDistanceOrder(WorldObject const* obj1, WorldObject const* obj2, bool is3D = true) const;
+        bool IsInRange(WorldObject const* obj, float minRange, float maxRange, bool is3D = true) const;
+        bool IsInRange2d(float x, float y, float minRange, float maxRange) const;
+        bool IsInRange3d(float x, float y, float z, float minRange, float maxRange) const;
 
         float GetAngle( const WorldObject* obj ) const;
         float GetAngle( const float x, const float y ) const;
+        void GetSinCos(const float x, const float y, float &vsin, float &vcos);
         bool HasInArc( const float arcangle, const WorldObject* obj ) const;
+        bool IsInBetween(const WorldObject *obj1, const WorldObject *obj2, float size = 0) const;
 
         virtual void SendMessageToSet(WorldPacket *data, bool self, bool to_possessor = true);
         virtual void SendMessageToSetInRange(WorldPacket *data, float dist, bool self, bool to_possessor = true);
         void BuildHeartBeatMsg( WorldPacket *data ) const;
         void BuildTeleportAckMsg( WorldPacket *data, float x, float y, float z, float ang) const;
-        bool IsBeingTeleported() { return mSemaphoreTeleport; }
-        void SetSemaphoreTeleport(bool semphsetting) { mSemaphoreTeleport = semphsetting; }
 
         void MonsterSay(const char* text, uint32 language, uint64 TargetGuid);
         void MonsterYell(const char* text, uint32 language, uint64 TargetGuid);
@@ -464,7 +512,11 @@ class TRINITY_DLL_SPEC WorldObject : public Object
         void MonsterYell(int32 textId, uint32 language, uint64 TargetGuid);
         void MonsterTextEmote(int32 textId, uint64 TargetGuid, bool IsBossEmote = false);
         void MonsterWhisper(int32 textId, uint64 receiver, bool IsBossWhisper = false);
+        void MonsterYellToZone(int32 textId, uint32 language, uint64 TargetGuid);
         void BuildMonsterChat(WorldPacket *data, uint8 msgtype, char const* text, uint32 language, char const* name, uint64 TargetGuid) const;
+
+        void PlayDistanceSound(uint32 sound_id, Player* target = NULL);
+        void PlayDirectSound(uint32 sound_id, Player* target = NULL);
 
         void SendObjectDeSpawnAnim(uint64 guid);
 
@@ -484,9 +536,10 @@ class TRINITY_DLL_SPEC WorldObject : public Object
         Map      * GetMap() const   { return m_map ? m_map : const_cast<WorldObject*>(this)->_getMap(); }
         Map      * FindMap() const  { return m_map ? m_map : const_cast<WorldObject*>(this)->_findMap(); }
         Map const* GetBaseMap() const;
-        Creature* SummonCreature(uint32 id, float x, float y, float z, float ang,TempSummonType spwtype,uint32 despwtime);
+        TempSummon* SummonCreature(uint32 id, float x, float y, float z, float ang = 0,TempSummonType spwtype = TEMPSUMMON_MANUAL_DESPAWN,uint32 despwtime = 0);
+        Vehicle*    SummonVehicle(uint32 entry, float x, float y, float z, float ang = 0);
         GameObject* SummonGameObject(uint32 entry, float x, float y, float z, float ang, float rotation0, float rotation1, float rotation2, float rotation3, uint32 respawnTime);
-        Creature* SummonTrigger(float x, float y, float z, float ang, uint32 dur, CreatureAI* (*GetAI)(Creature*) = NULL);
+        Creature*   SummonTrigger(float x, float y, float z, float ang, uint32 dur, CreatureAI* (*GetAI)(Creature*) = NULL);
         bool isActiveObject() const { return m_isActive; }
         void setActive(bool isActiveObject);
         void SetWorldObject(bool apply);
@@ -495,14 +548,23 @@ class TRINITY_DLL_SPEC WorldObject : public Object
         template<class NOTIFIER> void VisitNearbyWorldObject(const float &radius, NOTIFIER &notifier) const { GetMap()->VisitWorld(GetPositionX(), GetPositionY(), radius, notifier); }
         bool IsTempWorldObject;
 
+#ifdef MAP_BASED_RAND_GEN
+        int32 irand(int32 min, int32 max) const     { return int32 (GetMap()->mtRand.randInt(max - min)) + min; }
+        uint32 urand(uint32 min, uint32 max) const  { return GetMap()->mtRand.randInt(max - min) + min; }
+        int32 rand32() const                        { return GetMap()->mtRand.randInt(); }
+        double rand_norm() const                    { return GetMap()->mtRand.randExc(); }
+        double rand_chance() const                  { return GetMap()->mtRand.randExc(100.0); }
+#endif
+
     protected:
         explicit WorldObject();
         std::string m_name;
         bool m_isActive;
 
     private:
-        uint32 m_mapId;
-        uint32 m_InstanceId;
+        uint32 m_mapId;                                     // object at map with map_id
+        uint32 m_InstanceId;                                // in map copy with instance id
+        uint32 m_phaseMask;                                 // in area phase state
         Map    *m_map;
 
         Map* _getMap();
@@ -512,8 +574,6 @@ class TRINITY_DLL_SPEC WorldObject : public Object
         float m_positionY;
         float m_positionZ;
         float m_orientation;
-
-        bool mSemaphoreTeleport;
 };
 #endif
 

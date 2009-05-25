@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software licensed under GPL version 2
  * Please see the included DOCS/LICENSE.TXT for more information */
 
@@ -6,6 +6,8 @@
 #define SC_ESCORTAI_H
 
 #define DEFAULT_MAX_PLAYER_DISTANCE 50
+
+extern UNORDERED_MAP<uint32, std::vector<PointMovement> > PointMovementMap;
 
 struct Escort_Waypoint
 {
@@ -32,14 +34,9 @@ struct TRINITY_DLL_DECL npc_escortAI : public ScriptedAI
         // Pure Virtual Functions
         virtual void WaypointReached(uint32) = 0;
 
-        virtual void Aggro(Unit*) = 0;
-
-        virtual void Reset() = 0;
-
         // CreatureAI functions
-        npc_escortAI(Creature *c) : ScriptedAI(c), IsBeingEscorted(false), PlayerTimer(1000), MaxPlayerDistance(DEFAULT_MAX_PLAYER_DISTANCE), CanMelee(true), DespawnAtEnd(true), DespawnAtFar(true) {m_creature->GetPosition(LastPos.x, LastPos.y, LastPos.z);}
-
-        bool IsVisible(Unit*) const;
+        npc_escortAI(Creature *c) : ScriptedAI(c), IsBeingEscorted(false), PlayerTimer(1000), MaxPlayerDistance(DEFAULT_MAX_PLAYER_DISTANCE), CanMelee(true), DespawnAtEnd(true), DespawnAtFar(true)
+        {}
 
         void AttackStart(Unit*);
 
@@ -53,12 +50,13 @@ struct TRINITY_DLL_DECL npc_escortAI : public ScriptedAI
 
         void MovementInform(uint32, uint32);
 
-        void OnPossess(bool apply);
-
         // EscortAI functions
         void AddWaypoint(uint32 id, float x, float y, float z, uint32 WaitTimeMs = 0);
 
+        void FillPointMovementListForCreature();
+
         void Start(bool bAttack, bool bDefend, bool bRun, uint64 pGUID = 0);
+        void SetRun(bool bRun = true);
 
         void SetMaxPlayerDistance(float newMax) { MaxPlayerDistance = newMax; }
         float GetMaxPlayerDistance() { return MaxPlayerDistance; }
@@ -77,14 +75,8 @@ struct TRINITY_DLL_DECL npc_escortAI : public ScriptedAI
     private:
         uint32 WaitTimer;
         uint32 PlayerTimer;
+        uint32 m_uiNpcFlags;
         float MaxPlayerDistance;
-
-        struct
-        {
-            float x;
-            float y;
-            float z;
-        }LastPos;
 
         std::list<Escort_Waypoint> WaypointList;
         std::list<Escort_Waypoint>::iterator CurrentWP;
@@ -93,7 +85,7 @@ struct TRINITY_DLL_DECL npc_escortAI : public ScriptedAI
         bool Defend;
         bool Returning;
         bool ReconnectWP;
-        bool Run;
+        bool bIsRunning;
         bool CanMelee;
         bool DespawnAtEnd;
         bool DespawnAtFar;
