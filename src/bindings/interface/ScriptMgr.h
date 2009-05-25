@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
- * Thanks to the original authors: MaNGOS <http://www.mangosproject.org/>
+ * Thanks to the original authors: MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -152,7 +152,7 @@ struct TRINITY_DLL_DECL ScriptedAI : public CreatureAI
 
     void DoSay(char const* text, uint32 language)
     {
-        m_creature->Say(text,language,0);
+        m_creature->MonsterSay(text,language,0);
     }
 
     void DoGoHome();

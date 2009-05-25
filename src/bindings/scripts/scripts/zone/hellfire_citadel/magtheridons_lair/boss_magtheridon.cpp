@@ -128,7 +128,7 @@ struct TRINITY_DLL_DECL mob_abyssalAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit*) {DoZoneInCombat();}
+    void EnterCombat(Unit*) {DoZoneInCombat();}
     void AttackStart(Unit *who) {if(!trigger) ScriptedAI::AttackStart(who);}
     void MoveInLineOfSight(Unit *who) {if(!trigger) ScriptedAI::MoveInLineOfSight(who);}
 
@@ -257,7 +257,7 @@ struct TRINITY_DLL_DECL boss_magtheridonAI : public ScriptedAI
         for(CubeMap::iterator i = Cube.begin(); i != Cube.end(); ++i)
         {
             Unit *clicker = Unit::GetUnit(*m_creature, (*i).second);
-            if(!clicker || !clicker->HasAura(SPELL_SHADOW_GRASP, 1))
+            if(!clicker || !clicker->HasAura(SPELL_SHADOW_GRASP))
             {
                 DebuffClicker(clicker);
                 (*i).second = 0;
@@ -265,12 +265,12 @@ struct TRINITY_DLL_DECL boss_magtheridonAI : public ScriptedAI
         }
 
         // if 5 clickers from other cubes apply shadow cage
-        if(ClickerNum >= CLICKERS_COUNT && !m_creature->HasAura(SPELL_SHADOW_CAGE, 0))
+        if(ClickerNum >= CLICKERS_COUNT && !m_creature->HasAura(SPELL_SHADOW_CAGE))
         {
             DoScriptText(SAY_BANISH, m_creature);
             m_creature->CastSpell(m_creature, SPELL_SHADOW_CAGE, true);
         }
-        else if(ClickerNum < CLICKERS_COUNT && m_creature->HasAura(SPELL_SHADOW_CAGE, 0))
+        else if(ClickerNum < CLICKERS_COUNT && m_creature->HasAura(SPELL_SHADOW_CAGE))
             m_creature->RemoveAurasDueToSpell(SPELL_SHADOW_CAGE);
 
         if(!ClickerNum) NeedCheckCube = false;
@@ -297,7 +297,7 @@ struct TRINITY_DLL_DECL boss_magtheridonAI : public ScriptedAI
             ScriptedAI::AttackStart(who);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(pInstance)
             pInstance->SetData(DATA_MAGTHERIDON_EVENT, IN_PROGRESS);
@@ -311,7 +311,7 @@ struct TRINITY_DLL_DECL boss_magtheridonAI : public ScriptedAI
 
     void UpdateAI(const uint32 diff)
     {
-        if (!InCombat)
+        if (!m_creature->isInCombat())
         {
             if (RandChat_Timer < diff)
             {
@@ -439,7 +439,7 @@ struct TRINITY_DLL_DECL mob_hellfire_channelerAI : public ScriptedAI
         m_creature->CastSpell(m_creature, SPELL_SHADOW_GRASP_C, false);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(pInstance)
             pInstance->SetData(DATA_CHANNELER_EVENT, IN_PROGRESS);
@@ -510,7 +510,7 @@ bool GOHello_go_Manticron_Cube(Player *player, GameObject* _GO)
     if(!Magtheridon || !Magtheridon->isAlive()) return true;
 
     // if exhausted or already channeling return
-    if(player->HasAura(SPELL_MIND_EXHAUSTION, 0) || player->HasAura(SPELL_SHADOW_GRASP, 1))
+    if(player->HasAura(SPELL_MIND_EXHAUSTION) || player->HasAura(SPELL_SHADOW_GRASP))
         return true;
 
     player->InterruptNonMeleeSpells(false);

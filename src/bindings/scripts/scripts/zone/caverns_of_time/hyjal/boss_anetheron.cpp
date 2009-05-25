@@ -70,7 +70,7 @@ struct TRINITY_DLL_DECL boss_anetheronAI : public hyjal_trashAI
             pInstance->SetData(DATA_ANETHERONEVENT, NOT_STARTED);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(pInstance && IsEvent)
             pInstance->SetData(DATA_ANETHERONEVENT, IN_PROGRESS);
@@ -148,7 +148,7 @@ struct TRINITY_DLL_DECL boss_anetheronAI : public hyjal_trashAI
 
         if(SwarmTimer < diff)
         {
-            Unit* target = SelectUnit(SELECT_TARGET_RANDOM,0,100,true);
+            Unit* target = SelectTarget(SELECT_TARGET_RANDOM,0,100,true);
             if(target)
                 DoCast(target,SPELL_CARRION_SWARM);
 
@@ -170,7 +170,7 @@ struct TRINITY_DLL_DECL boss_anetheronAI : public hyjal_trashAI
         {
             for(uint8 i=0;i<3;++i)
             {
-                Unit* target = SelectUnit(SELECT_TARGET_RANDOM,0,100,true);
+                Unit* target = SelectTarget(SELECT_TARGET_RANDOM,0,100,true);
                 if(target)
                     target->CastSpell(target,SPELL_SLEEP,true);
             }
@@ -194,7 +194,7 @@ struct TRINITY_DLL_DECL boss_anetheronAI : public hyjal_trashAI
         }else AuraTimer -= diff;
         if(InfernoTimer < diff)
         {
-            DoCast(SelectUnit(SELECT_TARGET_RANDOM,0,100,true), SPELL_INFERNO);
+            DoCast(SelectTarget(SELECT_TARGET_RANDOM,0,100,true), SPELL_INFERNO);
             InfernoTimer = 45000;
             switch(rand()%2)
             {
@@ -242,7 +242,7 @@ struct TRINITY_DLL_DECL mob_towering_infernalAI : public ScriptedAI
         CheckTimer = 5000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
 
     }
@@ -259,11 +259,8 @@ struct TRINITY_DLL_DECL mob_towering_infernalAI : public ScriptedAI
 
     void MoveInLineOfSight(Unit *who)
     {
-        if (m_creature->GetDistance(who) <= 50 && !InCombat && m_creature->IsHostileTo(who))
-        {
-            m_creature->AddThreat(who,0.0);
-            m_creature->Attack(who,false);
-        }
+        if (m_creature->GetDistance(who) <= 50 && !m_creature->isInCombat() && m_creature->IsHostileTo(who))
+            AttackStart(who);
     }
 
     void UpdateAI(const uint32 diff)

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -55,7 +55,7 @@ struct TRINITY_DLL_DECL boss_razorgoreAI : public ScriptedAI
         m_creature->ApplySpellImmune(1, IMMUNITY_EFFECT,SPELL_EFFECT_ATTACK_ME, true);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoZoneInCombat();
     }
@@ -104,7 +104,7 @@ struct TRINITY_DLL_DECL boss_razorgoreAI : public ScriptedAI
         }else Conflagration_Timer -= diff;
 
         // Aura Check. If the gamer is affected by confliguration we attack a random gamer.
-        if (m_creature->getVictim()->HasAura(SPELL_CONFLAGRATION,0))
+        if (m_creature->getVictim()->HasAura(SPELL_CONFLAGRATION))
         {
             Unit* target = NULL;
             target = SelectUnit(SELECT_TARGET_RANDOM,1);

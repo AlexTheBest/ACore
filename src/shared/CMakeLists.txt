@@ -6,18 +6,15 @@ add_subdirectory(Database)
 ########### next target ###############
 
 SET(shared_STAT_SRCS
-   Base.cpp
-   Base.h
    ByteBuffer.h
    Common.cpp
    Common.h
    Errors.h
    Log.cpp
    Log.h
-   Mthread.cpp
-   Mthread.h
    ProgressBar.cpp
    ProgressBar.h
+   Threading.cpp
    Timer.h
    Util.cpp
    Util.h
@@ -26,3 +23,7 @@ SET(shared_STAT_SRCS
 )
 
 add_library(shared STATIC ${shared_STAT_SRCS})
+target_link_libraries(
+shared
+${ACE_LIBRARY}
+)

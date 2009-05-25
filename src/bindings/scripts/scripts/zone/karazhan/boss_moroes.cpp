@@ -295,11 +295,15 @@ struct TRINITY_DLL_DECL boss_moroesAI : public ScriptedAI
 
             if (Blind_Timer < diff)
             {
-                Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 0, 5, true);
-                if (target && m_creature->IsWithinMeleeRange(target))
+                Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 0);
+                if (target && target->GetTypeId() == TYPEID_PLAYER && m_creature->IsWithinMeleeRange(target))
+                {
                     DoCast(target, SPELL_BLIND);
 
-                Blind_Timer = 40000;
+                    Blind_Timer = 40000;
+                }
+                else
+                    Blind_Timer = 1000;
             }else Blind_Timer -= diff;
         }
 

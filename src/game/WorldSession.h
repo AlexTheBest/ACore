@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,7 @@
 #define __WORLDSESSION_H
 
 #include "Common.h"
+#include "SharedDefines.h"
 
 class MailItemsInfo;
 struct ItemPrototype;
@@ -46,6 +47,32 @@ class LoginQueryHolder;
 class CharacterHandler;
 
 #define CHECK_PACKET_SIZE(P,S) if((P).size() < (S)) return SizeError((P),(S));
+
+#define NUM_ACCOUNT_DATA_TYPES 8
+
+struct AccountData
+{
+    AccountData() : Time(0), Data("") {}
+
+    time_t Time;
+    std::string Data;
+};
+
+struct AddonInfo
+{
+    AddonInfo(std::string name, uint8 enabled, uint32 crc)
+    {
+        Name = name;
+        Enabled = enabled;
+        CRC = crc;
+    }
+
+    std::string Name;
+    uint8 Enabled;
+    uint32 CRC;
+};
+
+typedef std::list<AddonInfo> AddonsList;
 
 enum PartyOperation
 {
@@ -73,13 +100,19 @@ class TRINITY_DLL_SPEC WorldSession
 {
     friend class CharacterHandler;
     public:
-        WorldSession(uint32 id, WorldSocket *sock, uint32 sec, uint8 expansion, time_t mute_time, LocaleConstant locale);
+        WorldSession(uint32 id, WorldSocket *sock, AccountTypes sec, uint8 expansion, time_t mute_time, LocaleConstant locale);
         ~WorldSession();
 
         bool PlayerLoading() const { return m_playerLoading; }
         bool PlayerLogout() const { return m_playerLogout; }
 
         void SizeError(WorldPacket const& packet, uint32 size) const;
+
+        void ReadAddonsInfo(WorldPacket &data);
+        void SendAddonsInfo();
+
+        void ReadMovementInfo(WorldPacket &data, MovementInfo *mi);
+        void OutMovementInfo(MovementInfo *mi);
 
         void SendPacket(WorldPacket const* packet);
         void SendNotification(const char *format,...) ATTR_PRINTF(2,3);
@@ -88,12 +121,13 @@ class TRINITY_DLL_SPEC WorldSession
         void SendLfgResult(uint32 type, uint32 entry, uint8 lfg_type);
         void SendPartyResult(PartyOperation operation, const std::string& member, PartyResult res);
         void SendAreaTriggerMessage(const char* Text, ...) ATTR_PRINTF(2,3);
+        void SendSetPhaseShift(uint32 phaseShift);
 
-        uint32 GetSecurity() const { return _security; }
+        AccountTypes GetSecurity() const { return _security; }
         uint32 GetAccountId() const { return _accountId; }
         Player* GetPlayer() const { return _player; }
         char const* GetPlayerName() const;
-        void SetSecurity(uint32 security) { _security = security; }
+        void SetSecurity(AccountTypes security) { _security = security; }
         std::string const& GetRemoteAddress() { return m_Address; }
         void SetPlayer(Player *plr) { _player = plr; }
         uint8 Expansion() const { return m_expansion; }
@@ -141,7 +175,7 @@ class TRINITY_DLL_SPEC WorldSession
 
         void SendAttackStop(Unit const* enemy);
 
-        void SendBattlegGroundList( uint64 guid, uint32 bgTypeId );
+        void SendBattlegGroundList( uint64 guid, BattleGroundTypeId bgTypeId );
 
         void SendTradeStatus(uint32 status);
         void SendCancelTrade();
@@ -152,6 +186,11 @@ class TRINITY_DLL_SPEC WorldSession
 
         //pet
         void SendPetNameQuery(uint64 guid, uint32 petnumber);
+
+        // Account Data
+        AccountData *GetAccountData(uint32 type) { return &m_accountData[type]; }
+        void SetAccountData(uint32 type, time_t time_, std::string data);
+        void LoadAccountData();
 
         //mail
                                                             //used with item_page table
@@ -309,6 +348,7 @@ class TRINITY_DLL_SPEC WorldSession
 
         void HandleGameObjectUseOpcode(WorldPacket& recPacket);
         void HandleMeetingStoneInfo(WorldPacket& recPacket);
+        void HandleGameobjectReportUse(WorldPacket& recvPacket);
 
         void HandleNameQueryOpcode(WorldPacket& recvPacket);
 
@@ -322,9 +362,11 @@ class TRINITY_DLL_SPEC WorldSession
         void HandleMoveWorldportAckOpcode();                // for server-side calls
 
         void HandleMovementOpcodes(WorldPacket& recvPacket);
-        void HandlePossessedMovement(WorldPacket& recv_data, MovementInfo& movementInfo, uint32& MovementFlags);
         void HandleSetActiveMoverOpcode(WorldPacket &recv_data);
-        void HandleNotActiveMoverOpcode(WorldPacket &recv_data);
+        void HandleMoveNotActiveMover(WorldPacket &recv_data);
+        void HandleDismissControlledVehicle(WorldPacket &recv_data);
+        void HandleRequestVehicleExit(WorldPacket &recv_data);
+        void HandleChangeSeatsOnControlledVehicle(WorldPacket &recv_data);
         void HandleMoveTimeSkippedOpcode(WorldPacket &recv_data);
 
         void HandleRequestRaidInfoOpcode( WorldPacket & recv_data );
@@ -385,7 +427,7 @@ class TRINITY_DLL_SPEC WorldSession
         void HandleGuildSaveEmblemOpcode(WorldPacket& recvPacket);
 
         void HandleTaxiNodeStatusQueryOpcode(WorldPacket& recvPacket);
-        void HandleTaxiQueryAvailableNodesOpcode(WorldPacket& recvPacket);
+        void HandleTaxiQueryAvailableNodes(WorldPacket& recvPacket);
         void HandleActivateTaxiOpcode(WorldPacket& recvPacket);
         void HandleActivateTaxiFarOpcode(WorldPacket& recvPacket);
         void HandleTaxiNextDestinationOpcode(WorldPacket& recvPacket);
@@ -429,6 +471,7 @@ class TRINITY_DLL_SPEC WorldSession
         void HandleAuctionRemoveItem( WorldPacket & recv_data );
         void HandleAuctionListOwnerItems( WorldPacket & recv_data );
         void HandleAuctionPlaceBid( WorldPacket & recv_data );
+        void HandleAuctionListPendingSales( WorldPacket & recv_data );
 
         void HandleGetMail( WorldPacket & recv_data );
         void HandleSendMail( WorldPacket & recv_data );
@@ -536,6 +579,7 @@ class TRINITY_DLL_SPEC WorldSession
 
         //Pet
         void HandlePetAction( WorldPacket & recv_data );
+        void HandlePetActionHelper(Unit *pet, uint64 guid1, uint16 spellid, uint16 flag, uint64 guid2);
         void HandlePetNameQuery( WorldPacket & recv_data );
         void HandlePetSetAction( WorldPacket & recv_data );
         void HandlePetAbandon( WorldPacket & recv_data );
@@ -544,6 +588,7 @@ class TRINITY_DLL_SPEC WorldSession
         void HandlePetUnlearnOpcode( WorldPacket& recvPacket );
         void HandlePetSpellAutocastOpcode( WorldPacket& recvPacket );
         void HandlePetCastSpellOpcode( WorldPacket& recvPacket );
+        void HandlePetLearnTalent( WorldPacket& recvPacket );
 
         void HandleSetActionBar(WorldPacket& recv_data);
 
@@ -580,10 +625,9 @@ class TRINITY_DLL_SPEC WorldSession
         void HandleLfmSetNoneOpcode(WorldPacket& recv_data);
         void HandleLfmSetOpcode(WorldPacket& recv_data);
         void HandleLfgSetCommentOpcode(WorldPacket& recv_data);
-        void HandleNewUnknownOpcode(WorldPacket& recv_data);
         void HandleChooseTitleOpcode(WorldPacket& recv_data);
         void HandleRealmStateRequestOpcode(WorldPacket& recv_data);
-        void HandleAllowMoveAckOpcode(WorldPacket& recv_data);
+        void HandleTimeSyncResp(WorldPacket& recv_data);
         void HandleWhoisOpcode(WorldPacket& recv_data);
         void HandleResetInstancesOpcode(WorldPacket& recv_data);
 
@@ -629,6 +673,29 @@ class TRINITY_DLL_SPEC WorldSession
         void HandleGuildBankBuyTab(WorldPacket& recv_data);
         void HandleGuildBankTabText(WorldPacket& recv_data);
         void HandleGuildBankSetTabText(WorldPacket& recv_data);
+
+        // Calendar
+        void HandleCalendarGetCalendar(WorldPacket& recv_data);
+        void HandleCalendarGetEvent(WorldPacket& recv_data);
+        void HandleCalendarGuildFilter(WorldPacket& recv_data);
+        void HandleCalendarArenaTeam(WorldPacket& recv_data);
+        void HandleCalendarAddEvent(WorldPacket& recv_data);
+        void HandleCalendarUpdateEvent(WorldPacket& recv_data);
+        void HandleCalendarRemoveEvent(WorldPacket& recv_data);
+        void HandleCalendarCopyEvent(WorldPacket& recv_data);
+        void HandleCalendarEventInvite(WorldPacket& recv_data);
+        void HandleCalendarEventRsvp(WorldPacket& recv_data);
+        void HandleCalendarEventRemoveInvite(WorldPacket& recv_data);
+        void HandleCalendarEventStatus(WorldPacket& recv_data);
+        void HandleCalendarEventModeratorStatus(WorldPacket& recv_data);
+        void HandleCalendarComplain(WorldPacket& recv_data);
+        void HandleCalendarGetNumPending(WorldPacket& recv_data);
+
+        void HandleSpellClick(WorldPacket& recv_data);
+        void HandleAlterAppearance(WorldPacket& recv_data);
+        void HandleRemoveGlyph(WorldPacket& recv_data);
+        void HandleCharCustomize(WorldPacket& recv_data);
+        void HandleInspectAchievements(WorldPacket& recv_data);
     private:
         // private trade methods
         void moveItems(Item* myItems[], Item* hisItems[]);
@@ -639,7 +706,7 @@ class TRINITY_DLL_SPEC WorldSession
         WorldSocket *m_Socket;
         std::string m_Address;
 
-        uint32 _security;
+        AccountTypes _security;
         uint32 _accountId;
         uint8 m_expansion;
 
@@ -651,8 +718,9 @@ class TRINITY_DLL_SPEC WorldSession
         LocaleConstant m_sessionDbcLocale;
         int m_sessionDbLocaleIndex;
         uint32 m_latency;
-
-        ZThread::LockedQueue<WorldPacket*,ZThread::FastMutex> _recvQueue;
+        AccountData m_accountData[NUM_ACCOUNT_DATA_TYPES];
+        AddonsList m_addonsList;
+        ACE_Based::LockedQueue<WorldPacket*, ACE_Thread_Mutex> _recvQueue;
 };
 #endif
 /// @}
