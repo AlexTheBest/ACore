@@ -276,7 +276,7 @@ void WorldSession::HandleGroupUninviteGuidOpcode(WorldPacket & recv_data)
     SendPartyResult(PARTY_OP_LEAVE, "", PARTY_RESULT_NOT_IN_YOUR_PARTY);
 }
 
-void WorldSession::HandleGroupUninviteNameOpcode(WorldPacket & recv_data)
+void WorldSession::HandleGroupUninviteOpcode(WorldPacket & recv_data)
 {
     CHECK_PACKET_SIZE(recv_data,1);
 
@@ -290,7 +290,7 @@ void WorldSession::HandleGroupUninviteNameOpcode(WorldPacket & recv_data)
     // can't uninvite yourself
     if(GetPlayer()->GetName() == membername)
     {
-        sLog.outError("WorldSession::HandleGroupUninviteNameOpcode: leader %s(%d) tried to uninvite himself from the group.", GetPlayer()->GetName(), GetPlayer()->GetGUIDLow());
+        sLog.outError("WorldSession::HandleGroupUninviteOpcode: leader %s(%d) tried to uninvite himself from the group.", GetPlayer()->GetName(), GetPlayer()->GetGUIDLow());
         return;
     }
 
@@ -342,7 +342,7 @@ void WorldSession::HandleGroupSetLeaderOpcode( WorldPacket & recv_data )
     group->ChangeLeader(guid);
 }
 
-void WorldSession::HandleGroupLeaveOpcode( WorldPacket & /*recv_data*/ )
+void WorldSession::HandleGroupDisbandOpcode( WorldPacket & /*recv_data*/ )
 {
     if(!GetPlayer()->GetGroup())
         return;
@@ -409,6 +409,16 @@ void WorldSession::HandleLootRoll( WorldPacket &recv_data )
 
     // everything's fine, do it
     group->CountRollVote(GetPlayer()->GetGUID(), Guid, NumberOfPlayers, Choise);
+
+    switch (Choise)
+    {
+        case 1:
+            GetPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ROLL_NEED, 1);
+            break;
+        case 2:
+            GetPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_ROLL_GREED, 1);
+            break;
+    }
 }
 
 void WorldSession::HandleMinimapPingOpcode(WorldPacket& recv_data)
@@ -464,7 +474,7 @@ void WorldSession::HandleRandomRollOpcode(WorldPacket& recv_data)
         SendPacket(&data);
 }
 
-void WorldSession::HandleRaidIconTargetOpcode( WorldPacket & recv_data )
+void WorldSession::HandleRaidTargetUpdateOpcode( WorldPacket & recv_data )
 {
     CHECK_PACKET_SIZE(recv_data,1);
 
@@ -497,7 +507,7 @@ void WorldSession::HandleRaidIconTargetOpcode( WorldPacket & recv_data )
     }
 }
 
-void WorldSession::HandleRaidConvertOpcode( WorldPacket & /*recv_data*/ )
+void WorldSession::HandleGroupRaidConvertOpcode( WorldPacket & /*recv_data*/ )
 {
     Group *group = GetPlayer()->GetGroup();
     if(!group)
@@ -558,7 +568,7 @@ void WorldSession::HandleGroupChangeSubGroupOpcode( WorldPacket & recv_data )
     group->ChangeMembersGroup(movedPlayer, groupNr);
 }
 
-void WorldSession::HandleGroupAssistantOpcode( WorldPacket & recv_data )
+void WorldSession::HandleGroupAssistantLeaderOpcode( WorldPacket & recv_data )
 {
     CHECK_PACKET_SIZE(recv_data,8+1);
 
@@ -580,9 +590,10 @@ void WorldSession::HandleGroupAssistantOpcode( WorldPacket & recv_data )
     group->SetAssistant(guid, (flag==0?false:true));
 }
 
-void WorldSession::HandleGroupPromoteOpcode( WorldPacket & recv_data )
+void WorldSession::HandlePartyAssignmentOpcode( WorldPacket & recv_data )
 {
     CHECK_PACKET_SIZE(recv_data, 1+1+8);
+    sLog.outDebug("MSG_PARTY_ASSIGNMENT");
 
     Group *group = GetPlayer()->GetGroup();
     if(!group)
@@ -642,7 +653,7 @@ void WorldSession::HandleRaidReadyCheckOpcode( WorldPacket & recv_data )
     }
 }
 
-void WorldSession::HandleRaidReadyCheckFinishOpcode( WorldPacket & recv_data )
+void WorldSession::HandleRaidReadyCheckFinishedOpcode( WorldPacket & /*recv_data*/ )
 {
     //Group* group = GetPlayer()->GetGroup();
     //if(!group)
@@ -919,11 +930,11 @@ void WorldSession::HandleRequestPartyMemberStatsOpcode( WorldPacket &recv_data )
     sLog.outDebug( "WORLD: got CMSG_GROUP_CANCEL." );
 }*/
 
-void WorldSession::HandleGroupPassOnLootOpcode( WorldPacket & recv_data )
+void WorldSession::HandleOptOutOfLootOpcode( WorldPacket & recv_data )
 {
     CHECK_PACKET_SIZE(recv_data, 4);
 
-    sLog.outDebug("WORLD: Received CMSG_GROUP_PASS_ON_LOOT");
+    sLog.outDebug("WORLD: Received CMSG_OPT_OUT_OF_LOOT");
 
     uint32 unkn;
     recv_data >> unkn;

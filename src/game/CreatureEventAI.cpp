@@ -413,12 +413,12 @@ void CreatureEventAI::ProcessAction(CreatureEventAI_Action const& action, uint32
         }
         case ACTION_T_MORPH_TO_ENTRY_OR_MODEL:
         {
-            if (action.morph.creatireId || action.morph.modelId)
+            if (action.morph.creatureId || action.morph.modelId)
             {
                 //set model based on entry from creature_template
-                if (action.morph.creatireId)
+                if (action.morph.creatureId)
                 {
-                    if (CreatureInfo const* ci = GetCreatureTemplateStore(action.morph.creatireId))
+                    if (CreatureInfo const* ci = GetCreatureTemplateStore(action.morph.creatureId))
                     {
                         //use default display
                         if (ci->Modelid_A1)
@@ -520,12 +520,12 @@ void CreatureEventAI::ProcessAction(CreatureEventAI_Action const& action, uint32
             Creature* pCreature = NULL;
 
             if (action.summon.duration)
-                pCreature = m_creature->SummonCreature(action.summon.creatured, 0.0f, 0.0f, 0.0f, 0.0f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, action.summon.duration);
+                pCreature = m_creature->SummonCreature(action.summon.creatureId, 0.0f, 0.0f, 0.0f, 0.0f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, action.summon.duration);
             else
-                pCreature = m_creature->SummonCreature(action.summon.creatured, 0.0f, 0.0f, 0.0f, 0.0f, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 0);
+                pCreature = m_creature->SummonCreature(action.summon.creatureId, 0.0f, 0.0f, 0.0f, 0.0f, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 0);
 
             if (!pCreature)
-                sLog.outErrorDb( "CreatureEventAI: failed to spawn creature %u. Spawn event %d is on creature %d", action.summon.creatured, EventId, m_creature->GetEntry());
+                sLog.outErrorDb( "CreatureEventAI: failed to spawn creature %u. Spawn event %d is on creature %d", action.summon.creatureId, EventId, m_creature->GetEntry());
             else if (action.summon.target != TARGET_T_SELF && target)
                 pCreature->AI()->AttackStart(target);
             break;
@@ -577,15 +577,27 @@ void CreatureEventAI::ProcessAction(CreatureEventAI_Action const& action, uint32
             MeleeEnabled = action.auto_attack.state != 0;
             break;
         case ACTION_T_COMBAT_MOVEMENT:
+            // ignore no affect case
+            if(CombatMovementEnabled==(action.combat_movement.state!=0))
+                return;
+
             CombatMovementEnabled = action.combat_movement.state != 0;
 
             //Allow movement (create new targeted movement gen only if idle)
             if (CombatMovementEnabled)
             {
-                    m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim(), AttackDistance, AttackAngle);
+                if(action.combat_movement.melee && m_creature->isInCombat())
+                    if(Unit* victim = m_creature->getVictim())
+                        m_creature->SendMeleeAttackStart(victim);
+
+                m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim(), AttackDistance, AttackAngle);
             }
             else
             {
+                if(action.combat_movement.melee && m_creature->isInCombat())
+                    if(Unit* victim = m_creature->getVictim())
+                        m_creature->SendMeleeAttackStop(victim);
+
                 m_creature->GetMotionMaster()->MoveIdle();
             }
             break;
@@ -605,7 +617,7 @@ void CreatureEventAI::ProcessAction(CreatureEventAI_Action const& action, uint32
                 sLog.outErrorDb( "CreatureEventAI: Event %d incremented Phase above %u. Phase mask cannot be used with phases past %u. CreatureEntry = %d", EventId, MAX_PHASE-1, MAX_PHASE-1, m_creature->GetEntry());
                 Phase = MAX_PHASE-1;
             }
-            else 
+            else
                 Phase = new_phase;
 
             break;
