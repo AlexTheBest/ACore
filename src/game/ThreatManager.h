@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,20 +45,8 @@ class ThreatCalcHelper
 };
 
 //==============================================================
-
 class TRINITY_DLL_SPEC HostilReference : public Reference<Unit, ThreatManager>
 {
-    private:
-        float iThreat;
-        float iTempThreatModifyer;                          // used for taunt
-        uint64 iUnitGuid;
-        bool iOnline;
-        bool iAccessible;
-    private:
-        // Inform the source, that the status of that reference was changed
-        void fireStatusChanged(const ThreatRefStatusChangeEvent& pThreatRefStatusChangeEvent);
-
-        Unit* getSourceUnit();
     public:
         HostilReference(Unit* pUnit, ThreatManager *pThreatManager, float pThreat);
 
@@ -125,6 +113,17 @@ class TRINITY_DLL_SPEC HostilReference : public Reference<Unit, ThreatManager>
 
         // Tell our refFrom (source) object, that the link is cut (Target destroyed)
         void sourceObjectDestroyLink();
+    private:
+        // Inform the source, that the status of that reference was changed
+        void fireStatusChanged(ThreatRefStatusChangeEvent& pThreatRefStatusChangeEvent);
+
+        Unit* getSourceUnit();
+    private:
+        float iThreat;
+        float iTempThreatModifyer;                          // used for taunt
+        uint64 iUnitGuid;
+        bool iOnline;
+        bool iAccessible;
 };
 
 //==============================================================
@@ -170,14 +169,9 @@ class TRINITY_DLL_SPEC ThreatContainer
 
 class TRINITY_DLL_SPEC ThreatManager
 {
-    private:
-        HostilReference* iCurrentVictim;
-        Unit* iOwner;
-        ThreatContainer iThreatContainer;
-        ThreatContainer iThreatOfflineContainer;
-
-        void _addThreat(Unit* target, float threat);
     public:
+        friend class HostilReference;
+
         explicit ThreatManager(Unit *pOwner);
 
         ~ThreatManager() { clearReferences(); }
@@ -191,7 +185,7 @@ class TRINITY_DLL_SPEC ThreatManager
 
         bool isThreatListEmpty() { return iThreatContainer.empty();}
 
-        bool processThreatEvent(const UnitBaseEvent* pUnitBaseEvent);
+        void processThreatEvent(ThreatRefStatusChangeEvent* threatRefStatusChangeEvent);
 
         HostilReference* getCurrentVictim() { return iCurrentVictim; }
 
@@ -208,10 +202,17 @@ class TRINITY_DLL_SPEC ThreatManager
 
         // methods to access the lists from the outside to do sume dirty manipulation (scriping and such)
         // I hope they are used as little as possible.
-        inline std::list<HostilReference*>& getThreatList() { return iThreatContainer.getThreatList(); }
-        inline std::list<HostilReference*>& getOfflieThreatList() { return iThreatOfflineContainer.getThreatList(); }
-        inline ThreatContainer& getOnlineContainer() { return iThreatContainer; }
-        inline ThreatContainer& getOfflineContainer() { return iThreatOfflineContainer; }
+        std::list<HostilReference*>& getThreatList() { return iThreatContainer.getThreatList(); }
+        std::list<HostilReference*>& getOfflieThreatList() { return iThreatOfflineContainer.getThreatList(); }
+        ThreatContainer& getOnlineContainer() { return iThreatContainer; }
+        ThreatContainer& getOfflineContainer() { return iThreatOfflineContainer; }
+    private:
+        void _addThreat(Unit *pVictim, float threat);
+
+        HostilReference* iCurrentVictim;
+        Unit* iOwner;
+        ThreatContainer iThreatContainer;
+        ThreatContainer iThreatOfflineContainer;
 };
 
 //=================================================

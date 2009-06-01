@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -101,7 +101,7 @@ struct TRINITY_DLL_DECL boss_harbinger_skyrissAI : public ScriptedAI
         ScriptedAI::MoveInLineOfSight(who);
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void JustDied(Unit* Killer)
     {
@@ -163,7 +163,7 @@ struct TRINITY_DLL_DECL boss_harbinger_skyrissAI : public ScriptedAI
                     case 1:
                          DoScriptText(SAY_INTRO, m_creature);
                         if (GameObject* Sphere = GameObject::GetGameObject(*m_creature,pInstance->GetData64(DATA_SPHERE_SHIELD)))
-                            Sphere->SetGoState(0);
+                            Sphere->SetGoState(GO_STATE_ACTIVE);
                         ++Intro_Phase;
                         Intro_Timer = 25000;
                         break;
@@ -288,7 +288,7 @@ struct TRINITY_DLL_DECL boss_harbinger_skyriss_illusionAI : public ScriptedAI
 
     void Reset() { }
 
-    void Aggro(Unit *who) { }
+    void EnterCombat(Unit *who) { }
 };
 
 CreatureAI* GetAI_boss_harbinger_skyriss_illusion(Creature *_Creature)

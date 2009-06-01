@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 #include "Util.h"
 #include "Policies/SingletonImp.h"
 #include "Platform/Define.h"
-#include "../src/zthread/ThreadImpl.h"
+#include "Threading.h"
 #include "DatabaseEnv.h"
 #include "Database/PGSQLDelayThread.h"
 #include "Database/SqlOperations.h"
@@ -79,14 +79,14 @@ bool DatabasePostgre::Initialize(const char *infoString)
 
     Tokens::iterator iter;
 
-    std::string host, port_or_socket, user, password, database;
+    std::string host, port_or_socket_dir, user, password, database;
 
     iter = tokens.begin();
 
     if(iter != tokens.end())
         host = *iter++;
     if(iter != tokens.end())
-        port_or_socket = *iter++;
+        port_or_socket_dir = *iter++;
     if(iter != tokens.end())
         user = *iter++;
     if(iter != tokens.end())
@@ -94,7 +94,10 @@ bool DatabasePostgre::Initialize(const char *infoString)
     if(iter != tokens.end())
         database = *iter++;
 
-    mPGconn = PQsetdbLogin(host.c_str(), port_or_socket.c_str(), NULL, NULL, database.c_str(), user.c_str(), password.c_str());
+    if (host == ".")
+        mPGconn = PQsetdbLogin(NULL, port_or_socket_dir == "." ? NULL : port_or_socket_dir.c_str(), NULL, NULL, database.c_str(), user.c_str(), password.c_str());
+    else
+        mPGconn = PQsetdbLogin(host.c_str(), port_or_socket_dir.c_str(), NULL, NULL, database.c_str(), user.c_str(), password.c_str());
 
     /* check to see that the backend connection was successfully made */
     if (PQstatus(mPGconn) != CONNECTION_OK)
@@ -123,8 +126,8 @@ QueryResult* DatabasePostgre::Query(const char *sql)
     uint32 fieldCount = 0;
 
     // guarded block for thread-safe request
-    ZThread::Guard<ZThread::FastMutex> query_connection_guard(mMutex);
-    #ifdef TRINITY_DEBUG
+    ACE_Guard<ACE_Thread_Mutex> query_connection_guard(mMutex);
+    #ifdef MANGOS_DEBUG
     uint32 _s = getMSTime();
     #endif
     // Send the query
@@ -171,9 +174,10 @@ bool DatabasePostgre::Execute(const char *sql)
         return false;
 
     // don't use queued execution if it has not been initialized
-    if (!m_threadBody) return DirectExecute(sql);
+    if (!m_threadBody)
+        return DirectExecute(sql);
 
-    tranThread = ZThread::ThreadImpl::current();            // owner of this transaction
+    tranThread = ACE_Based::Thread::current();              // owner of this transaction
     TransactionQueues::iterator i = m_tranQueues.find(tranThread);
     if (i != m_tranQueues.end() && i->second != NULL)
     {                                                       // Statement for transaction
@@ -194,8 +198,8 @@ bool DatabasePostgre::DirectExecute(const char* sql)
         return false;
     {
         // guarded block for thread-safe  request
-        ZThread::Guard<ZThread::FastMutex> query_connection_guard(mMutex);
-        #ifdef TRINITY_DEBUG
+        ACE_Guard<ACE_Thread_Mutex> query_connection_guard(mMutex);
+        #ifdef MANGOS_DEBUG
         uint32 _s = getMSTime();
         #endif
         PGresult *res = PQexec(mPGconn, sql);
@@ -244,7 +248,7 @@ bool DatabasePostgre::BeginTransaction()
     // don't use queued execution if it has not been initialized
     if (!m_threadBody)
     {
-        if (tranThread==ZThread::ThreadImpl::current())
+        if (tranThread == ACE_Based::Thread::current())
             return false;                                   // huh? this thread already started transaction
         mMutex.acquire();
         if (!_TransactionCmd("START TRANSACTION"))
@@ -255,7 +259,7 @@ bool DatabasePostgre::BeginTransaction()
         return true;
     }
     // transaction started
-    tranThread = ZThread::ThreadImpl::current();            // owner of this transaction
+    tranThread = ACE_Based::Thread::current();              // owner of this transaction
     TransactionQueues::iterator i = m_tranQueues.find(tranThread);
     if (i != m_tranQueues.end() && i->second != NULL)
         // If for thread exists queue and also contains transaction
@@ -275,14 +279,14 @@ bool DatabasePostgre::CommitTransaction()
     // don't use queued execution if it has not been initialized
     if (!m_threadBody)
     {
-        if (tranThread!=ZThread::ThreadImpl::current())
+        if (tranThread != ACE_Based::Thread::current())
             return false;
         bool _res = _TransactionCmd("COMMIT");
         tranThread = NULL;
         mMutex.release();
         return _res;
     }
-    tranThread = ZThread::ThreadImpl::current();
+    tranThread = ACE_Based::Thread::current();
     TransactionQueues::iterator i = m_tranQueues.find(tranThread);
     if (i != m_tranQueues.end() && i->second != NULL)
     {
@@ -301,14 +305,14 @@ bool DatabasePostgre::RollbackTransaction()
     // don't use queued execution if it has not been initialized
     if (!m_threadBody)
     {
-        if (tranThread!=ZThread::ThreadImpl::current())
+        if (tranThread != ACE_Based::Thread::current())
             return false;
         bool _res = _TransactionCmd("ROLLBACK");
         tranThread = NULL;
         mMutex.release();
         return _res;
     }
-    tranThread = ZThread::ThreadImpl::current();
+    tranThread = ACE_Based::Thread::current();
     TransactionQueues::iterator i = m_tranQueues.find(tranThread);
     if (i != m_tranQueues.end() && i->second != NULL)
     {
@@ -331,7 +335,8 @@ void DatabasePostgre::InitDelayThread()
     assert(!m_delayThread);
 
     //New delay thread for delay execute
-    m_delayThread = new ZThread::Thread(m_threadBody = new PGSQLDelayThread(this));
+    m_threadBody = new PGSQLDelayThread(this);
+    m_delayThread = new ACE_Based::Thread(*m_threadBody);
 }
 
 void DatabasePostgre::HaltDelayThread()

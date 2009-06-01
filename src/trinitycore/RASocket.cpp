@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,7 +69,7 @@ RASocket::~RASocket()
     ///- Delete buffer and decrease active admins count
     delete [] buff;
 
-    sLog.outRALog("Connection was closed.\n");
+    sLog.outRemote("Connection was closed.\n");
 
     if(stage==OK)
         iUsers--;
@@ -79,7 +79,7 @@ RASocket::~RASocket()
 void RASocket::OnAccept()
 {
     std::string ss=GetRemoteAddress();
-    sLog.outRALog("Incoming connection from %s.\n",ss.c_str());
+    sLog.outRemote("Incoming connection from %s.\n",ss.c_str());
     ///- If there is already an active admin, drop the connection
     if(iUsers)
         dropclient
@@ -97,7 +97,7 @@ void RASocket::OnRead()
     unsigned int sz=ibuf.GetLength();
     if(iInputLength+sz>=RA_BUFF_SIZE)
     {
-        sLog.outRALog("Input buffer overflow, possible DOS attack.\n");
+        sLog.outRemote("Input buffer overflow, possible DOS attack.\n");
         SetCloseAndDelete();
         return;
     }
@@ -149,7 +149,7 @@ void RASocket::OnRead()
                     std::string login = szLogin;
 
                     ///- Convert Account name to Upper Format
-                    AccountMgr::normilizeString(login);
+                    AccountMgr::normalizeString(login);
 
                     ///- Escape the Login to allow quotes in names
                     LoginDatabase.escape_string(login);
@@ -160,7 +160,7 @@ void RASocket::OnRead()
                     if(!result)
                     {
                         Sendf("-No such user.\r\n");
-                        sLog.outRALog("User %s does not exist.\n",szLogin.c_str());
+                        sLog.outRemote("User %s does not exist.\n",szLogin.c_str());
                         if(bSecure)SetCloseAndDelete();
                     }
                     else
@@ -173,7 +173,7 @@ void RASocket::OnRead()
                         if(fields[0].GetUInt32()<iMinLevel)
                         {
                             Sendf("-Not enough privileges.\r\n");
-                            sLog.outRALog("User %s has no privilege.\n",szLogin.c_str());
+                            sLog.outRemote("User %s has no privilege.\n",szLogin.c_str());
                             if(bSecure)SetCloseAndDelete();
                         }   else
                         {
@@ -191,8 +191,8 @@ void RASocket::OnRead()
                     std::string login = szLogin;
                     std::string pw = &buff[5];
 
-                    AccountMgr::normilizeString(login);
-                    AccountMgr::normilizeString(pw);
+                    AccountMgr::normalizeString(login);
+                    AccountMgr::normalizeString(pw);
                     LoginDatabase.escape_string(login);
                     LoginDatabase.escape_string(pw);
 
@@ -208,14 +208,14 @@ void RASocket::OnRead()
                         ++iUsers;
 
                         Sendf("+Logged in.\r\n");
-                        sLog.outRALog("User %s has logged in.\n",szLogin.c_str());
+                        sLog.outRemote("User %s has logged in.\n",szLogin.c_str());
                         Sendf("TC>");
                     }
                     else
                     {
                         ///- Else deny access
                         Sendf("-Wrong pass.\r\n");
-                        sLog.outRALog("User %s has failed to log in.\n",szLogin.c_str());
+                        sLog.outRemote("User %s has failed to log in.\n",szLogin.c_str());
                         if(bSecure)SetCloseAndDelete();
                     }
                 }
@@ -224,7 +224,7 @@ void RASocket::OnRead()
             case OK:
                 if(strlen(buff))
                 {
-                    sLog.outRALog("Got '%s' cmd.\n",buff);
+                    sLog.outRemote("Got '%s' cmd.\n",buff);
                     sWorld.QueueCliCommand(&RASocket::zprint , buff);
                 }
                 else
@@ -257,4 +257,3 @@ void RASocket::zprint( const char * szText )
 
     #endif
 }
-

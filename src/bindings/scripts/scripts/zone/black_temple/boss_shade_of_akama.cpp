@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -113,7 +113,7 @@ struct TRINITY_DLL_DECL mob_ashtongue_channelerAI : public ScriptedAI
 
     void Reset() { ShadeGUID = 0; }
     void JustDied(Unit* killer);
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
     void AttackStart(Unit* who) {}
     void MoveInLineOfSight(Unit* who) {}
     void UpdateAI(const uint32 diff) {}
@@ -135,7 +135,7 @@ struct TRINITY_DLL_DECL mob_ashtongue_sorcererAI : public ScriptedAI
     }
 
     void JustDied(Unit* killer);
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
     void AttackStart(Unit* who) {}
     void MoveInLineOfSight(Unit* who) {}
     void UpdateAI(const uint32 diff)
@@ -274,8 +274,6 @@ struct TRINITY_DLL_DECL boss_shade_of_akamaAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit* who) { }
-
     void AttackStart(Unit* who)
     {
         if(!who || IsBanished) return;
@@ -291,7 +289,7 @@ struct TRINITY_DLL_DECL boss_shade_of_akamaAI : public ScriptedAI
 
         debug_log("TSCR: Increasing Death Count for Shade of Akama encounter");
         ++DeathCount;
-        m_creature->RemoveSingleAuraFromStack(SPELL_SHADE_SOUL_CHANNEL_2, 0);
+        m_creature->RemoveAuraFromStack(SPELL_SHADE_SOUL_CHANNEL_2);
         if(guid)
         {
             if(Sorcerers.empty())
@@ -346,7 +344,7 @@ struct TRINITY_DLL_DECL boss_shade_of_akamaAI : public ScriptedAI
         std::list<Creature*> ChannelerList;
 
         Trinity::AllCreaturesOfEntryInRange check(m_creature, CREATURE_CHANNELER, 50);
-        Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(ChannelerList, check);
+        Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(m_creature, ChannelerList, check);
         TypeContainerVisitor<Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange>, GridTypeMapContainer> visitor(searcher);
 
         CellLock<GridReadGuard> cell_lock(cell, pair);
@@ -381,7 +379,7 @@ struct TRINITY_DLL_DECL boss_shade_of_akamaAI : public ScriptedAI
 
     void UpdateAI(const uint32 diff)
     {
-        if(!InCombat)
+        if(!m_creature->isInCombat())
             return;
 
         if(IsBanished)
@@ -557,7 +555,7 @@ struct TRINITY_DLL_DECL npc_akamaAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void BeginEvent(Player* pl)
     {
@@ -576,8 +574,8 @@ struct TRINITY_DLL_DECL npc_akamaAI : public ScriptedAI
             m_creature->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
             ((boss_shade_of_akamaAI*)Shade->AI())->SetAkamaGUID(m_creature->GetGUID());
             ((boss_shade_of_akamaAI*)Shade->AI())->SetSelectableChannelers();
-            ((boss_shade_of_akamaAI*)Shade->AI())->InCombat = true;
             Shade->AddThreat(m_creature, 1000000.0f);
+            m_creature->CombatStart(Shade);
             Shade->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_STATE_NONE);
             Shade->SetUInt64Value(UNIT_FIELD_TARGET, m_creature->GetGUID());
             if(pl) Shade->AddThreat(pl, 1.0f);

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,11 +25,7 @@
 #include "Policies/SingletonImp.h"
 #include "Util.h"
 
-#ifdef DO_POSTGRESQL
-extern DatabasePostgre LoginDatabase;
-#else
-extern DatabaseMysql LoginDatabase;
-#endif
+extern DatabaseType LoginDatabase;
 
 INSTANTIATE_SINGLETON_1(AccountMgr);
 
@@ -44,8 +40,8 @@ AccountOpResult AccountMgr::CreateAccount(std::string username, std::string pass
     if(utf8length(username) > MAX_ACCOUNT_STR)
         return AOR_NAME_TOO_LONG;                           // username's too long
 
-    normilizeString(username);
-    normilizeString(password);
+    normalizeString(username);
+    normalizeString(password);
 
     LoginDatabase.escape_string(username);
     LoginDatabase.escape_string(password);
@@ -124,8 +120,8 @@ AccountOpResult AccountMgr::ChangeUsername(uint32 accid, std::string new_uname, 
     if(utf8length(new_passwd) > MAX_ACCOUNT_STR)
         return AOR_PASS_TOO_LONG;
 
-    normilizeString(new_uname);
-    normilizeString(new_passwd);
+    normalizeString(new_uname);
+    normalizeString(new_passwd);
 
     LoginDatabase.escape_string(new_uname);
     LoginDatabase.escape_string(new_passwd);
@@ -145,7 +141,7 @@ AccountOpResult AccountMgr::ChangePassword(uint32 accid, std::string new_passwd)
     if (utf8length(new_passwd) > MAX_ACCOUNT_STR)
         return AOR_PASS_TOO_LONG;
 
-    normilizeString(new_passwd);
+    normalizeString(new_passwd);
 
     LoginDatabase.escape_string(new_passwd);
     if(!LoginDatabase.PExecute("UPDATE account SET sha_pass_hash=SHA1(CONCAT(username,':','%s')) WHERE id='%d'", new_passwd.c_str(), accid))
@@ -196,7 +192,7 @@ bool AccountMgr::GetName(uint32 acc_id, std::string &name)
 
 bool AccountMgr::CheckPassword(uint32 accid, std::string passwd)
 {
-    normilizeString(passwd);
+    normalizeString(passwd);
     LoginDatabase.escape_string(passwd);
 
     QueryResult *result = LoginDatabase.PQuery("SELECT 1 FROM account WHERE id='%d' AND sha_pass_hash=SHA1(CONCAT(username,':','%s'))", accid, passwd.c_str());
@@ -209,7 +205,7 @@ bool AccountMgr::CheckPassword(uint32 accid, std::string passwd)
     return false;
 }
 
-bool AccountMgr::normilizeString(std::string& utf8str)
+bool AccountMgr::normalizeString(std::string& utf8str)
 {
     wchar_t wstr_buf[MAX_ACCOUNT_STR+1];
 

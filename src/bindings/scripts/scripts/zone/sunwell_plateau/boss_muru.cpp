@@ -137,7 +137,7 @@ struct TRINITY_DLL_DECL boss_entropiusAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit *who) {
+    void EnterCombat(Unit *who) {
         DoCastAOE(SPELL_NEGATIVE_ENERGY_E, true);
         DoCast(m_creature, SPELL_ENTROPIUS_SPAWN, false);
     }
@@ -155,7 +155,7 @@ struct TRINITY_DLL_DECL boss_entropiusAI : public ScriptedAI
                 m_creature->SummonCreature(CREATURE_DARK_FIENDS, x,y,z,o, TEMPSUMMON_CORPSE_DESPAWN, 0);
                 break;
         }
-        summoned->AI()->AttackStart(SelectUnit(SELECT_TARGET_RANDOM,0, 50, true));
+        summoned->AI()->AttackStart(SelectTarget(SELECT_TARGET_RANDOM,0, 50, true));
         Summons.Summon(summoned);
     }
 
@@ -180,10 +180,10 @@ struct TRINITY_DLL_DECL boss_entropiusAI : public ScriptedAI
         }else EnrageTimer -= diff;
 
         if(BlackHoleSummonTimer < diff){
-            Unit* random = SelectUnit(SELECT_TARGET_RANDOM, 0, 100, true);
+            Unit* random = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true);
             if(!random)return;
             DoCast(random, SPELL_DARKNESS_E, false);
-            random = SelectUnit(SELECT_TARGET_RANDOM, 0, 100, true);
+            random = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true);
             if(!random)return;
             random->CastSpell(random, SPELL_BLACKHOLE, false);
             BlackHoleSummonTimer = 15000;
@@ -230,7 +230,7 @@ struct TRINITY_DLL_DECL boss_muruAI : public Scripted_NoMovementAI
             pInstance->SetData(DATA_MURU_EVENT, NOT_STARTED);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(pInstance)
             pInstance->SetData(DATA_MURU_EVENT, IN_PROGRESS);
@@ -260,7 +260,7 @@ struct TRINITY_DLL_DECL boss_muruAI : public Scripted_NoMovementAI
                 summoned->CastSpell(summoned,SPELL_DARKFIEND_VISUAL,false);
                 break;
         }
-        summoned->AI()->AttackStart(SelectUnit(SELECT_TARGET_RANDOM,0, 50, true));
+        summoned->AI()->AttackStart(SelectTarget(SELECT_TARGET_RANDOM,0, 50, true));
         Summons.Summon(summoned);
     }
 
@@ -361,8 +361,6 @@ struct TRINITY_DLL_DECL npc_muru_portalAI : public Scripted_NoMovementAI
         Summons.DespawnAll();
     }
 
-    void Aggro(Unit *who) {}
-
     void JustSummoned(Creature* summoned){
         Player* Target;
         Target = (Player*)(Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_PLAYER_GUID)));
@@ -422,8 +420,6 @@ struct TRINITY_DLL_DECL npc_dark_fiendAI : public ScriptedAI
         m_creature->addUnitState(UNIT_STAT_STUNNED);
     };
 
-    void Aggro(Unit *who) {}
-
     void SpellHit(Unit* caster, const SpellEntry* Spell){
         for(uint8 i = 0; i < 3; ++i)
             if(Spell->Effect[i] == 38){
@@ -441,7 +437,7 @@ struct TRINITY_DLL_DECL npc_dark_fiendAI : public ScriptedAI
             if(!InAction){
                 m_creature->clearUnitState(UNIT_STAT_STUNNED);
                 DoCastAOE(SPELL_DARKFIEND_SKIN, false);
-                AttackStart(SelectUnit(SELECT_TARGET_RANDOM, 0, 100, true));
+                AttackStart(SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true));
                 InAction = true;
                 WaitTimer = 500;
             }else{
@@ -481,8 +477,6 @@ struct TRINITY_DLL_DECL npc_void_sentinelAI : public ScriptedAI
         m_creature->GetHomePosition(x,y,z,o);
         DoTeleportTo(x,y,71);
     };
-
-    void Aggro(Unit *who) {}
 
     void JustDied(Unit* killer){
         for (uint8 i = 0; i < 8; ++i){
@@ -535,8 +529,6 @@ struct TRINITY_DLL_DECL npc_blackholeAI : public ScriptedAI
         m_creature->addUnitState(UNIT_STAT_STUNNED);
         DoCastAOE(SPELL_BLACKHOLE_SPAWN, true);
     }
-
-    void Aggro(Unit *who) {}
 
     void UpdateAI(const uint32 diff)
     {

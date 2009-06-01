@@ -1,4 +1,4 @@
- /* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ /* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -44,7 +44,7 @@ struct TRINITY_DLL_DECL npc_astor_hadrenAI : public ScriptedAI
         m_creature->setFaction(68);
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
     }
 
@@ -91,24 +91,27 @@ bool GossipSelect_npc_astor_hadren(Player *player, Creature *_Creature, uint32 s
 ## npc_deathstalker_erland
 ######*/
 
-#define SAY_QUESTACCEPT -1000335
-#define SAY_START       -1000336
-#define SAY_AGGRO_1     -1000337
-#define SAY_AGGRO_2     -1000338
-#define SAY_LAST        -1000339
+enum
+{
+    SAY_QUESTACCEPT     = -1000335,
+    SAY_START           = -1000336,
+    SAY_AGGRO_1         = -1000337,
+    SAY_AGGRO_2         = -1000338,
+    SAY_LAST            = -1000339,
 
-#define SAY_THANKS      -1000340
-#define SAY_RANE        -1000341
-#define SAY_ANSWER      -1000342
-#define SAY_MOVE_QUINN  -1000343
+    SAY_THANKS          = -1000340,
+    SAY_RANE            = -1000341,
+    SAY_ANSWER          = -1000342,
+    SAY_MOVE_QUINN      = -1000343,
 
-#define SAY_GREETINGS   -1000344
-#define SAY_QUINN       -1000345
-#define SAY_ON_BYE      -1000346
+    SAY_GREETINGS       = -1000344,
+    SAY_QUINN           = -1000345,
+    SAY_ON_BYE          = -1000346,
 
-#define QUEST_ESCORTING 435
-#define NPC_RANE        1950
-#define NPC_QUINN       1951
+    QUEST_ESCORTING     = 435,
+    NPC_RANE            = 1950,
+    NPC_QUINN           = 1951
+};
 
 struct TRINITY_DLL_DECL npc_deathstalker_erlandAI : public npc_escortAI
 {
@@ -126,11 +129,10 @@ struct TRINITY_DLL_DECL npc_deathstalker_erlandAI : public npc_escortAI
         case 1: DoScriptText(SAY_START, m_creature, player);break;
         case 13:
             DoScriptText(SAY_LAST, m_creature, player);
-            if(player)
-                ((Player*)player)->GroupEventHappens(QUEST_ESCORTING, m_creature);break;
+            player->GroupEventHappens(QUEST_ESCORTING, m_creature);break;
         case 14: DoScriptText(SAY_THANKS, m_creature, player);break;
         case 15: {
-                Unit* Rane = FindCreature(NPC_RANE, 20, m_creature);
+                Unit* Rane = me->FindNearestCreature(NPC_RANE, 20);
                 if(Rane)
                     DoScriptText(SAY_RANE, Rane);
                 break;}
@@ -138,7 +140,7 @@ struct TRINITY_DLL_DECL npc_deathstalker_erlandAI : public npc_escortAI
         case 17: DoScriptText(SAY_MOVE_QUINN, m_creature); break;
         case 24: DoScriptText(SAY_GREETINGS, m_creature);break;
         case 25: {
-                Unit* Quinn = FindCreature(NPC_QUINN, 20, m_creature);
+                Unit* Quinn = me->FindNearestCreature(NPC_QUINN, 20);
                 if(Quinn)
                     DoScriptText(SAY_QUINN, Quinn);
                 break;}
@@ -149,7 +151,7 @@ struct TRINITY_DLL_DECL npc_deathstalker_erlandAI : public npc_escortAI
 
     void Reset() {}
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         switch(rand()%2)
         {

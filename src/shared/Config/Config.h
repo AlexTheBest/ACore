@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,18 +35,10 @@ class TRINITY_DLL_SPEC Config
         bool SetSource(const char *file, bool ignorecase = true);
         bool Reload();
 
-        bool GetString(const char* name, std::string *value);
-        bool GetString(const char* name, char const **value);
-        std::string GetStringDefault(const char* name, const char* def);
-
-        bool GetBool(const char* name, bool *value);
-        bool GetBoolDefault(const char* name, const bool def = false);
-
-        bool GetInt(const char* name, int *value);
-        int GetIntDefault(const char* name, const int def);
-
-        bool GetFloat(const char* name, float *value);
-        float GetFloatDefault(const char* name, const float def);
+        std::string GetStringDefault(const char * name, std::string def);
+        bool GetBoolDefault(const char * name, const bool def);
+        int32 GetIntDefault(const char * name, const int32 def);
+        float GetFloatDefault(const char * name, const float def);
 
         std::string GetFilename() const { return mFilename; }
     private:
