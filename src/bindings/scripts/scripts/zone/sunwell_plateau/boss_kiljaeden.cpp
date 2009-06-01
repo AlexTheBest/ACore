@@ -321,8 +321,6 @@ struct TRINITY_DLL_DECL boss_kalecgos_kjAI : public ScriptedAI
 
     void Reset(){}
 
-    void Aggro(Unit* who) {}
-
     void FindOrbs()
     {
         CellPair pair(Trinity::ComputeCellPair(m_creature->GetPositionX(), m_creature->GetPositionY()));
@@ -331,7 +329,7 @@ struct TRINITY_DLL_DECL boss_kalecgos_kjAI : public ScriptedAI
         cell.SetNoCreate();
         std::list<GameObject*> orbList;
         AllOrbsInGrid check;
-        Trinity::GameObjectListSearcher<AllOrbsInGrid> searcher(orbList, check);
+        Trinity::GameObjectListSearcher<AllOrbsInGrid> searcher(me, orbList, check);
         TypeContainerVisitor<Trinity::GameObjectListSearcher<AllOrbsInGrid>, GridTypeMapContainer> visitor(searcher);
         CellLock<GridReadGuard> cell_lock(cell, pair);
         cell_lock->Visit(cell_lock, visitor, *(m_creature->GetMap()));
@@ -524,7 +522,7 @@ struct TRINITY_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
         }
     }
 
-    void Aggro(Unit* who){
+    void EnterCombat(Unit* who){
         DoZoneInCombat();
         DoScriptText(SAY_KJ_EMERGE, m_creature);
     }
@@ -540,7 +538,7 @@ struct TRINITY_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
             float x,y,z;
             Unit* target;
             for(uint8 z = 0; z < 6; ++z){
-                target = SelectUnit(SELECT_TARGET_RANDOM, 0, 100, true);
+                target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true);
                 if (!target->HasAura(SPELL_VENGEANCE_OF_THE_BLUE_FLIGHT,0)) break;
             }
             target->GetPosition(x,y,z);
@@ -584,7 +582,7 @@ struct TRINITY_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
                         if(!m_creature->IsNonMeleeSpellCasted(false)){
                             m_creature->RemoveAurasDueToSpell(SPELL_SOUL_FLAY);
                             for(uint8 z = 0; z < 6; ++z){
-                                randomPlayer = SelectUnit(SELECT_TARGET_RANDOM, 0, 100, true);
+                                randomPlayer = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true);
                                 if (!randomPlayer->HasAura(SPELL_VENGEANCE_OF_THE_BLUE_FLIGHT,0)) break;
                             }
                             if(randomPlayer)DoCast(randomPlayer, SPELL_LEGION_LIGHTNING, false);
@@ -658,7 +656,7 @@ struct TRINITY_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
                     case TIMER_ARMAGEDDON: //Phase 4
                         Unit* target;
                         for(uint8 z = 0; z < 6; ++z){
-                            target = SelectUnit(SELECT_TARGET_RANDOM, 0, 100, true);
+                            target = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true);
                             if (!target->HasAura(SPELL_VENGEANCE_OF_THE_BLUE_FLIGHT,0)) break;
                         }
                         if(target){
@@ -776,8 +774,6 @@ struct TRINITY_DLL_DECL mob_kiljaeden_controllerAI : public Scripted_NoMovementA
         Summons.Summon(summoned);
     }
 
-    void Aggro(Unit* who) {}
-
     void UpdateAI(const uint32 diff)
     {
         if(RandomSayTimer < diff && pInstance->GetData(DATA_MURU_EVENT) != DONE && pInstance->GetData(DATA_KILJAEDEN_EVENT) == NOT_STARTED){
@@ -836,7 +832,7 @@ struct TRINITY_DLL_DECL mob_hand_of_the_deceiverAI : public ScriptedAI
         summoned->SetLevel(m_creature->getLevel());
     }
 
-    void Aggro(Unit* who){
+    void EnterCombat(Unit* who){
         if(pInstance){
             pInstance->SetData(DATA_KILJAEDEN_EVENT, IN_PROGRESS);
             Creature* Control = ((Creature*)Unit::GetUnit(*m_creature, pInstance->GetData64(DATA_KILJAEDEN_CONTROLLER)));
@@ -856,7 +852,7 @@ struct TRINITY_DLL_DECL mob_hand_of_the_deceiverAI : public ScriptedAI
     }
 
     void UpdateAI(const uint32 diff){
-        if(!InCombat)
+        if(!me->isInCombat())
             DoCast(m_creature, SPELL_SHADOW_CHANNELING);
 
         if(!UpdateVictim())
@@ -915,8 +911,6 @@ struct TRINITY_DLL_DECL mob_felfire_portalAI : public Scripted_NoMovementAI
 
     }
 
-    void Aggro(Unit* who) {}
-
     void JustSummoned(Creature* summoned)
     {
         summoned->setFaction(m_creature->getFaction());
@@ -957,8 +951,6 @@ struct TRINITY_DLL_DECL mob_volatile_felfire_fiendAI : public ScriptedAI
         ExplodeTimer = 2000;
         LockedTarget = false;
     }
-
-    void Aggro(Unit* who) {}
 
     void DamageTaken(Unit *done_by, uint32 &damage)
     {
@@ -1006,8 +998,6 @@ struct TRINITY_DLL_DECL mob_armageddonAI : public Scripted_NoMovementAI
         Spell = 0;
         Timer = 0;
     }
-
-    void Aggro(Unit* who){}
 
     void UpdateAI(const uint32 diff)
     {
@@ -1068,10 +1058,7 @@ struct TRINITY_DLL_DECL mob_shield_orbAI : public ScriptedAI
         else Clockwise = false;
     }
 
-    void Reset(){
-    }
-
-    void Aggro(Unit* who){}
+    void Reset(){}
 
     void UpdateAI(const uint32 diff){
         if(PointReached){
@@ -1129,8 +1116,6 @@ struct TRINITY_DLL_DECL mob_sinster_reflectionAI : public ScriptedAI
         Timer[2] = 0;
         Class = 0;
     }
-
-    void Aggro(Unit* who){}
 
     void UpdateAI(const uint32 diff){
 
@@ -1199,7 +1184,7 @@ struct TRINITY_DLL_DECL mob_sinster_reflectionAI : public ScriptedAI
                     Timer[1] = 4000;
                 }
                 if(Timer[2] < diff){
-                    DoCast(SelectUnit(SELECT_TARGET_RANDOM, 0, 100, true), SPELL_SR_CURSE_OF_AGONY, true);
+                    DoCast(SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true), SPELL_SR_CURSE_OF_AGONY, true);
                     Timer[2] = 3000;
                 }
                 DoMeleeAttackIfReady();

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -107,7 +107,7 @@ struct TRINITY_DLL_DECL npc_enslaved_soulAI : public ScriptedAI
 
     void Reset() {ReliquaryGUID = 0;}
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         m_creature->CastSpell(m_creature, ENSLAVED_SOUL_PASSIVE, true);
         DoZoneInCombat();
@@ -157,7 +157,7 @@ struct TRINITY_DLL_DECL boss_reliquary_of_soulsAI : public ScriptedAI
         m_creature->RemoveAurasDueToSpell(SPELL_SUBMERGE);
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         m_creature->AddThreat(who, 10000.0f);
         DoZoneInCombat();
@@ -167,15 +167,6 @@ struct TRINITY_DLL_DECL boss_reliquary_of_soulsAI : public ScriptedAI
         Phase = 1;
         Counter = 0;
         Timer = 0;
-    }
-
-    void AttackStart(Unit* who)
-    {
-        if (!InCombat)
-        {
-            Aggro(who);
-            InCombat = true;
-        }
     }
 
     bool SummonSoul()
@@ -197,8 +188,6 @@ struct TRINITY_DLL_DECL boss_reliquary_of_soulsAI : public ScriptedAI
     {
         if(pInstance)
             pInstance->SetData(DATA_RELIQUARYOFSOULSEVENT, DONE);
-
-        InCombat = false;
     }
 
     void UpdateAI(const uint32 diff)
@@ -361,7 +350,7 @@ struct TRINITY_DLL_DECL boss_essence_of_sufferingAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoScriptText(SUFF_SAY_FREED, m_creature);
         DoZoneInCombat();
@@ -406,7 +395,7 @@ struct TRINITY_DLL_DECL boss_essence_of_sufferingAI : public ScriptedAI
 
     void UpdateAI(const uint32 diff)
     {
-        if(InCombat)
+        if(m_creature->isInCombat())
         {
             //Supposed to be cast on nearest target
             if(FixateTimer < diff)
@@ -485,7 +474,7 @@ struct TRINITY_DLL_DECL boss_essence_of_desireAI : public ScriptedAI
                         m_creature->InterruptSpell(CURRENT_GENERIC_SPELL, false);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoScriptText(DESI_SAY_FREED, m_creature);
         DoZoneInCombat();
@@ -564,7 +553,7 @@ struct TRINITY_DLL_DECL boss_essence_of_angerAI : public ScriptedAI
         CheckedAggro = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         switch(rand()%2)
         {

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,46 +22,53 @@
 #define TRINITY_NULLCREATUREAI_H
 
 #include "CreatureAI.h"
+#include "CreatureAIImpl.h"
 
 class TRINITY_DLL_DECL PassiveAI : public CreatureAI
 {
     public:
-        PassiveAI(Creature *c) : CreatureAI(c) {}
-        ~PassiveAI() {}
+        explicit PassiveAI(Creature *c) : CreatureAI(c) {}
 
         void MoveInLineOfSight(Unit *) {}
         void AttackStart(Unit *) {}
-
         void UpdateAI(const uint32);
+
         static int Permissible(const Creature *) { return PERMIT_BASE_IDLE;  }
 };
 
-class TRINITY_DLL_DECL PossessedAI : public PassiveAI
+class TRINITY_DLL_DECL PossessedAI : public CreatureAI
 {
     public:
-        PossessedAI(Creature *c) : PassiveAI(c) {}
+        explicit PossessedAI(Creature *c) : CreatureAI(c) {}
 
+        void MoveInLineOfSight(Unit *) {}
         void AttackStart(Unit *target);
         void UpdateAI(const uint32);
         void EnterEvadeMode() {}
 
         void JustDied(Unit*);
         void KilledUnit(Unit* victim);
+
+        static int Permissible(const Creature *) { return PERMIT_BASE_IDLE;  }
 };
 
-class TRINITY_DLL_DECL NullCreatureAI : public PassiveAI
+class TRINITY_DLL_DECL NullCreatureAI : public CreatureAI
 {
     public:
-        NullCreatureAI(Creature *c) : PassiveAI(c) {}
+        explicit NullCreatureAI(Creature *c) : CreatureAI(c) {}
 
+        void MoveInLineOfSight(Unit *) {}
+        void AttackStart(Unit *) {}
         void UpdateAI(const uint32) {}
         void EnterEvadeMode() {}
+
+        static int Permissible(const Creature *) { return PERMIT_BASE_IDLE;  }
 };
 
 class TRINITY_DLL_DECL CritterAI : public PassiveAI
 {
     public:
-        CritterAI(Creature *c) : PassiveAI(c) {}
+        explicit CritterAI(Creature *c) : PassiveAI(c) {}
 
         void DamageTaken(Unit *done_by, uint32 & /*damage*/);
         void EnterEvadeMode();

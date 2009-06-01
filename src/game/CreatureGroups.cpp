@@ -115,8 +115,13 @@ void CreatureGroupManager::LoadCreatureFormations()
         //If creature is group leader we may skip loading of dist/angle
         if(group_member->leaderGUID != memberGUID)
         {
-            group_member->follow_dist            = fields[2].GetUInt32();
-            group_member->follow_angle            = fields[3].GetUInt32();
+            group_member->follow_dist       = fields[2].GetFloat();
+            group_member->follow_angle      = fields[3].GetFloat() * M_PI / 180;
+        }
+        else
+        {
+            group_member->follow_dist       = 0;
+            group_member->follow_angle      = 0;
         }
 
         // check data correctness
@@ -241,7 +246,7 @@ void CreatureGroup::LeaderMoveTo(float x, float y, float z)
 
         member->UpdateGroundPositionZ(dx, dy, dz);
 
-        if(member->GetDistance(m_leader) < dist + MAX_DESYNC)
+        if(member->IsWithinDist(m_leader, dist + MAX_DESYNC))
             member->SetUnitMovementFlags(m_leader->GetUnitMovementFlags());
         else
             member->RemoveUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
