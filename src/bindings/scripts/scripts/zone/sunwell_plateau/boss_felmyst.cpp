@@ -158,7 +158,7 @@ struct TRINITY_DLL_DECL boss_felmystAI : public ScriptedAI
         Timer[EVENT_BERSERK] = 600000;
         FlightCount = 0;
 
-        m_creature->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING + MOVEMENTFLAG_ONTRANSPORT);
+        m_creature->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
         m_creature->SetFloatValue(UNIT_FIELD_BOUNDINGRADIUS, 10);
         m_creature->SetFloatValue(UNIT_FIELD_COMBATREACH, 10);
 
@@ -169,7 +169,7 @@ struct TRINITY_DLL_DECL boss_felmystAI : public ScriptedAI
             pInstance->SetData(DATA_FELMYST_EVENT, NOT_STARTED);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         m_creature->setActive(true);
         DoZoneInCombat();
@@ -293,7 +293,7 @@ struct TRINITY_DLL_DECL boss_felmystAI : public ScriptedAI
             error_log("prevent fly phase");
             m_creature->GetMotionMaster()->Clear(false);
             m_creature->HandleEmoteCommand(EMOTE_ONESHOT_LIFTOFF);
-            m_creature->SetUnitMovementFlags(MOVEMENTFLAG_LEVITATING + MOVEMENTFLAG_ONTRANSPORT);
+            m_creature->SetUnitMovementFlags(MOVEMENTFLAG_LEVITATING);
             m_creature->StopMoving();
             DoScriptText(YELL_TAKEOFF, m_creature);
             Timer[EVENT_FLIGHT_SEQUENCE] = 2000;
@@ -306,7 +306,7 @@ struct TRINITY_DLL_DECL boss_felmystAI : public ScriptedAI
         case 2:{
             error_log("Summon Vapor case 2");
             Unit* target;
-            target = SelectUnit(SELECT_TARGET_RANDOM, 0, 150, true);
+            target = SelectTarget(SELECT_TARGET_RANDOM, 0, 150, true);
             if(!target) target = Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_PLAYER_GUID));
             if(target)
             {
@@ -331,7 +331,7 @@ struct TRINITY_DLL_DECL boss_felmystAI : public ScriptedAI
             error_log("Summon Vapor case3");
             //m_creature->CastSpell(m_creature, SPELL_VAPOR_SELECT); need core support
             Unit* target;
-            target = SelectUnit(SELECT_TARGET_RANDOM, 0, 150, true);
+            target = SelectTarget(SELECT_TARGET_RANDOM, 0, 150, true);
             if(!target) target = Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_PLAYER_GUID));
             if(target)
             {
@@ -358,7 +358,7 @@ struct TRINITY_DLL_DECL boss_felmystAI : public ScriptedAI
             break;
         case 5:{
             Unit* target;
-            target = SelectUnit(SELECT_TARGET_RANDOM, 0, 150, true);
+            target = SelectTarget(SELECT_TARGET_RANDOM, 0, 150, true);
             if(!target) target = Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_PLAYER_GUID));
             if(target)
             {
@@ -414,7 +414,7 @@ struct TRINITY_DLL_DECL boss_felmystAI : public ScriptedAI
             Timer[EVENT_FLIGHT_SEQUENCE] = 0;
             break;
         case 10:
-            m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_LEVITATING + MOVEMENTFLAG_ONTRANSPORT);
+            m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
             m_creature->StopMoving();
             m_creature->HandleEmoteCommand(EMOTE_ONESHOT_LAND);
             EnterPhase(PHASE_GROUND);
@@ -471,7 +471,7 @@ struct TRINITY_DLL_DECL boss_felmystAI : public ScriptedAI
                 Timer[EVENT_GAS_NOVA] = 20000 + rand()%5 * 1000;
                 break;
             case EVENT_ENCAPSULATE:
-                if(Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 0, 150, true))
+                if(Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 150, true))
                 {
                     m_creature->CastSpell(target, SPELL_ENCAPSULATE_CHANNEL, false);
                     Timer[EVENT_ENCAPSULATE] = 25000 + rand()%5 * 1000;
@@ -529,7 +529,7 @@ struct TRINITY_DLL_DECL boss_felmystAI : public ScriptedAI
             cell.SetNoCreate();
 
             Trinity::AllCreaturesOfEntryInRange check(m_creature, entry, 100);
-            Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(templist, check);
+            Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(m_creature, templist, check);
 
             TypeContainerVisitor<Trinity::CreatureListSearcher<Trinity::AllCreaturesOfEntryInRange>, GridTypeMapContainer> cSearcher(searcher);
 
@@ -561,7 +561,7 @@ struct TRINITY_DLL_DECL mob_felmyst_vaporAI : public ScriptedAI
         m_creature->SetSpeed(MOVE_RUN, 0.8);
     }
     void Reset() {}
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         DoZoneInCombat();
         //m_creature->CastSpell(m_creature, SPELL_VAPOR_FORCE, true); core bug
@@ -583,7 +583,7 @@ struct TRINITY_DLL_DECL mob_felmyst_trailAI : public ScriptedAI
         m_creature->SetFloatValue(UNIT_FIELD_BOUNDINGRADIUS, 0.01); // core bug
     }
     void Reset() {}
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
     void AttackStart(Unit* who) {}
     void MoveInLineOfSight(Unit* who) {}
     void UpdateAI(const uint32 diff) {}

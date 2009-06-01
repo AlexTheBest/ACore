@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,6 @@
 #define _DatabasePostgre_H
 
 #include "Policies/Singleton.h"
-#include "zthread/FastMutex.h"
 #include <stdarg.h>
 
 #ifdef WIN32
@@ -63,10 +62,8 @@ class DatabasePostgre : public Database
         // must be call before finish thread run
         void ThreadEnd();
     private:
-        ZThread::FastMutex mMutex;
-        ZThread::FastMutex tranMutex;
-
-        ZThread::ThreadImpl* tranThread;
+        ACE_Thread_Mutex mMutex;
+        ACE_Based::Thread * tranThread;
 
         PGconn *mPGconn;
 

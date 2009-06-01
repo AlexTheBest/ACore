@@ -10,6 +10,14 @@
 #include <set>
 #include "mpq.h"
 
+// MOPY flags
+#define WMO_MATERIAL_NOCAMCOLLIDE    0x01
+#define WMO_MATERIAL_DETAIL          0x02
+#define WMO_MATERIAL_NO_COLLISION    0x04
+#define WMO_MATERIAL_HINT            0x08
+#define WMO_MATERIAL_RENDER          0x10
+#define WMO_MATERIAL_COLLIDE_HIT     0x20
+#define WMO_MATERIAL_WALL_SURFACE    0x40
 
 class WMOInstance;
 class WMOManager;
@@ -35,13 +43,11 @@ public:
 private:
     std::string filename;
     char outfilename;
-
 };
 
 class WMOGroup
 {
 public:
-
     int offsize,flag,flag1,Xid,Xid2,Xid3,zero1,Xflag,nTexture,GroupID;
     int mopy_size,moba_size,hlq_xverts,hlq_yverts;
     int MopyEx_size,IndexExTr_size,LiquEx_size;
@@ -74,10 +80,9 @@ public:
 private:
     std::string filename;
     char outfilename;
-
 };
 
-struct WMOLiquidHeader
+struct WMOLiquidHeader 
 {
     int xverts, yverts, xtiles, ytiles;
     float pos_x;
@@ -86,7 +91,7 @@ struct WMOLiquidHeader
     short type;
 };
 
-class WMOInstance
+class WMOInstance 
 {
     static std::set<int> ids;
 public:
@@ -105,4 +110,3 @@ public:
 };
 
 #endif
-

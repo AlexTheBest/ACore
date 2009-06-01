@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -17,44 +17,20 @@
 /* ScriptData
 SDName: Eversong_Woods
 SD%Complete: 100
-SDComment: Quest support: 8346, 8483, 8488, 8490
+SDComment: Quest support: 8483, 8488, 8490, 9686
 SDCategory: Eversong Woods
 EndScriptData */
 
 /* ContentData
-mobs_mana_tapped
 npc_prospector_anvilward
 npc_apprentice_mirveda
 npc_infused_crystal
+npc_kelerun_bloodmourn
+go_harbinger_second_trial
 EndContentData */
 
 #include "precompiled.h"
 #include "../../npc/npc_escortAI.h"
-
-/*######
-## mobs_mana_tapped
-######*/
-
-struct TRINITY_DLL_DECL mobs_mana_tappedAI : public ScriptedAI
-{
-    mobs_mana_tappedAI(Creature *c) : ScriptedAI(c) {}
-
-    void Reset() { }
-
-    void Aggro(Unit *who) { }
-
-    void SpellHit(Unit *caster, const SpellEntry *spell)
-    {
-        if( caster->GetTypeId() == TYPEID_PLAYER)
-            if( ((Player*)caster)->GetQuestStatus(8346) == QUEST_STATUS_INCOMPLETE && !((Player*)caster)->GetReqKillOrCastCurrentCount(8346, m_creature->GetEntry()) && spell->Id == 28734)
-                ((Player*)caster)->CastedCreatureOrGO(15468, m_creature->GetGUID(), spell->Id);
-        return;
-    }
-};
-CreatureAI* GetAI_mobs_mana_tapped(Creature *_Creature)
-{
-    return new mobs_mana_tappedAI (_Creature);
-}
 
 /*######
 ## npc_prospector_anvilward
@@ -89,7 +65,7 @@ struct TRINITY_DLL_DECL npc_prospector_anvilwardAI : public npc_escortAI
         }
     }
 
-    void Aggro(Unit* who) { }
+    void EnterCombat(Unit* who) { }
 
     void Reset()
     {
@@ -107,18 +83,11 @@ struct TRINITY_DLL_DECL npc_prospector_anvilwardAI : public npc_escortAI
     }
 };
 
-CreatureAI* GetAI_npc_prospector_anvilward(Creature *_Creature)
+CreatureAI* GetAI_npc_prospector_anvilward(Creature* pCreature)
 {
-    npc_prospector_anvilwardAI* thisAI = new npc_prospector_anvilwardAI(_Creature);
+    npc_prospector_anvilwardAI* thisAI = new npc_prospector_anvilwardAI(pCreature);
 
-    thisAI->AddWaypoint(0, 9294.78, -6682.51, 22.42);
-    thisAI->AddWaypoint(1, 9298.27, -6667.99, 22.42);
-    thisAI->AddWaypoint(2, 9309.63, -6658.84, 22.43);
-    thisAI->AddWaypoint(3, 9304.43, -6649.31, 26.46);
-    thisAI->AddWaypoint(4, 9298.83, -6648.00, 28.61);
-    thisAI->AddWaypoint(5, 9291.06, -6653.46, 31.83, 2500);
-    thisAI->AddWaypoint(6, 9289.08, -6660.17, 31.85, 5000);
-    thisAI->AddWaypoint(7, 9291.06, -6653.46, 31.83);
+    thisAI->FillPointMovementListForCreature();
 
     return (CreatureAI*)thisAI;
 }
@@ -229,7 +198,7 @@ struct TRINITY_DLL_DECL npc_secondTrialAI : public ScriptedAI
       questPhase = 0;
       summonerGuid = 0;
 
-      m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_KNEEL);
+      m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, UNIT_STAND_STATE_KNEEL);
       m_creature->setFaction(FACTION_FRIENDLY);
 
       spellFlashLight = false;
@@ -261,14 +230,14 @@ struct TRINITY_DLL_DECL npc_secondTrialAI : public ScriptedAI
       }
     }
 
-    void Aggro(Unit *who) { }
+    void EnterCombat(Unit *who) { }
 
     void UpdateAI(const uint32 diff)
     {
       if ( questPhase == 1 ) {
 
         if ( timer < diff ) {
-              m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_NONE);
+              m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, UNIT_STAND_STATE_STAND);
               m_creature->setFaction(FACTION_HOSTILE);
               questPhase = 0;
 
@@ -357,7 +326,7 @@ struct TRINITY_DLL_DECL master_kelerun_bloodmournAI : public ScriptedAI
 
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -539,7 +508,7 @@ bool GOHello_go_second_trial(Player *player, GameObject* _GO)
 
     Creature* event_controller = NULL;
     Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck u_check(*_GO, MASTER_KELERUN_BLOODMOURN, true, 30);
-    Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(event_controller, u_check);
+    Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(player, event_controller, u_check);
     TypeContainerVisitor<Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck>, GridTypeMapContainer >  grid_unit_searcher(searcher);
     //cell_lock->Visit(cell_lock, grid_unit_searcher, *MapManager::Instance().GetMap(_GO->GetMap(), _GO));
     cell_lock->Visit(cell_lock, grid_unit_searcher, *(_GO->GetMap()));
@@ -575,7 +544,7 @@ struct TRINITY_DLL_DECL npc_apprentice_mirvedaAI : public ScriptedAI
         Summon = false;
     }
 
-    void Aggro(Unit* who){}
+    void EnterCombat(Unit* who){}
 
     void JustSummoned(Creature *summoned)
     {
@@ -680,7 +649,7 @@ struct TRINITY_DLL_DECL npc_infused_crystalAI : public Scripted_NoMovementAI
         WaveTimer = 0;
     }
 
-    void Aggro(Unit* who){}
+    void EnterCombat(Unit* who){}
 
     void MoveInLineOfSight(Unit* who)
     {
@@ -752,11 +721,6 @@ CreatureAI* GetAI_npc_infused_crystalAI(Creature *_Creature)
 void AddSC_eversong_woods()
 {
     Script *newscript;
-
-    newscript = new Script;
-    newscript->Name="mobs_mana_tapped";
-    newscript->GetAI = &GetAI_mobs_mana_tapped;
-    newscript->RegisterSelf();
 
     newscript = new Script;
     newscript->Name= "npc_prospector_anvilward";
