@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
- * Thanks to the original authors: MaNGOS <http://www.mangosproject.org/>
+ * Thanks to the original authors: MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -88,7 +88,6 @@ char const* ScriptsVersion()
 {
     return "Default Trinity scripting library";
 }
-
 TRINITY_DLL_EXPORT
 bool GossipHello ( Player * player, Creature *_Creature )
 {
@@ -289,12 +288,34 @@ bool ItemUse( Player *player, Item* _Item, SpellCastTargets const& targets)
 }
 
 TRINITY_DLL_EXPORT
-bool ReceiveEmote( Player *player, Creature *_Creature, uint32 emote )
+bool EffectDummyCreature(Unit *caster, uint32 spellId, uint32 effIndex, Creature *crTarget )
 {
-    Script *tmpscript = m_scripts[_Creature->GetScriptId()];
-    if (!tmpscript || !tmpscript->pReceiveEmote) return false;
+    Script *tmpscript = m_scripts[crTarget->GetScriptId()];
 
-    return tmpscript->pReceiveEmote(player, _Creature, emote);
+    if (!tmpscript || !tmpscript->pEffectDummyCreature) return false;
+
+    return tmpscript->pEffectDummyCreature(caster, spellId,effIndex,crTarget);
+}
+
+TRINITY_DLL_EXPORT
+bool EffectDummyGameObj(Unit *caster, uint32 spellId, uint32 effIndex, GameObject *gameObjTarget )
+{
+    Script *tmpscript = m_scripts[gameObjTarget->GetGOInfo()->ScriptId];
+
+    if (!tmpscript || !tmpscript->pEffectDummyGameObj) return false;
+
+    return tmpscript->pEffectDummyGameObj(caster, spellId,effIndex,gameObjTarget);
+}
+
+
+TRINITY_DLL_EXPORT
+bool EffectDummyItem(Unit *caster, uint32 spellId, uint32 effIndex, Item *itemTarget )
+{
+    Script *tmpscript = m_scripts[itemTarget->GetProto()->ScriptId];
+
+    if (!tmpscript || !tmpscript->pEffectDummyItem) return false;
+
+    return tmpscript->pEffectDummyItem(caster, spellId,effIndex,itemTarget);
 }
 
 TRINITY_DLL_EXPORT

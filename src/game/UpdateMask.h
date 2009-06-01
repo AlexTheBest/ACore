@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,27 +36,27 @@ class UpdateMask
                 delete [] mUpdateMask;
         }
 
-        inline void SetBit (uint32 index)
+        void SetBit (uint32 index)
         {
             ( (uint8 *)mUpdateMask )[ index >> 3 ] |= 1 << ( index & 0x7 );
         }
 
-        inline void UnsetBit (uint32 index)
+        void UnsetBit (uint32 index)
         {
             ( (uint8 *)mUpdateMask )[ index >> 3 ] &= (0xff ^ (1 <<  ( index & 0x7 ) ) );
         }
 
-        inline bool GetBit (uint32 index)
+        bool GetBit (uint32 index) const
         {
             return ( ( (uint8 *)mUpdateMask)[ index >> 3 ] & ( 1 << ( index & 0x7 ) )) != 0;
         }
 
-        inline uint32 GetBlockCount() { return mBlocks; }
-        inline uint32 GetLength() { return mBlocks << 2; }
-        inline uint32 GetCount() { return mCount; }
-        inline uint8* GetMask() { return (uint8*)mUpdateMask; }
+        uint32 GetBlockCount() const { return mBlocks; }
+        uint32 GetLength() const { return mBlocks << 2; }
+        uint32 GetCount() const { return mCount; }
+        uint8* GetMask() { return (uint8*)mUpdateMask; }
 
-        inline void SetCount (uint32 valuesCount)
+        void SetCount (uint32 valuesCount)
         {
             if(mUpdateMask)
                 delete [] mUpdateMask;
@@ -68,13 +68,13 @@ class UpdateMask
             memset(mUpdateMask, 0, mBlocks << 2);
         }
 
-        inline void Clear()
+        void Clear()
         {
             if (mUpdateMask)
                 memset(mUpdateMask, 0, mBlocks << 2);
         }
 
-        inline UpdateMask& operator = ( const UpdateMask& mask )
+        UpdateMask& operator = ( const UpdateMask& mask )
         {
             SetCount(mask.mCount);
             memcpy(mUpdateMask, mask.mUpdateMask, mBlocks << 2);
@@ -82,21 +82,21 @@ class UpdateMask
             return *this;
         }
 
-        inline void operator &= ( const UpdateMask& mask )
+        void operator &= ( const UpdateMask& mask )
         {
             ASSERT(mask.mCount <= mCount);
-            for (uint32 i = 0; i < mBlocks; i++)
+            for (uint32 i = 0; i < mBlocks; ++i)
                 mUpdateMask[i] &= mask.mUpdateMask[i];
         }
 
-        inline void operator |= ( const UpdateMask& mask )
+        void operator |= ( const UpdateMask& mask )
         {
             ASSERT(mask.mCount <= mCount);
-            for (uint32 i = 0; i < mBlocks; i++)
+            for (uint32 i = 0; i < mBlocks; ++i)
                 mUpdateMask[i] |= mask.mUpdateMask[i];
         }
 
-        inline UpdateMask operator & ( const UpdateMask& mask ) const
+        UpdateMask operator & ( const UpdateMask& mask ) const
         {
             ASSERT(mask.mCount <= mCount);
 
@@ -107,7 +107,7 @@ class UpdateMask
             return newmask;
         }
 
-        inline UpdateMask operator | ( const UpdateMask& mask ) const
+        UpdateMask operator | ( const UpdateMask& mask ) const
         {
             ASSERT(mask.mCount <= mCount);
 

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@ enum BG_WS_TimerOrScore
     BG_WS_FLAG_RESPAWN_TIME = 23000,
     BG_WS_FLAG_DROP_TIME    = 10000,
     BG_WS_SPELL_FORCE_TIME  = 600000,
-    BG_WS_SPELL_BRUTAL_TIME = 900000 
+    BG_WS_SPELL_BRUTAL_TIME = 900000
 };
 
 enum BG_WS_Sound
@@ -116,8 +116,10 @@ enum BG_WS_FlagState
 
 enum BG_WS_Graveyards
 {
-    WS_GRAVEYARD_MAIN_ALLIANCE   = 771,
-    WS_GRAVEYARD_MAIN_HORDE      = 772
+    WS_GRAVEYARD_FLAGROOM_ALLIANCE = 769,
+    WS_GRAVEYARD_FLAGROOM_HORDE    = 770,
+    WS_GRAVEYARD_MAIN_ALLIANCE     = 771,
+    WS_GRAVEYARD_MAIN_HORDE        = 772
 };
 
 enum BG_WS_CreatureTypes
@@ -151,10 +153,12 @@ class BattleGroundWS : public BattleGround
         /* Construction */
         BattleGroundWS();
         ~BattleGroundWS();
-        void Update(time_t diff);
+        void Update(uint32 diff);
 
         /* inherited from BattlegroundClass */
         virtual void AddPlayer(Player *plr);
+        virtual void StartingEventCloseDoors();
+        virtual void StartingEventOpenDoors();
 
         /* BG Flags */
         uint64 GetAllianceFlagPickerGUID() const    { return m_FlagKeepers[BG_TEAM_ALLIANCE]; }
@@ -180,7 +184,9 @@ class BattleGroundWS : public BattleGround
         void HandleAreaTrigger(Player *Source, uint32 Trigger);
         void HandleKillPlayer(Player *player, Player *killer);
         bool SetupBattleGround();
-        virtual void ResetBGSubclass();
+        virtual void Reset();
+        void EndBattleGround(uint32 winner);
+        virtual WorldSafeLocsEntry const* GetClosestGraveYard(Player* player);
 
         void UpdateFlagState(uint32 team, uint32 value);
         void UpdateTeamScore(uint32 team);
@@ -191,9 +197,9 @@ class BattleGroundWS : public BattleGround
 
         /* Scorekeeping */
         uint32 GetTeamScore(uint32 TeamID) const            { return m_TeamScores[GetTeamIndexByTeamId(TeamID)]; }
-        void AddPoint(uint32 TeamID, uint32 Points = 1)     { m_TeamScores[GetTeamIndexByTeamId(TeamID)] += Points; m_score[GetTeamIndexByTeamId(TeamID)] =  m_TeamScores[GetTeamIndexByTeamId(TeamID)];}
-        void SetTeamPoint(uint32 TeamID, uint32 Points = 0) { m_TeamScores[GetTeamIndexByTeamId(TeamID)] = Points; m_score[GetTeamIndexByTeamId(TeamID)] =  m_TeamScores[GetTeamIndexByTeamId(TeamID)];}
-        void RemovePoint(uint32 TeamID, uint32 Points = 1)  { m_TeamScores[GetTeamIndexByTeamId(TeamID)] -= Points; m_score[GetTeamIndexByTeamId(TeamID)] =  m_TeamScores[GetTeamIndexByTeamId(TeamID)]; }
+        void AddPoint(uint32 TeamID, uint32 Points = 1)     { m_TeamScores[GetTeamIndexByTeamId(TeamID)] += Points; }
+        void SetTeamPoint(uint32 TeamID, uint32 Points = 0) { m_TeamScores[GetTeamIndexByTeamId(TeamID)] = Points; }
+        void RemovePoint(uint32 TeamID, uint32 Points = 1)  { m_TeamScores[GetTeamIndexByTeamId(TeamID)] -= Points; }
 
     private:
         uint64 m_FlagKeepers[2];                            // 0 - alliance, 1 - horde
@@ -202,9 +208,11 @@ class BattleGroundWS : public BattleGround
         uint32 m_TeamScores[2];
         int32 m_FlagsTimer[2];
         int32 m_FlagsDropTimer[2];
-        
+
+        uint32 m_ReputationCapture;
+        uint32 m_HonorWinKills;
+        uint32 m_HonorEndKills;
         int32 m_FlagSpellForceTimer;
-        int32 m_FlagSpellBrutalTimer;
         bool m_BothFlagsKept;
         uint8 m_FlagDebuffState;                            // 0 - no debuffs, 1 - focused assault, 2 - brutal assault
 };

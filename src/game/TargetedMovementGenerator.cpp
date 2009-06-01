@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,6 @@
 #include "TargetedMovementGenerator.h"
 #include "Errors.h"
 #include "Creature.h"
-#include "MapManager.h"
 #include "DestinationHolderImp.h"
 #include "World.h"
 
@@ -43,24 +42,70 @@ struct StackCleaner
 */
 
 template<class T>
-void
+TargetedMovementGenerator<T>::TargetedMovementGenerator(Unit &target, float offset, float angle)
+: TargetedMovementGeneratorBase(target)
+, i_offset(offset), i_angle(angle), i_recalculateTravel(false)
+{
+    target.GetPosition(i_targetX, i_targetY, i_targetZ);
+}
+
+template<class T>
+bool
 TargetedMovementGenerator<T>::_setTargetLocation(T &owner)
 {
     if( !i_target.isValid() || !&owner )
-        return;
+        return false;
 
     if( owner.hasUnitState(UNIT_STAT_ROOT | UNIT_STAT_STUNNED | UNIT_STAT_DISTRACTED) )
-        return;
-
-    // prevent redundant micro-movement for pets, other followers.
-    //if(i_offset && i_target->IsWithinDistInMap(&owner,2*i_offset))
-    //    return;
+        return false;
 
     float x, y, z;
+    Traveller<T> traveller(owner);
+    if(i_destinationHolder.HasDestination())
+    {
+        if(i_destinationHolder.HasArrived())
+        {
+            // prevent redundant micro-movement
+            if(i_offset ? i_target->IsWithinDistInMap(&owner, i_offset + 1.0f) : i_target->IsWithinMeleeRange(&owner))
+                return false;
+        }
+        else
+        {
+            bool stop = false;
+            if(!i_offset)
+            {
+                if(i_target->IsWithinMeleeRange(&owner, 0))
+                    stop = true;
+            }
+            else if(!i_angle && !owner.hasUnitState(UNIT_STAT_FOLLOW))
+            {
+                if(i_target->IsWithinDist(&owner, i_offset * 0.8))
+                    stop = true;
+            }
+
+            if(stop)
+            {
+                owner.GetPosition(x, y, z);
+                i_destinationHolder.SetDestination(traveller, x, y, z);
+                i_destinationHolder.StartTravel(traveller, false);
+                owner.StopMoving();
+                return false;
+            }
+        }
+
+        if(i_target->GetDistanceSq(i_targetX, i_targetY, i_targetZ) < 0.01f)
+            return false;
+    }
+
     if(!i_offset)
     {
         // to nearest random contact position
         i_target->GetRandomContactPoint( &owner, x, y, z, 0, MELEE_RANGE - 0.5f );
+    }
+    else if(!i_angle && !owner.hasUnitState(UNIT_STAT_FOLLOW))
+    {
+        // caster chase
+        i_target->GetContactPoint(&owner, x, y, z, i_offset * urand(80, 100) * 0.01f);
     }
     else
     {
@@ -84,24 +129,25 @@ TargetedMovementGenerator<T>::_setTargetLocation(T &owner)
         if( i_destinationHolder.HasDestination() && i_destinationHolder.GetDestinationDiff(x,y,z) < bothObjectSize )
             return;
     */
-    Traveller<T> traveller(owner);
     i_destinationHolder.SetDestination(traveller, x, y, z);
     owner.addUnitState(UNIT_STAT_CHASE);
     if (owner.GetTypeId() == TYPEID_UNIT && ((Creature*)&owner)->canFly())
         owner.AddUnitMovementFlag(MOVEMENTFLAG_FLYING2);
+    i_destinationHolder.StartTravel(traveller);
+    return true;
 }
 
 template<class T>
 void
 TargetedMovementGenerator<T>::Initialize(T &owner)
 {
-    if(!&owner)
-        return;
-    owner.RemoveUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
+    if (owner.GetTypeId() == TYPEID_UNIT && ((Creature*)&owner)->HasSearchedAssistance())
+        owner.AddUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
+    else
+        owner.RemoveUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
 
     if (owner.GetTypeId() == TYPEID_UNIT && ((Creature*)&owner)->canFly())
         owner.AddUnitMovementFlag(MOVEMENTFLAG_FLYING2);
-
     _setTargetLocation(owner);
 }
 
@@ -133,7 +179,7 @@ TargetedMovementGenerator<T>::Update(T &owner, const uint32 & time_diff)
         return true;
 
     // prevent movement while casting spells with cast time or channel time
-    if ( owner.IsNonMeleeSpellCasted(false, false,  true))
+    if(owner.hasUnitState(UNIT_STAT_CASTING))
     {
         if (!owner.IsStopped())
             owner.StopMoving();
@@ -148,7 +194,7 @@ TargetedMovementGenerator<T>::Update(T &owner, const uint32 & time_diff)
 
     if( !i_destinationHolder.HasDestination() )
         _setTargetLocation(owner);
-    if( owner.IsStopped() && !i_destinationHolder.HasArrived() )
+    else if( owner.IsStopped() && !i_destinationHolder.HasArrived() )
     {
         owner.addUnitState(UNIT_STAT_CHASE);
         if (owner.GetTypeId() == TYPEID_UNIT && ((Creature*)&owner)->canFly())
@@ -161,24 +207,17 @@ TargetedMovementGenerator<T>::Update(T &owner, const uint32 & time_diff)
     if (i_destinationHolder.UpdateTraveller(traveller, time_diff))
     {
         // put targeted movement generators on a higher priority
-        if (owner.GetObjectSize())
-            i_destinationHolder.ResetUpdate(50);
+        //if (owner.GetObjectSize())
+        //i_destinationHolder.ResetUpdate(50);
 
-        //float dist = owner.GetCombatReach() + i_target.getTarget()->GetCombatReach() + sWorld.getRate(RATE_TARGET_POS_RECALCULATION_RANGE);
-
-        //More distance let have better performance, less distance let have more sensitive reaction at target move.
-
-        // try to counter precision differences
-        //if( i_destinationHolder.GetDistance2dFromDestSq(*i_target.getTarget()) >= dist * dist)
-        if(i_offset ? !i_target->IsWithinDistInMap(&owner,2*i_offset)
-            : !i_target->IsWithinMeleeRange(&owner))
+        // target moved
+        if(i_targetX != i_target->GetPositionX() || i_targetY != i_target->GetPositionY()
+            || i_targetZ != i_target->GetPositionZ())
         {
-            owner.SetInFront(i_target.getTarget());         // Set new Angle For Map::
-            _setTargetLocation(owner);                      //Calculate New Dest and Send data To Player
+            if(_setTargetLocation(owner) || !owner.hasUnitState(UNIT_STAT_FOLLOW))
+                owner.SetInFront(i_target.getTarget());
+            i_target->GetPosition(i_targetX, i_targetY, i_targetZ);
         }
-        // Update the Angle of the target only for Map::, no need to send packet for player
-        else if ( !i_angle && !owner.HasInArc( 0.01f, i_target.getTarget() ) )
-            owner.SetInFront(i_target.getTarget());
 
         if(( owner.IsStopped() && !i_destinationHolder.HasArrived() ) || i_recalculateTravel )
         {
@@ -201,8 +240,10 @@ TargetedMovementGenerator<T>::GetTarget() const
     return i_target.getTarget();
 }
 
-template void TargetedMovementGenerator<Player>::_setTargetLocation(Player &);
-template void TargetedMovementGenerator<Creature>::_setTargetLocation(Creature &);
+template TargetedMovementGenerator<Player>::TargetedMovementGenerator(Unit &target, float offset, float angle);
+template TargetedMovementGenerator<Creature>::TargetedMovementGenerator(Unit &target, float offset, float angle);
+template bool TargetedMovementGenerator<Player>::_setTargetLocation(Player &);
+template bool TargetedMovementGenerator<Creature>::_setTargetLocation(Creature &);
 template void TargetedMovementGenerator<Player>::Initialize(Player &);
 template void TargetedMovementGenerator<Creature>::Initialize(Creature &);
 template void TargetedMovementGenerator<Player>::Finalize(Player &);

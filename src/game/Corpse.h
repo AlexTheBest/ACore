@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -58,7 +58,7 @@ class Corpse : public WorldObject
         void RemoveFromWorld();
 
         bool Create( uint32 guidlow );
-        bool Create( uint32 guidlow, Player *owner, uint32 mapid, float x, float y, float z, float ang );
+        bool Create( uint32 guidlow, Player *owner );
 
         void SaveToDB();
         bool LoadFromDB(uint32 guid, QueryResult *result, uint32 InstanceId);
@@ -82,14 +82,11 @@ class Corpse : public WorldObject
         Player* lootRecipient;
         bool lootForBody;
 
-        void Say(const char* text, uint32 language, uint64 TargetGuid) { MonsterSay(text,language,TargetGuid); }
-        void Yell(const char* text, uint32 language, uint64 TargetGuid) { MonsterYell(text,language,TargetGuid); }
-        void TextEmote(const char* text, uint64 TargetGuid) { MonsterTextEmote(text,TargetGuid); }
-        void Whisper(const char* text, uint64 receiver) { MonsterWhisper(text,receiver); }
         void Say(int32 textId, uint32 language, uint64 TargetGuid) { MonsterSay(textId,language,TargetGuid); }
         void Yell(int32 textId, uint32 language, uint64 TargetGuid) { MonsterYell(textId,language,TargetGuid); }
         void TextEmote(int32 textId, uint64 TargetGuid) { MonsterTextEmote(textId,TargetGuid); }
         void Whisper(int32 textId,uint64 receiver) { MonsterWhisper(textId,receiver); }
+        void YellToZone(int32 textId, uint32 language, uint64 TargetGuid) { MonsterYellToZone(textId,language,TargetGuid); }
 
         GridReference<Corpse> &GetGridRef() { return m_gridRef; }
     private:
