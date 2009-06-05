@@ -159,7 +159,7 @@ struct TRINITY_DLL_DECL advisorbase_ai : public ScriptedAI
 
     advisorbase_ai(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     void MoveInLineOfSight(Unit *who)
@@ -274,7 +274,7 @@ struct TRINITY_DLL_DECL boss_kaelthasAI : public ScriptedAI
 {
     boss_kaelthasAI(Creature *c) : ScriptedAI(c), summons(m_creature)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         AdvisorGuid[0] = 0;
         AdvisorGuid[1] = 0;
         AdvisorGuid[2] = 0;
@@ -311,10 +311,7 @@ struct TRINITY_DLL_DECL boss_kaelthasAI : public ScriptedAI
 
     void DeleteLegs()
     {
-        InstanceMap::PlayerList const &playerliste = ((InstanceMap*)m_creature->GetMap())->GetPlayers();
-        InstanceMap::PlayerList::const_iterator it;
-
-        Map::PlayerList const &PlayerList = ((InstanceMap*)m_creature->GetMap())->GetPlayers();
+        Map::PlayerList const &PlayerList = m_creature->GetMap()->GetPlayers();
         for(Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
         {
             Player* i_pl = i->getSource();
@@ -734,7 +731,7 @@ struct TRINITY_DLL_DECL boss_kaelthasAI : public ScriptedAI
                         if (!Advisor)
                             error_log("TSCR: Kael'Thas Advisor %u does not exist. Possibly despawned? Incorrectly Killed?", i);
                         else if(Target)
-                            ((advisorbase_ai*)Advisor->AI())->Revive(Target);
+                            CAST_AI(advisorbase_ai, Advisor->AI())->Revive(Target);
                     }
 
                     PhaseSubphase = 1;
@@ -1400,7 +1397,7 @@ struct TRINITY_DLL_DECL mob_phoenix_tkAI : public ScriptedAI
 {
     mob_phoenix_tkAI(Creature *c) : ScriptedAI(c)
     {
-       pInstance = ((ScriptedInstance*)c->GetInstanceData());
+       pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance* pInstance;

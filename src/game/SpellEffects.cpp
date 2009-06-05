@@ -3295,7 +3295,8 @@ void Spell::EffectSummonType(uint32 i)
                         return;
 
                     //vehicle->SetUInt64Value(UNIT_FIELD_SUMMONEDBY, m_caster->GetGUID());
-                    vehicle->setFaction(m_caster->getFaction());
+                    if(m_originalCaster)
+                        vehicle->setFaction(m_originalCaster->getFaction());
                     vehicle->SetUInt32Value(UNIT_CREATED_BY_SPELL, m_spellInfo->Id);
                     break;
                 }
@@ -3963,7 +3964,8 @@ void Spell::EffectTameCreature(uint32 /*i*/)
     finish();
 
     Pet* pet = m_caster->CreateTamedPetFrom(creatureTarget,m_spellInfo->Id);
-    if(!pet) return;
+    if(!pet)                                                // in versy specific state like near world end/etc.
+        return;
 
     // kill original creature
     creatureTarget->setDeathState(JUST_DIED);
@@ -4890,6 +4892,10 @@ void Spell::EffectScriptEffect(uint32 effIndex)
                 case 52124:
                     if(unitTarget)
                         m_caster->CastSpell(unitTarget, 52125, false);
+                    return;
+                case 52479: // Gift of the Harvester
+                    if(unitTarget && m_originalCaster)
+                        m_originalCaster->CastSpell(unitTarget, urand(0, 1) ? damage : 52505, true);
                     return;
                 // Death Gate
                 case 52751:

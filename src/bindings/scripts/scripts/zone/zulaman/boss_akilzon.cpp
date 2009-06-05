@@ -61,10 +61,10 @@ struct TRINITY_DLL_DECL boss_akilzonAI : public ScriptedAI
 {
     boss_akilzonAI(Creature *c) : ScriptedAI(c)
     {
-        SpellEntry *TempSpell = (SpellEntry*)GetSpellStore()->LookupEntry(SPELL_ELECTRICAL_DAMAGE);
+        SpellEntry *TempSpell = GET_SPELL(SPELL_ELECTRICAL_DAMAGE);
         if(TempSpell)
             TempSpell->EffectBasePoints[1] = 49;//disable bugged lightning until fixed in core
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
     ScriptedInstance *pInstance;
 
@@ -383,7 +383,7 @@ struct TRINITY_DLL_DECL mob_soaring_eagleAI : public ScriptedAI
 
     void EnterCombat(Unit *who) {DoZoneInCombat();}
 
-    void MoveInLineOfSight(Unit *) {}
+    void MoveInLineOfSight(Unit* who) {}
 
     void MovementInform(uint32, uint32)
     {

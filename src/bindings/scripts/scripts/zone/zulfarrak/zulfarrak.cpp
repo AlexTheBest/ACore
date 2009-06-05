@@ -44,7 +44,7 @@ struct TRINITY_DLL_DECL npc_sergeant_blyAI : public ScriptedAI
 {
     npc_sergeant_blyAI(Creature *c) : ScriptedAI(c)
     {
-        //pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        //pInstance = (c->GetInstanceData());
     }
 
     //ScriptedInstance* pInstance;
@@ -121,7 +121,7 @@ bool GossipSelect_npc_sergeant_bly(Player *player, Creature *_Creature, uint32 s
     {
         player->CLOSE_GOSSIP_MENU();
         _Creature->setFaction(FACTION_HOSTILE);
-        ((npc_sergeant_blyAI*)_Creature->AI())->AttackStart(player);
+        CAST_AI(npc_sergeant_blyAI, _Creature->AI())->AttackStart(player);
     }
     return true;
 }
@@ -141,7 +141,7 @@ struct TRINITY_DLL_DECL npc_weegli_blastfuseAI : public ScriptedAI
 {
     npc_weegli_blastfuseAI(Creature *c) : ScriptedAI(c)
     {
-        //pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        //pInstance = (c->GetInstanceData());
     }
 
     //ScriptedInstance* pInstance;

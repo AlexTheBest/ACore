@@ -22,14 +22,17 @@
 /// @{
 /// \file
 
-#include "Common.h"
-#include "Database/DatabaseEnv.h"
-#include "RealmList.h"
+#include <openssl/opensslv.h>
+#include <openssl/crypto.h>
 
+#include "Common.h"
 #include "Config/ConfigEnv.h"
-#include "Log.h"
+#include "Database/DatabaseEnv.h"
 #include "sockets/ListenSocket.h"
+
 #include "AuthSocket.h"
+#include "Log.h"
+#include "RealmList.h"
 #include "SystemConfig.h"
 #include "Util.h"
 
@@ -160,6 +163,13 @@ extern int main(int argc, char **argv)
         clock_t pause = 3000 + clock();
 
         while (pause > clock()) {}
+    }
+
+    sLog.outDetail("%s (Library: %s)", OPENSSL_VERSION_TEXT, SSLeay_version(SSLEAY_VERSION));
+    if (SSLeay() < 0x009080bfL )
+    {
+        sLog.outDetail("WARNING: Outdated version of OpenSSL lib. Logins to server impossible!");
+        sLog.outDetail("WARNING: Minimal required version [OpenSSL 0.9.8k]");
     }
 
     sLog.outString( "%s (realm-daemon)", _FULLVERSION );

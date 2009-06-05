@@ -108,7 +108,7 @@ struct TRINITY_DLL_DECL boss_high_king_maulgarAI : public ScriptedAI
 {
     boss_high_king_maulgarAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         for(uint8 i = 0; i < 4; ++i)
             Council[i] = 0;
     }
@@ -304,7 +304,7 @@ struct TRINITY_DLL_DECL boss_olm_the_summonerAI : public ScriptedAI
 {
     boss_olm_the_summonerAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     uint32 DarkDecay_Timer;
@@ -341,7 +341,7 @@ struct TRINITY_DLL_DECL boss_olm_the_summonerAI : public ScriptedAI
             Maulgar = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_MAULGAR)));
 
             if(Maulgar)
-                ((boss_high_king_maulgarAI*)Maulgar->AI())->AddDeath();
+                CAST_AI(boss_high_king_maulgarAI, Maulgar->AI())->AddDeath();
 
             if(CheckAllBossDied(pInstance, m_creature))
                 pInstance->SetData(DATA_MAULGAREVENT, DONE);
@@ -406,7 +406,7 @@ struct TRINITY_DLL_DECL boss_kiggler_the_crazedAI : public ScriptedAI
 {
     boss_kiggler_the_crazedAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     uint32 GreaterPolymorph_Timer;
@@ -445,7 +445,7 @@ struct TRINITY_DLL_DECL boss_kiggler_the_crazedAI : public ScriptedAI
             Maulgar = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_MAULGAR)));
 
             if(Maulgar)
-                ((boss_high_king_maulgarAI*)Maulgar->AI())->AddDeath();
+                CAST_AI(boss_high_king_maulgarAI, Maulgar->AI())->AddDeath();
 
             if(CheckAllBossDied(pInstance, m_creature))
                 pInstance->SetData(DATA_MAULGAREVENT, DONE);
@@ -516,7 +516,7 @@ struct TRINITY_DLL_DECL boss_blindeye_the_seerAI : public ScriptedAI
 {
     boss_blindeye_the_seerAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     uint32 GreaterPowerWordShield_Timer;
@@ -553,7 +553,7 @@ struct TRINITY_DLL_DECL boss_blindeye_the_seerAI : public ScriptedAI
             Maulgar = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_MAULGAR)));
 
             if(Maulgar)
-                ((boss_high_king_maulgarAI*)Maulgar->AI())->AddDeath();
+                CAST_AI(boss_high_king_maulgarAI, Maulgar->AI())->AddDeath();
 
             if(CheckAllBossDied(pInstance, m_creature))
                 pInstance->SetData(DATA_MAULGAREVENT, DONE);
@@ -614,7 +614,7 @@ struct TRINITY_DLL_DECL boss_krosh_firehandAI : public ScriptedAI
 {
     boss_krosh_firehandAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     uint32 GreaterFireball_Timer;
@@ -651,7 +651,7 @@ struct TRINITY_DLL_DECL boss_krosh_firehandAI : public ScriptedAI
             Maulgar = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_MAULGAR)));
 
             if(Maulgar)
-                ((boss_high_king_maulgarAI*)Maulgar->AI())->AddDeath();
+                CAST_AI(boss_high_king_maulgarAI, Maulgar->AI())->AddDeath();
 
             if(CheckAllBossDied(pInstance, m_creature))
                 pInstance->SetData(DATA_MAULGAREVENT, DONE);

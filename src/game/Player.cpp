@@ -684,7 +684,7 @@ bool Player::Create( uint32 guidlow, const std::string& name, uint8 race, uint8 
     InitTaxiNodesForLevel();
     InitGlyphsForLevel();
     InitTalentForLevel();
-    InitPrimaryProffesions();                               // to max set before any spell added
+    InitPrimaryProfessions();                               // to max set before any spell added
 
     // apply original stats mods before spell loading or item equipment that call before equip _RemoveStatsMods()
     UpdateMaxHealth();                                      // Update max Health (for add bonus from stamina)
@@ -2971,10 +2971,10 @@ bool Player::addSpell(uint32 spell_id, bool active, bool learning, bool dependen
     m_usedTalentCount += talentCost;
 
     // update free primary prof.points (if any, can be none in case GM .learn prof. learning)
-    if(uint32 freeProfs = GetFreePrimaryProffesionPoints())
+    if(uint32 freeProfs = GetFreePrimaryProfessionPoints())
     {
         if(spellmgr.IsPrimaryProfessionFirstRankSpell(spell_id))
-            SetFreePrimaryProffesions(freeProfs-1);
+            SetFreePrimaryProfessions(freeProfs-1);
     }
 
     // add dependent skills
@@ -3181,9 +3181,9 @@ void Player::removeSpell(uint32 spell_id, bool disabled, bool update_action_bar_
     // update free primary prof.points (if not overflow setting, can be in case GM use before .learn prof. learning)
     if(spellmgr.IsPrimaryProfessionFirstRankSpell(spell_id))
     {
-        uint32 freeProfs = GetFreePrimaryProffesionPoints()+1;
+        uint32 freeProfs = GetFreePrimaryProfessionPoints()+1;
         if(freeProfs <= sWorld.getConfig(CONFIG_MAX_PRIMARY_TRADE_SKILL))
-            SetFreePrimaryProffesions(freeProfs);
+            SetFreePrimaryProfessions(freeProfs);
     }
 
     // remove dependent skill
@@ -3830,7 +3830,7 @@ TrainerSpellState Player::GetTrainerSpellState(TrainerSpell const* trainer_spell
         return TRAINER_SPELL_GREEN;
 
     // check primary prof. limit
-    if(spellmgr.IsPrimaryProfessionFirstRankSpell(spell->Id) && GetFreePrimaryProffesionPoints() == 0)
+    if(spellmgr.IsPrimaryProfessionFirstRankSpell(spell->Id) && GetFreePrimaryProfessionPoints() == 0)
         return TRAINER_SPELL_GREEN_DISABLED;
 
     return TRAINER_SPELL_GREEN;
@@ -4468,7 +4468,7 @@ void Player::RepopAtGraveyard()
     AreaTableEntry const *zone = GetAreaEntryByAreaID(GetAreaId());
 
     // Such zones are considered unreachable as a ghost and the player must be automatically revived
-    if(!isAlive() && zone && zone->flags & AREA_FLAG_NEED_FLY || GetTransport())
+    if(!isAlive() && zone && zone->flags & AREA_FLAG_NEED_FLY || GetTransport() || GetPositionZ() < -500.0f)
     {
         ResurrectPlayer(0.5f);
         SpawnCorpseBones();
@@ -14257,7 +14257,7 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder )
         return false;
     }
 
-    InitPrimaryProffesions();                               // to max set before any spell loaded
+    InitPrimaryProfessions();                               // to max set before any spell loaded
 
     // init saved position, and fix it later if problematic
     uint32 transGUID = fields[24].GetUInt32();
@@ -16664,8 +16664,6 @@ void Player::RemovePet(Pet* pet, PetSaveMode mode, bool returnreagent)
 
 void Player::StopCastingCharm()
 {
-    ExitVehicle();
-
     Unit* charm = GetCharm();
     if(!charm)
         return;
@@ -16674,6 +16672,8 @@ void Player::StopCastingCharm()
     {
         if(((Creature*)charm)->HasSummonMask(SUMMON_MASK_PUPPET))
             ((Puppet*)charm)->UnSummon();
+        else if(((Creature*)charm)->isVehicle())
+            ExitVehicle();
     }
     if(GetCharmGUID())
     {
@@ -16685,6 +16685,7 @@ void Player::StopCastingCharm()
     if(GetCharmGUID())
     {
         sLog.outCrash("Player %s is not able to uncharm unit (Entry: %u, Type: %u)", GetName(), charm->GetEntry(), charm->GetTypeId());
+        assert(false);
     }
 }
 
@@ -16787,7 +16788,7 @@ void Player::PetSpellInitialize()
 
     CharmInfo *charmInfo = pet->GetCharmInfo();
 
-    WorldPacket data(SMSG_PET_SPELLS, 8+4+4+4+4*10+1+1);
+    WorldPacket data(SMSG_PET_SPELLS, 8+4+4+4+4*MAX_UNIT_ACTION_BAR_INDEX+1+1);
     data << uint64(pet->GetGUID());
     data << uint32(pet->GetCreatureInfo()->family);         // creature family (required for pet talents)
     data << uint32(0);
@@ -16862,7 +16863,7 @@ void Player::PossessSpellInitialize()
         return;
     }
 
-    WorldPacket data(SMSG_PET_SPELLS, 8+4+4+4+4*10+1+1);
+    WorldPacket data(SMSG_PET_SPELLS, 8+4+4+4+4*MAX_UNIT_ACTION_BAR_INDEX+1+1);
     data << uint64(charm->GetGUID());
     data << uint32(0);
     data << uint32(0);
@@ -16942,7 +16943,7 @@ void Player::CharmSpellInitialize()
         }
     }
 
-    WorldPacket data(SMSG_PET_SPELLS, 8+4+4+4+4*10+1+4*addlist+1);
+    WorldPacket data(SMSG_PET_SPELLS, 8+4+4+4+4*MAX_UNIT_ACTION_BAR_INDEX+1+4*addlist+1);
     data << uint64(charm->GetGUID());
     data << uint32(0);
     data << uint32(0);
@@ -18371,6 +18372,19 @@ bool Player::IsVisibleGloballyFor( Player* u ) const
     return true;
 }
 
+template<class T>
+inline void UpdateVisibilityOf_helper(std::set<uint64>& s64, T* target)
+{
+    s64.insert(target->GetGUID());
+}
+
+template<>
+inline void UpdateVisibilityOf_helper(std::set<uint64>& s64, GameObject* target)
+{
+    if(!target->IsTransport())
+        s64.insert(target->GetGUID());
+}
+
 void Player::UpdateVisibilityOf(WorldObject* target)
 {
     if(HaveAtClient(target))
@@ -18391,8 +18405,7 @@ void Player::UpdateVisibilityOf(WorldObject* target)
         if(target->isVisibleForInState(this,false))
         {
             target->SendUpdateToPlayer(this);
-            if(target->GetTypeId()!=TYPEID_GAMEOBJECT||!((GameObject*)target)->IsTransport())
-                m_clientGUIDs.insert(target->GetGUID());
+            UpdateVisibilityOf_helper(m_clientGUIDs, target);
 
             #ifdef TRINITY_DEBUG
             if((sLog.getLogFilter() & LOG_FILTER_VISIBILITY_CHANGES)==0)
@@ -18420,23 +18433,8 @@ void Player::SendInitialVisiblePackets(Unit* target)
 }
 
 template<class T>
-inline void UpdateVisibilityOf_helper(std::set<uint64>& s64, T* target)
-{
-    s64.insert(target->GetGUID());
-}
-
-template<>
-inline void UpdateVisibilityOf_helper(std::set<uint64>& s64, GameObject* target)
-{
-    if(!target->IsTransport())
-        s64.insert(target->GetGUID());
-}
-
-template<class T>
 void Player::UpdateVisibilityOf(T* target, UpdateData& data, std::set<WorldObject*>& visibleNow)
 {
-    if(!target)
-    return;
     if(HaveAtClient(target))
     {
         if(!target->isVisibleForInState(this,true))
@@ -18450,7 +18448,7 @@ void Player::UpdateVisibilityOf(T* target, UpdateData& data, std::set<WorldObjec
             #endif
         }
     }
-    else if(visibleNow.size() < 30)
+    else if(visibleNow.size() < 30 || target->GetTypeId() == TYPEID_UNIT && ((Creature*)target)->isVehicle())
     {
         if(target->isVisibleForInState(this,false))
         {
@@ -18466,50 +18464,15 @@ void Player::UpdateVisibilityOf(T* target, UpdateData& data, std::set<WorldObjec
     }
 }
 
-/*template<>
-void Player::UpdateVisibilityOf<Creature>(Creature* target, UpdateData& data, UpdateDataMapType& data_updates, std::set<WorldObject*>& visibleNow)
-{
-    if(HaveAtClient(target))
-    {
-        if(!target->isVisibleForInState(this,true))
-        {
-            target->DestroyForPlayer(this);
-            target->BuildOutOfRangeUpdateBlock(&data);
-            m_clientGUIDs.erase(target->GetGUID());
-
-            #ifdef TRINITY_DEBUG
-            if((sLog.getLogFilter() & LOG_FILTER_VISIBILITY_CHANGES)==0)
-                sLog.outDebug("Object %u (Type: %u, Entry: %u) is out of range for player %u. Distance = %f",target->GetGUIDLow(),target->GetTypeId(),target->GetEntry(),GetGUIDLow(),GetDistance(target));
-            #endif
-        }
-    }
-    else
-    {
-        if(target->isVisibleForInState(this,false))
-        {
-            visibleNow.insert(target);
-            target->BuildUpdate(data_updates);
-            target->SendUpdateToPlayer(this);
-            target->SendMonsterMoveWithSpeedToCurrentDestination(this);
-            UpdateVisibilityOf_helper(m_clientGUIDs,target);
-
-            #ifdef TRINITY_DEBUG
-            if((sLog.getLogFilter() & LOG_FILTER_VISIBILITY_CHANGES)==0)
-                sLog.outDebug("Object %u (Type: %u, Entry: %u) is visible now for player %u. Distance = %f",target->GetGUIDLow(),target->GetTypeId(),target->GetEntry(),GetGUIDLow(),GetDistance(target));
-            #endif
-        }
-    }
-}*/
-
 template void Player::UpdateVisibilityOf(Player*        target, UpdateData& data, std::set<WorldObject*>& visibleNow);
 template void Player::UpdateVisibilityOf(Creature*      target, UpdateData& data, std::set<WorldObject*>& visibleNow);
 template void Player::UpdateVisibilityOf(Corpse*        target, UpdateData& data, std::set<WorldObject*>& visibleNow);
 template void Player::UpdateVisibilityOf(GameObject*    target, UpdateData& data, std::set<WorldObject*>& visibleNow);
 template void Player::UpdateVisibilityOf(DynamicObject* target, UpdateData& data, std::set<WorldObject*>& visibleNow);
 
-void Player::InitPrimaryProffesions()
+void Player::InitPrimaryProfessions()
 {
-    SetFreePrimaryProffesions(sWorld.getConfig(CONFIG_MAX_PRIMARY_TRADE_SKILL));
+    SetFreePrimaryProfessions(sWorld.getConfig(CONFIG_MAX_PRIMARY_TRADE_SKILL));
 }
 
 void Player::SendComboPoints()

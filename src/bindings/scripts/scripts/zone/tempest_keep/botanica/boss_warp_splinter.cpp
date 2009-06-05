@@ -46,7 +46,7 @@ struct TRINITY_DLL_DECL mob_treantAI  : public ScriptedAI
 
     void EnterCombat(Unit *who) {}
 
-    void MoveInLineOfSight(Unit*) {}
+    void MoveInLineOfSight(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -54,7 +54,7 @@ struct TRINITY_DLL_DECL mob_treantAI  : public ScriptedAI
         {
             if(WarpGuid && check_Timer < diff)
             {
-                if(Unit *Warp = (Unit*)Unit::GetUnit(*m_creature, WarpGuid))
+                if(Unit *Warp = Unit::GetUnit(*m_creature, WarpGuid))
                 {
                     if(m_creature->IsWithinMeleeRange(Warp,2.5f))
                     {
@@ -160,7 +160,7 @@ struct TRINITY_DLL_DECL boss_warp_splinterAI : public ScriptedAI
             float O = - m_creature->GetAngle(X,Y);
 
             if(Creature *pTreant = m_creature->SummonCreature(CREATURE_TREANT,treant_pos[i][0],treant_pos[i][1],treant_pos[i][2],O,TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN,25000))
-                ((mob_treantAI*)pTreant->AI())->WarpGuid = m_creature->GetGUID();
+                CAST_AI(mob_treantAI, pTreant->AI())->WarpGuid = m_creature->GetGUID();
         }
         switch(rand()%2)
         {

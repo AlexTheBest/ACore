@@ -126,7 +126,7 @@ bool GOHello_gilded_brazier(Player *player, GameObject* _GO)
     {
         Creature *Stillblade = player->SummonCreature(17716, 8106.11, -7542.06, 151.775, 3.02598, TEMPSUMMON_DEAD_DESPAWN, 60000);
         if (Stillblade)
-            ((CreatureAI*)Stillblade->AI())->AttackStart(player);
+            (Stillblade->AI())->AttackStart(player);
     }
     return true;
 };
@@ -198,7 +198,7 @@ struct TRINITY_DLL_DECL npc_ranger_lilathaAI : public npc_escortAI
         case 25: m_creature->AddUnitMovementFlag(MOVEMENTFLAG_WALK_MODE); break;
         case 30:
             if (player && player->GetTypeId() == TYPEID_PLAYER)
-                ((Player*)player)->GroupEventHappens(QUEST_ESCAPE_FROM_THE_CATACOMBS,m_creature);
+                CAST_PLR(player)->GroupEventHappens(QUEST_ESCAPE_FROM_THE_CATACOMBS,m_creature);
             break;
         case 32:
             m_creature->SetOrientation(2.978281);
@@ -232,7 +232,7 @@ struct TRINITY_DLL_DECL npc_ranger_lilathaAI : public npc_escortAI
         {
             Player* player = Unit::GetPlayer(PlayerGUID);
             if (player)
-                ((Player*)player)->FailQuest(QUEST_ESCAPE_FROM_THE_CATACOMBS);
+                CAST_PLR(player)->FailQuest(QUEST_ESCAPE_FROM_THE_CATACOMBS);
         }
     }
 
@@ -247,7 +247,7 @@ bool QuestAccept_npc_ranger_lilatha(Player* player, Creature* creature, Quest co
     if (quest->GetQuestId() == QUEST_ESCAPE_FROM_THE_CATACOMBS)
     {
         creature->setFaction(113);
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
     }
     return true;
 }
@@ -258,7 +258,7 @@ CreatureAI* GetAI_npc_ranger_lilathaAI(Creature *_Creature)
 
     ranger_lilathaAI->FillPointMovementListForCreature();
 
-    return (CreatureAI*)ranger_lilathaAI;
+    return ranger_lilathaAI;
 }
 
 void AddSC_ghostlands()

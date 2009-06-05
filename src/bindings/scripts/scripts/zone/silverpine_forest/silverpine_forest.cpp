@@ -81,7 +81,7 @@ bool GossipSelect_npc_astor_hadren(Player *player, Creature *_Creature, uint32 s
             player->CLOSE_GOSSIP_MENU();
             _Creature->setFaction(21);
             if(player)
-                ((npc_astor_hadrenAI*)_Creature->AI())->AttackStart(player);
+                CAST_AI(npc_astor_hadrenAI, _Creature->AI())->AttackStart(player);
             break;
     }
     return true;
@@ -171,7 +171,7 @@ bool QuestAccept_npc_deathstalker_erland(Player* player, Creature* creature, Que
     if (quest->GetQuestId() == QUEST_ESCORTING)
     {
         DoScriptText(SAY_QUESTACCEPT, creature, player);
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
     }
 
     return true;
@@ -209,7 +209,7 @@ CreatureAI* GetAI_npc_deathstalker_erlandAI(Creature *_Creature)
     deathstalker_erlandAI->AddWaypoint(25, 1310.51, 1207.36, 58.51, 5000);
     deathstalker_erlandAI->AddWaypoint(26, 1310.51, 1207.36, 58.51, 2000);
 
-    return (CreatureAI*)deathstalker_erlandAI;
+    return deathstalker_erlandAI;
 }
 
 /*######

@@ -240,7 +240,7 @@ struct TRINITY_DLL_DECL npc_twiggy_flatheadAI : public ScriptedAI
     {
         if(!who || (!who->isAlive())) return;
 
-        if (m_creature->IsWithinDistInMap(who, 10.0f) && (who->GetTypeId() == TYPEID_PLAYER) && ((Player*)who)->GetQuestStatus(1719) == QUEST_STATUS_INCOMPLETE && !EventInProgress)
+        if (m_creature->IsWithinDistInMap(who, 10.0f) && (who->GetTypeId() == TYPEID_PLAYER) && CAST_PLR(who)->GetQuestStatus(1719) == QUEST_STATUS_INCOMPLETE && !EventInProgress)
         {
             PlayerGUID = who->GetGUID();
             EventInProgress = true;
@@ -353,7 +353,7 @@ struct TRINITY_DLL_DECL npc_twiggy_flatheadAI : public ScriptedAI
                             pCreature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
                             pCreature->HandleEmoteCommand(EMOTE_ONESHOT_ROAR);
                             pCreature->setFaction(14);
-                            ((CreatureAI*)pCreature->AI())->AttackStart(pWarrior);
+                            (pCreature->AI())->AttackStart(pWarrior);
                             ++Wave;
                             Wave_Timer = 20000;
                         }
@@ -447,7 +447,7 @@ struct TRINITY_DLL_DECL npc_wizzlecrank_shredderAI : public npc_escortAI
             if(Mercenary)
             {
                 DoScriptText(SAY_MERCENARY_4, Mercenary);
-                ((Creature*)Mercenary)->AI()->AttackStart(m_creature);
+                CAST_CRE(Mercenary)->AI()->AttackStart(m_creature);
                 AttackStart(Mercenary);
             }
                 }break;
@@ -499,7 +499,7 @@ bool QuestAccept_npc_wizzlecrank_shredder(Player* player, Creature* creature, Qu
     if (quest->GetQuestId() == QUEST_ESCAPE)
     {
          creature->setFaction(FACTION_RATCHET);
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
     }
     return true;
 }
@@ -541,7 +541,7 @@ CreatureAI* GetAI_npc_wizzlecrank_shredderAI(Creature *_Creature)
     thisAI->AddWaypoint(30, 1091.28, -2985.82, 91.74, 7000);
     thisAI->AddWaypoint(31, 1091.28, -2985.82, 91.74, 3000);
 
-    return (CreatureAI*)thisAI;
+    return thisAI;
 }
 
 void AddSC_the_barrens()

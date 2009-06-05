@@ -165,7 +165,7 @@ CreatureAI* GetAI_example_escort(Creature *_Creature)
     testAI->AddWaypoint(3, 1231, -4419, 23, 5000);
     testAI->AddWaypoint(4, 1208, -4392, 23, 5000);
 
-    return (CreatureAI*)testAI;
+    return testAI;
 }
 
 bool GossipHello_example_escort(Player *player, Creature *_Creature)
@@ -186,7 +186,7 @@ bool GossipSelect_example_escort(Player *player, Creature *_Creature, uint32 sen
     if (action == GOSSIP_ACTION_INFO_DEF+1)
     {
         player->CLOSE_GOSSIP_MENU();
-        ((npc_escortAI*)(_Creature->AI()))->Start(true, true, true, player->GetGUID());
+        CAST_AI(npc_escortAI, (_Creature->AI()))->Start(true, true, true, player->GetGUID());
 
         return true;                                        // prevent mangos core handling
     }
@@ -194,7 +194,7 @@ bool GossipSelect_example_escort(Player *player, Creature *_Creature, uint32 sen
     if (action == GOSSIP_ACTION_INFO_DEF+2)
     {
         player->CLOSE_GOSSIP_MENU();
-        ((npc_escortAI*)(_Creature->AI()))->Start(false, false, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (_Creature->AI()))->Start(false, false, false, player->GetGUID());
 
         return true;                                        // prevent mangos core handling
     }
@@ -202,7 +202,7 @@ bool GossipSelect_example_escort(Player *player, Creature *_Creature, uint32 sen
     if (action == GOSSIP_ACTION_INFO_DEF+3)
     {
         player->CLOSE_GOSSIP_MENU();
-        ((npc_escortAI*)(_Creature->AI()))->Start(false, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (_Creature->AI()))->Start(false, true, false, player->GetGUID());
 
         return true;                                        // prevent mangos core handling
     }

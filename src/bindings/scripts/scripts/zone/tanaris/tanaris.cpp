@@ -66,15 +66,15 @@ struct TRINITY_DLL_DECL mob_aquementasAI : public ScriptedAI
 
     void SendItem(Unit* receiver)
     {
-        if (((Player*)receiver)->HasItemCount(11169,1,false) &&
-            ((Player*)receiver)->HasItemCount(11172,11,false) &&
-            ((Player*)receiver)->HasItemCount(11173,1,false) &&
-            !((Player*)receiver)->HasItemCount(11522,1,true))
+        if (CAST_PLR(receiver)->HasItemCount(11169,1,false) &&
+            CAST_PLR(receiver)->HasItemCount(11172,11,false) &&
+            CAST_PLR(receiver)->HasItemCount(11173,1,false) &&
+            !CAST_PLR(receiver)->HasItemCount(11522,1,true))
         {
             ItemPosCountVec dest;
-            uint8 msg = ((Player*)receiver)->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, 11522, 1, false);
+            uint8 msg = CAST_PLR(receiver)->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, 11522, 1, false);
             if( msg == EQUIP_ERR_OK )
-                ((Player*)receiver)->StoreNewItem( dest, 11522, 1, true);
+                CAST_PLR(receiver)->StoreNewItem( dest, 11522, 1, true);
         }
     }
 
@@ -179,7 +179,7 @@ struct TRINITY_DLL_DECL npc_custodian_of_timeAI : public npc_escortAI
                 DoScriptText(WHISPER_CUSTODIAN_14, m_creature, pTemp);
                 DoCast(pTemp,34883);
                 //below here is temporary workaround, to be removed when spell works properly
-                ((Player*)pTemp)->AreaExploredOrEventHappens(10277);
+                CAST_PLR(pTemp)->AreaExploredOrEventHappens(10277);
                 break;
         }
     }
@@ -191,12 +191,12 @@ struct TRINITY_DLL_DECL npc_custodian_of_timeAI : public npc_escortAI
 
         if( who->GetTypeId() == TYPEID_PLAYER )
         {
-            if( ((Player*)who)->HasAura(34877) && ((Player*)who)->GetQuestStatus(10277) == QUEST_STATUS_INCOMPLETE )
+            if( CAST_PLR(who)->HasAura(34877) && CAST_PLR(who)->GetQuestStatus(10277) == QUEST_STATUS_INCOMPLETE )
             {
                 float Radius = 10.0;
                 if( m_creature->IsWithinDistInMap(who, Radius) )
                 {
-                    ((npc_escortAI*)(m_creature->AI()))->Start(false, false, false, who->GetGUID());
+                    Start(false, false, false, who->GetGUID());
                 }
             }
         }
@@ -217,7 +217,7 @@ CreatureAI* GetAI_npc_custodian_of_time(Creature* pCreature)
 
     custodian_of_timeAI->FillPointMovementListForCreature();
 
-    return (CreatureAI*)custodian_of_timeAI;
+    return custodian_of_timeAI;
 }
 
 /*######
@@ -413,7 +413,7 @@ struct TRINITY_DLL_DECL npc_OOX17AI : public npc_escortAI
         if (PlayerGUID)
         {
             if (Player* player = Unit::GetPlayer(PlayerGUID))
-                ((Player*)player)->FailQuest(Q_OOX17);
+                CAST_PLR(player)->FailQuest(Q_OOX17);
         }
     }
 
@@ -435,7 +435,7 @@ bool QuestAccept_npc_OOX17(Player* player, Creature* creature, Quest const* ques
         creature->SetUInt32Value(UNIT_FIELD_BYTES_1,0);
         creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_ATTACKABLE_2);
         DoScriptText(SAY_CHICKEN_ACC, creature);
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
 
     }
     return true;
@@ -533,7 +533,7 @@ CreatureAI* GetAI_npc_OOX17(Creature *_Creature)
     OOX17AI->AddWaypoint(85, -6944.81, -4816.58, 1.60);
     OOX17AI->AddWaypoint(86, -6942.06, -4839.40, 0.66,5000);
 
-    return (CreatureAI*)OOX17AI;
+    return OOX17AI;
 }
 
 /*######

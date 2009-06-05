@@ -69,7 +69,7 @@ struct TRINITY_DLL_DECL boss_ingvar_the_plundererAI : public ScriptedAI
 {
     boss_ingvar_the_plundererAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         HeroicMode = c->GetMap()->IsHeroic();
     }
 
@@ -285,7 +285,7 @@ struct TRINITY_DLL_DECL mob_annhylde_the_callerAI : public ScriptedAI
 {
     mob_annhylde_the_callerAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     float x,y,z;
@@ -357,15 +357,15 @@ struct TRINITY_DLL_DECL mob_annhylde_the_callerAI : public ScriptedAI
                     Resurect_Phase = 2;
                 }else if (Resurect_Phase == 2)
                 {
-                    Unit* ingvar = Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_INGVAR));
+                    Creature* ingvar = Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_INGVAR));
                     if(ingvar)
                     {
                         ingvar->RemoveAurasDueToSpell(SPELL_SCOURG_RESURRECTION_DUMMY);
                         //ingvar->CastSpell(ingvar,SPELL_INGVAR_TRANSFORM,false);
                         ingvar->SetUInt32Value(UNIT_FIELD_DISPLAYID, MODEL_INGVAR_UNDEAD); // Visual Hack - when he dies he becomes human model -> wrong
-                        Creature* c_ingvar = (Creature*)ingvar;
+                        Creature* c_ingvar = ingvar;
 
-                        ((boss_ingvar_the_plundererAI*)(c_ingvar->AI()))->StartZombiePhase();
+                        CAST_AI(boss_ingvar_the_plundererAI, (c_ingvar->AI()))->StartZombiePhase();
 
                         m_creature->GetMotionMaster()->MovePoint(2,x+1,y,z+30);
                         Resurect_Phase++;
@@ -388,7 +388,7 @@ struct TRINITY_DLL_DECL mob_ingvar_throw_dummyAI : public ScriptedAI
 {
     mob_ingvar_throw_dummyAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         HeroicMode = c->GetMap()->IsHeroic();
     }
 

@@ -90,7 +90,7 @@ npc_willixAI(Creature *c) : npc_escortAI(c) {}
         case 45:
             DoScriptText(SAY_WIN, m_creature, player);
             if (player && player->GetTypeId() == TYPEID_PLAYER)
-                ((Player*)player)->GroupEventHappens(QUEST_WILLIX_THE_IMPORTER,m_creature);
+                CAST_PLR(player)->GroupEventHappens(QUEST_WILLIX_THE_IMPORTER,m_creature);
             break;
         case 46:
             DoScriptText(SAY_END, m_creature, player);
@@ -115,7 +115,7 @@ npc_willixAI(Creature *c) : npc_escortAI(c) {}
         if (PlayerGUID)
         {
             if (Player* player = Unit::GetPlayer(PlayerGUID))
-                ((Player*)player)->FailQuest(QUEST_WILLIX_THE_IMPORTER);
+                CAST_PLR(player)->FailQuest(QUEST_WILLIX_THE_IMPORTER);
         }
     }
 
@@ -129,7 +129,7 @@ bool QuestAccept_npc_willix(Player* player, Creature* creature, Quest const* que
 {
     if (quest->GetQuestId() == QUEST_WILLIX_THE_IMPORTER)
     {
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
         DoScriptText(SAY_READY, creature, player);
         creature->setFaction(113);
     }
@@ -189,7 +189,7 @@ CreatureAI* GetAI_npc_willix(Creature *_Creature)
     thisAI->AddWaypoint(45, 1948.35, 1571.35, 80.96, 30000);
     thisAI->AddWaypoint(46, 1947.02, 1566.42, 81.80, 30000);
 
-    return (CreatureAI*)thisAI;
+    return thisAI;
 }
 
 void AddSC_razorfen_kraul()

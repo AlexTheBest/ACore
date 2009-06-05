@@ -20,7 +20,9 @@
 #define ZONE_SCRIPT_H_
 
 #include "Common.h"
+#include "Creature.h"
 
+//struct CreatureData;
 class Creature;
 class GameObject;
 
@@ -29,7 +31,7 @@ class TRINITY_DLL_SPEC ZoneScript
     public:
         explicit ZoneScript() {}
 
-        virtual uint32 GetCreatureEntry(uint32 guidlow, uint32 entry) { return entry; }
+        virtual uint32 GetCreatureEntry(uint32 guidlow, const CreatureData *data) { return data->id; }
         virtual uint32 GetGameObjectEntry(uint32 guidlow, uint32 entry) { return entry; }
 
         virtual void OnCreatureCreate(Creature *, bool add) {}

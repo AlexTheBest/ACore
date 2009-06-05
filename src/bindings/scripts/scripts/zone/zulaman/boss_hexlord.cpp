@@ -179,7 +179,7 @@ struct TRINITY_DLL_DECL boss_hexlord_addAI : public ScriptedAI
 
     boss_hexlord_addAI(Creature* c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     void Reset() {}
@@ -202,7 +202,7 @@ struct TRINITY_DLL_DECL boss_hex_lord_malacrassAI : public ScriptedAI
 {
     boss_hex_lord_malacrassAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         SelectAddEntry();
         for(uint8 i = 0; i < 4; ++i)
             AddGUID[i] = 0;
@@ -257,7 +257,7 @@ struct TRINITY_DLL_DECL boss_hex_lord_malacrassAI : public ScriptedAI
         {
             Unit* Temp = Unit::GetUnit((*m_creature),AddGUID[i]);
             if(Temp && Temp->isAlive())
-                ((Creature*)Temp)->AI()->AttackStart(m_creature->getVictim());
+                CAST_CRE(Temp)->AI()->AttackStart(m_creature->getVictim());
             else
             {
                 EnterEvadeMode();
@@ -353,7 +353,7 @@ struct TRINITY_DLL_DECL boss_hex_lord_malacrassAI : public ScriptedAI
             {
                 Unit* Temp = Unit::GetUnit((*m_creature),AddGUID[i]);
                 if(Temp && Temp->isAlive() && !Temp->getVictim())
-                    ((Creature*)Temp)->AI()->AttackStart(m_creature->getVictim());
+                    CAST_CRE(Temp)->AI()->AttackStart(m_creature->getVictim());
             }
             CheckAddState_Timer = 5000;
         }else CheckAddState_Timer -= diff;

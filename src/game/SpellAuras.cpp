@@ -345,7 +345,7 @@ pAuraHandler AuraHandler[TOTAL_AURAS]=
 
 Aura::Aura(SpellEntry const* spellproto, uint32 effMask, int32 *currentBasePoints, Unit *target, WorldObject *source, Unit *caster, Item* castItem) :
 m_caster_guid(0), m_castItemGuid(castItem?castItem->GetGUID():0), m_target(target),
-m_timeCla(1000), m_removeMode(AURA_REMOVE_BY_DEFAULT), m_AuraDRGroup(DIMINISHING_NONE),
+m_timeCla(0), m_removeMode(AURA_REMOVE_BY_DEFAULT), m_AuraDRGroup(DIMINISHING_NONE),
 m_auraSlot(MAX_AURAS), m_auraLevel(1), m_procCharges(0), m_stackAmount(1),m_auraStateMask(0), m_updated(false), m_isRemoved(false)
 {
     assert(target);
@@ -355,6 +355,9 @@ m_auraSlot(MAX_AURAS), m_auraLevel(1), m_procCharges(0), m_stackAmount(1),m_aura
     m_auraFlags = effMask;
 
     m_spellProto = spellproto;
+
+    if(m_spellProto->manaPerSecond || m_spellProto->manaPerSecondPerLevel)
+        m_timeCla = 1000;
 
     m_isPassive = IsPassiveSpell(GetId());
 
@@ -456,10 +459,9 @@ Aura::~Aura()
 AuraEffect::AuraEffect(Aura * parentAura, uint8 effIndex, int32 * currentBasePoints , Unit *caster, Item* castItem, WorldObject *source) :
 m_parentAura(parentAura), m_spellmod(NULL), m_periodicTimer(0), m_isPeriodic(false), m_isAreaAura(false), m_isPersistent(false),
 m_target(parentAura->GetTarget()), m_tickNumber(0)
+, m_spellProto(parentAura->GetSpellProto()), m_effIndex(effIndex), m_auraName(AuraType(m_spellProto->EffectApplyAuraName[m_effIndex]))
 {
-    m_spellProto = parentAura->GetSpellProto();
-    m_effIndex = effIndex;
-    m_auraName = AuraType(m_spellProto->EffectApplyAuraName[m_effIndex]);
+    assert(m_auraName < TOTAL_AURAS);
 
     if(currentBasePoints)
         m_currentBasePoints = *currentBasePoints;
@@ -533,12 +535,12 @@ AreaAuraEffect::AreaAuraEffect(Aura * parentAura, uint32 effIndex, int32 * curre
         case SPELL_EFFECT_APPLY_AREA_AURA_PARTY:
             m_areaAuraType = AREA_AURA_PARTY;
             if(m_target->GetTypeId() == TYPEID_UNIT && ((Creature*)m_target)->isTotem())
-                m_auraName = SPELL_AURA_NONE;
+                *const_cast<AuraType*>(&m_auraName) = SPELL_AURA_NONE;
             break;
         case SPELL_EFFECT_APPLY_AREA_AURA_RAID:
             m_areaAuraType = AREA_AURA_RAID;
             if(m_target->GetTypeId() == TYPEID_UNIT && ((Creature*)m_target)->isTotem())
-                m_auraName = SPELL_AURA_NONE;
+                *const_cast<AuraType*>(&m_auraName) = SPELL_AURA_NONE;
             break;
         case SPELL_EFFECT_APPLY_AREA_AURA_FRIEND:
             m_areaAuraType = AREA_AURA_FRIEND;
@@ -546,7 +548,7 @@ AreaAuraEffect::AreaAuraEffect(Aura * parentAura, uint32 effIndex, int32 * curre
         case SPELL_EFFECT_APPLY_AREA_AURA_ENEMY:
             m_areaAuraType = AREA_AURA_ENEMY;
             if(m_target == caster_ptr)
-                m_auraName = SPELL_AURA_NONE;    // Do not do any effect on self
+                *const_cast<AuraType*>(&m_auraName) = SPELL_AURA_NONE;    // Do not do any effect on self
             break;
         case SPELL_EFFECT_APPLY_AREA_AURA_PET:
             m_areaAuraType = AREA_AURA_PET;
@@ -554,7 +556,7 @@ AreaAuraEffect::AreaAuraEffect(Aura * parentAura, uint32 effIndex, int32 * curre
         case SPELL_EFFECT_APPLY_AREA_AURA_OWNER:
             m_areaAuraType = AREA_AURA_OWNER;
             if(m_target == caster_ptr)
-                m_auraName = SPELL_AURA_NONE;
+                *const_cast<AuraType*>(&m_auraName) = SPELL_AURA_NONE;
             break;
         default:
             sLog.outError("Wrong spell effect in AreaAura constructor");
@@ -628,15 +630,15 @@ void Aura::Update(uint32 diff)
             m_duration = 0;
 
         // all spells with manaPerSecond/manaPerSecondPerLevel have aura in effect 0
-        if(m_timeCla > 0)
-            m_timeCla -= diff;
-        if(m_timeCla <= 0)
+        if(m_timeCla)
         {
-            if(Unit* caster = GetCaster())
+            if(m_timeCla > diff)
+                m_timeCla -= diff;
+            else if(Unit* caster = GetCaster())
             {
                 if(int32 manaPerSecond = m_spellProto->manaPerSecond + m_spellProto->manaPerSecondPerLevel * caster->getLevel())
                 {
-                    m_timeCla = 1000;
+                    m_timeCla += 1000 - diff;
 
                     Powers powertype = Powers(m_spellProto->powerType);
                     if(powertype == POWER_HEALTH)
@@ -673,13 +675,14 @@ void AuraEffect::Update(uint32 diff)
 {
     if (m_isPeriodic && (GetParentAura()->GetAuraDuration() >=0 || GetParentAura()->IsPassive() || GetParentAura()->IsPermanent()))
     {
-        m_periodicTimer -= diff;
-        if(m_periodicTimer <= 0) // tick also at m_periodicTimer==0 to prevent lost last tick in case max m_duration == (max m_periodicTimer)*N
+        if(m_periodicTimer > diff)
+            m_periodicTimer -= diff;
+        else // tick also at m_periodicTimer==0 to prevent lost last tick in case max m_duration == (max m_periodicTimer)*N
         {
             ++m_tickNumber;
 
             // update before applying (aura can be removed in TriggerSpell or PeriodicTick calls)
-            m_periodicTimer += m_amplitude;
+            m_periodicTimer += m_amplitude - diff;
 
             if(!m_target->hasUnitState(UNIT_STAT_ISOLATED))
                 PeriodicTick();
@@ -856,8 +859,7 @@ void AuraEffect::ApplyModifier(bool apply, bool Real, bool changeAmount)
     if (GetParentAura()->IsRemoved())
         return;
 
-    if(m_auraName<TOTAL_AURAS)
-        (*this.*AuraHandler [m_auraName])(apply,Real, changeAmount);
+    (*this.*AuraHandler [m_auraName])(apply,Real, changeAmount);
 }
 
 void AuraEffect::RecalculateAmount(bool applied)
@@ -3529,7 +3531,7 @@ void AuraEffect::HandleAuraModScale(bool apply, bool Real, bool /*changeAmount*/
     if( apply )
     {
         m_target->SetCharmerGUID(GetCasterGUID());
-        m_target->SetUInt32Value(UNIT_FIELD_FACTIONTEMPLATE,caster->getFaction());
+        m_target->setFaction(caster->getFaction());
 
         caster->SetCharm(m_target);
 
@@ -3571,7 +3573,7 @@ void AuraEffect::HandleAuraModScale(bool apply, bool Real, bool /*changeAmount*/
         else if(m_target->GetTypeId() == TYPEID_UNIT)
         {
             CreatureInfo const *cinfo = ((Creature*)m_target)->GetCreatureInfo();
-            m_target->SetUInt32Value(UNIT_FIELD_FACTIONTEMPLATE,cinfo->faction_A);
+            m_target->setFaction(cinfo->faction_A);
         }
 
         caster->SetCharm(NULL);
@@ -3664,8 +3666,8 @@ void AuraEffect::HandleAuraModPetTalentsPoints(bool Apply, bool Real, bool chang
         if( apply )
         {
             m_target->SetCharmerGUID(GetCasterGUID());
-            m_target->SetUInt32Value(UNIT_FIELD_FACTIONTEMPLATE,caster->getFaction());
-            m_target->CastStop(m_target==caster ? GetId() : 0);
+            m_target->setFaction(caster->getFaction());
+            m_target->CastStop(m_target == caster ? GetId() : 0);
             caster->SetCharm(m_target);
 
             m_target->CombatStop();
@@ -3713,12 +3715,12 @@ void AuraEffect::HandleAuraModPetTalentsPoints(bool Apply, bool Real, bool chang
                 if(((Creature*)m_target)->isPet())
                 {
                     if(Unit* owner = m_target->GetOwner())
-                        m_target->SetUInt32Value(UNIT_FIELD_FACTIONTEMPLATE,owner->getFaction());
+                        m_target->setFaction(owner->getFaction());
                     else if(cinfo)
-                        m_target->SetUInt32Value(UNIT_FIELD_FACTIONTEMPLATE,cinfo->faction_A);
+                        m_target->setFaction(cinfo->faction_A);
                 }
                 else if(cinfo)                              // normal creature
-                    m_target->SetUInt32Value(UNIT_FIELD_FACTIONTEMPLATE,cinfo->faction_A);
+                    m_target->setFaction(cinfo->faction_A);
 
                 // restore UNIT_FIELD_BYTES_0
                 if(cinfo && caster->GetTypeId() == TYPEID_PLAYER && caster->getClass() == CLASS_WARLOCK && cinfo->type == CREATURE_TYPE_DEMON)
@@ -4979,6 +4981,10 @@ void AuraEffect::HandleAuraModIncreaseHealth(bool apply, bool Real, bool changeA
     {
         if(apply)
         {
+            // Vampiric Blood
+            if(GetSpellProto()->Id == 55233)
+                m_amount = m_target->GetMaxHealth() * m_amount / 100;
+
             m_target->HandleStatModifier(UNIT_MOD_HEALTH, TOTAL_VALUE, float(m_amount), apply);
             m_target->ModifyHealth(m_amount);
         }
@@ -6626,20 +6632,53 @@ void AuraEffect::PeriodicDummyTick()
         {
             switch (spell->Id)
             {
-                // Killing Spree
-//                case 51690: break;
-                // Overkill
-                case 58428:
-                    if (!m_target->HasAuraType(SPELL_AURA_MOD_STEALTH))
-                        m_target->RemoveAurasDueToSpell(58427);
-                    break;
                 // Master of Subtlety
                 case 31666:
                     if (!m_target->HasAuraType(SPELL_AURA_MOD_STEALTH))
                         m_target->RemoveAurasDueToSpell(31665);
                     break;
-                default:
+                // Killing Spree
+                case 51690:
+                {
+                    std::list<Unit*> targets;
+                    {
+                        // eff_radius ==0
+                        float radius = GetSpellMaxRange(spell, false);
+
+                        CellPair p(MaNGOS::ComputeCellPair(caster->GetPositionX(),caster->GetPositionY()));
+                        Cell cell(p);
+                        cell.data.Part.reserved = ALL_DISTRICT;
+
+                        MaNGOS::AnyUnfriendlyVisibleUnitInObjectRangeCheck u_check(caster, caster, radius);
+                        MaNGOS::UnitListSearcher<MaNGOS::AnyUnfriendlyVisibleUnitInObjectRangeCheck> checker(caster,targets, u_check);
+
+                        TypeContainerVisitor<MaNGOS::UnitListSearcher<MaNGOS::AnyUnfriendlyVisibleUnitInObjectRangeCheck>, GridTypeMapContainer > grid_object_checker(checker);
+                        TypeContainerVisitor<MaNGOS::UnitListSearcher<MaNGOS::AnyUnfriendlyVisibleUnitInObjectRangeCheck>, WorldTypeMapContainer > world_object_checker(checker);
+
+                        CellLock<GridReadGuard> cell_lock(cell, p);
+
+                        cell_lock->Visit(cell_lock, grid_object_checker,  *caster->GetMap());
+                        cell_lock->Visit(cell_lock, world_object_checker, *caster->GetMap());
+                    }
+
+                    if(targets.empty())
+                        return;
+
+                    std::list<Unit*>::const_iterator itr = targets.begin();
+                    std::advance(itr, rand()%targets.size());
+                    Unit* target = *itr;
+
+                    caster->CastSpell(target, 57840, true);
+                    caster->CastSpell(target, 57841, true);
+                    return;
+                }
+                // Overkill
+                case 58428:
+                    if (!m_target->HasAuraType(SPELL_AURA_MOD_STEALTH))
+                        m_target->RemoveAurasDueToSpell(58427);
                     break;
+//                default:
+//                    break;
             }
             break;
         }
@@ -6814,7 +6853,7 @@ void AuraEffect::HandleAuraControlVehicle(bool apply, bool Real, bool /*changeAm
     if(!caster || caster == m_target)
         return;
 
-    Vehicle *vehicle = dynamic_cast<Vehicle*>(m_target);
+    Vehicle * const vehicle = dynamic_cast<Vehicle * const>(m_target);
 
     if (apply)
     {
@@ -6904,10 +6943,10 @@ void AuraEffect::HandleModPossess(bool apply, bool Real, bool /*changeAmount*/)
         if(m_target->getLevel() > m_amount)
             return;
 
-        m_target->SetCharmedOrPossessedBy(caster, true);
+        m_target->SetCharmedBy(caster, CHARM_TYPE_POSSESS);
     }
     else
-        m_target->RemoveCharmedOrPossessedBy(caster);
+        m_target->RemoveCharmedBy(caster);
 }
 
 void AuraEffect::HandleModPossessPet(bool apply, bool Real, bool /*changeAmount*/)
@@ -6924,11 +6963,11 @@ void AuraEffect::HandleModPossessPet(bool apply, bool Real, bool /*changeAmount*
         if(caster->GetGuardianPet() != m_target)
             return;
 
-        m_target->SetCharmedOrPossessedBy(caster, true);
+        m_target->SetCharmedBy(caster, CHARM_TYPE_POSSESS);
     }
     else
     {
-        m_target->RemoveCharmedOrPossessedBy(caster);
+        m_target->RemoveCharmedBy(caster);
 
         // Reinitialize the pet bar and make the pet come back to the owner
         ((Player*)caster)->PetSpellInitialize();
@@ -6952,10 +6991,10 @@ void AuraEffect::HandleModCharm(bool apply, bool Real, bool /*changeAmount*/)
         if(int32(m_target->getLevel()) > m_amount)
             return;
 
-        m_target->SetCharmedOrPossessedBy(caster, false);
+        m_target->SetCharmedBy(caster, CHARM_TYPE_CHARM);
     }
     else
-        m_target->RemoveCharmedOrPossessedBy(caster);
+        m_target->RemoveCharmedBy(caster);
 }
 
 void AuraEffect::HandlePhase(bool apply, bool Real, bool /*changeAmount*/)

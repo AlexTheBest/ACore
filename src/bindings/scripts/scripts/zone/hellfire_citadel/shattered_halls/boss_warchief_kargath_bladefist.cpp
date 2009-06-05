@@ -52,7 +52,7 @@ struct TRINITY_DLL_DECL boss_warchief_kargath_bladefistAI : public ScriptedAI
 {
     boss_warchief_kargath_bladefistAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         HeroicMode = m_creature->GetMap()->IsHeroic();
     }
 
@@ -165,7 +165,7 @@ struct TRINITY_DLL_DECL boss_warchief_kargath_bladefistAI : public ScriptedAI
             {
                 (*temp).GetMotionMaster()->Clear(true);
                 m_creature->DealDamage(temp,temp->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
-                ((Creature*)temp)->RemoveCorpse();
+                CAST_CRE(temp)->RemoveCorpse();
             }
         }
         adds.clear();
@@ -177,7 +177,7 @@ struct TRINITY_DLL_DECL boss_warchief_kargath_bladefistAI : public ScriptedAI
             {
                 (*temp).GetMotionMaster()->Clear(true);
                 m_creature->DealDamage(temp,temp->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
-                ((Creature*)temp)->RemoveCorpse();
+                CAST_CRE(temp)->RemoveCorpse();
             }
         }
         assassins.clear();

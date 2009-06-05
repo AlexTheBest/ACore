@@ -118,7 +118,7 @@ CreatureAI* GetAI_npc_chicken_cluck(Creature *_Creature)
 bool QuestAccept_npc_chicken_cluck(Player *player, Creature *_Creature, const Quest *_Quest )
 {
     if(_Quest->GetQuestId() == QUEST_CLUCK)
-        ((npc_chicken_cluckAI*)_Creature->AI())->Reset();
+        CAST_AI(npc_chicken_cluckAI, _Creature->AI())->Reset();
 
     return true;
 }
@@ -126,7 +126,7 @@ bool QuestAccept_npc_chicken_cluck(Player *player, Creature *_Creature, const Qu
 bool QuestComplete_npc_chicken_cluck(Player *player, Creature *_Creature, const Quest *_Quest)
 {
     if(_Quest->GetQuestId() == QUEST_CLUCK)
-        ((npc_chicken_cluckAI*)_Creature->AI())->Reset();
+        CAST_AI(npc_chicken_cluckAI, _Creature->AI())->Reset();
 
     return true;
 }
@@ -361,12 +361,12 @@ struct TRINITY_DLL_DECL npc_injured_patientAI : public ScriptedAI
     {
         if (caster->GetTypeId() == TYPEID_PLAYER && m_creature->isAlive() && spell->Id == 20804)
         {
-            if((((Player*)caster)->GetQuestStatus(6624) == QUEST_STATUS_INCOMPLETE) || (((Player*)caster)->GetQuestStatus(6622) == QUEST_STATUS_INCOMPLETE))
+            if((CAST_PLR(caster)->GetQuestStatus(6624) == QUEST_STATUS_INCOMPLETE) || (CAST_PLR(caster)->GetQuestStatus(6622) == QUEST_STATUS_INCOMPLETE))
             {
                 if (Doctorguid)
                 {
                     if(Creature* Doctor = Unit::GetCreature(*m_creature, Doctorguid))
-                        ((npc_doctorAI*)Doctor->AI())->PatientSaved(m_creature, ((Player*)caster), Coord);
+                        CAST_AI(npc_doctorAI, Doctor->AI())->PatientSaved(m_creature, CAST_PLR(caster), Coord);
                 }
             }
 
@@ -424,7 +424,7 @@ struct TRINITY_DLL_DECL npc_injured_patientAI : public ScriptedAI
             if (Doctorguid)
             {
                 if(Creature* Doctor = Unit::GetCreature((*m_creature), Doctorguid))
-                    ((npc_doctorAI*)Doctor->AI())->PatientDied(Coord);
+                    CAST_AI(npc_doctorAI, Doctor->AI())->PatientDied(Coord);
             }
         }
     }
@@ -561,10 +561,10 @@ void npc_doctorAI::UpdateAI(const uint32 diff)
                 Patient->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
 
                 Patients.push_back(Patient->GetGUID());
-                ((npc_injured_patientAI*)Patient->AI())->Doctorguid = m_creature->GetGUID();
+                CAST_AI(npc_injured_patientAI, Patient->AI())->Doctorguid = m_creature->GetGUID();
 
                 if (Point)
-                    ((npc_injured_patientAI*)Patient->AI())->Coord = Point;
+                    CAST_AI(npc_injured_patientAI, Patient->AI())->Coord = Point;
 
                 Coordinates.erase(itr);
             }
@@ -577,7 +577,7 @@ void npc_doctorAI::UpdateAI(const uint32 diff)
 bool QuestAccept_npc_doctor(Player *player, Creature *creature, Quest const *quest )
 {
     if ((quest->GetQuestId() == 6624) || (quest->GetQuestId() == 6622))
-        ((npc_doctorAI*)creature->AI())->BeginEvent(player);
+        CAST_AI(npc_doctorAI, creature->AI())->BeginEvent(player);
 
     return true;
 }
@@ -667,7 +667,7 @@ struct TRINITY_DLL_DECL npc_garments_of_questsAI : public npc_escortAI
                 switch(m_creature->GetEntry())
                 {
                     case ENTRY_SHAYA:
-                        if (((Player*)pCaster)->GetQuestStatus(QUEST_MOON) == QUEST_STATUS_INCOMPLETE)
+                        if (CAST_PLR(pCaster)->GetQuestStatus(QUEST_MOON) == QUEST_STATUS_INCOMPLETE)
                         {
                             if (bIsHealed && !bCanRun && Spell->Id == SPELL_FORTITUDE_R1)
                             {
@@ -684,7 +684,7 @@ struct TRINITY_DLL_DECL npc_garments_of_questsAI : public npc_escortAI
                         }
                         break;
                     case ENTRY_ROBERTS:
-                        if (((Player*)pCaster)->GetQuestStatus(QUEST_LIGHT_1) == QUEST_STATUS_INCOMPLETE)
+                        if (CAST_PLR(pCaster)->GetQuestStatus(QUEST_LIGHT_1) == QUEST_STATUS_INCOMPLETE)
                         {
                             if (bIsHealed && !bCanRun && Spell->Id == SPELL_FORTITUDE_R1)
                             {
@@ -701,7 +701,7 @@ struct TRINITY_DLL_DECL npc_garments_of_questsAI : public npc_escortAI
                         }
                         break;
                     case ENTRY_DOLF:
-                        if (((Player*)pCaster)->GetQuestStatus(QUEST_LIGHT_2) == QUEST_STATUS_INCOMPLETE)
+                        if (CAST_PLR(pCaster)->GetQuestStatus(QUEST_LIGHT_2) == QUEST_STATUS_INCOMPLETE)
                         {
                             if (bIsHealed && !bCanRun && Spell->Id == SPELL_FORTITUDE_R1)
                             {
@@ -718,7 +718,7 @@ struct TRINITY_DLL_DECL npc_garments_of_questsAI : public npc_escortAI
                         }
                         break;
                     case ENTRY_KORJA:
-                        if (((Player*)pCaster)->GetQuestStatus(QUEST_SPIRIT) == QUEST_STATUS_INCOMPLETE)
+                        if (CAST_PLR(pCaster)->GetQuestStatus(QUEST_SPIRIT) == QUEST_STATUS_INCOMPLETE)
                         {
                             if (bIsHealed && !bCanRun && Spell->Id == SPELL_FORTITUDE_R1)
                             {
@@ -735,7 +735,7 @@ struct TRINITY_DLL_DECL npc_garments_of_questsAI : public npc_escortAI
                         }
                         break;
                     case ENTRY_DG_KEL:
-                        if (((Player*)pCaster)->GetQuestStatus(QUEST_DARKNESS) == QUEST_STATUS_INCOMPLETE)
+                        if (CAST_PLR(pCaster)->GetQuestStatus(QUEST_DARKNESS) == QUEST_STATUS_INCOMPLETE)
                         {
                             if (bIsHealed && !bCanRun && Spell->Id == SPELL_FORTITUDE_R1)
                             {
@@ -755,7 +755,7 @@ struct TRINITY_DLL_DECL npc_garments_of_questsAI : public npc_escortAI
 
                 //give quest credit, not expect any special quest objectives
                 if (bCanRun)
-                    ((Player*)pCaster)->TalkedToCreature(m_creature->GetEntry(),m_creature->GetGUID());
+                    CAST_PLR(pCaster)->TalkedToCreature(m_creature->GetEntry(),m_creature->GetGUID());
             }
         }
     }
@@ -800,7 +800,7 @@ CreatureAI* GetAI_npc_garments_of_quests(Creature* pCreature)
 
     tempAI->FillPointMovementListForCreature();
 
-    return (CreatureAI*)tempAI;
+    return tempAI;
 }
 
 /*######

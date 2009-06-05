@@ -35,6 +35,38 @@ const uint32 WintergraspFaction[2] = {1732, 1735};
 #define SPELL_TENACITY      58549
 #define SPELL_TENACITY_VEHICLE  59911
 
+#define SPELL_VICTORY_REWARD    56902
+#define SPELL_DEFEAT_REWARD     58494
+
+#define SPELL_SHUTDOWN_VEHICLE  21247
+
+const uint32 WG_KEEP_CM = 0; //Need data
+const uint32 WG_RULERS_BUFF   = 52108;
+//some cosmetics :D
+const uint32 WG_VICTORY_AURA  = 60044;
+
+enum OutdoorPvP_WG_Sounds
+{
+/*TODO    OutdoorPvP_WG_SOUND_KEEP_CLAIMED            = 8192,
+    OutdoorPvP_WG_SOUND_KEEP_CAPTURED_ALLIANCE  = 8173,
+    OutdoorPvP_WG_SOUND_KEEP_CAPTURED_HORDE     = 8213,
+    OutdoorPvP_WG_SOUND_KEEP_ASSAULTED_ALLIANCE = 8212,
+    OutdoorPvP_WG_SOUND_KEEP_ASSAULTED_HORDE    = 8174,
+    OutdoorPvP_WG_SOUND_NEAR_VICTORY            = 8456
+*/
+};
+
+enum OutdoorPvP_WG_KeepStatus
+{
+    OutdoorPvP_WG_KEEP_TYPE_NEUTRAL             = 0,
+    OutdoorPvP_WG_KEEP_TYPE_CONTESTED           = 1,
+    OutdoorPvP_WG_KEEP_STATUS_ALLY_CONTESTED    = 1,
+    OutdoorPvP_WG_KEEP_STATUS_HORDE_CONTESTED   = 2,
+    OutdoorPvP_WG_KEEP_TYPE_OCCUPIED            = 3,
+    OutdoorPvP_WG_KEEP_STATUS_ALLY_OCCUPIED     = 3,
+    OutdoorPvP_WG_KEEP_STATUS_HORDE_OCCUPIED    = 4
+};
+
 enum DamageState
 {
     DAMAGE_INTACT,
@@ -75,12 +107,13 @@ class OPvPWintergrasp : public OutdoorPvP
     protected:
         typedef std::map<uint32, BuildingState *> BuildingStateMap;
         typedef std::set<Creature*> CreatureSet;
+        typedef std::set<Vehicle*> VehicleSet;
         typedef std::set<GameObject*> GameObjectSet;
     public:
         explicit OPvPWintergrasp() : m_tenacityStack(0) {}
         bool SetupOutdoorPvP();
 
-        uint32 GetCreatureEntry(uint32 guidlow, uint32 entry);
+        uint32 GetCreatureEntry(uint32 guidlow, const CreatureData *data);
         //uint32 GetGameObjectEntry(uint32 guidlow, uint32 entry);
 
         void OnCreatureCreate(Creature *creature, bool add);
@@ -102,6 +135,7 @@ class OPvPWintergrasp : public OutdoorPvP
         BuildingStateMap m_buildingStates;
 
         CreatureSet m_creatures;
+        VehicleSet m_vehicles[2];
         GameObjectSet m_gobjects;
 
         TeamPairMap m_creEntryPair, m_goDisplayPair;
@@ -117,6 +151,11 @@ class OPvPWintergrasp : public OutdoorPvP
         bool UpdateGameObjectInfo(GameObject *go);
 
         void RebuildAllBuildings();
+        void StartBattle();
+        void EndBattle();
+        void GiveReward();
+
+        void VehicleCastSpell(TeamId team, int32 spellId);
 };
 
 #endif

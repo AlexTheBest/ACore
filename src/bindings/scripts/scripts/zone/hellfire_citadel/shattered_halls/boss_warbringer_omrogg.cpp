@@ -128,7 +128,7 @@ struct TRINITY_DLL_DECL boss_warbringer_omroggAI : public ScriptedAI
 {
     boss_warbringer_omroggAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         HeroicMode = m_creature->GetMap()->IsHeroic();
     }
 
@@ -274,7 +274,7 @@ struct TRINITY_DLL_DECL boss_warbringer_omroggAI : public ScriptedAI
 
             DoScriptText(YELL_DIE_L, Left);
 
-            ((mob_omrogg_headsAI*)((Creature*)Right)->AI())->DoDeathYell();
+            CAST_AI(mob_omrogg_headsAI, CAST_CRE(Right)->AI())->DoDeathYell();
         }
 
         if (pInstance)

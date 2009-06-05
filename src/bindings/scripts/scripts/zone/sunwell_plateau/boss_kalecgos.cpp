@@ -102,7 +102,7 @@ struct TRINITY_DLL_DECL boss_kalecgosAI : public ScriptedAI
 {
     boss_kalecgosAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         SathGUID = 0;
         DoorGUID = 0;
     }
@@ -134,7 +134,7 @@ struct TRINITY_DLL_DECL boss_kalecgosAI : public ScriptedAI
         }
 
         Unit *Sath = Unit::GetUnit(*m_creature,SathGUID);
-        if(Sath) ((Creature*)Sath)->AI()->EnterEvadeMode();
+        if(Sath) CAST_CRE(Sath)->AI()->EnterEvadeMode();
 
         GameObject *Door = GameObject::GetGameObject(*m_creature, DoorGUID);
         if(Door) Door->SetLootState(GO_JUST_DEACTIVATED);
@@ -250,7 +250,7 @@ struct TRINITY_DLL_DECL boss_sathrovarrAI : public ScriptedAI
 {
     boss_sathrovarrAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         KalecGUID = 0;
         KalecgosGUID = 0;
     }
@@ -318,8 +318,8 @@ struct TRINITY_DLL_DECL boss_sathrovarrAI : public ScriptedAI
             TeleportAllPlayersBack();
             if(Unit *Kalecgos = Unit::GetUnit(*m_creature, KalecgosGUID))
             {
-                ((boss_kalecgosAI*)((Creature*)Kalecgos)->AI())->TalkTimer = 1;
-                ((boss_kalecgosAI*)((Creature*)Kalecgos)->AI())->isFriendly = false;
+                CAST_AI(boss_kalecgosAI, CAST_CRE(Kalecgos)->AI())->TalkTimer = 1;
+                CAST_AI(boss_kalecgosAI, CAST_CRE(Kalecgos)->AI())->isFriendly = false;
             }
             EnterEvadeMode();
             return;
@@ -338,8 +338,8 @@ struct TRINITY_DLL_DECL boss_sathrovarrAI : public ScriptedAI
         TeleportAllPlayersBack();
         if(Unit *Kalecgos = Unit::GetUnit(*m_creature, KalecgosGUID))
         {
-            ((boss_kalecgosAI*)((Creature*)Kalecgos)->AI())->TalkTimer = 1;
-            ((boss_kalecgosAI*)((Creature*)Kalecgos)->AI())->isFriendly = true;
+            CAST_AI(boss_kalecgosAI, CAST_CRE(Kalecgos)->AI())->TalkTimer = 1;
+            CAST_AI(boss_kalecgosAI, CAST_CRE(Kalecgos)->AI())->isFriendly = true;
         }
 
         if(pInstance)
@@ -371,7 +371,7 @@ struct TRINITY_DLL_DECL boss_sathrovarrAI : public ScriptedAI
                 if(Kalecgos)
                 {
                     Kalecgos->CastSpell(Kalecgos, SPELL_ENRAGE, true);
-                    ((boss_kalecgosAI*)((Creature*)Kalecgos)->AI())->isEnraged = true;
+                    CAST_AI(boss_kalecgosAI, CAST_CRE(Kalecgos)->AI())->isEnraged = true;
                 }
                 DoCast(m_creature, SPELL_ENRAGE, true);
                 isEnraged = true;
@@ -381,7 +381,7 @@ struct TRINITY_DLL_DECL boss_sathrovarrAI : public ScriptedAI
             {
                 if(Unit *Kalecgos = Unit::GetUnit(*m_creature, KalecgosGUID))
                 {
-                    if(((boss_kalecgosAI*)((Creature*)Kalecgos)->AI())->isBanished)
+                    if(CAST_AI(boss_kalecgosAI, CAST_CRE(Kalecgos)->AI())->isBanished)
                     {
                         m_creature->DealDamage(m_creature, m_creature->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
                         return;
@@ -458,7 +458,7 @@ struct TRINITY_DLL_DECL boss_kalecAI : public ScriptedAI
     bool isEnraged; // if demon is enraged
 
     boss_kalecAI(Creature *c) : ScriptedAI(c){
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     void Reset()
@@ -570,7 +570,7 @@ void boss_kalecgosAI::UpdateAI(const uint32 diff)
                  if(Sath)
                  {
                      Sath->CastSpell(Sath, SPELL_ENRAGE, true);
-                     ((boss_sathrovarrAI*)((Creature*)Sath)->AI())->isEnraged = true;
+                     CAST_AI(boss_sathrovarrAI, CAST_CRE(Sath)->AI())->isEnraged = true;
                  }
                  DoCast(m_creature, SPELL_ENRAGE, true);
                  isEnraged = true;
@@ -580,7 +580,7 @@ void boss_kalecgosAI::UpdateAI(const uint32 diff)
              {
                  if(Unit *Sath = Unit::GetUnit(*m_creature, SathGUID))
                  {
-                     if(((boss_sathrovarrAI*)((Creature*)Sath)->AI())->isBanished)
+                     if(CAST_AI(boss_sathrovarrAI, CAST_CRE(Sath)->AI())->isBanished)
                      {
                          Sath->DealDamage(Sath, Sath->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
                          return;

@@ -175,7 +175,7 @@ bool GameObject::Create(uint32 guidlow, uint32 name_id, Map *map, uint32 phaseMa
             m_charges = goinfo->spellcaster.charges;
             break;
         case GAMEOBJECT_TYPE_DESTRUCTIBLE_BUILDING:
-            m_goValue->building.health = goinfo->building.damagedHealth + goinfo->building.destroyedHealth;
+            m_goValue->building.health = goinfo->building.intactNumHits + goinfo->building.damagedNumHits;
             break;
     }
 
@@ -306,17 +306,13 @@ void GameObject::Update(uint32 /*p_time*/)
                 bool IsBattleGroundTrap = false;
                 //FIXME: this is activation radius (in different casting radius that must be selected from spell data)
                 //TODO: move activated state code (cast itself) to GO_ACTIVATED, in this place only check activating and set state
-                float radius = 0.0f;
-                const SpellEntry *spellEntry = sSpellStore.LookupEntry(m_spellId);
-                if(spellEntry)
-                    radius = GetSpellRadiusForHostile(sSpellRadiusStore.LookupEntry(spellEntry->EffectRadiusIndex[0]));
-                else
-                    radius = goInfo->trap.radius;
+                float radius = goInfo->trap.radius;
+                if(!radius) // i think this is a hack, spell radius is determined by trap radius (spell itself does not have radius)
+                    if(const SpellEntry *spellEntry = sSpellStore.LookupEntry(m_spellId))
+                        radius = goInfo->trap.radius;
                 if(!radius)
                 {
-                    if(goInfo->trap.cooldown != 3)            // cast in other case (at some triggering/linked go/etc explicit call)
-                        return;
-                    else
+                    if(goInfo->trap.cooldown == 3)            // cast in other case (at some triggering/linked go/etc explicit call)
                     {
                         if(m_respawnTime > 0)
                             break;
@@ -324,13 +320,15 @@ void GameObject::Update(uint32 /*p_time*/)
                         radius = goInfo->trap.cooldown;       // battlegrounds gameobjects has data2 == 0 && data5 == 3
                         IsBattleGroundTrap = true;
                     }
+                    if(!radius)
+                        return;
                 }
 
                 bool NeedDespawn = (goInfo->trap.charges != 0);
 
                 // Note: this hack with search required until GO casting not implemented
                 // search unfriendly creature
-                if(owner && NeedDespawn)                    // hunter trap
+                if(owner)                    // hunter trap
                 {
                     Trinity::AnyUnfriendlyNoTotemUnitInObjectRangeCheck checker(this, owner, radius);
                     Trinity::UnitSearcher<Trinity::AnyUnfriendlyNoTotemUnitInObjectRangeCheck> searcher(this, ok, checker);
@@ -350,11 +348,16 @@ void GameObject::Update(uint32 /*p_time*/)
 
                 if (ok)
                 {
+                    // some traps do not have spell but should be triggered
+                    if(goInfo->trap.spellId)
+                        CastSpell(ok, goInfo->trap.spellId);
                     //Unit *caster =  owner ? owner : ok;
-
-                    CastSpell(ok, goInfo->trap.spellId);
                     //caster->CastSpell(ok, goInfo->trap.spellId, true, 0, 0, GetGUID());
-                    m_cooldownTime = time(NULL) + 4;        // 4 seconds
+
+                    if(goInfo->trap.cooldown)
+                        m_cooldownTime = time(NULL) + goInfo->trap.cooldown;
+                    else
+                        m_cooldownTime = time(NULL) + 4;        // 4 seconds
 
                     if(NeedDespawn)
                         SetLootState(GO_JUST_DEACTIVATED);  // can be despawned or destroyed
@@ -1447,12 +1450,12 @@ void GameObject::TakenDamage(uint32 damage)
 
             SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DESTROYED);
             SetUInt32Value(GAMEOBJECT_DISPLAYID, m_goInfo->building.destroyedDisplayId);
-            EventInform(m_goInfo->building.destroyedEventId);
+            EventInform(m_goInfo->building.damagedEvent);
         }
     }
     else // from intact to damaged
     {
-        if(m_goValue->building.health <= m_goInfo->building.destroyedHealth)
+        if(m_goValue->building.health <= m_goInfo->building.damagedNumHits)
         {
             if(!m_goInfo->building.destroyedDisplayId)
                 m_goValue->building.health = 0;
@@ -1461,7 +1464,7 @@ void GameObject::TakenDamage(uint32 damage)
 
             SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED);
             SetUInt32Value(GAMEOBJECT_DISPLAYID, m_goInfo->building.damagedDisplayId);
-            EventInform(m_goInfo->building.damagedEventId);
+            EventInform(m_goInfo->building.intactEvent);
         }
     }
 }
@@ -1470,7 +1473,7 @@ void GameObject::Rebuild()
 {
     RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_DAMAGED + GO_FLAG_DESTROYED);
     SetUInt32Value(GAMEOBJECT_DISPLAYID, m_goInfo->displayId);
-    m_goValue->building.health = m_goInfo->building.damagedHealth + m_goInfo->building.destroyedHealth;
+    m_goValue->building.health = m_goInfo->building.intactNumHits + m_goInfo->building.damagedNumHits;
 }
 
 void GameObject::EventInform(uint32 eventId)

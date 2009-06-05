@@ -46,7 +46,7 @@ bool GossipHello_npc_erozion(Player *player, Creature *_Creature)
     if( _Creature->isQuestGiver() )
         player->PrepareQuestMenu( _Creature->GetGUID() );
 
-    ScriptedInstance* pInstance = ((ScriptedInstance*)_Creature->GetInstanceData());
+    ScriptedInstance* pInstance = (_Creature->GetInstanceData());
     if( pInstance && pInstance->GetData(TYPE_BARREL_DIVERSION) != DONE && !player->HasItemCount(ITEM_ENTRY_BOMBS,1) )
         player->ADD_GOSSIP_ITEM( 0, "I need a pack of Incendiary Bombs.", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
 
@@ -177,7 +177,7 @@ struct TRINITY_DLL_DECL npc_thrall_old_hillsbradAI : public npc_escortAI
 {
     npc_thrall_old_hillsbradAI(Creature *c) : npc_escortAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         m_creature->setActive(true);
     }
 
@@ -335,7 +335,7 @@ struct TRINITY_DLL_DECL npc_thrall_old_hillsbradAI : public npc_escortAI
                     if (uint64 TarethaGUID = pInstance->GetData64(DATA_TARETHA))
                     {
                         if (Creature* Taretha = (Unit::GetCreature(*m_creature, TarethaGUID)))
-                            ((npc_escortAI*)(Taretha->AI()))->Start(false, false, true, PlayerGUID);
+                            CAST_AI(npc_escortAI, (Taretha->AI()))->Start(false, false, true, PlayerGUID);
                     }
 
                     //kill credit creature for quest
@@ -486,7 +486,7 @@ CreatureAI* GetAI_npc_thrall_old_hillsbrad(Creature *_Creature)
 
     thrall_walkAI->FillPointMovementListForCreature();
 
-    return (CreatureAI*)thrall_walkAI;
+    return thrall_walkAI;
 }
 
 bool GossipHello_npc_thrall_old_hillsbrad(Player *player, Creature *_Creature)
@@ -497,7 +497,7 @@ bool GossipHello_npc_thrall_old_hillsbrad(Player *player, Creature *_Creature)
         player->SendPreparedQuest(_Creature->GetGUID());
     }
 
-    ScriptedInstance* pInstance = ((ScriptedInstance*)_Creature->GetInstanceData());
+    ScriptedInstance* pInstance = (_Creature->GetInstanceData());
     if( pInstance )
     {
         if (pInstance->GetData(TYPE_BARREL_DIVERSION) == DONE && !pInstance->GetData(TYPE_THRALL_EVENT))
@@ -523,7 +523,7 @@ bool GossipHello_npc_thrall_old_hillsbrad(Player *player, Creature *_Creature)
 
 bool GossipSelect_npc_thrall_old_hillsbrad(Player *player, Creature *_Creature, uint32 sender, uint32 action)
 {
-    ScriptedInstance* pInstance = ((ScriptedInstance*)_Creature->GetInstanceData());
+    ScriptedInstance* pInstance = (_Creature->GetInstanceData());
     switch( action )
     {
         case GOSSIP_ACTION_INFO_DEF+1:
@@ -536,10 +536,10 @@ bool GossipSelect_npc_thrall_old_hillsbrad(Player *player, Creature *_Creature, 
 
             DoScriptText(SAY_TH_START_EVENT_PART1, _Creature);
 
-            ((npc_escortAI*)(_Creature->AI()))->Start(true, true, true, player->GetGUID());
-            ((npc_escortAI*)(_Creature->AI()))->SetMaxPlayerDistance(100.0f);//not really needed, because it will not despawn if player is too far
-            ((npc_escortAI*)(_Creature->AI()))->SetDespawnAtEnd(false);
-            ((npc_escortAI*)(_Creature->AI()))->SetDespawnAtFar(false);
+            CAST_AI(npc_escortAI, (_Creature->AI()))->Start(true, true, true, player->GetGUID());
+            CAST_AI(npc_escortAI, (_Creature->AI()))->SetMaxPlayerDistance(100.0f);//not really needed, because it will not despawn if player is too far
+            CAST_AI(npc_escortAI, (_Creature->AI()))->SetDespawnAtEnd(false);
+            CAST_AI(npc_escortAI, (_Creature->AI()))->SetDespawnAtFar(false);
             break;
 
         case GOSSIP_ACTION_INFO_DEF+2:
@@ -555,14 +555,14 @@ bool GossipSelect_npc_thrall_old_hillsbrad(Player *player, Creature *_Creature, 
 
             DoScriptText(SAY_TH_START_EVENT_PART2, _Creature);
 
-            ((npc_thrall_old_hillsbradAI*)_Creature->AI())->StartWP();
+            CAST_AI(npc_thrall_old_hillsbradAI, _Creature->AI())->StartWP();
             break;
 
         case GOSSIP_ACTION_INFO_DEF+3:
             player->CLOSE_GOSSIP_MENU();
             if(pInstance)
                 pInstance->SetData(TYPE_THRALL_PART3,IN_PROGRESS);
-            ((npc_thrall_old_hillsbradAI*)_Creature->AI())->StartWP();
+            CAST_AI(npc_thrall_old_hillsbradAI, _Creature->AI())->StartWP();
             break;
     }
     return true;
@@ -581,7 +581,7 @@ struct TRINITY_DLL_DECL npc_tarethaAI : public npc_escortAI
 {
     npc_tarethaAI(Creature *c) : npc_escortAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance *pInstance;
@@ -612,12 +612,12 @@ CreatureAI* GetAI_npc_taretha(Creature *_Creature)
 
     taretha_walkAI->FillPointMovementListForCreature();
 
-    return (CreatureAI*)taretha_walkAI;
+    return taretha_walkAI;
 }
 
 bool GossipHello_npc_taretha(Player *player, Creature *_Creature)
 {
-    ScriptedInstance* pInstance = ((ScriptedInstance*)_Creature->GetInstanceData());
+    ScriptedInstance* pInstance = (_Creature->GetInstanceData());
     if( pInstance && pInstance->GetData(TYPE_THRALL_PART3) == DONE && pInstance->GetData(TYPE_THRALL_PART4) == NOT_STARTED)
     {
         player->ADD_GOSSIP_ITEM( 0, GOSSIP_ITEM_EPOCH1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
@@ -628,7 +628,7 @@ bool GossipHello_npc_taretha(Player *player, Creature *_Creature)
 
 bool GossipSelect_npc_taretha(Player *player, Creature *_Creature, uint32 sender, uint32 action)
 {
-    ScriptedInstance* pInstance = ((ScriptedInstance*)_Creature->GetInstanceData());
+    ScriptedInstance* pInstance = (_Creature->GetInstanceData());
     if( action == GOSSIP_ACTION_INFO_DEF+1 )
     {
         player->ADD_GOSSIP_ITEM( 0, GOSSIP_ITEM_EPOCH2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
@@ -649,7 +649,7 @@ bool GossipSelect_npc_taretha(Player *player, Creature *_Creature, uint32 sender
              {
                  Creature* Thrall = (Unit::GetCreature((*_Creature), ThrallGUID));
                  if(Thrall)
-                     ((npc_thrall_old_hillsbradAI*)Thrall->AI())->StartWP();
+                     CAST_AI(npc_thrall_old_hillsbradAI, Thrall->AI())->StartWP();
              }
         }
     }

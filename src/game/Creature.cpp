@@ -206,12 +206,6 @@ void Creature::SearchFormationAndPath()
     if(!lowguid)
         return;
 
-    if(isTrigger())
-    {
-        SetDefaultMovementType(IDLE_MOTION_TYPE);
-        return;
-    }
-
     bool usePath = (GetDefaultMovementType() == WAYPOINT_MOTION_TYPE);
     CreatureGroupInfoType::iterator frmdata = CreatureGroupMap.find(lowguid);
     if(frmdata != CreatureGroupMap.end())
@@ -358,9 +352,9 @@ bool Creature::UpdateEntry(uint32 Entry, uint32 team, const CreatureData *data )
 
     SelectLevel(GetCreatureInfo());
     if (team == HORDE)
-        SetUInt32Value(UNIT_FIELD_FACTIONTEMPLATE, GetCreatureInfo()->faction_H);
+        setFaction(GetCreatureInfo()->faction_H);
     else
-        SetUInt32Value(UNIT_FIELD_FACTIONTEMPLATE, GetCreatureInfo()->faction_A);
+        setFaction(GetCreatureInfo()->faction_A);
 
     if(GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_WORLDEVENT)
         SetUInt32Value(UNIT_NPC_FLAGS,GetCreatureInfo()->npcflag | gameeventmgr.GetNPCFlag(this));
@@ -1450,9 +1444,9 @@ float Creature::GetSpellDamageMod(int32 Rank)
 bool Creature::CreateFromProto(uint32 guidlow, uint32 Entry, uint32 team, const CreatureData *data)
 {
     SetZoneScript();
-    if(m_zoneScript)
+    if(m_zoneScript && data)
     {
-        Entry = m_zoneScript->GetCreatureEntry(guidlow, Entry);
+        Entry = m_zoneScript->GetCreatureEntry(guidlow, data);
         if(!Entry)
             return false;
     }
@@ -1721,10 +1715,10 @@ void Creature::setDeathState(DeathState s)
 
     if(s == JUST_DIED)
     {
-        SetUInt64Value (UNIT_FIELD_TARGET,0);               // remove target selection in any cases (can be set at aura remove in Unit::setDeathState)
-        SetUInt32Value(UNIT_NPC_FLAGS, 0);
-        //if(!isPet())
-            setActive(false);
+        SetUInt64Value(UNIT_FIELD_TARGET,0);                // remove target selection in any cases (can be set at aura remove in Unit::setDeathState)
+        SetUInt32Value(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_NONE);
+
+        setActive(false);
 
         if(!isPet() && GetCreatureInfo()->SkinLootId)
             if ( LootTemplates_Skinning.HaveLootFor(GetCreatureInfo()->SkinLootId) )
@@ -1756,6 +1750,8 @@ void Creature::setDeathState(DeathState s)
         SetMeleeDamageSchool(SpellSchools(cinfo->dmgschool));
         LoadCreaturesAddon(true);
         Motion_Initialize();
+        if(GetCreatureData() && GetPhaseMask() != GetCreatureData()->phaseMask)
+            SetPhaseMask(GetCreatureData()->phaseMask, true);
     }
 }
 
@@ -2041,6 +2037,25 @@ void Creature::CallAssistance()
             }
         }
     }
+}
+
+void Creature::CallForHelp(float fRadius)
+{
+    if (fRadius <= 0.0f || !getVictim() || isPet() || isCharmed())
+        return;
+
+    CellPair p(MaNGOS::ComputeCellPair(GetPositionX(), GetPositionY()));
+    Cell cell(p);
+    cell.data.Part.reserved = ALL_DISTRICT;
+    cell.SetNoCreate();
+
+    MaNGOS::CallOfHelpCreatureInRangeDo u_do(this, getVictim(), fRadius);
+    MaNGOS::CreatureWorker<MaNGOS::CallOfHelpCreatureInRangeDo> worker(this, u_do);
+
+    TypeContainerVisitor<MaNGOS::CreatureWorker<MaNGOS::CallOfHelpCreatureInRangeDo>, GridTypeMapContainer >  grid_creature_searcher(worker);
+
+    CellLock<GridReadGuard> cell_lock(cell, p);
+    cell_lock->Visit(cell_lock, grid_creature_searcher, *GetMap());
 }
 
 bool Creature::CanAssistTo(const Unit* u, const Unit* enemy, bool checkfaction /*= true*/) const

@@ -99,7 +99,7 @@ struct TRINITY_DLL_DECL npc_shenthulAI : public ScriptedAI
         {
             if( Unit* temp = Unit::GetUnit((*m_creature),playerGUID) )
                 if( temp->GetTypeId() == TYPEID_PLAYER )
-                    ((Player*)temp)->FailQuest(QUEST_2460);
+                    CAST_PLR(temp)->FailQuest(QUEST_2460);
             Reset();
         } else Reset_Timer -= diff;
 
@@ -137,8 +137,8 @@ bool QuestAccept_npc_shenthul(Player* player, Creature* creature, Quest const* q
 {
     if( quest->GetQuestId() == QUEST_2460 )
     {
-        ((npc_shenthulAI*)creature->AI())->CanTalk = true;
-        ((npc_shenthulAI*)creature->AI())->playerGUID = player->GetGUID();
+        CAST_AI(npc_shenthulAI, creature->AI())->CanTalk = true;
+        CAST_AI(npc_shenthulAI, creature->AI())->playerGUID = player->GetGUID();
     }
     return true;
 }

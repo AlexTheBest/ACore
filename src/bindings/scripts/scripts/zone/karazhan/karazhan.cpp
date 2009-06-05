@@ -115,7 +115,7 @@ struct TRINITY_DLL_DECL npc_barnesAI : public npc_escortAI
     npc_barnesAI(Creature* c) : npc_escortAI(c)
     {
         RaidWiped = false;
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance* pInstance;
@@ -372,13 +372,13 @@ CreatureAI* GetAI_npc_barnesAI(Creature* _Creature)
     for(uint8 i = 0; i < 6; ++i)
         Barnes_AI->AddWaypoint(i, StageLocations[i][0], StageLocations[i][1], 90.465);
 
-    return ((CreatureAI*)Barnes_AI);
+    return (Barnes_AI);
 }
 
 bool GossipHello_npc_barnes(Player* player, Creature* _Creature)
 {
     // Check for death of Moroes.
-    ScriptedInstance* pInstance = ((ScriptedInstance*)_Creature->GetInstanceData());
+    ScriptedInstance* pInstance = (_Creature->GetInstanceData());
     if(pInstance && (pInstance->GetData(DATA_MOROES_EVENT) >= DONE))
     {
         player->ADD_GOSSIP_ITEM(0, OZ_GOSSIP1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
@@ -390,7 +390,7 @@ bool GossipHello_npc_barnes(Player* player, Creature* _Creature)
             player->ADD_GOSSIP_ITEM(5, OZ_GM_GOSSIP3, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 5);
         }
 
-        if(!((npc_barnesAI*)_Creature->AI())->RaidWiped)
+        if(!CAST_AI(npc_barnesAI, _Creature->AI())->RaidWiped)
             player->SEND_GOSSIP_MENU(8970, _Creature->GetGUID());
         else
             player->SEND_GOSSIP_MENU(8975, _Creature->GetGUID());
@@ -409,21 +409,21 @@ bool GossipSelect_npc_barnes(Player *player, Creature *_Creature, uint32 sender,
             break;
         case GOSSIP_ACTION_INFO_DEF+2:
             player->CLOSE_GOSSIP_MENU();
-            ((npc_barnesAI*)_Creature->AI())->StartEvent();
+            CAST_AI(npc_barnesAI, _Creature->AI())->StartEvent();
             break;
         case GOSSIP_ACTION_INFO_DEF+3:
             player->CLOSE_GOSSIP_MENU();
-            ((npc_barnesAI*)_Creature->AI())->Event = EVENT_OZ;
+            CAST_AI(npc_barnesAI, _Creature->AI())->Event = EVENT_OZ;
             outstring_log("TSCR: player (GUID %i) manually set Opera event to EVENT_OZ",player->GetGUID());
             break;
         case GOSSIP_ACTION_INFO_DEF+4:
             player->CLOSE_GOSSIP_MENU();
-            ((npc_barnesAI*)_Creature->AI())->Event = EVENT_HOOD;
+            CAST_AI(npc_barnesAI, _Creature->AI())->Event = EVENT_HOOD;
             outstring_log("TSCR: player (GUID %i) manually set Opera event to EVENT_HOOD",player->GetGUID());
             break;
         case GOSSIP_ACTION_INFO_DEF+5:
             player->CLOSE_GOSSIP_MENU();
-            ((npc_barnesAI*)_Creature->AI())->Event = EVENT_RAJ;
+            CAST_AI(npc_barnesAI, _Creature->AI())->Event = EVENT_RAJ;
             outstring_log("TSCR: player (GUID %i) manually set Opera event to EVENT_RAJ",player->GetGUID());
             break;
     }
@@ -441,7 +441,7 @@ bool GossipSelect_npc_barnes(Player *player, Creature *_Creature, uint32 sender,
 
 bool GossipHello_npc_berthold(Player* player, Creature* _Creature)
 {
-    ScriptedInstance* pInstance = ((ScriptedInstance*)_Creature->GetInstanceData());
+    ScriptedInstance* pInstance = (_Creature->GetInstanceData());
                                                             // Check if Shade of Aran is dead or not
     if(pInstance && (pInstance->GetData(DATA_SHADEOFARAN_EVENT) >= DONE))
         player->ADD_GOSSIP_ITEM(0, GOSSIP_ITEM_TELEPORT, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
@@ -486,7 +486,7 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
 {
     npc_image_of_medivhAI(Creature* c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance *pInstance;
@@ -557,21 +557,21 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
             return 10000;
         case 2:
             if(arca)
-                ((Creature*)arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_2,LANG_UNIVERSAL,NULL);
+                CAST_CRE(arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_2,LANG_UNIVERSAL,NULL);
             return 20000;
         case 3:
             m_creature->MonsterYell(SAY_DIALOG_MEDIVH_3,LANG_UNIVERSAL,NULL);
             return 10000;
         case 4:
             if(arca)
-                ((Creature*)arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_4, LANG_UNIVERSAL, NULL);
+                CAST_CRE(arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_4, LANG_UNIVERSAL, NULL);
             return 20000;
         case 5:
             m_creature->MonsterYell(SAY_DIALOG_MEDIVH_5, LANG_UNIVERSAL, NULL);
             return 20000;
         case 6:
             if(arca)
-                ((Creature*)arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_6, LANG_UNIVERSAL, NULL);
+                CAST_CRE(arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_6, LANG_UNIVERSAL, NULL);
             return 10000;
         case 7:
             FireArcanagosTimer = 500;
@@ -589,7 +589,7 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
             return 1000;
         case 11:
             if(arca)
-                ((Creature*)arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_8, LANG_UNIVERSAL, NULL);
+                CAST_CRE(arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_8, LANG_UNIVERSAL, NULL);
             return 5000;
         case 12:
             arca->GetMotionMaster()->MovePoint(0, -11010.82,-1761.18, 156.47);
@@ -606,7 +606,7 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
 
             if(map->IsDungeon())
             {
-                InstanceMap::PlayerList const &PlayerList = ((InstanceMap*)map)->GetPlayers();
+                InstanceMap::PlayerList const &PlayerList = map->GetPlayers();
                 for (InstanceMap::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
                 {
                     if(i->getSource()->isAlive())

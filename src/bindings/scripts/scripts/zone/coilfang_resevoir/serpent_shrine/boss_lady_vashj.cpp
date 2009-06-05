@@ -132,7 +132,7 @@ struct TRINITY_DLL_DECL boss_lady_vashjAI : public ScriptedAI
 {
     boss_lady_vashjAI (Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         Intro = false;
         JustCreated = true;
         m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE); //set it only once on creature create (no need do intro if wiped)
@@ -583,14 +583,14 @@ struct TRINITY_DLL_DECL mob_enchanted_elementalAI : public ScriptedAI
 {
     mob_enchanted_elementalAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance *pInstance;
     uint32 move;
     uint32 phase;
     float x, y, z;
-    Unit *Vashj;
+    Creature *Vashj;
 
     void Reset()
     {
@@ -619,7 +619,7 @@ struct TRINITY_DLL_DECL mob_enchanted_elementalAI : public ScriptedAI
             }
         }
         if (pInstance)
-            Vashj = Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_LADYVASHJ));
+            Vashj = Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_LADYVASHJ));
     }
 
     void EnterCombat(Unit *who) { return; }
@@ -657,7 +657,7 @@ struct TRINITY_DLL_DECL mob_enchanted_elementalAI : public ScriptedAI
                 m_creature->GetMotionMaster()->MovePoint(0, MIDDLE_X, MIDDLE_Y, MIDDLE_Z);
                 if(m_creature->GetDistance(MIDDLE_X, MIDDLE_Y, MIDDLE_Z) < 3)
                 {
-                    SpellEntry *spell = (SpellEntry *)GetSpellStore()->LookupEntry(SPELL_SURGE);
+                    SpellEntry *spell = GET_SPELL(SPELL_SURGE);
                     if( spell )
                     {
                         uint8 eff_mask=0;
@@ -672,7 +672,7 @@ struct TRINITY_DLL_DECL mob_enchanted_elementalAI : public ScriptedAI
                     m_creature->DealDamage(m_creature, m_creature->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
                 }
             }
-            if(((boss_lady_vashjAI*)((Creature*)Vashj)->AI())->InCombat == false || ((boss_lady_vashjAI*)((Creature*)Vashj)->AI())->Phase != 2 || Vashj->isDead())
+            if(CAST_AI(boss_lady_vashjAI, Vashj->AI())->InCombat == false || CAST_AI(boss_lady_vashjAI, Vashj->AI())->Phase != 2 || Vashj->isDead())
             {
                 //call Unsummon()
                 m_creature->DealDamage(m_creature, m_creature->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
@@ -688,7 +688,7 @@ struct TRINITY_DLL_DECL mob_tainted_elementalAI : public ScriptedAI
 {
     mob_tainted_elementalAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance *pInstance;
@@ -710,7 +710,7 @@ struct TRINITY_DLL_DECL mob_tainted_elementalAI : public ScriptedAI
             Vashj = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_LADYVASHJ)));
 
             if(Vashj)
-                ((boss_lady_vashjAI*)Vashj->AI())->EventTaintedElementalDeath();
+                CAST_AI(boss_lady_vashjAI, Vashj->AI())->EventTaintedElementalDeath();
         }
     }
 
@@ -751,7 +751,7 @@ struct TRINITY_DLL_DECL mob_toxic_sporebatAI : public ScriptedAI
 {
     mob_toxic_sporebatAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         EnterEvadeMode();
     }
 
@@ -827,7 +827,7 @@ struct TRINITY_DLL_DECL mob_toxic_sporebatAI : public ScriptedAI
                 //check if vashj is death
                 Unit *Vashj = NULL;
                 Vashj = Unit::GetUnit((*m_creature), pInstance->GetData64(DATA_LADYVASHJ));
-                if(!Vashj || (Vashj && !Vashj->isAlive()) || (Vashj && ((boss_lady_vashjAI*)((Creature*)Vashj)->AI())->Phase != 3))
+                if(!Vashj || (Vashj && !Vashj->isAlive()) || (Vashj && CAST_AI(boss_lady_vashjAI, CAST_CRE(Vashj)->AI())->Phase != 3))
                 {
                     //remove
                     m_creature->setDeathState(DEAD);
@@ -883,7 +883,7 @@ struct TRINITY_DLL_DECL mob_shield_generator_channelAI : public ScriptedAI
 {
     mob_shield_generator_channelAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance *pInstance;
@@ -928,7 +928,7 @@ struct TRINITY_DLL_DECL mob_shield_generator_channelAI : public ScriptedAI
 
 bool ItemUse_item_tainted_core(Player *player, Item* _Item, SpellCastTargets const& targets)
 {
-    ScriptedInstance *pInstance = (player->GetInstanceData()) ? ((ScriptedInstance*)player->GetInstanceData()) : NULL;
+    ScriptedInstance *pInstance = (player->GetInstanceData()) ? (player->GetInstanceData()) : NULL;
 
     if(!pInstance)
     {
@@ -938,7 +938,7 @@ bool ItemUse_item_tainted_core(Player *player, Item* _Item, SpellCastTargets con
 
     Creature *Vashj = NULL;
     Vashj = (Unit::GetCreature((*player), pInstance->GetData64(DATA_LADYVASHJ)));
-    if(Vashj && ((boss_lady_vashjAI*)Vashj->AI())->Phase == 2)
+    if(Vashj && CAST_AI(boss_lady_vashjAI, Vashj->AI())->Phase == 2)
     {
         if(targets.getGOTarget() && targets.getGOTarget()->GetTypeId()==TYPEID_GAMEOBJECT)
         {
@@ -974,7 +974,7 @@ bool ItemUse_item_tainted_core(Player *player, Item* _Item, SpellCastTargets con
 
             //get and remove channel
             Unit *Channel = NULL;
-            Channel = Unit::GetUnit((*Vashj), ((boss_lady_vashjAI*)Vashj->AI())->ShieldGeneratorChannel[channel_identifier]);
+            Channel = Unit::GetCreature(*Vashj, CAST_AI(boss_lady_vashjAI, Vashj->AI())->ShieldGeneratorChannel[channel_identifier]);
             if(Channel)
             {
                 //call Unsummon()

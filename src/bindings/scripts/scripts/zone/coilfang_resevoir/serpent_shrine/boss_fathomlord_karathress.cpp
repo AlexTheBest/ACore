@@ -95,7 +95,7 @@ struct TRINITY_DLL_DECL boss_fathomlord_karathressAI : public ScriptedAI
 {
     boss_fathomlord_karathressAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         Advisors[0] = 0;
         Advisors[1] = 0;
         Advisors[2] = 0;
@@ -305,7 +305,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_sharkkisAI : public ScriptedAI
 {
     boss_fathomguard_sharkkisAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance* pInstance;
@@ -349,8 +349,8 @@ struct TRINITY_DLL_DECL boss_fathomguard_sharkkisAI : public ScriptedAI
             Karathress = (Unit::GetCreature((*m_creature), pInstance->GetData64(DATA_KARATHRESS)));
 
             if (Karathress)
-                ((boss_fathomlord_karathressAI*)Karathress->AI())->EventSharkkisDeath();
-                    ((boss_fathomlord_karathressAI*)Karathress->AI())->EventSharkkisDeath();
+                CAST_AI(boss_fathomlord_karathressAI, Karathress->AI())->EventSharkkisDeath();
+                    CAST_AI(boss_fathomlord_karathressAI, Karathress->AI())->EventSharkkisDeath();
         }
     }
 
@@ -449,7 +449,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_tidalvessAI : public ScriptedAI
 {
     boss_fathomguard_tidalvessAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance* pInstance;
@@ -479,7 +479,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_tidalvessAI : public ScriptedAI
 
             if (Karathress)
                 if(!m_creature->isAlive() && Karathress)
-                    ((boss_fathomlord_karathressAI*)Karathress->AI())->EventTidalvessDeath();
+                    CAST_AI(boss_fathomlord_karathressAI, Karathress->AI())->EventTidalvessDeath();
         }
     }
 
@@ -536,7 +536,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_tidalvessAI : public ScriptedAI
             Unit *SpitfireTotem = Unit::GetUnit( *m_creature, CREATURE_SPITFIRE_TOTEM );
             if( SpitfireTotem )
             {
-                ((Creature*)SpitfireTotem)->AI()->AttackStart( m_creature->getVictim() );
+                CAST_CRE(SpitfireTotem)->AI()->AttackStart( m_creature->getVictim() );
             }
             Spitfire_Timer = 60000;
         }else Spitfire_Timer -= diff;
@@ -564,7 +564,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_caribdisAI : public ScriptedAI
 {
     boss_fathomguard_caribdisAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance* pInstance;
@@ -594,7 +594,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_caribdisAI : public ScriptedAI
 
             if (Karathress)
                 if(!m_creature->isAlive() && Karathress)
-                    ((boss_fathomlord_karathressAI*)Karathress->AI())->EventCaribdisDeath();
+                    CAST_AI(boss_fathomlord_karathressAI, Karathress->AI())->EventCaribdisDeath();
         }
     }
 
@@ -655,7 +655,7 @@ struct TRINITY_DLL_DECL boss_fathomguard_caribdisAI : public ScriptedAI
             Creature *Cyclone = m_creature->SummonCreature(CREATURE_CYCLONE, m_creature->GetPositionX(), m_creature->GetPositionY(), m_creature->GetPositionZ(), (rand()%5), TEMPSUMMON_TIMED_DESPAWN, 15000);
             if( Cyclone )
             {
-                ((Creature*)Cyclone)->SetFloatValue(OBJECT_FIELD_SCALE_X, 3.0f);
+                CAST_CRE(Cyclone)->SetFloatValue(OBJECT_FIELD_SCALE_X, 3.0f);
                 Cyclone->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                 Cyclone->setFaction(m_creature->getFaction());
                 Cyclone->CastSpell(Cyclone, SPELL_CYCLONE_CYCLONE, true);

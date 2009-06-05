@@ -44,7 +44,7 @@ struct TRINITY_DLL_DECL mob_naga_distillerAI : public ScriptedAI
 {
     mob_naga_distillerAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance *pInstance;
@@ -90,7 +90,7 @@ struct TRINITY_DLL_DECL boss_warlord_kalithreshAI : public ScriptedAI
 {
     boss_warlord_kalithreshAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance *pInstance;
@@ -182,7 +182,7 @@ struct TRINITY_DLL_DECL boss_warlord_kalithreshAI : public ScriptedAI
             {
                 DoScriptText(SAY_REGEN, m_creature);
                 DoCast(m_creature,SPELL_WARLORDS_RAGE);
-                ((mob_naga_distillerAI*)distiller->AI())->StartRageGen(m_creature);
+                CAST_AI(mob_naga_distillerAI, distiller->AI())->StartRageGen(m_creature);
             }
             Rage_Timer = 3000+rand()%15000;
         }else Rage_Timer -= diff;

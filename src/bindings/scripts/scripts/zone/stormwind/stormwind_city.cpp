@@ -93,8 +93,8 @@ struct TRINITY_DLL_DECL npc_bartlebyAI : public ScriptedAI
 
             if (done_by->GetTypeId() == TYPEID_PLAYER && done_by->GetGUID() == PlayerGUID)
             {
-                ((Player*)done_by)->AttackStop();
-                ((Player*)done_by)->AreaExploredOrEventHappens(1640);
+                CAST_PLR(done_by)->AttackStop();
+                CAST_PLR(done_by)->AreaExploredOrEventHappens(1640);
             }
             m_creature->CombatStop();
             EnterEvadeMode();
@@ -109,8 +109,8 @@ bool QuestAccept_npc_bartleby(Player *player, Creature *_Creature, Quest const *
     if(_Quest->GetQuestId() == 1640)
     {
         _Creature->setFaction(168);
-        ((npc_bartlebyAI*)_Creature->AI())->PlayerGUID = player->GetGUID();
-        ((npc_bartlebyAI*)_Creature->AI())->AttackStart(player);
+        CAST_AI(npc_bartlebyAI, _Creature->AI())->PlayerGUID = player->GetGUID();
+        CAST_AI(npc_bartlebyAI, _Creature->AI())->AttackStart(player);
     }
     return true;
 }
@@ -143,8 +143,8 @@ struct TRINITY_DLL_DECL npc_dashel_stonefistAI : public ScriptedAI
 
             if (done_by->GetTypeId() == TYPEID_PLAYER)
             {
-                ((Player*)done_by)->AttackStop();
-                ((Player*)done_by)->AreaExploredOrEventHappens(1447);
+                CAST_PLR(done_by)->AttackStop();
+                CAST_PLR(done_by)->AreaExploredOrEventHappens(1447);
             }
             //m_creature->CombatStop();
             EnterEvadeMode();
@@ -159,7 +159,7 @@ bool QuestAccept_npc_dashel_stonefist(Player *player, Creature *_Creature, Quest
     if(_Quest->GetQuestId() == 1447)
     {
         _Creature->setFaction(168);
-        ((npc_dashel_stonefistAI*)_Creature->AI())->AttackStart(player);
+        CAST_AI(npc_dashel_stonefistAI, _Creature->AI())->AttackStart(player);
     }
     return true;
 }

@@ -52,8 +52,8 @@ struct TRINITY_DLL_DECL npc_calvin_montagueAI : public ScriptedAI
     void JustDied(Unit* Killer)
     {
         if( Killer->GetTypeId() == TYPEID_PLAYER )
-            if( ((Player*)Killer)->GetQuestStatus(QUEST_590) == QUEST_STATUS_INCOMPLETE )
-                ((Player*)Killer)->AreaExploredOrEventHappens(QUEST_590);
+            if( CAST_PLR(Killer)->GetQuestStatus(QUEST_590) == QUEST_STATUS_INCOMPLETE )
+                CAST_PLR(Killer)->AreaExploredOrEventHappens(QUEST_590);
     }
 
     void UpdateAI(const uint32 diff)
@@ -75,7 +75,7 @@ bool QuestAccept_npc_calvin_montague(Player* player, Creature* creature, Quest c
     {
         creature->setFaction(FACTION_HOSTILE);
         creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_ATTACKABLE_2);
-        ((npc_calvin_montagueAI*)creature->AI())->AttackStart(player);
+        CAST_AI(npc_calvin_montagueAI, creature->AI())->AttackStart(player);
     }
     return true;
 }

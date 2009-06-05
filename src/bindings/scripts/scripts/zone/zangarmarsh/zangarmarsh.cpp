@@ -333,7 +333,7 @@ bool QuestAccept_npc_kayra_longmane(Player* player, Creature* creature, Quest co
 {
     if (quest->GetQuestId() == QUEST_EFU)
     {
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
         creature->setFaction(113);
     }
     return true;
@@ -371,7 +371,7 @@ CreatureAI* GetAI_npc_kayra_longmaneAI(Creature* _Creature)
     thisAI->AddWaypoint(25, -488.45, 5447.83, 22.38);
     thisAI->AddWaypoint(26, -449.65, 5463.78, 21.77, 11000);//SAY_PROGRESS_6
 
-    return (CreatureAI*)thisAI;
+    return thisAI;
 }
 /*######
 ## AddSC

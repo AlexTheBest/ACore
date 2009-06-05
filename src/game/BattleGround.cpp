@@ -18,22 +18,24 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "Object.h"
 #include "Player.h"
+#include "ObjectMgr.h"
+#include "World.h"
+#include "WorldPacket.h"
+
+#include "ArenaTeam.h"
 #include "BattleGround.h"
 #include "BattleGroundMgr.h"
 #include "Creature.h"
-#include "MapManager.h"
-#include "Language.h"
-#include "SpellAuras.h"
-#include "ArenaTeam.h"
-#include "World.h"
-#include "Group.h"
-#include "ObjectMgr.h"
-#include "WorldPacket.h"
-#include "Util.h"
 #include "Formulas.h"
 #include "GridNotifiersImpl.h"
+#include "Group.h"
+#include "Language.h"
+#include "MapManager.h"
+#include "Object.h"
+#include "SpellAuras.h"
+#include "Util.h"
+
 
 namespace MaNGOS
 {
@@ -1277,10 +1279,56 @@ void BattleGround::RemoveFromBGFreeSlotQueue()
 // returns the number how many players can join battleground to MaxPlayersPerTeam
 uint32 BattleGround::GetFreeSlotsForTeam(uint32 Team) const
 {
-    //return free slot count to MaxPlayerPerTeam
-    if (GetStatus() == STATUS_WAIT_JOIN || GetStatus() == STATUS_IN_PROGRESS)
+    //if BG is starting ... invite anyone
+    if (GetStatus() == STATUS_WAIT_JOIN)
         return (GetInvitedCount(Team) < GetMaxPlayersPerTeam()) ? GetMaxPlayersPerTeam() - GetInvitedCount(Team) : 0;
+    //if BG is already started .. do not allow to join too much players of one faction
+    uint32 otherTeam;
+    uint32 otherIn;
+    if (Team == ALLIANCE)
+    {
+        otherTeam = GetInvitedCount(HORDE);
+        otherIn = GetPlayersCountByTeam(HORDE);
+    }
+    else
+    {
+        otherTeam = GetInvitedCount(ALLIANCE);
+        otherIn = GetPlayersCountByTeam(ALLIANCE);
+    }
+    if (GetStatus() == STATUS_IN_PROGRESS)
+    {
+        // difference based on ppl invited (not necessarily entered battle)
+        // default: allow 0
+        uint32 diff = 0;
+        // allow join one person if the sides are equal (to fill up bg to minplayersperteam)
+        if (otherTeam == GetInvitedCount(Team))
+            diff = 1;
+        // allow join more ppl if the other side has more players
+        else if(otherTeam > GetInvitedCount(Team))
+            diff = otherTeam - GetInvitedCount(Team);
 
+        // difference based on max players per team (don't allow inviting more)
+        uint32 diff2 = (GetInvitedCount(Team) < GetMaxPlayersPerTeam()) ? GetMaxPlayersPerTeam() - GetInvitedCount(Team) : 0;
+        // difference based on players who already entered
+        // default: allow 0
+        uint32 diff3 = 0;
+        // allow join one person if the sides are equal (to fill up bg minplayersperteam)
+        if (otherIn == GetPlayersCountByTeam(Team))
+            diff3 = 1;
+        // allow join more ppl if the other side has more players
+        else if (otherIn > GetPlayersCountByTeam(Team))
+            diff3 = otherIn - GetPlayersCountByTeam(Team);
+        // or other side has less than minPlayersPerTeam
+        else if (GetInvitedCount(Team) <= GetMinPlayersPerTeam())
+            diff3 = GetMinPlayersPerTeam() - GetInvitedCount(Team) + 1;
+
+        // return the minimum of the 3 differences
+
+        // min of diff and diff 2
+        diff = diff < diff2 ? diff : diff2;
+        // min of diff, diff2 and diff3
+        return diff < diff3 ? diff : diff3 ;
+    }
     return 0;
 }
 
@@ -1795,7 +1843,7 @@ void BattleGround::SetHoliday(bool is_holiday)
 
 int32 BattleGround::GetObjectType(uint64 guid)
 {
-    for(uint32 i = 0;i <= m_BgObjects.size(); i++)
+    for(uint32 i = 0; i < m_BgObjects.size(); ++i)
         if(m_BgObjects[i] == guid)
             return i;
     sLog.outError("BattleGround: cheating? a player used a gameobject which isnt supposed to be a usable object!");

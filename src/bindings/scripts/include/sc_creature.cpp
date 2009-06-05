@@ -70,7 +70,7 @@ void SummonList::DespawnAll()
         {
             erase(begin());
             summon->SetVisibility(VISIBILITY_OFF);
-            if(summon->HasSummonMask(SUMMON_MASK_SUMMON) && !summon->isPet())
+            if(summon->isSummon() && !summon->isPet())
                 ((TempSummon*)summon)->UnSummon();
             else
                 summon->setDeathState(JUST_DIED);
@@ -491,7 +491,7 @@ void ScriptedAI::DoTeleportPlayer(Unit* pUnit, float x, float y, float z, float 
         return;
     }
 
-    ((Player*)pUnit)->TeleportTo(pUnit->GetMapId(), x, y, z, o, TELE_TO_NOT_LEAVE_COMBAT);
+    CAST_PLR(pUnit)->TeleportTo(pUnit->GetMapId(), x, y, z, o, TELE_TO_NOT_LEAVE_COMBAT);
 }
 
 void ScriptedAI::DoTeleportAll(float x, float y, float z, float o)
@@ -712,7 +712,7 @@ void LoadOverridenDBCData()
     SpellEntry *spellInfo;
     for(uint32 i = 0; i < GetSpellStore()->GetNumRows(); ++i)
     {
-        spellInfo = (SpellEntry*)GetSpellStore()->LookupEntry(i);
+        spellInfo = GET_SPELL(i);
         if(!spellInfo)
             continue;
 

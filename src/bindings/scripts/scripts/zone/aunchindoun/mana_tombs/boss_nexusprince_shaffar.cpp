@@ -279,7 +279,7 @@ struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
             return;
         }
         if(!Shaffar->isInCombat())
-            ((Creature*)Shaffar)->AI()->AttackStart(who);
+            CAST_CRE(Shaffar)->AI()->AttackStart(who);
     }
 
     void JustSummoned(Creature *summoned)
@@ -291,7 +291,7 @@ struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
     {
         Unit *Shaffar = me->FindNearestCreature(ENTRY_SHAFFAR, 100);
         if(Shaffar)
-            ((boss_nexusprince_shaffarAI*)(((Creature*)Shaffar)->AI()))->RemoveBeaconFromList(m_creature);
+            CAST_AI(boss_nexusprince_shaffarAI, (CAST_CRE(Shaffar)->AI()))->RemoveBeaconFromList(m_creature);
     }
 
     void UpdateAI(const uint32 diff)
@@ -322,8 +322,6 @@ struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
                 m_creature->InterruptNonMeleeSpells(true);
 
             m_creature->CastSpell(m_creature,SPELL_ETHEREAL_APPRENTICE,true);
-            if( m_creature->isPet() )
-                ((Pet*)m_creature)->SetDuration(0);
             KillSelf();
             return;
         }else Apprentice_Timer -= diff;

@@ -111,7 +111,7 @@ struct TRINITY_DLL_DECL npc_kaya_flathoofAI : public npc_escortAI
         case 23: m_creature->SetInFront(player);
             DoScriptText(SAY_END, m_creature, player);
             if (player && player->GetTypeId() == TYPEID_PLAYER)
-                ((Player*)player)->GroupEventHappens(QUEST_PK, m_creature);
+                CAST_PLR(player)->GroupEventHappens(QUEST_PK, m_creature);
             break;
         }
     }
@@ -131,7 +131,7 @@ struct TRINITY_DLL_DECL npc_kaya_flathoofAI : public npc_escortAI
         {
             Player* player = Unit::GetPlayer(PlayerGUID);
             if (player)
-                ((Player*)player)->FailQuest(QUEST_PK);
+                CAST_PLR(player)->FailQuest(QUEST_PK);
         }
     }
 
@@ -145,7 +145,7 @@ bool QuestAccept_npc_kaya_flathoof(Player* player, Creature* creature, Quest con
 {
     if (quest->GetQuestId() == QUEST_PK)
     {
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
         DoScriptText(SAY_START, creature);
         creature->setFaction(113);
         creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_ATTACKABLE_2);
@@ -182,7 +182,7 @@ CreatureAI* GetAI_npc_kaya_flathoofAI(Creature *_Creature)
     thisAI->AddWaypoint(22, -43.77, -497.99, -46.13, 3000);// summon
     thisAI->AddWaypoint(23, -41.77, -518.15, -46.13, 5000);//end
 
-    return (CreatureAI*)thisAI;
+    return thisAI;
 }
 
 /*######

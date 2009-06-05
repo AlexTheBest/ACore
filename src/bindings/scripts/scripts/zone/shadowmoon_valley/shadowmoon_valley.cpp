@@ -750,7 +750,7 @@ struct TRINITY_DLL_DECL npc_overlord_morghorAI : public ScriptedAI
                 plr->RemoveAurasDueToSpell(SPELL_FOUR);
                 return 5000;
             }else{
-                ((Player*)plr)->FailQuest(QUEST_LORD_ILLIDAN_STORMRAGE); Step = 30; return 100;
+                CAST_PLR(plr)->FailQuest(QUEST_LORD_ILLIDAN_STORMRAGE); Step = 30; return 100;
             }break;
         case 17: DoScriptText(LORD_ILLIDAN_SAY_5, Illi); return 5000; break;
         case 18: DoScriptText(LORD_ILLIDAN_SAY_6, Illi); return 5000; break;
@@ -769,7 +769,7 @@ struct TRINITY_DLL_DECL npc_overlord_morghorAI : public ScriptedAI
         case 25: DoScriptText(OVERLORD_SAY_6, m_creature); return 2000; break;
         case 26:
             if(plr)
-                ((Player*)plr)->GroupEventHappens(QUEST_LORD_ILLIDAN_STORMRAGE, m_creature);
+                CAST_PLR(plr)->GroupEventHappens(QUEST_LORD_ILLIDAN_STORMRAGE, m_creature);
             return 6000; break;
         case 27:
             {
@@ -832,8 +832,8 @@ bool QuestAccept_npc_overlord_morghor(Player *player, Creature *_Creature, const
 {
     if(_Quest->GetQuestId() == QUEST_LORD_ILLIDAN_STORMRAGE)
     {
-        ((npc_overlord_morghorAI*)_Creature->AI())->PlayerGUID = player->GetGUID();
-        ((npc_overlord_morghorAI*)_Creature->AI())->StartEvent();
+        CAST_AI(npc_overlord_morghorAI, _Creature->AI())->PlayerGUID = player->GetGUID();
+        CAST_AI(npc_overlord_morghorAI, _Creature->AI())->StartEvent();
         return true;
     }
     return false;
@@ -943,7 +943,7 @@ struct TRINITY_DLL_DECL npc_earthmender_wildaAI : public npc_escortAI
                case 44: SummonAssassin(); break;
                case 50:
                    DoScriptText(SAY_END, m_creature, player);
-                   ((Player*)player)->GroupEventHappens(QUEST_ESCAPE_FROM_COILSKAR_CISTERN, m_creature);
+                   CAST_PLR(player)->GroupEventHappens(QUEST_ESCAPE_FROM_COILSKAR_CISTERN, m_creature);
                    Completed = true;
                    break;
                }
@@ -961,7 +961,7 @@ struct TRINITY_DLL_DECL npc_earthmender_wildaAI : public npc_escortAI
                case 0: DoScriptText(ASSASSIN_SAY_AGGRO1, CoilskarAssassin, player); break;
                case 1: DoScriptText(ASSASSIN_SAY_AGGRO2, CoilskarAssassin, player); break;
                }
-               ((Creature*)CoilskarAssassin)->AI()->AttackStart(m_creature);
+               CAST_CRE(CoilskarAssassin)->AI()->AttackStart(m_creature);
            }
            else error_log("TSCR ERROR: Coilskar Assassin couldn't be summmoned");
        }
@@ -972,7 +972,7 @@ struct TRINITY_DLL_DECL npc_earthmender_wildaAI : public npc_escortAI
            {
                Player* player = Unit::GetPlayer(PlayerGUID);
                if (player)
-                   ((Player*)player)->FailQuest(QUEST_ESCAPE_FROM_COILSKAR_CISTERN);
+                   CAST_PLR(player)->FailQuest(QUEST_ESCAPE_FROM_COILSKAR_CISTERN);
            }
        }
 
@@ -1039,7 +1039,7 @@ CreatureAI* GetAI_npc_earthmender_wildaAI(Creature *_Creature)
        earthmender_wildaAI->AddWaypoint(49, -2841.754883, 1289.832520, 6.990304);
        earthmender_wildaAI->AddWaypoint(50, -2871.398438, 1302.348145, 6.807335, 8000); // SAY_END
 
-       return (CreatureAI*)earthmender_wildaAI;
+       return earthmender_wildaAI;
 }
 
 bool QuestAccept_npc_earthmender_wilda(Player* player, Creature* creature, Quest const* quest)
@@ -1047,7 +1047,7 @@ bool QuestAccept_npc_earthmender_wilda(Player* player, Creature* creature, Quest
     if (quest->GetQuestId() == QUEST_ESCAPE_FROM_COILSKAR_CISTERN)
     {
         creature->setFaction(113);
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
     }
     return true;
 }
@@ -1381,12 +1381,13 @@ struct TRINITY_DLL_DECL mob_torloth_the_magnificentAI : public ScriptedAI
             switch(slayer->GetTypeId())
         {
             case TYPEID_UNIT:
-                if(((Creature*)slayer)->isPet() && ((Pet*)slayer)->GetOwner()->GetTypeId() == TYPEID_PLAYER)
-                    ((Player*)((Pet*)slayer->GetOwner()))->GroupEventHappens(QUEST_BATTLE_OF_THE_CRIMSON_WATCH, m_creature);
+                if(Unit *owner = slayer->GetOwner()) 
+                    if(owner->GetTypeId() == TYPEID_PLAYER)
+                        CAST_PLR(owner)->GroupEventHappens(QUEST_BATTLE_OF_THE_CRIMSON_WATCH, m_creature);
                 break;
 
             case TYPEID_PLAYER:
-                ((Player*)slayer)->GroupEventHappens(QUEST_BATTLE_OF_THE_CRIMSON_WATCH, m_creature);
+                CAST_PLR(slayer)->GroupEventHappens(QUEST_BATTLE_OF_THE_CRIMSON_WATCH, m_creature);
                 break;
         }
 
@@ -1490,14 +1491,14 @@ struct TRINITY_DLL_DECL npc_lord_illidan_stormrageAI : public ScriptedAI
                             Spawn->GetMotionMaster()->MovePoint(0,x, y, z);
                         }
                     }
-                    ((mob_illidari_spawnAI*)Spawn->AI())->LordIllidanGUID = m_creature->GetGUID();
+                    CAST_AI(mob_illidari_spawnAI, Spawn->AI())->LordIllidanGUID = m_creature->GetGUID();
                 }
 
                 if(WavesInfo[WaveCount].CreatureId == 22076) // Torloth
                 {
-                    ((mob_torloth_the_magnificentAI*)Spawn->AI())->LordIllidanGUID = m_creature->GetGUID();
+                    CAST_AI(mob_torloth_the_magnificentAI, Spawn->AI())->LordIllidanGUID = m_creature->GetGUID();
                     if(PlayerGUID)
-                        ((mob_torloth_the_magnificentAI*)Spawn->AI())->AggroTargetGUID = PlayerGUID;
+                        CAST_AI(mob_torloth_the_magnificentAI, Spawn->AI())->AggroTargetGUID = PlayerGUID;
                 }
             }
         }
@@ -1605,7 +1606,7 @@ void mob_illidari_spawnAI::JustDied(Unit *slayer)
     m_creature->RemoveCorpse();
     if(Creature* LordIllidan = (Unit::GetCreature(*m_creature, LordIllidanGUID)))
         if(LordIllidan)
-            ((npc_lord_illidan_stormrageAI*)LordIllidan->AI())->LiveCounter();
+            CAST_AI(npc_lord_illidan_stormrageAI, LordIllidan->AI())->LiveCounter();
 }
 
 /*#####
@@ -1616,13 +1617,13 @@ bool GOQuestAccept_GO_crystal_prison(Player* plr, GameObject* go, Quest const* q
 {
     if(quest->GetQuestId() == QUEST_BATTLE_OF_THE_CRIMSON_WATCH )
     {
-        Unit* Illidan = plr->FindNearestCreature(22083, 50);
+        Creature* Illidan = plr->FindNearestCreature(22083, 50);
 
-        if(Illidan && !(((npc_lord_illidan_stormrageAI*)((Creature*)Illidan)->AI())->EventStarted))
+        if(Illidan && !CAST_AI(npc_lord_illidan_stormrageAI, Illidan->AI())->EventStarted)
         {
-            ((npc_lord_illidan_stormrageAI*)((Creature*)Illidan)->AI())->PlayerGUID = plr->GetGUID();
-            ((npc_lord_illidan_stormrageAI*)((Creature*)Illidan)->AI())->LiveCount = 0;
-            ((npc_lord_illidan_stormrageAI*)((Creature*)Illidan)->AI())->EventStarted=true;
+            CAST_AI(npc_lord_illidan_stormrageAI, Illidan->AI())->PlayerGUID = plr->GetGUID();
+            CAST_AI(npc_lord_illidan_stormrageAI, Illidan->AI())->LiveCount = 0;
+            CAST_AI(npc_lord_illidan_stormrageAI, Illidan->AI())->EventStarted=true;
         }
     }
  return true;
@@ -1742,10 +1743,10 @@ struct TRINITY_DLL_DECL npc_enraged_spiritAI : public ScriptedAI
                  Summoned->setFaction(ENRAGED_SOUL_FRIENDLY);
                  Summoned->GetMotionMaster()->MovePoint(0,totemOspirits->GetPositionX(), totemOspirits->GetPositionY(), Summoned->GetPositionZ());
 
-                 Player* Owner = (Player*)totemOspirits->GetOwner();
-                 if (Owner)
+                 Unit* Owner = totemOspirits->GetOwner();
+                 if (Owner && Owner->GetTypeId() == TYPEID_PLAYER)
                      // DoCast(Owner, credit); -- not working!
-                     Owner->KilledMonster(credit, Summoned->GetGUID());
+                     CAST_PLR(Owner)->KilledMonster(credit, Summoned->GetGUID());
                  DoCast(totemOspirits,SPELL_SOUL_CAPTURED);
              }
         }

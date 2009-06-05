@@ -121,7 +121,7 @@ struct TRINITY_DLL_DECL boss_sapphironAI : public BossAI
         }
     }
 
-    void JustDied(Unit*)
+    void JustDied(Unit* who)
     {
         _JustDied();
         me->CastSpell(me, SPELL_DIES, true);
@@ -173,7 +173,7 @@ struct TRINITY_DLL_DECL boss_sapphironAI : public BossAI
 
         events.Update(diff);
 
-        if(phase != PHASE_BIRTH && !UpdateVictim() || !CheckInRoom())
+        if(phase != PHASE_BIRTH && !UpdateCombatState() || !CheckInRoom())
             return;
 
         if(phase == PHASE_GROUND)

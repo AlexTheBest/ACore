@@ -167,7 +167,7 @@ ObjectMgr::~ObjectMgr()
 
 void ObjectMgr::LoadPlayerInfoInCache()
 {
-    QueryResult *result = CharacterDatabase.PQuery("SELECT guid, name, data, class  FROM characters");
+    QueryResult *result = CharacterDatabase.PQuery("SELECT guid, name, data, class FROM characters");
     if(!result)
     {
         sLog.outError( "Loading Player Cache failed.");
@@ -892,9 +892,6 @@ void ObjectMgr::LoadEquipmentTemplates()
     }
     sLog.outString( ">> Loaded %u equipment template", sEquipmentStorage.RecordCount );
     sLog.outString();
-
-    // Creature items can be not listed in item_template
-    //sItemStore.Clear(); -- so used in spell casting
 }
 
 CreatureModelInfo const* ObjectMgr::GetCreatureModelInfo(uint32 modelid)
@@ -1128,9 +1125,14 @@ void ObjectMgr::LoadCreatures()
         }
 
         // I do not know why but in db most display id are not zero
-        if(data.displayid == cInfo->Modelid_A1 || data.displayid == cInfo->Modelid_A2
+        /*if(data.displayid == 11686 || data.displayid == 24719)
+        {
+            (const_cast<CreatureInfo*>(cInfo))->flags_extra |= CREATURE_FLAG_EXTRA_TRIGGER;
+        }
+        else if(data.displayid == cInfo->Modelid_A1 || data.displayid == cInfo->Modelid_A2
             || data.displayid == cInfo->Modelid_H1 || data.displayid == cInfo->Modelid_H2)
             data.displayid = 0;
+            */
 
         if(data.equipmentId > 0)                            // -1 no equipment, 0 use default
         {
@@ -1172,6 +1174,8 @@ void ObjectMgr::LoadCreatures()
                 sLog.outErrorDb("Table `creature` have creature (GUID: %u Entry: %u) with `MovementType`=1 (random movement) but with `spawndist`=0, replace by idle movement type (0).",guid,data.id );
                 data.movementType = IDLE_MOTION_TYPE;
             }
+            else if(cInfo->flags_extra & CREATURE_FLAG_EXTRA_TRIGGER)
+                data.movementType = IDLE_MOTION_TYPE;
         }
         else if(data.movementType == IDLE_MOTION_TYPE)
         {
@@ -3165,9 +3169,13 @@ void ObjectMgr::LoadQuests()
         "RewRepFaction1, RewRepFaction2, RewRepFaction3, RewRepFaction4, RewRepFaction5, RewRepValue1, RewRepValue2, RewRepValue3, RewRepValue4, RewRepValue5,"
     //   97                 98             99                100       101           102                103               104         105     106     107
         "RewHonorableKills, RewOrReqMoney, RewMoneyMaxLevel, RewSpell, RewSpellCast, RewMailTemplateId, RewMailDelaySecs, PointMapId, PointX, PointY, PointOpt,"
-    //   108            109            110            111            112              113            114                115                116                117
-        "DetailsEmote1, DetailsEmote2, DetailsEmote3, DetailsEmote4, IncompleteEmote, CompleteEmote, OfferRewardEmote1, OfferRewardEmote2, OfferRewardEmote3, OfferRewardEmote4,"
-    //   118          119
+    //   108            109            110            111            112                 113                 114                 115
+        "DetailsEmote1, DetailsEmote2, DetailsEmote3, DetailsEmote4, DetailsEmoteDelay1, DetailsEmoteDelay2, DetailsEmoteDelay3, DetailsEmoteDelay4,"
+    //   116              117            118                119                120                121
+        "IncompleteEmote, CompleteEmote, OfferRewardEmote1, OfferRewardEmote2, OfferRewardEmote3, OfferRewardEmote4,"
+    //   122                     123                     124                     125
+        "OfferRewardEmoteDelay1, OfferRewardEmoteDelay2, OfferRewardEmoteDelay3, OfferRewardEmoteDelay4,"
+    //   126          127
         "StartScript, CompleteScript"
         " FROM quest_template");
     if(result == NULL)

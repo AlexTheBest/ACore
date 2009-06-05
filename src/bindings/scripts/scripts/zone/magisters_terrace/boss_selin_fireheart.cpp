@@ -53,7 +53,7 @@ struct TRINITY_DLL_DECL boss_selin_fireheartAI : public ScriptedAI
 {
     boss_selin_fireheartAI(Creature* c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
 
         Crystals.clear();
         //GUIDs per instance is static, so we only need to load them once.
@@ -98,7 +98,7 @@ struct TRINITY_DLL_DECL boss_selin_fireheartAI : public ScriptedAI
                 if (pUnit)
                 {
                     if(!pUnit->isAlive())
-                        ((Creature*)pUnit)->Respawn();      // Let MaNGOS handle setting death state, etc.
+                        CAST_CRE(pUnit)->Respawn();      // Let MaNGOS handle setting death state, etc.
 
                     // Only need to set unselectable flag. You can't attack unselectable units so non_attackable flag is not necessary here.
                     pUnit->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
@@ -340,17 +340,17 @@ struct TRINITY_DLL_DECL mob_fel_crystalAI : public ScriptedAI
 
     void JustDied(Unit* killer)
     {
-        if (ScriptedInstance* pInstance = ((ScriptedInstance*)m_creature->GetInstanceData()))
+        if (ScriptedInstance* pInstance = (m_creature->GetInstanceData()))
         {
             Creature* Selin = (Unit::GetCreature(*m_creature, pInstance->GetData64(DATA_SELIN)));
             if (Selin && Selin->isAlive())
             {
-                if (((boss_selin_fireheartAI*)Selin->AI())->CrystalGUID == m_creature->GetGUID())
+                if(CAST_AI(boss_selin_fireheartAI, Selin->AI())->CrystalGUID == m_creature->GetGUID())
                 {
                     // Set this to false if we are the creature that Selin is draining so his AI flows properly
-                    ((boss_selin_fireheartAI*)Selin->AI())->DrainingCrystal = false;
-                    ((boss_selin_fireheartAI*)Selin->AI())->IsDraining = false;
-                    ((boss_selin_fireheartAI*)Selin->AI())->EmpowerTimer = 10000;
+                    CAST_AI(boss_selin_fireheartAI, Selin->AI())->DrainingCrystal = false;
+                    CAST_AI(boss_selin_fireheartAI, Selin->AI())->IsDraining = false;
+                    CAST_AI(boss_selin_fireheartAI, Selin->AI())->EmpowerTimer = 10000;
                     if (Selin->getVictim())
                     {
                         Selin->AI()->AttackStart(Selin->getVictim());

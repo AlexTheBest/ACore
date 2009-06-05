@@ -64,7 +64,7 @@ npc_swiftmountainAI(Creature *c) : npc_escortAI(c) {}
          case 70:
             DoScriptText(SAY_FINISH, m_creature, player);
             if (player && player->GetTypeId() == TYPEID_PLAYER)
-                ((Player*)player)->GroupEventHappens(QUEST_HOMEWARD_BOUND,m_creature);
+                CAST_PLR(player)->GroupEventHappens(QUEST_HOMEWARD_BOUND,m_creature);
             break;
 
         }
@@ -87,7 +87,7 @@ npc_swiftmountainAI(Creature *c) : npc_escortAI(c) {}
         if (PlayerGUID)
         {
             if (Player* player = Unit::GetPlayer(PlayerGUID))
-                ((Player*)player)->FailQuest(QUEST_HOMEWARD_BOUND);
+                CAST_PLR(player)->FailQuest(QUEST_HOMEWARD_BOUND);
         }
     }
 
@@ -101,7 +101,7 @@ bool QuestAccept_npc_swiftmountain(Player* player, Creature* creature, Quest con
 {
     if (quest->GetQuestId() == QUEST_HOMEWARD_BOUND)
     {
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
         DoScriptText(SAY_READY, creature, player);
         creature->setFaction(113);
     }
@@ -186,7 +186,7 @@ CreatureAI* GetAI_npc_swiftmountain(Creature *_Creature)
    thisAI->AddWaypoint(70, -4938.3, -1100.41, -50.71, 5000);
    thisAI->AddWaypoint(71, -4937.34, -1102.87, -49.82);
 
-    return (CreatureAI*)thisAI;
+    return thisAI;
 }
 
 /*#####

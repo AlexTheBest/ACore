@@ -2095,7 +2095,7 @@ void Unit::CalcAbsorbResist(Unit *pVictim,SpellSchoolMask schoolMask, DamageEffe
                     // This, if I'm not mistaken, shows that we get back ~2% of the absorbed damage as runic power.
                     int32 absorbed = RemainingDamage * currentAbsorb / 100;
                     int32 regen = absorbed * 2 / 10;
-                    pVictim->CastCustomSpell(pVictim, 49088, &regen, 0, 0, true, 0, (*i));
+                    pVictim->CastCustomSpell(pVictim, 49088, &regen, NULL, NULL, true, NULL, *i);
                     RemainingDamage -= absorbed;
                     continue;
                 }
@@ -3305,12 +3305,11 @@ uint32 Unit::GetWeaponSkillValue (WeaponAttackType attType, Unit const* target) 
 
 void Unit::_DeleteAuras()
 {
-    for (AuraList::iterator i = m_removedAuras.begin(); i != m_removedAuras.end();i = m_removedAuras.begin())
+    while(!m_removedAuras.empty())
     {
-        Aura * Aur = *i;
-        sLog.outDebug("Aura %d is deleted from unit %d", Aur->GetId(), GetGUIDLow());
+        delete m_removedAuras.front();
         m_removedAuras.pop_front();
-        delete (Aur);
+//        sLog.outDebug("Aura %d is deleted from unit %d", Aur->GetId(), GetGUIDLow());
     }
 }
 
@@ -3320,7 +3319,7 @@ void Unit::_UpdateSpells( uint32 time )
         _UpdateAutoRepeatSpell();
 
     // remove finished spells from current pointers
-    for (uint32 i = 0; i < CURRENT_MAX_SPELL; i++)
+    for (uint32 i = 0; i < CURRENT_MAX_SPELL; ++i)
     {
         if (m_currentSpells[i] && m_currentSpells[i]->getState() == SPELL_STATE_FINISHED)
         {
@@ -3371,20 +3370,18 @@ void Unit::_UpdateSpells( uint32 time )
 
     if(!m_gameObj.empty())
     {
-        GameObjectList::iterator ite1, dnext1;
-        for (ite1 = m_gameObj.begin(); ite1 != m_gameObj.end(); ite1 = dnext1)
+        GameObjectList::iterator itr;
+        for(itr = m_gameObj.begin(); itr != m_gameObj.end();)
         {
-            dnext1 = ite1;
-            //(*i)->Update( difftime );
-            if( !(*ite1)->isSpawned() )
+            if( !(*itr)->isSpawned() )
             {
-                (*ite1)->SetOwnerGUID(0);
-                (*ite1)->SetRespawnTime(0);
-                (*ite1)->Delete();
-                dnext1 = m_gameObj.erase(ite1);
+                (*itr)->SetOwnerGUID(0);
+                (*itr)->SetRespawnTime(0);
+                (*itr)->Delete();
+                m_gameObj.erase(itr++);
             }
             else
-                ++dnext1;
+                ++itr;
         }
     }
 }
@@ -4099,7 +4096,6 @@ void Unit::RemoveAurasDueToItemSpell(Item* castItem,uint32 spellId)
 
 void Unit::RemoveAurasByType(AuraType auraType, uint64 casterGUID, Aura * except)
 {
-    if (auraType >= TOTAL_AURAS) return;
     for (AuraEffectList::iterator iter = m_modAuras[auraType].begin(); iter != m_modAuras[auraType].end();)
     {
         Aura * aur = (*iter)->GetParentAura();
@@ -4116,7 +4112,6 @@ void Unit::RemoveAurasByType(AuraType auraType, uint64 casterGUID, Aura * except
 
 void Unit::RemoveAurasByTypeWithDispel(AuraType auraType, Spell * spell)
 {
-    if (auraType >= TOTAL_AURAS) return;
     std::queue < std::pair < uint32, uint64 > > remove_list;
 
     for (AuraEffectList::iterator iter = m_modAuras[auraType].begin(); iter != m_modAuras[auraType].end();++iter)
@@ -5498,8 +5493,8 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                 target = GetGuardianPet();
                 if (!target)
                     return false;
-                triggered_spell_id = 54181;
                 basepoints0 = damage * 15 / 100;
+                triggered_spell_id = 54181;
                 break;
             }
             switch(dummySpell->Id)
@@ -6061,13 +6056,18 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                     int32 holy = caster->SpellBaseDamageBonus(SPELL_SCHOOL_MASK_HOLY) +
                                  caster->SpellBaseDamageBonusForVictim(SPELL_SCHOOL_MASK_HOLY, this);
                     basepoints0 = int32(ap*0.10f + 0.10f*holy);
-                    pVictim->CastCustomSpell(pVictim, 20267, &basepoints0, 0, 0, true, 0, triggeredByAura);
+                    pVictim->CastCustomSpell(pVictim, 20267, &basepoints0, NULL, NULL, true, NULL, triggeredByAura);
                     return true;
                 }
                 // Judgement of Wisdom
                 case 20186:
                 {
-                    pVictim->CastSpell(pVictim, 20268, true, NULL, triggeredByAura);
+                    if (pVictim->getPowerType() == POWER_MANA)
+                    {
+                        // 2% of maximum mana
+                        basepoints0 = int32(pVictim->GetMaxPower(POWER_MANA) * 2 / 100);
+                        pVictim->CastCustomSpell(pVictim, 20268, &basepoints0, NULL, NULL, true, NULL, triggeredByAura);
+                    }
                     return true;
                 }
                 // Holy Power (Redemption Armor set)
@@ -6095,6 +6095,29 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                             break;
                         case CLASS_WARRIOR:
                             triggered_spell_id = 28790;     // Increases the friendly target's armor
+                            break;
+                        default:
+                            return false;
+                    }
+                    break;
+                }
+                // Blessing of Sanctuary
+                case 20911:
+                {
+                    if (target->GetTypeId() != TYPEID_PLAYER)
+                        return false;
+
+                    target = this;
+                    switch (target->getPowerType())
+                    {
+                        case POWER_MANA:
+                            triggered_spell_id = 57319;
+                            break;
+                        case POWER_RAGE:
+                            triggered_spell_id = 57320;
+                            break;
+                        case POWER_RUNIC_POWER:
+                            triggered_spell_id = 57321;
                             break;
                         default:
                             return false;
@@ -6203,7 +6226,7 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                         if (procSpell->Effect[i] == SPELL_EFFECT_ENERGIZE)
                         {
                             int32 mana = procSpell->EffectBasePoints[i];
-                            CastCustomSpell(this, 54986, 0, &mana, 0, true, castItem, triggeredByAura);
+                            CastCustomSpell(this, 54986, NULL, &mana, NULL, true, castItem, triggeredByAura);
                             break;
                         }
                     return true;
@@ -7322,7 +7345,7 @@ bool Unit::HandleProcTriggerSpell(Unit *pVictim, uint32 damage, AuraEffect* trig
                         case SPELL_SCHOOL_NATURE: trigger_spell_id = 50488; break;
                         case SPELL_SCHOOL_FROST:  trigger_spell_id = 50485; break;
                         case SPELL_SCHOOL_SHADOW: trigger_spell_id = 50489; break;
-                        case SPELL_SCHOOL_ARCANE: trigger_spell_id = 54373; break;
+                        case SPELL_SCHOOL_ARCANE: trigger_spell_id = 50486; break;
                         default:
                             return false;
                     }
@@ -7649,7 +7672,7 @@ bool Unit::HandleOverrideClassScriptAuraProc(Unit *pVictim, uint32 damage, AuraE
                 return false;
             int32 cost = procSpell->manaCost + procSpell->ManaCostPercentage * GetCreateMana() / 100;
             int32 basepoints0 = cost * triggeredByAura->GetAmount()/100;
-            CastCustomSpell(this, 47762, &basepoints0, 0, 0, true, 0, triggeredByAura);
+            CastCustomSpell(this, 47762, &basepoints0, NULL, NULL, true, NULL, triggeredByAura);
             return true;
         }
         // Rapture
@@ -11655,7 +11678,10 @@ void Unit::RemoveFromWorld()
         ExitVehicle();
 
         if(GetCharmerGUID())
+        {
             sLog.outCrash("Unit %u has charmer guid when removed from world", GetEntry());
+            assert(false);
+        }
 
         WorldObject::RemoveFromWorld();
     }
@@ -11701,7 +11727,7 @@ void Unit::UpdateCharmAI()
         if(isCharmed())
         {
             i_disabledAI = i_AI;
-            if(isPossessed())
+            if(isPossessed() || ((Creature*)this)->isVehicle())
                 i_AI = new PossessedAI((Creature*)this);
             else
                 i_AI = new PetAI((Creature*)this);
@@ -11996,10 +12022,10 @@ typedef std::list< ProcTriggeredData > ProcTriggeredList;
 // for example SPELL_AURA_MECHANIC_IMMUNITY - need check for mechanic
 bool InitTriggerAuraData()
 {
-    for (int i=0;i<TOTAL_AURAS;i++)
+    for (int i = 0; i < TOTAL_AURAS; ++i)
     {
-      isTriggerAura[i]=false;
-      isNonTriggerAura[i] = false;
+        isTriggerAura[i]=false;
+        isNonTriggerAura[i] = false;
     }
     isTriggerAura[SPELL_AURA_DUMMY] = true;
     isTriggerAura[SPELL_AURA_MOD_CONFUSE] = true;
@@ -12950,7 +12976,7 @@ Pet* Unit::CreateTamedPetFrom(Creature* creatureTarget,uint32 spell_id)
     }
 
     pet->SetCreatorGUID(GetGUID());
-    pet->SetUInt32Value(UNIT_FIELD_FACTIONTEMPLATE, getFaction());
+    pet->setFaction(getFaction());
     pet->SetUInt32Value(UNIT_CREATED_BY_SPELL, spell_id);
 
     if(GetTypeId()==TYPEID_PLAYER)
@@ -13524,12 +13550,13 @@ void Unit::SetConfused(bool apply)
         ((Player*)this)->SetClientControl(this, !apply);
 }
 
-void Unit::SetCharmedOrPossessedBy(Unit* charmer, bool possess)
+void Unit::SetCharmedBy(Unit* charmer, CharmType type)
 {
     if(!charmer)
         return;
 
-    assert(!possess || charmer->GetTypeId() == TYPEID_PLAYER);
+    assert(type != CHARM_TYPE_POSSESS || charmer->GetTypeId() == TYPEID_PLAYER);
+    assert(type != CHARM_TYPE_VEHICLE || GetTypeId() == TYPEID_UNIT && ((Creature*)this)->isVehicle());
 
     if(this == charmer)
         return;
@@ -13580,50 +13607,57 @@ void Unit::SetCharmedOrPossessedBy(Unit* charmer, bool possess)
     }
 
     // Pets already have a properly initialized CharmInfo, don't overwrite it.
-    if(GetTypeId() == TYPEID_PLAYER || GetTypeId() == TYPEID_UNIT
-        && !((Creature*)this)->HasSummonMask(SUMMON_MASK_GUARDIAN))
+    if(type != CHARM_TYPE_VEHICLE && !GetCharmInfo())
     {
         CharmInfo *charmInfo = InitCharmInfo();
-        if(possess)
+        if(type == CHARM_TYPE_POSSESS)
             charmInfo->InitPossessCreateSpells();
         else
             charmInfo->InitCharmCreateSpells();
     }
 
-    //Set possessed
-    if(possess)
+    if(charmer->GetTypeId() == TYPEID_PLAYER)
     {
-        addUnitState(UNIT_STAT_POSSESSED);
-        SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_24);
-        ((Player*)charmer)->SetClientControl(this, 1);
-        ((Player*)charmer)->SetViewpoint(this, true);
-        charmer->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
-    }
-    // Charm demon
-    else if(GetTypeId() == TYPEID_UNIT && charmer->GetTypeId() == TYPEID_PLAYER && charmer->getClass() == CLASS_WARLOCK)
-    {
-        CreatureInfo const *cinfo = ((Creature*)this)->GetCreatureInfo();
-        if(cinfo && cinfo->type == CREATURE_TYPE_DEMON)
+        switch(type)
         {
-            //to prevent client crash
-            //SetFlag(UNIT_FIELD_BYTES_0, 2048);
+            case CHARM_TYPE_VEHICLE:
+                ((Player*)charmer)->SetViewpoint(this, true);
+                ((Player*)charmer)->VehicleSpellInitialize();
+                break;
+            case CHARM_TYPE_POSSESS:
+                addUnitState(UNIT_STAT_POSSESSED);
+                SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_24);
+                charmer->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
+                ((Player*)charmer)->SetClientControl(this, 1);
+                ((Player*)charmer)->SetViewpoint(this, true);
+                ((Player*)charmer)->PossessSpellInitialize();
+                break;
+            case CHARM_TYPE_CHARM:
+                if(GetTypeId() == TYPEID_UNIT && charmer->getClass() == CLASS_WARLOCK)
+                {
+                    CreatureInfo const *cinfo = ((Creature*)this)->GetCreatureInfo();
+                    if(cinfo && cinfo->type == CREATURE_TYPE_DEMON)
+                    {
+                        //to prevent client crash
+                        //SetFlag(UNIT_FIELD_BYTES_0, 2048);
 
-            //just to enable stat window
-            if(GetCharmInfo())
-                GetCharmInfo()->SetPetNumber(objmgr.GeneratePetNumber(), true);
+                        //just to enable stat window
+                        if(GetCharmInfo())
+                            GetCharmInfo()->SetPetNumber(objmgr.GeneratePetNumber(), true);
 
-            //if charmed two demons the same session, the 2nd gets the 1st one's name
-            SetUInt32Value(UNIT_FIELD_PET_NAME_TIMESTAMP, time(NULL));
+                        //if charmed two demons the same session, the 2nd gets the 1st one's name
+                        SetUInt32Value(UNIT_FIELD_PET_NAME_TIMESTAMP, time(NULL));
+                    }
+                }
+                ((Player*)charmer)->CharmSpellInitialize();
+                break;
+            default:
+                break;
         }
-    }
-
-    if(possess)
-        ((Player*)charmer)->PossessSpellInitialize();
-    else if(charmer->GetTypeId() == TYPEID_PLAYER)
-        ((Player*)charmer)->CharmSpellInitialize();
+    }      
 }
 
-void Unit::RemoveCharmedOrPossessedBy(Unit *charmer)
+void Unit::RemoveCharmedBy(Unit *charmer)
 {
     if(!isCharmed())
         return;
@@ -13633,7 +13667,13 @@ void Unit::RemoveCharmedOrPossessedBy(Unit *charmer)
     else if(charmer != GetCharmer()) // one aura overrides another?
         return;
 
-    bool possess = hasUnitState(UNIT_STAT_POSSESSED);
+    CharmType type;
+    if(hasUnitState(UNIT_STAT_POSSESSED))
+        type = CHARM_TYPE_POSSESS;
+    else if(this == charmer->m_Vehicle)
+        type = CHARM_TYPE_VEHICLE;
+    else
+        type = CHARM_TYPE_CHARM;
 
     CastStop();
     CombatStop(); //TODO: CombatStop(true) may cause crash (interrupt spells)
@@ -13642,7 +13682,7 @@ void Unit::RemoveCharmedOrPossessedBy(Unit *charmer)
     RestoreFaction();
     GetMotionMaster()->InitDefault();
 
-    if(possess)
+    if(type == CHARM_TYPE_POSSESS)
     {
         clearUnitState(UNIT_STAT_POSSESSED);
         RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_UNK_24);
@@ -13650,20 +13690,18 @@ void Unit::RemoveCharmedOrPossessedBy(Unit *charmer)
 
     if(GetTypeId() == TYPEID_UNIT)
     {
-        if(!((Creature*)this)->isPet())
-            RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
-
         ((Creature*)this)->AI()->OnCharmed(false);
-        if(isAlive() && ((Creature*)this)->IsAIEnabled)
+        if(isAlive() && charmer && !IsFriendlyTo(charmer))
+            ((Creature*)this)->AddThreat(charmer, 10000.0f);
+        /*if(isAlive() && ((Creature*)this)->IsAIEnabled)
         {
             if(charmer && !IsFriendlyTo(charmer))
             {
-                ((Creature*)this)->AddThreat(charmer, 10000.0f);
                 ((Creature*)this)->AI()->AttackStart(charmer);
             }
             else
                 ((Creature*)this)->AI()->EnterEvadeMode();
-        }
+        }*/
     }
     else
         ((Player*)this)->SetClientControl(this, 1);
@@ -13672,42 +13710,46 @@ void Unit::RemoveCharmedOrPossessedBy(Unit *charmer)
     if(!charmer)
         return;
 
-    assert(!possess || charmer->GetTypeId() == TYPEID_PLAYER);
+    assert(type != CHARM_TYPE_POSSESS || charmer->GetTypeId() == TYPEID_PLAYER);
+    assert(type != CHARM_TYPE_VEHICLE || GetTypeId() == TYPEID_UNIT && ((Creature*)this)->isVehicle());
 
     charmer->SetCharm(this, false);
-    if(possess)
+
+    if(charmer->GetTypeId() == TYPEID_PLAYER)
     {
-        ((Player*)charmer)->SetClientControl(charmer, 1);
-        ((Player*)charmer)->SetViewpoint(this, false);
-        charmer->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
-    }
-    // restore UNIT_FIELD_BYTES_0
-    else if(GetTypeId() == TYPEID_UNIT && charmer->GetTypeId() == TYPEID_PLAYER && charmer->getClass() == CLASS_WARLOCK)
-    {
-        CreatureInfo const *cinfo = ((Creature*)this)->GetCreatureInfo();
-        if(cinfo && cinfo->type == CREATURE_TYPE_DEMON)
+        switch(type)
         {
-            if(GetCharmInfo())
-                GetCharmInfo()->SetPetNumber(0, true);
-            else
-                sLog.outError("Aura::HandleModCharm: target="UI64FMTD" with typeid=%d has a charm aura but no charm info!", GetGUID(), GetTypeId());
+            case CHARM_TYPE_VEHICLE:
+                ((Player*)charmer)->SetViewpoint(this, false);
+                break;
+            case CHARM_TYPE_POSSESS:
+                ((Player*)charmer)->SetClientControl(charmer, 1);
+                ((Player*)charmer)->SetViewpoint(this, false);
+                charmer->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
+                break;
+            case CHARM_TYPE_CHARM:
+                if(GetTypeId() == TYPEID_UNIT && charmer->getClass() == CLASS_WARLOCK)
+                {
+                    CreatureInfo const *cinfo = ((Creature*)this)->GetCreatureInfo();
+                    if(cinfo && cinfo->type == CREATURE_TYPE_DEMON)
+                    {
+                        if(GetCharmInfo())
+                            GetCharmInfo()->SetPetNumber(0, true);
+                        else
+                            sLog.outError("Aura::HandleModCharm: target="UI64FMTD" with typeid=%d has a charm aura but no charm info!", GetGUID(), GetTypeId());
+                    }
+                }
+                break;
+            default:
+                break;
         }
     }
 
     //a guardian should always have charminfo
-    if(GetTypeId() == TYPEID_PLAYER || GetTypeId() == TYPEID_UNIT
-        && !((Creature*)this)->HasSummonMask(SUMMON_MASK_GUARDIAN))
-    {
+    if(charmer->GetTypeId() == TYPEID_PLAYER && this != charmer->GetFirstControlled())
+        ((Player*)charmer)->SendRemoveControlBar();
+    else if(GetTypeId() == TYPEID_PLAYER || GetTypeId() == TYPEID_UNIT && !((Creature*)this)->isGuardian())
         DeleteCharmInfo();
-    }
-
-    if(possess || charmer->GetTypeId() == TYPEID_PLAYER)
-    {
-        // Remove pet spell action bar
-        WorldPacket data(SMSG_PET_SPELLS, 8);
-        data << uint64(0);
-        ((Player*)charmer)->GetSession()->SendPacket(&data);
-    }
 }
 
 void Unit::RestoreFaction()
@@ -14000,7 +14042,7 @@ void Unit::SetPhaseMask(uint32 newPhaseMask, bool update)
         return;
 
     for(ControlList::const_iterator itr = m_Controlled.begin(); itr != m_Controlled.end(); ++itr)
-        if((*itr)->GetOwnerGUID() == GetGUID())
+        if((*itr)->GetTypeId() == TYPEID_UNIT)
             (*itr)->SetPhaseMask(newPhaseMask,true);
 
     for(int8 i = 0; i < MAX_SUMMON_SLOT; ++i)

@@ -75,7 +75,7 @@ struct TRINITY_DLL_DECL npc_professor_phizzlethorpeAI : public npc_escortAI
             DoScriptText(SAY_PROGRESS_9, m_creature, player);
             Completed = true;
             if(player)
-                ((Player*)player)->GroupEventHappens(QUEST_SUNKEN_TREASURE, m_creature);
+                CAST_PLR(player)->GroupEventHappens(QUEST_SUNKEN_TREASURE, m_creature);
             break;
         }
     }
@@ -102,7 +102,7 @@ struct TRINITY_DLL_DECL npc_professor_phizzlethorpeAI : public npc_escortAI
         {
             Player* player = Unit::GetPlayer(PlayerGUID);
             if (player)
-                ((Player*)player)->FailQuest(QUEST_SUNKEN_TREASURE);
+                CAST_PLR(player)->FailQuest(QUEST_SUNKEN_TREASURE);
         }
     }
 
@@ -117,7 +117,7 @@ bool QuestAccept_npc_professor_phizzlethorpe(Player* player, Creature* creature,
     if (quest->GetQuestId() == QUEST_SUNKEN_TREASURE)
     {
         DoScriptText(SAY_PROGRESS_1, creature, player);
-        ((npc_escortAI*)(creature->AI()))->Start(false, false, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(false, false, false, player->GetGUID());
         creature->setFaction(113);
     }
     return true;
@@ -129,7 +129,7 @@ CreatureAI* GetAI_npc_professor_phizzlethorpeAI(Creature *_Creature)
 
     professor_phizzlethorpeAI->FillPointMovementListForCreature();
 
-    return (CreatureAI*)professor_phizzlethorpeAI;
+    return professor_phizzlethorpeAI;
 }
 
 void AddSC_arathi_highlands()

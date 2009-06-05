@@ -127,7 +127,7 @@ bool OPvPWintergrasp::SetupOutdoorPvP()
     LoadTeamPair(m_creEntryPair, CreatureEntryPair);
 
     m_wartime = false;
-    m_timer = 600000;
+    m_timer = sWorld.getConfig(CONFIG_OUTDOORPVP_WINTERGRASP_START_TIME) * MINUTE * IN_MILISECONDS;
 
     return true;
 }
@@ -155,33 +155,59 @@ void OPvPWintergrasp::ProcessEvent(GameObject *obj, uint32 eventId)
     }
 }
 
-void OPvPWintergrasp::ChangeDefender()
-{
-    m_defender = OTHER_TEAM(m_defender);
-    if(m_defender == TEAM_ALLIANCE)
-        sWorld.SendZoneText(ZONE_WINTERGRASP, "Alliance has taken over the fortress!");
-    else
-        sWorld.SendZoneText(ZONE_WINTERGRASP, "Horde has taken over the fortress!");
-    UpdateAllWorldObject();
-
-    m_wartime = false;
-    m_timer = 600000; // for test, should be 2 hour 30 min
-}
-
-uint32 OPvPWintergrasp::GetCreatureEntry(uint32 guidlow, uint32 entry)
+uint32 OPvPWintergrasp::GetCreatureEntry(uint32 guidlow, const CreatureData *data)
 {
     if(m_defender == TEAM_ALLIANCE)
     {
-        TeamPairMap::const_iterator itr = m_creEntryPair.find(entry);
+        TeamPairMap::const_iterator itr = m_creEntryPair.find(data->id);
         if(itr != m_creEntryPair.end())
+        {
+            const_cast<CreatureData*>(data)->displayid = 0;
             return itr->second;
+        }
     }
-    return entry;
+    return data->id;
 }
 
 void OPvPWintergrasp::OnCreatureCreate(Creature *creature, bool add)
 {
-    if(m_creEntryPair.find(creature->GetEntry()) != m_creEntryPair.end())
+    if(creature->isVehicle())
+    {
+        TeamId team;
+        if(creature->getFaction() == WintergraspFaction[TEAM_ALLIANCE])
+            team = TEAM_ALLIANCE;
+        else if(creature->getFaction() == WintergraspFaction[TEAM_HORDE])
+            team = TEAM_HORDE;
+        else
+            return;
+
+        switch(creature->GetEntry())
+        {
+            case 27881:
+            case 28094:
+            case 28312:
+            case 32627:
+            //case 28366: tower
+                if(add)
+                {
+                    m_vehicles[team].insert((Vehicle*)creature);
+                    if(m_tenacityStack > 0)
+                    {
+                        if(team == TEAM_ALLIANCE)
+                            creature->SetAuraStack(SPELL_TENACITY_VEHICLE, creature, m_tenacityStack);
+                    }
+                    else if(m_tenacityStack < 0)
+                    {
+                        if(team == TEAM_HORDE)
+                            creature->SetAuraStack(SPELL_TENACITY_VEHICLE, creature, -m_tenacityStack);
+                    }
+                }
+                else
+                    m_vehicles[team].erase((Vehicle*)creature);                
+                break;
+        }
+    }
+    else if(m_creEntryPair.find(creature->GetEntry()) != m_creEntryPair.end())
     {
         if(add) m_creatures.insert(creature);
         else m_creatures.erase(creature);
@@ -304,7 +330,7 @@ bool OPvPWintergrasp::UpdateGameObjectInfo(GameObject *go)
 
 void OPvPWintergrasp::HandlePlayerEnterZone(Player * plr, uint32 zone)
 {
-    if(!plr->HasAura(SPELL_RECRUIT) && !plr->HasAura(SPELL_CORPORAL)
+    if(m_wartime && !plr->HasAura(SPELL_RECRUIT) && !plr->HasAura(SPELL_CORPORAL)
         && !plr->HasAura(SPELL_LIEUTENANT))
         plr->CastSpell(plr, SPELL_RECRUIT, true);
 
@@ -377,12 +403,18 @@ void OPvPWintergrasp::UpdateTenacityStack()
     if(m_tenacityStack > 0)
     {
         if(newStack <= 0)
+        {
             TeamCastSpell(TEAM_ALLIANCE, -SPELL_TENACITY);
+            VehicleCastSpell(TEAM_ALLIANCE, -SPELL_TENACITY_VEHICLE);
+        }
     }
     else if(m_tenacityStack < 0)
     {
         if(newStack >= 0)
+        {
             TeamCastSpell(TEAM_HORDE, -SPELL_TENACITY);
+            VehicleCastSpell(TEAM_HORDE, -SPELL_TENACITY_VEHICLE);
+        }
     }
     m_tenacityStack = newStack;
 
@@ -390,9 +422,22 @@ void OPvPWintergrasp::UpdateTenacityStack()
     if(newStack)
     {
         TeamId team = newStack > 0 ? TEAM_ALLIANCE : TEAM_HORDE;
+        if(newStack < 0) newStack = -newStack;
         for(PlayerSet::iterator itr = m_players[team].begin(); itr != m_players[team].end(); ++itr)
             (*itr)->SetAuraStack(SPELL_TENACITY, *itr, newStack);
+        for(VehicleSet::iterator itr = m_vehicles[team].begin(); itr != m_vehicles[team].end(); ++itr)
+            (*itr)->SetAuraStack(SPELL_TENACITY_VEHICLE, *itr, newStack);
     }
+}
+
+void OPvPWintergrasp::VehicleCastSpell(TeamId team, int32 spellId)
+{
+    if(spellId > 0)
+        for(VehicleSet::iterator itr = m_vehicles[team].begin(); itr != m_vehicles[team].end(); ++itr)
+            (*itr)->CastSpell(*itr, (uint32)spellId, true);
+    else
+        for(VehicleSet::iterator itr = m_vehicles[team].begin(); itr != m_vehicles[team].end(); ++itr)
+            (*itr)->RemoveAura((uint32)-spellId); // by stack?
 }
 
 bool OPvPWintergrasp::Update(uint32 diff)
@@ -403,20 +448,75 @@ bool OPvPWintergrasp::Update(uint32 diff)
     {
         if(m_wartime)
         {
-            m_wartime = false;
-            m_timer = 600000; // for test, should be 2 hour 30 min
             if(m_defender == TEAM_ALLIANCE)
                 sWorld.SendZoneText(ZONE_WINTERGRASP, "Alliance has successfully defended the fortress!");
             else
                 sWorld.SendZoneText(ZONE_WINTERGRASP, "Horde has successfully defended the fortress!");
+            GiveReward();
+            EndBattle();
         }
         else
         {
-            m_wartime = true;
-            m_timer = 30*60*1000;
             sWorld.SendZoneText(ZONE_WINTERGRASP, "Battle begins!");
             UpdateAllWorldObject();
+            StartBattle();
         }
     }
     return false;
+}
+
+void OPvPWintergrasp::ChangeDefender()
+{
+    m_defender = OTHER_TEAM(m_defender);
+    if(m_defender == TEAM_ALLIANCE)
+        sWorld.SendZoneText(ZONE_WINTERGRASP, "Alliance has taken over the fortress!");
+    else
+        sWorld.SendZoneText(ZONE_WINTERGRASP, "Horde has taken over the fortress!");
+    UpdateAllWorldObject();
+
+    GiveReward();
+    EndBattle();
+}
+
+void OPvPWintergrasp::GiveReward()
+{
+    for(uint32 team = 0; team < 2; ++team)
+        for(PlayerSet::iterator itr = m_players[team].begin(); itr != m_players[team].end(); ++itr)
+            if((*itr)->HasAura(SPELL_LIEUTENANT))
+                (*itr)->CastSpell(*itr, team == m_defender ? SPELL_VICTORY_REWARD : SPELL_DEFEAT_REWARD, true);
+}
+
+void OPvPWintergrasp::StartBattle()
+{
+    m_wartime = true;
+    m_timer = sWorld.getConfig(CONFIG_OUTDOORPVP_WINTERGRASP_BATTLE_TIME) * MINUTE * IN_MILISECONDS;
+
+    for(uint32 team = 0; team < 2; ++team)
+    {
+        for(PlayerSet::iterator itr = m_players[team].begin(); itr != m_players[team].end(); ++itr)
+        {
+            (*itr)->RemoveAura(SPELL_RECRUIT);
+            (*itr)->RemoveAura(SPELL_CORPORAL);
+            (*itr)->RemoveAura(SPELL_LIEUTENANT);
+            (*itr)->CastSpell(*itr, SPELL_RECRUIT, true);
+        }
+    }
+}
+
+void OPvPWintergrasp::EndBattle()
+{
+    m_wartime = false;
+    m_timer = sWorld.getConfig(CONFIG_OUTDOORPVP_WINTERGRASP_INTERVAL) * MINUTE * IN_MILISECONDS;
+
+    for(uint32 team = 0; team < 2; ++team)
+    {
+        VehicleCastSpell(TeamId(team), SPELL_SHUTDOWN_VEHICLE);
+
+        for(PlayerSet::iterator itr = m_players[team].begin(); itr != m_players[team].end(); ++itr)
+        {
+            (*itr)->RemoveAura(SPELL_RECRUIT);
+            (*itr)->RemoveAura(SPELL_CORPORAL);
+            (*itr)->RemoveAura(SPELL_LIEUTENANT);
+        }
+    }
 }

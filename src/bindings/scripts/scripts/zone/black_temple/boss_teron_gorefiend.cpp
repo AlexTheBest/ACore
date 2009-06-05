@@ -197,7 +197,7 @@ struct TRINITY_DLL_DECL boss_teron_gorefiendAI : public ScriptedAI
 {
     boss_teron_gorefiendAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance* pInstance;
@@ -338,7 +338,7 @@ struct TRINITY_DLL_DECL boss_teron_gorefiendAI : public ScriptedAI
             Creature* control = m_creature->SummonCreature(CREATURE_GHOST, x, y, z, 0, TEMPSUMMON_TIMED_DESAWN, 30000);
             if(control)
             {
-                ((Player*)Ghost)->Possess(control);
+                CAST_PLR(Ghost)->Possess(control);
                 Ghost->DealDamage(Ghost, Ghost->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL,
             false);
             }*/
@@ -352,7 +352,7 @@ struct TRINITY_DLL_DECL boss_teron_gorefiendAI : public ScriptedAI
                 {
                     Construct->CastSpell(Construct, SPELL_PASSIVE_SHADOWFORM, true);
                     SetThreatList(Construct);               // Use same function as Doom Blossom to set Threat List.
-                    ((mob_shadowy_constructAI*)Construct->AI())->GhostGUID = GhostGUID;
+                    CAST_AI(mob_shadowy_constructAI, Construct->AI())->GhostGUID = GhostGUID;
                     Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 1);
                     if(!target)                             // someone's trying to solo.
                         target = m_creature->getVictim();
@@ -430,7 +430,7 @@ struct TRINITY_DLL_DECL boss_teron_gorefiendAI : public ScriptedAI
                     DoomBlossom->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                     DoomBlossom->setFaction(m_creature->getFaction());
                     DoomBlossom->AddThreat(target, 1.0f);
-                    ((mob_doom_blossomAI*)DoomBlossom->AI())->SetTeronGUID(m_creature->GetGUID());
+                    CAST_AI(mob_doom_blossomAI, DoomBlossom->AI())->SetTeronGUID(m_creature->GetGUID());
                     target->CombatStart(DoomBlossom);
                     SetThreatList(DoomBlossom);
                     SummonDoomBlossomTimer = 35000;

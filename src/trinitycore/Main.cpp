@@ -22,11 +22,16 @@
 /// @{
 /// \file
 
+#include <openssl/opensslv.h>
+#include <openssl/crypto.h>
+
 #include "Common.h"
 #include "Database/DatabaseEnv.h"
 #include "Config/ConfigEnv.h"
+
 #include "Log.h"
 #include "Master.h"
+
 
 #ifndef _TRINITY_CORE_CONFIG
 # define _TRINITY_CORE_CONFIG  "TrinityCore.conf"
@@ -150,6 +155,13 @@ extern int main(int argc, char **argv)
         clock_t pause = 3000 + clock();
 
         while (pause > clock()) {}
+    }
+
+    sLog.outDetail("%s (Library: %s)", OPENSSL_VERSION_TEXT, SSLeay_version(SSLEAY_VERSION));
+    if (SSLeay() < 0x009080bfL )
+    {
+        sLog.outDetail("WARNING: Outdated version of OpenSSL lib. Logins to server impossible!");
+        sLog.outDetail("WARNING: Minimal required version [OpenSSL 0.9.8k]");
     }
 
     ///- and run the 'Master'

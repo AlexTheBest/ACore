@@ -101,9 +101,9 @@ struct TRINITY_DLL_DECL boss_janalaiAI : public ScriptedAI
 {
     boss_janalaiAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance =((ScriptedInstance*)c->GetInstanceData());
+        pInstance =(c->GetInstanceData());
 
-        SpellEntry *TempSpell = (SpellEntry*)GetSpellStore()->LookupEntry(SPELL_HATCH_EGG);
+        SpellEntry *TempSpell = GET_SPELL(SPELL_HATCH_EGG);
         if(TempSpell && TempSpell->EffectImplicitTargetA[0] != 1)
         {
             TempSpell->EffectImplicitTargetA[0] = 1;
@@ -481,7 +481,7 @@ struct TRINITY_DLL_DECL mob_amanishi_hatcherAI : public ScriptedAI
 {
     mob_amanishi_hatcherAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance =((ScriptedInstance*)c->GetInstanceData());
+        pInstance =(c->GetInstanceData());
     }
 
     ScriptedInstance *pInstance;
@@ -543,8 +543,8 @@ struct TRINITY_DLL_DECL mob_amanishi_hatcherAI : public ScriptedAI
     }
 
     void EnterCombat(Unit* who) {}
-    void AttackStart(Unit*) {}
-    void MoveInLineOfSight(Unit*) {}
+    void AttackStart(Unit* who) {}
+    void MoveInLineOfSight(Unit* who) {}
     void MovementInform(uint32, uint32)
     {
         if(waypoint == 5)
@@ -612,7 +612,7 @@ struct TRINITY_DLL_DECL mob_hatchlingAI : public ScriptedAI
 {
     mob_hatchlingAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance =((ScriptedInstance*)c->GetInstanceData());
+        pInstance =(c->GetInstanceData());
     }
 
     ScriptedInstance *pInstance;
