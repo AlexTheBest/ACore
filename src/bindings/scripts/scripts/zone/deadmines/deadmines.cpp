@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -72,7 +72,7 @@ struct TRINITY_DLL_DECL instance_deadmines : public ScriptedInstance
                 CannonBlast_Timer = CANNON_BLAST_TIMER;
                 // it's a hack - Mr. Smite should do that but his too far away
                 IronCladDoor->SetName("Mr. Smite");
-                IronCladDoor->Yell(SAY_MR_SMITE_ALARM1, LANG_UNIVERSAL, 0);
+                IronCladDoor->MonsterYell(SAY_MR_SMITE_ALARM1, LANG_UNIVERSAL, 0);
                 DoPlaySound(IronCladDoor, SOUND_MR_SMITE_ALARM1);
                 State=CANNON_BLAST_INITIATED;
                 break;
@@ -84,7 +84,7 @@ struct TRINITY_DLL_DECL instance_deadmines : public ScriptedInstance
                     ShootCannon();
                     BlastOutDoor();
                     LeverStucked();
-                    IronCladDoor->Yell(SAY_MR_SMITE_ALARM2, LANG_UNIVERSAL, 0);
+                    IronCladDoor->MonsterYell(SAY_MR_SMITE_ALARM2, LANG_UNIVERSAL, 0);
                     DoPlaySound(IronCladDoor, SOUND_MR_SMITE_ALARM2);
                     State = PIRATES_ATTACK;
                 }else
@@ -126,13 +126,13 @@ struct TRINITY_DLL_DECL instance_deadmines : public ScriptedInstance
 
     void ShootCannon()
     {
-        DefiasCannon->SetUInt32Value(GAMEOBJECT_STATE, 0);
+        DefiasCannon->SetGoState(GO_STATE_ACTIVE);
         DoPlaySound(DefiasCannon, SOUND_CANNONFIRE);
     }
 
     void BlastOutDoor()
     {
-        IronCladDoor->SetUInt32Value(GAMEOBJECT_STATE, 2);
+        IronCladDoor->SetGoState(GO_STATE_ACTIVE_ALTERNATIVE);
         DoPlaySound(IronCladDoor, SOUND_DESTROYDOOR);
     }
 
@@ -196,7 +196,7 @@ struct TRINITY_DLL_DECL instance_deadmines : public ScriptedInstance
 
 bool ItemUse_item_defias_gunpowder(Player *player, Item* _Item, SpellCastTargets const& targets)
 {
-    ScriptedInstance *pInstance = (player->GetInstanceData()) ? ((ScriptedInstance*)player->GetInstanceData()) : NULL;
+    ScriptedInstance *pInstance = (player->GetInstanceData()) ? (player->GetInstanceData()) : NULL;
 
     if(!pInstance)
     {

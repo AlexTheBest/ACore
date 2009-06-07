@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,7 +98,7 @@ struct ArenaTeamMember
 
     void ModifyPersonalRating(Player* plr, int32 mod, uint32 slot)
     {
-        if (personal_rating + mod < 0)
+        if (int32(personal_rating) + mod < 0)
             personal_rating = 0;
         else
             personal_rating += mod;
@@ -179,18 +179,7 @@ class ArenaTeam
             return NULL;
         }
 
-        bool IsFighting() const
-        {
-            for (MemberList::const_iterator itr = members.begin(); itr != members.end(); ++itr)
-            {
-                if (Player *p = objmgr.GetPlayer(itr->guid))
-                {
-                    if (p->GetMap()->IsBattleArena())
-                        return true;
-                }
-            }
-            return false;
-        }
+        bool IsFighting() const;
 
         bool LoadArenaTeamFromDB(uint32 ArenaTeamId);
         void LoadMembersFromDB(uint32 ArenaTeamId);
@@ -211,6 +200,7 @@ class ArenaTeam
         void MemberWon(Player * plr, uint32 againstRating);
         int32 LostAgainst(uint32 againstRating);
         void MemberLost(Player * plr, uint32 againstRating);
+        void OfflineMemberLost(uint64 guid, uint32 againstRating);
 
         void UpdateArenaPointsHelper(std::map<uint32, uint32> & PlayerPoints);
 

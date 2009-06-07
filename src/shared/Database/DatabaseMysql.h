@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,8 @@
 
 #include "Database.h"
 #include "Policies/Singleton.h"
-#include "zthread/FastMutex.h"
+#include "ace/Thread_Mutex.h"
+#include "ace/Guard_T.h"
 
 #ifdef WIN32
 #define FD_SETSIZE 1024
@@ -49,6 +50,7 @@ class TRINITY_DLL_SPEC DatabaseMysql : public Database
         void InitDelayThread();
         void HaltDelayThread();
         QueryResult* Query(const char *sql);
+        QueryNamedResult* QueryNamed(const char *sql);
         bool Execute(const char *sql);
         bool DirectExecute(const char* sql);
         bool BeginTransaction();
@@ -65,15 +67,16 @@ class TRINITY_DLL_SPEC DatabaseMysql : public Database
         // must be call before finish thread run
         void ThreadEnd();
     private:
-        ZThread::FastMutex mMutex;
+        ACE_Thread_Mutex mMutex;
 
-        ZThread::ThreadImpl* tranThread;
+        ACE_Based::Thread * tranThread;
 
         MYSQL *mMysql;
 
         static size_t db_count;
 
         bool _TransactionCmd(const char *sql);
+        bool _Query(const char *sql, MYSQL_RES **pResult, MYSQL_FIELD **pFields, uint64* pRowCount, uint32* pFieldCount);
 };
 #endif
 #endif

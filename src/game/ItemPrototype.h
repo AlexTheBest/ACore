@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,10 +57,18 @@ enum ItemModType
     ITEM_MOD_CRIT_TAKEN_RATING        = 34,
     ITEM_MOD_RESILIENCE_RATING        = 35,
     ITEM_MOD_HASTE_RATING             = 36,
-    ITEM_MOD_EXPERTISE_RATING         = 37
+    ITEM_MOD_EXPERTISE_RATING         = 37,
+    ITEM_MOD_ATTACK_POWER             = 38,
+    ITEM_MOD_RANGED_ATTACK_POWER      = 39,
+    ITEM_MOD_FERAL_ATTACK_POWER       = 40,
+    ITEM_MOD_SPELL_HEALING_DONE       = 41,
+    ITEM_MOD_SPELL_DAMAGE_DONE        = 42,
+    ITEM_MOD_MANA_REGENERATION        = 43,
+    ITEM_MOD_ARMOR_PENETRATION_RATING = 44,
+    ITEM_MOD_SPELL_POWER              = 45
 };
 
-#define MAX_ITEM_MOD                    38
+#define MAX_ITEM_MOD                    46
 
 enum ItemSpelltriggerType
 {
@@ -68,6 +76,12 @@ enum ItemSpelltriggerType
     ITEM_SPELLTRIGGER_ON_EQUIP        = 1,
     ITEM_SPELLTRIGGER_CHANCE_ON_HIT   = 2,
     ITEM_SPELLTRIGGER_SOULSTONE       = 4,
+    /*
+     * ItemSpelltriggerType 5 might have changed on 2.4.3/3.0.3: Such auras
+     * will be applied on item pickup and removed on item loss - maybe on the
+     * other hand the item is destroyed if the aura is removed ("removed on
+     * death" of spell 57348 makes me think so)
+     */
     ITEM_SPELLTRIGGER_ON_NO_DELAY_USE = 5,                  // no equip cooldown
     ITEM_SPELLTRIGGER_LEARN_SPELL_ID  = 6                   // used in item_template.spell_2 with spell_id with SPELL_GENERIC_LEARN in spell_1
 };
@@ -89,23 +103,27 @@ enum ItemBondingType
 // masks for ITEM_FIELD_FLAGS field
 enum ITEM_FLAGS
 {
-    ITEM_FLAGS_BINDED                         = 0x00000001,
+    ITEM_FLAGS_BINDED                         = 0x00000001, // set in game at binding, not set in template
     ITEM_FLAGS_CONJURED                       = 0x00000002,
     ITEM_FLAGS_OPENABLE                       = 0x00000004,
     ITEM_FLAGS_WRAPPED                        = 0x00000008,
+    ITEM_FLAGS_BROKEN                         = 0x00000010, // appears red icon (like when item durability==0)
     ITEM_FLAGS_WRAPPER                        = 0x00000200, // used or not used wrapper
     ITEM_FLAGS_PARTY_LOOT                     = 0x00000800, // determines if item is party loot or not
     ITEM_FLAGS_CHARTER                        = 0x00002000, // arena/guild charter
+    ITEM_FLAGS_PROSPECTABLE                   = 0x00040000,
     ITEM_FLAGS_UNIQUE_EQUIPPED                = 0x00080000,
     ITEM_FLAGS_USEABLE_IN_ARENA               = 0x00200000,
     ITEM_FLAGS_THROWABLE                      = 0x00400000, // not used in game for check trow possibility, only for item in game tooltip
     ITEM_FLAGS_SPECIALUSE                     = 0x00800000, // last used flag in 2.3.0
-    ITEM_FLAGS_BOA                            = 0x08000000, // bind on account
+    ITEM_FLAGS_BOA                            = 0x08000000, // bind on account (set in template for items that can binded in like way)
+    ITEM_FLAGS_TRIGGERED_CAST                 = 0x10000000, // used by enchanting scrolls made with vellum
     ITEM_FLAGS_MILLABLE                       = 0x20000000
 };
 
 enum BAG_FAMILY_MASK
 {
+    BAG_FAMILY_MASK_NONE                      = 0x00000000,
     BAG_FAMILY_MASK_ARROWS                    = 0x00000001,
     BAG_FAMILY_MASK_BULLETS                   = 0x00000002,
     BAG_FAMILY_MASK_SOUL_SHARDS               = 0x00000004,
@@ -185,10 +203,11 @@ enum ItemClass
     ITEM_CLASS_QUEST                            = 12,
     ITEM_CLASS_KEY                              = 13,
     ITEM_CLASS_PERMANENT                        = 14,
-    ITEM_CLASS_JUNK                             = 15
+    ITEM_CLASS_MISC                             = 15,
+    ITEM_CLASS_GLYPH                            = 16
 };
 
-#define MAX_ITEM_CLASS                            16
+#define MAX_ITEM_CLASS                            17
 
 enum ItemSubclassConsumable
 {
@@ -214,10 +233,11 @@ enum ItemSubclassContainer
     ITEM_SUBCLASS_ENGINEERING_CONTAINER         = 4,
     ITEM_SUBCLASS_GEM_CONTAINER                 = 5,
     ITEM_SUBCLASS_MINING_CONTAINER              = 6,
-    ITEM_SUBCLASS_LEATHERWORKING_CONTAINER      = 7
+    ITEM_SUBCLASS_LEATHERWORKING_CONTAINER      = 7,
+    ITEM_SUBCLASS_INSCRIPTION_CONTAINER         = 8
 };
 
-#define MAX_ITEM_SUBCLASS_CONTAINER               8
+#define MAX_ITEM_SUBCLASS_CONTAINER               9
 
 enum ItemSubclassWeapon
 {
@@ -243,6 +263,10 @@ enum ItemSubclassWeapon
     ITEM_SUBCLASS_WEAPON_WAND                   = 19,
     ITEM_SUBCLASS_WEAPON_FISHING_POLE           = 20
 };
+
+#define ITEM_SUBCLASS_MASK_WEAPON_RANGED (\
+    (1 << ITEM_SUBCLASS_WEAPON_BOW) | (1 << ITEM_SUBCLASS_WEAPON_GUN) |\
+    (1 << ITEM_SUBCLASS_WEAPON_CROSSBOW) | (1 << ITEM_SUBCLASS_WEAPON_THROWN))
 
 #define MAX_ITEM_SUBCLASS_WEAPON                  21
 
@@ -272,10 +296,11 @@ enum ItemSubclassArmor
     ITEM_SUBCLASS_ARMOR_SHIELD                  = 6,
     ITEM_SUBCLASS_ARMOR_LIBRAM                  = 7,
     ITEM_SUBCLASS_ARMOR_IDOL                    = 8,
-    ITEM_SUBCLASS_ARMOR_TOTEM                   = 9
+    ITEM_SUBCLASS_ARMOR_TOTEM                   = 9,
+    ITEM_SUBCLASS_ARMOR_SIGIL                   = 10
 };
 
-#define MAX_ITEM_SUBCLASS_ARMOR                   10
+#define MAX_ITEM_SUBCLASS_ARMOR                   11
 
 enum ItemSubclassReagent
 {
@@ -310,10 +335,12 @@ enum ItemSubclassTradeGoods
     ITEM_SUBCLASS_ELEMENTAL                     = 10,
     ITEM_SUBCLASS_TRADE_GOODS_OTHER             = 11,
     ITEM_SUBCLASS_ENCHANTING                    = 12,
-    ITEM_SUBCLASS_MATERIAL                      = 13        // Added in 2.4.2
+    ITEM_SUBCLASS_MATERIAL                      = 13,
+    ITEM_SUBCLASS_ARMOR_ENCHANTMENT             = 14,
+    ITEM_SUBCLASS_WEAPON_ENCHANTMENT            = 15
 };
 
-#define MAX_ITEM_SUBCLASS_TRADE_GOODS             14
+#define MAX_ITEM_SUBCLASS_TRADE_GOODS             16
 
 enum ItemSubclassGeneric
 {
@@ -423,7 +450,8 @@ const uint32 MaxItemSubclassValues[MAX_ITEM_CLASS] =
     MAX_ITEM_SUBCLASS_QUEST,
     MAX_ITEM_SUBCLASS_KEY,
     MAX_ITEM_SUBCLASS_PERMANENT,
-    MAX_ITEM_SUBCLASS_JUNK
+    MAX_ITEM_SUBCLASS_JUNK,
+    MAX_ITEM_SUBCLASS_GLYPH
 };
 
 inline uint8 ItemSubClassToDurabilityMultiplierId(uint32 ItemClass, uint32 ItemSubClass)
@@ -472,12 +500,17 @@ struct _Socket
     uint32 Content;
 };
 
+#define MAX_ITEM_PROTO_DAMAGES 5
+#define MAX_ITEM_PROTO_SOCKETS 3
+#define MAX_ITEM_PROTO_SPELLS  5
+#define MAX_ITEM_PROTO_STATS  10
+
 struct ItemPrototype
 {
     uint32 ItemId;
     uint32 Class;                                           // id from ItemClass.dbc
     uint32 SubClass;                                        // id from ItemSubClass.dbc
-    uint32 Unk0;
+    int32  Unk0;
     char*  Name1;
     uint32 DisplayInfoID;                                   // id from ItemDisplayInfo.dbc
     uint32 Quality;
@@ -497,11 +530,14 @@ struct ItemPrototype
     uint32 RequiredCityRank;
     uint32 RequiredReputationFaction;                       // id from Faction.dbc
     uint32 RequiredReputationRank;
-    uint32 MaxCount;
-    uint32 Stackable;
+    int32  MaxCount;                                        // <=0: no limit
+    int32  Stackable;                                       // 0: not allowed, -1: put in player coin info tab and don't limit stacking (so 1 slot)
     uint32 ContainerSlots;
-    _ItemStat ItemStat[10];
-    _Damage Damage[5];
+    uint32 StatsCount;
+    _ItemStat ItemStat[MAX_ITEM_PROTO_STATS];
+    uint32 ScalingStatDistribution;                         // id from ScalingStatDistribution.dbc
+    uint32 ScalingStatValue;                                // mask for selecting column in ScalingStatValues.dbc
+    _Damage Damage[MAX_ITEM_PROTO_DAMAGES];
     uint32 Armor;
     uint32 HolyRes;
     uint32 FireRes;
@@ -512,7 +548,7 @@ struct ItemPrototype
     uint32 Delay;
     uint32 AmmoType;
     float  RangedModRange;
-    _Spell Spells[5];
+    _Spell Spells[MAX_ITEM_PROTO_SPELLS];
     uint32 Bonding;
     char*  Description;
     uint32 PageText;
@@ -520,7 +556,7 @@ struct ItemPrototype
     uint32 PageMaterial;
     uint32 StartQuest;                                      // id from QuestCache.wdb
     uint32 LockID;
-    uint32 Material;                                        // id from Material.dbc
+    int32  Material;                                        // id from Material.dbc
     uint32 Sheath;
     uint32 RandomProperty;                                  // id from ItemRandomProperties.dbc
     uint32 RandomSuffix;                                    // id from ItemRandomSuffix.dbc
@@ -529,19 +565,20 @@ struct ItemPrototype
     uint32 MaxDurability;
     uint32 Area;                                            // id from AreaTable.dbc
     uint32 Map;                                             // id from Map.dbc
-    uint32 BagFamily;                                       // id from ItemBagFamily.dbc
+    uint32 BagFamily;                                       // bit mask (1 << id from ItemBagFamily.dbc)
     uint32 TotemCategory;                                   // id from TotemCategory.dbc
-    _Socket Socket[3];
+    _Socket Socket[MAX_ITEM_PROTO_SOCKETS];
     uint32 socketBonus;                                     // id from SpellItemEnchantment.dbc
     uint32 GemProperties;                                   // id from GemProperties.dbc
     uint32 RequiredDisenchantSkill;
     float  ArmorDamageModifier;
+    int32  Duration;                                        // negative = realtime, positive = ingame time
+    uint32 ItemLimitCategory;                               // id from ItemLimitCategory.dbc
     uint32 ScriptId;
     uint32 DisenchantID;
     uint32 FoodType;
     uint32 MinMoneyLoot;
     uint32 MaxMoneyLoot;
-    int32 Duration;                                         // negative = realtime, positive = ingame time
 
     // helpers
     bool CanChangeEquipStateInCombat() const
@@ -563,6 +600,36 @@ struct ItemPrototype
 
         return false;
     }
+
+    uint32 GetMaxStackSize() const { return Stackable > 0 ? uint32(Stackable) : uint32(0x7FFFFFFF-1); }
+
+    float getDPS() const
+    {
+        if (Delay == 0)
+            return 0;
+        float temp = 0;
+        for (int i = 0; i < MAX_ITEM_PROTO_DAMAGES; ++i)
+            temp+=Damage[i].DamageMin + Damage[i].DamageMax;
+        return temp*500/Delay;
+    }
+
+    int32 getFeralBonus(int32 extraDPS = 0) const
+    {
+        // 0x02A5F3 - is mask for Melee weapon from ItemSubClassMask.dbc
+        if (Class == ITEM_CLASS_WEAPON && (1<<SubClass)&0x02A5F3)
+        {
+            int32 bonus = int32((extraDPS + getDPS())*14.0f) - 767;
+            if (bonus < 0)
+                return 0;
+            return bonus;
+        }
+        return 0;
+    }
+
+    bool IsPotion() const { return Class==ITEM_CLASS_CONSUMABLE && SubClass==ITEM_SUBCLASS_POTION; }
+    bool IsWeaponVellum() const { return Class==ITEM_CLASS_TRADE_GOODS && SubClass==ITEM_SUBCLASS_WEAPON_ENCHANTMENT; }
+    bool IsArmorVellum() const { return Class==ITEM_CLASS_TRADE_GOODS && SubClass==ITEM_SUBCLASS_ARMOR_ENCHANTMENT; }
+    bool IsConjuredConsumable() const { return Class == ITEM_CLASS_CONSUMABLE && (Flags & ITEM_FLAGS_CONJURED); }
 };
 
 struct ItemLocale

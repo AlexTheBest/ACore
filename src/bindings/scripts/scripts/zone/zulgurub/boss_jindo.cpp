@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -43,7 +43,7 @@ struct TRINITY_DLL_DECL boss_jindoAI : public ScriptedAI
 {
     boss_jindoAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance *pInstance;
@@ -54,10 +54,6 @@ struct TRINITY_DLL_DECL boss_jindoAI : public ScriptedAI
     uint32 Delusions_Timer;
     uint32 Teleport_Timer;
 
-    Creature *Shade;
-    Creature *Skeletons;
-    Creature *HealingWard;
-
     void Reset()
     {
         BrainWashTotem_Timer = 20000;
@@ -67,7 +63,7 @@ struct TRINITY_DLL_DECL boss_jindoAI : public ScriptedAI
         Teleport_Timer = 5000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoScriptText(SAY_AGGRO, m_creature);
     }
@@ -88,7 +84,7 @@ struct TRINITY_DLL_DECL boss_jindoAI : public ScriptedAI
         if (HealingWard_Timer < diff)
         {
             //DoCast(m_creature, SPELL_POWERFULLHEALINGWARD);
-            HealingWard = m_creature->SummonCreature(14987, m_creature->GetPositionX()+3, m_creature->GetPositionY()-2, m_creature->GetPositionZ(), 0, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,30000);
+            m_creature->SummonCreature(14987, m_creature->GetPositionX()+3, m_creature->GetPositionY()-2, m_creature->GetPositionZ(), 0, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,30000);
             HealingWard_Timer = 14000 + rand()%6000;
         }else HealingWard_Timer -= diff;
 
@@ -110,7 +106,7 @@ struct TRINITY_DLL_DECL boss_jindoAI : public ScriptedAI
             {
                 DoCast(target, SPELL_DELUSIONSOFJINDO);
 
-                Shade = m_creature->SummonCreature(14986, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 15000);
+                Creature *Shade = m_creature->SummonCreature(14986, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 15000);
                 if(Shade)
                     Shade->AI()->AttackStart(target);
             }
@@ -130,6 +126,7 @@ struct TRINITY_DLL_DECL boss_jindoAI : public ScriptedAI
                 if(DoGetThreat(m_creature->getVictim()))
                     DoModifyThreatPercent(target,-100);
 
+                Creature *Skeletons;
                 Skeletons = m_creature->SummonCreature(14826, target->GetPositionX()+2, target->GetPositionY(), target->GetPositionZ(), 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 15000);
                 if(Skeletons)
                     Skeletons->AI()->AttackStart(target);
@@ -171,7 +168,7 @@ struct TRINITY_DLL_DECL mob_healing_wardAI : public ScriptedAI
 {
     mob_healing_wardAI(Creature *c) : ScriptedAI(c)
     {
-         pInstance = ((ScriptedInstance*)c->GetInstanceData());
+         pInstance = (c->GetInstanceData());
     }
 
     uint32 Heal_Timer;
@@ -183,7 +180,7 @@ struct TRINITY_DLL_DECL mob_healing_wardAI : public ScriptedAI
         Heal_Timer = 2000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -210,7 +207,7 @@ struct TRINITY_DLL_DECL mob_shade_of_jindoAI : public ScriptedAI
 {
     mob_shade_of_jindoAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     uint32 ShadowShock_Timer;
@@ -223,7 +220,7 @@ struct TRINITY_DLL_DECL mob_shade_of_jindoAI : public ScriptedAI
         m_creature->CastSpell(m_creature, SPELL_INVISIBLE,true);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -74,7 +74,7 @@ struct TRINITY_DLL_DECL npc_bartlebyAI : public ScriptedAI
     void Reset()
     {
         m_creature->setFaction(11);
-        m_creature->setEmoteState(7);
+        m_creature->SetUInt32Value(UNIT_NPC_EMOTESTATE, 7);
 
         PlayerGUID = 0;
     }
@@ -93,15 +93,15 @@ struct TRINITY_DLL_DECL npc_bartlebyAI : public ScriptedAI
 
             if (done_by->GetTypeId() == TYPEID_PLAYER && done_by->GetGUID() == PlayerGUID)
             {
-                ((Player*)done_by)->AttackStop();
-                ((Player*)done_by)->AreaExploredOrEventHappens(1640);
+                CAST_PLR(done_by)->AttackStop();
+                CAST_PLR(done_by)->AreaExploredOrEventHappens(1640);
             }
             m_creature->CombatStop();
             EnterEvadeMode();
         }
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 };
 
 bool QuestAccept_npc_bartleby(Player *player, Creature *_Creature, Quest const *_Quest)
@@ -109,8 +109,8 @@ bool QuestAccept_npc_bartleby(Player *player, Creature *_Creature, Quest const *
     if(_Quest->GetQuestId() == 1640)
     {
         _Creature->setFaction(168);
-        ((npc_bartlebyAI*)_Creature->AI())->PlayerGUID = player->GetGUID();
-        ((npc_bartlebyAI*)_Creature->AI())->AttackStart(player);
+        CAST_AI(npc_bartlebyAI, _Creature->AI())->PlayerGUID = player->GetGUID();
+        CAST_AI(npc_bartlebyAI, _Creature->AI())->AttackStart(player);
     }
     return true;
 }
@@ -131,7 +131,7 @@ struct TRINITY_DLL_DECL npc_dashel_stonefistAI : public ScriptedAI
     void Reset()
     {
         m_creature->setFaction(11);
-        m_creature->setEmoteState(7);
+        m_creature->SetUInt32Value(UNIT_NPC_EMOTESTATE, 7);
     }
 
     void DamageTaken(Unit *done_by, uint32 & damage)
@@ -143,15 +143,15 @@ struct TRINITY_DLL_DECL npc_dashel_stonefistAI : public ScriptedAI
 
             if (done_by->GetTypeId() == TYPEID_PLAYER)
             {
-                ((Player*)done_by)->AttackStop();
-                ((Player*)done_by)->AreaExploredOrEventHappens(1447);
+                CAST_PLR(done_by)->AttackStop();
+                CAST_PLR(done_by)->AreaExploredOrEventHappens(1447);
             }
             //m_creature->CombatStop();
             EnterEvadeMode();
         }
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 };
 
 bool QuestAccept_npc_dashel_stonefist(Player *player, Creature *_Creature, Quest const *_Quest)
@@ -159,7 +159,7 @@ bool QuestAccept_npc_dashel_stonefist(Player *player, Creature *_Creature, Quest
     if(_Quest->GetQuestId() == 1447)
     {
         _Creature->setFaction(168);
-        ((npc_dashel_stonefistAI*)_Creature->AI())->AttackStart(player);
+        CAST_AI(npc_dashel_stonefistAI, _Creature->AI())->AttackStart(player);
     }
     return true;
 }
@@ -173,6 +173,8 @@ CreatureAI* GetAI_npc_dashel_stonefist(Creature *_creature)
 ## npc_general_marcus_jonathan
 ######*/
 
+#define SAY_GREETING    -1000005
+
 bool ReceiveEmote_npc_general_marcus_jonathan(Player *player, Creature *_Creature, uint32 emote)
 {
     if(player->GetTeam() == ALLIANCE)
@@ -184,7 +186,7 @@ bool ReceiveEmote_npc_general_marcus_jonathan(Player *player, Creature *_Creatur
         }
         if (emote == TEXTEMOTE_WAVE)
         {
-            _Creature->MonsterSay("Greetings citizen",LANG_COMMON,0);
+            DoScriptText(SAY_GREETING, _Creature, player);
         }
     }
     return true;
@@ -260,7 +262,7 @@ void AddSC_stormwind_city()
 
     newscript = new Script;
     newscript->Name = "npc_general_marcus_jonathan";
-    newscript->pReceiveEmote = &ReceiveEmote_npc_general_marcus_jonathan;
+    //newscript->pReceiveEmote = &ReceiveEmote_npc_general_marcus_jonathan;
     newscript->RegisterSelf();
 
     newscript = new Script;

@@ -4,6 +4,8 @@
 SET(game_STAT_SRCS
    AccountMgr.cpp
    AccountMgr.h
+   AchievementMgr.h
+   AchievementMgr.cpp
    AddonHandler.cpp
    AddonHandler.h
    AggressorAI.cpp
@@ -12,9 +14,9 @@ SET(game_STAT_SRCS
    ArenaTeam.cpp
    ArenaTeam.h
    ArenaTeamHandler.cpp
+   AuctionHouseHandler.cpp
    AuctionHouseBot.cpp
    AuctionHouseBot.h
-   AuctionHouseHandler.cpp
    AuctionHouseMgr.cpp
    AuctionHouseMgr.h
    Bag.cpp
@@ -24,22 +26,31 @@ SET(game_STAT_SRCS
    BattleGroundAB.cpp
    BattleGroundAV.cpp
    BattleGroundBE.cpp
+   BattleGroundDS.cpp
    BattleGroundEY.cpp
    BattleGroundNA.cpp
    BattleGroundRL.cpp
+   BattleGroundRV.cpp
+   BattleGroundSA.cpp
    BattleGroundWS.cpp
    BattleGround.h
    BattleGroundAA.h
    BattleGroundAB.h
    BattleGroundAV.h
    BattleGroundBE.h
+   BattleGroundDS.h
    BattleGroundEY.h
    BattleGroundNA.h
    BattleGroundRL.h
+   BattleGroundRV.h
+   BattleGroundSA.h
    BattleGroundWS.h
    BattleGroundHandler.cpp
    BattleGroundMgr.cpp
    BattleGroundMgr.h
+   Calendar.cpp
+   Calendar.h
+   CalendarHandler.cpp
    Cell.h
    CellImpl.h
    Channel.cpp
@@ -57,15 +68,23 @@ SET(game_STAT_SRCS
    Corpse.h
    CreatureAI.cpp
    CreatureAI.h
+   CreatureAIFactory.h
    CreatureAIImpl.h
    CreatureAIRegistry.cpp
    CreatureAIRegistry.h
    CreatureAISelector.cpp
    CreatureAISelector.h
+   CreatureEventAI.cpp
+   CreatureEventAIMgr.cpp  
    Creature.cpp
    Creature.h
    CreatureGroups.cpp
    CreatureGroups.h
+   DBCEnums.h
+   DBCStores.cpp
+   DBCStores.h
+   DBCStructure.h
+   DBCfmt.h
    Debugcmds.cpp
    DestinationHolder.cpp
    DestinationHolder.h
@@ -76,8 +95,8 @@ SET(game_STAT_SRCS
    FleeingMovementGenerator.cpp
    FleeingMovementGenerator.h
    Formulas.h
-   GameEvent.cpp
-   GameEvent.h
+   GameEventMgr.cpp
+   GameEventMgr.h
    GameObject.cpp
    GameObject.h
    GlobalEvents.cpp
@@ -131,6 +150,8 @@ SET(game_STAT_SRCS
    MapInstanced.h
    MapManager.cpp
    MapManager.h
+   MapReference.h
+   MapRefManager.h
    MiscHandler.cpp
    MotionMaster.cpp
    MotionMaster.h
@@ -151,6 +172,8 @@ SET(game_STAT_SRCS
    Object.h
    ObjectMgr.cpp
    ObjectMgr.h
+   ObjectPosSelector.cpp
+   ObjectPosSelector.h
    Opcodes.cpp
    Opcodes.h
    OutdoorPvP.cpp
@@ -163,8 +186,6 @@ SET(game_STAT_SRCS
    OutdoorPvPMgr.h
    OutdoorPvPNA.cpp
    OutdoorPvPNA.h
-   OutdoorPvPObjectiveAI.cpp
-   OutdoorPvPObjectiveAI.h
    OutdoorPvPSI.cpp
    OutdoorPvPSI.h
    OutdoorPvPTF.cpp
@@ -184,8 +205,8 @@ SET(game_STAT_SRCS
    PlayerDump.h
    PointMovementGenerator.cpp
    PointMovementGenerator.h
-   PossessedAI.cpp
-   PossessedAI.h
+   PoolHandler.cpp
+   PoolHandler.h
    QueryHandler.cpp
    QuestDef.cpp
    QuestDef.h
@@ -194,6 +215,8 @@ SET(game_STAT_SRCS
    RandomMovementGenerator.h
    ReactorAI.cpp
    ReactorAI.h
+   ReputationMgr.cpp
+   ReputationMgr.h
    ScriptCalls.cpp
    ScriptCalls.h
    SharedDefines.h
@@ -221,7 +244,7 @@ SET(game_STAT_SRCS
    TemporarySummon.h
    TicketHandler.cpp
    TicketMgr.cpp
-   TicketMgr.h 
+   TicketMgr.h
    Tools.cpp
    Tools.h
    TotemAI.cpp
@@ -236,11 +259,15 @@ SET(game_STAT_SRCS
    Traveller.h
    Unit.cpp
    Unit.h
+   UnitAI.cpp
+   UnitAI.h
    UnitEvents.h
    UpdateData.cpp
    UpdateData.h
    UpdateFields.h
    UpdateMask.h
+   Vehicle.cpp
+   Vehicle.h
    VoiceChatHandler.cpp
    WaypointManager.cpp
    WaypointManager.h
@@ -264,6 +291,10 @@ SET(game_STAT_SRCS
    GroupReference.cpp
    GroupReference.h
    GroupRefManager.h
+   OutdoorPvPImpl.h
+   Wintergrasp.h
+   Wintergrasp.cpp
+   ZoneScript.h
 )
 
 add_library(game STATIC ${game_STAT_SRCS})

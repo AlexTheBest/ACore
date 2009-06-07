@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -46,7 +46,7 @@ struct TRINITY_DLL_DECL boss_mandokirAI : public ScriptedAI
 {
     boss_mandokirAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     uint32 KillCount;
@@ -123,7 +123,7 @@ struct TRINITY_DLL_DECL boss_mandokirAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
      DoScriptText(SAY_AGGRO, m_creature);
     }
@@ -270,7 +270,7 @@ struct TRINITY_DLL_DECL mob_ohganAI : public ScriptedAI
 {
     mob_ohganAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     uint32 SunderArmor_Timer;
@@ -281,7 +281,7 @@ struct TRINITY_DLL_DECL mob_ohganAI : public ScriptedAI
         SunderArmor_Timer = 5000;
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void JustDied(Unit* Killer)
     {

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -137,7 +137,7 @@ struct TRINITY_DLL_DECL npc_cooshcooshAI : public ScriptedAI
         m_creature->setFaction(FACTION_FRIENDLY_CO);
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -173,7 +173,7 @@ bool GossipSelect_npc_cooshcoosh(Player *player, Creature *_Creature, uint32 sen
     {
         player->CLOSE_GOSSIP_MENU();
         _Creature->setFaction(FACTION_HOSTILE_CO);
-        ((npc_cooshcooshAI*)_Creature->AI())->AttackStart(player);
+        _Creature->AI()->AttackStart(player);
     }
     return true;
 }
@@ -277,7 +277,7 @@ struct TRINITY_DLL_DECL npc_kayra_longmaneAI : public npc_escortAI
         m_creature->setFaction(1660);
     }
 
-    void Aggro(Unit* who){}
+    void EnterCombat(Unit* who){}
 
     void JustSummoned(Creature *summoned)
     {
@@ -333,7 +333,7 @@ bool QuestAccept_npc_kayra_longmane(Player* player, Creature* creature, Quest co
 {
     if (quest->GetQuestId() == QUEST_EFU)
     {
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
         creature->setFaction(113);
     }
     return true;
@@ -371,7 +371,7 @@ CreatureAI* GetAI_npc_kayra_longmaneAI(Creature* _Creature)
     thisAI->AddWaypoint(25, -488.45, 5447.83, 22.38);
     thisAI->AddWaypoint(26, -449.65, 5463.78, 21.77, 11000);//SAY_PROGRESS_6
 
-    return (CreatureAI*)thisAI;
+    return thisAI;
 }
 /*######
 ## AddSC

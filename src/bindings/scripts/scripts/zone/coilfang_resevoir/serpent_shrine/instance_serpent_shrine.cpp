@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -37,7 +37,7 @@ EndScriptData */
 
 bool GOHello_go_bridge_console(Player *player, GameObject* go)
 {
-    ScriptedInstance* pInstance = (ScriptedInstance*)go->GetInstanceData();
+    ScriptedInstance* pInstance = go->GetInstanceData();
 
     if(!pInstance)
         return false;
@@ -136,13 +136,13 @@ struct TRINITY_DLL_DECL instance_serpentshrine_cavern : public ScriptedInstance
 
     void OpenDoor(uint64 DoorGUID, bool open)
     {
-        if(GameObject *Door = instance->GetGameObjectInMap(DoorGUID))
-            Door->SetUInt32Value(GAMEOBJECT_STATE, open ? 0 : 1);
+        if(GameObject *Door = instance->GetGameObject(DoorGUID))
+            Door->SetGoState(open ? GO_STATE_ACTIVE : GO_STATE_READY);
     }
 
     void OnCreatureCreate(Creature *creature, uint32 creature_entry)
     {
-        switch(creature_entry)
+        switch(creature->GetEntry())
         {
             case 21212: LadyVashj = creature->GetGUID();            break;
             case 21214: Karathress = creature->GetGUID();           break;
@@ -236,7 +236,7 @@ struct TRINITY_DLL_DECL instance_serpentshrine_cavern : public ScriptedInstance
         }
         return 0;
     }
-    const char* Save()
+    std::string GetSaveData()
     {
         OUT_SAVE_INST_DATA;
         std::ostringstream stream;

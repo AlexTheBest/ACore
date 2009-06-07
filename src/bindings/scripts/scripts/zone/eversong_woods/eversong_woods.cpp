@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -17,44 +17,20 @@
 /* ScriptData
 SDName: Eversong_Woods
 SD%Complete: 100
-SDComment: Quest support: 8346, 8483, 8488, 8490
+SDComment: Quest support: 8483, 8488, 8490, 9686
 SDCategory: Eversong Woods
 EndScriptData */
 
 /* ContentData
-mobs_mana_tapped
 npc_prospector_anvilward
 npc_apprentice_mirveda
 npc_infused_crystal
+npc_kelerun_bloodmourn
+go_harbinger_second_trial
 EndContentData */
 
 #include "precompiled.h"
 #include "../../npc/npc_escortAI.h"
-
-/*######
-## mobs_mana_tapped
-######*/
-
-struct TRINITY_DLL_DECL mobs_mana_tappedAI : public ScriptedAI
-{
-    mobs_mana_tappedAI(Creature *c) : ScriptedAI(c) {}
-
-    void Reset() { }
-
-    void Aggro(Unit *who) { }
-
-    void SpellHit(Unit *caster, const SpellEntry *spell)
-    {
-        if( caster->GetTypeId() == TYPEID_PLAYER)
-            if( ((Player*)caster)->GetQuestStatus(8346) == QUEST_STATUS_INCOMPLETE && !((Player*)caster)->GetReqKillOrCastCurrentCount(8346, m_creature->GetEntry()) && spell->Id == 28734)
-                ((Player*)caster)->CastedCreatureOrGO(15468, m_creature->GetGUID(), spell->Id);
-        return;
-    }
-};
-CreatureAI* GetAI_mobs_mana_tapped(Creature *_Creature)
-{
-    return new mobs_mana_tappedAI (_Creature);
-}
 
 /*######
 ## npc_prospector_anvilward
@@ -89,7 +65,7 @@ struct TRINITY_DLL_DECL npc_prospector_anvilwardAI : public npc_escortAI
         }
     }
 
-    void Aggro(Unit* who) { }
+    void EnterCombat(Unit* who) { }
 
     void Reset()
     {
@@ -107,20 +83,13 @@ struct TRINITY_DLL_DECL npc_prospector_anvilwardAI : public npc_escortAI
     }
 };
 
-CreatureAI* GetAI_npc_prospector_anvilward(Creature *_Creature)
+CreatureAI* GetAI_npc_prospector_anvilward(Creature* pCreature)
 {
-    npc_prospector_anvilwardAI* thisAI = new npc_prospector_anvilwardAI(_Creature);
+    npc_prospector_anvilwardAI* thisAI = new npc_prospector_anvilwardAI(pCreature);
 
-    thisAI->AddWaypoint(0, 9294.78, -6682.51, 22.42);
-    thisAI->AddWaypoint(1, 9298.27, -6667.99, 22.42);
-    thisAI->AddWaypoint(2, 9309.63, -6658.84, 22.43);
-    thisAI->AddWaypoint(3, 9304.43, -6649.31, 26.46);
-    thisAI->AddWaypoint(4, 9298.83, -6648.00, 28.61);
-    thisAI->AddWaypoint(5, 9291.06, -6653.46, 31.83, 2500);
-    thisAI->AddWaypoint(6, 9289.08, -6660.17, 31.85, 5000);
-    thisAI->AddWaypoint(7, 9291.06, -6653.46, 31.83);
+    thisAI->FillPointMovementListForCreature();
 
-    return (CreatureAI*)thisAI;
+    return thisAI;
 }
 
 bool GossipHello_npc_prospector_anvilward(Player *player, Creature *_Creature)
@@ -142,7 +111,7 @@ bool GossipSelect_npc_prospector_anvilward(Player *player, Creature *_Creature, 
             break;
         case GOSSIP_ACTION_INFO_DEF+2:
             player->CLOSE_GOSSIP_MENU();
-            ((npc_escortAI*)(_Creature->AI()))->Start(true, true, false, player->GetGUID());
+            CAST_AI(npc_escortAI, (_Creature->AI()))->Start(true, true, false, player->GetGUID());
             break;
     }
     return true;
@@ -229,7 +198,7 @@ struct TRINITY_DLL_DECL npc_secondTrialAI : public ScriptedAI
       questPhase = 0;
       summonerGuid = 0;
 
-      m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_KNEEL);
+      m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, UNIT_STAND_STATE_KNEEL);
       m_creature->setFaction(FACTION_FRIENDLY);
 
       spellFlashLight = false;
@@ -261,14 +230,14 @@ struct TRINITY_DLL_DECL npc_secondTrialAI : public ScriptedAI
       }
     }
 
-    void Aggro(Unit *who) { }
+    void EnterCombat(Unit *who) { }
 
     void UpdateAI(const uint32 diff)
     {
       if ( questPhase == 1 ) {
 
         if ( timer < diff ) {
-              m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_NONE);
+              m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, UNIT_STAND_STATE_STAND);
               m_creature->setFaction(FACTION_HOSTILE);
               questPhase = 0;
 
@@ -357,7 +326,7 @@ struct TRINITY_DLL_DECL master_kelerun_bloodmournAI : public ScriptedAI
 
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -374,7 +343,7 @@ struct TRINITY_DLL_DECL master_kelerun_bloodmournAI : public ScriptedAI
           Creature* paladinSpawn;
           paladinSpawn = (Unit::GetCreature((*m_creature), paladinGuid[paladinPhase]));
             if ( paladinSpawn ) {
-               ((npc_secondTrialAI*)paladinSpawn->AI())->Activate(m_creature->GetGUID());
+               CAST_AI(npc_secondTrialAI, paladinSpawn->AI())->Activate(m_creature->GetGUID());
 
                switch(paladinPhase) {
                  case 0:
@@ -436,7 +405,7 @@ bool GossipHello_master_kelerun_bloodmourn(Player *player, Creature *_Creature)
     // Escort quests or any other event-driven quests. If player in party, all players that can accept this quest will receive confirmation box to accept quest.
     // !not sure if this really works!
 
-    if ( ((master_kelerun_bloodmournAI*)_Creature->AI())->questPhase == 0 ) {
+    if ( CAST_AI(master_kelerun_bloodmournAI, _Creature->AI())->questPhase == 0 ) {
         player->PrepareQuestMenu(_Creature->GetGUID());
         player->SendPreparedQuest(_Creature->GetGUID());
     }
@@ -449,7 +418,7 @@ bool QuestAccept_master_kelerun_bloodmourn(Player *player, Creature *creature, Q
 {
     // One Player exclusive quest, wait for user go activation
     if(quest->GetQuestId() == QUEST_SECOND_TRIAL )
-        ((master_kelerun_bloodmournAI*)creature->AI())->questPhase = 1;
+        CAST_AI(master_kelerun_bloodmournAI, creature->AI())->questPhase = 1;
 
     return true;
 }
@@ -475,12 +444,12 @@ void npc_secondTrialAI::JustDied(Unit* Killer) {
           Summoner = (Unit::GetCreature((*m_creature), summonerGuid));
 
           if ( Summoner )
-            ((master_kelerun_bloodmournAI*)Summoner->AI())->SecondTrialKill();
+            CAST_AI(master_kelerun_bloodmournAI, Summoner->AI())->SecondTrialKill();
 
           // last kill quest complete for group
           if ( m_creature->GetEntry() == CHAMPION_SUNSTRIKER ) {
 
-            if( Group *pGroup = ((Player*)Killer)->GetGroup() )
+            if( Group *pGroup = CAST_PLR(Killer)->GetGroup() )
             {
                for(GroupReference *itr = pGroup->GetFirstMember(); itr != NULL; itr = itr->next())
                {
@@ -492,8 +461,8 @@ void npc_secondTrialAI::JustDied(Unit* Killer) {
                 }
             }
             else {
-               if ( ((Player*)Killer)->GetQuestStatus( QUEST_SECOND_TRIAL ) == QUEST_STATUS_INCOMPLETE )
-                   ((Player*)Killer)->CompleteQuest( QUEST_SECOND_TRIAL );
+               if ( CAST_PLR(Killer)->GetQuestStatus( QUEST_SECOND_TRIAL ) == QUEST_STATUS_INCOMPLETE )
+                   CAST_PLR(Killer)->CompleteQuest( QUEST_SECOND_TRIAL );
             }
           }
       }
@@ -503,8 +472,8 @@ void npc_secondTrialAI::KilledUnit(Unit* Killed) {
 
   if ( Killed->GetTypeId() == TYPEID_PLAYER ) {
 
-      if ( ((Player*)Killed)->GetQuestStatus(QUEST_SECOND_TRIAL) == QUEST_STATUS_INCOMPLETE )
-        ((Player*)Killed)->FailQuest(QUEST_SECOND_TRIAL);
+      if ( CAST_PLR(Killed)->GetQuestStatus(QUEST_SECOND_TRIAL) == QUEST_STATUS_INCOMPLETE )
+        CAST_PLR(Killed)->FailQuest(QUEST_SECOND_TRIAL);
   }
 }
 
@@ -539,13 +508,13 @@ bool GOHello_go_second_trial(Player *player, GameObject* _GO)
 
     Creature* event_controller = NULL;
     Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck u_check(*_GO, MASTER_KELERUN_BLOODMOURN, true, 30);
-    Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(event_controller, u_check);
+    Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(player, event_controller, u_check);
     TypeContainerVisitor<Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck>, GridTypeMapContainer >  grid_unit_searcher(searcher);
     //cell_lock->Visit(cell_lock, grid_unit_searcher, *MapManager::Instance().GetMap(_GO->GetMap(), _GO));
     cell_lock->Visit(cell_lock, grid_unit_searcher, *(_GO->GetMap()));
 
     if ( event_controller )
-       ((master_kelerun_bloodmournAI*)event_controller->AI())->StartEvent();
+       CAST_AI(master_kelerun_bloodmournAI, event_controller->AI())->StartEvent();
 
     return true;
 }
@@ -575,7 +544,7 @@ struct TRINITY_DLL_DECL npc_apprentice_mirvedaAI : public ScriptedAI
         Summon = false;
     }
 
-    void Aggro(Unit* who){}
+    void EnterCombat(Unit* who){}
 
     void JustSummoned(Creature *summoned)
     {
@@ -595,7 +564,7 @@ struct TRINITY_DLL_DECL npc_apprentice_mirvedaAI : public ScriptedAI
         {
             Player* player = Unit::GetPlayer(PlayerGUID);
             if (player)
-                ((Player*)player)->FailQuest(QUEST_UNEXPECTED_RESULT);
+                CAST_PLR(player)->FailQuest(QUEST_UNEXPECTED_RESULT);
         }
     }
 
@@ -607,7 +576,7 @@ struct TRINITY_DLL_DECL npc_apprentice_mirvedaAI : public ScriptedAI
             {
                 Player* player = Unit::GetPlayer(PlayerGUID);
                 if(player)
-                    ((Player*)player)->CompleteQuest(QUEST_UNEXPECTED_RESULT);
+                    CAST_PLR(player)->CompleteQuest(QUEST_UNEXPECTED_RESULT);
             }
         }
 
@@ -625,8 +594,8 @@ bool QuestAccept_npc_apprentice_mirveda(Player* player, Creature* creature, Ques
 {
     if (quest->GetQuestId() == QUEST_UNEXPECTED_RESULT)
     {
-        ((npc_apprentice_mirvedaAI*)creature->AI())->Summon = true;
-        ((npc_apprentice_mirvedaAI*)creature->AI())->PlayerGUID = player->GetGUID();
+        CAST_AI(npc_apprentice_mirvedaAI, creature->AI())->Summon = true;
+        CAST_AI(npc_apprentice_mirvedaAI, creature->AI())->PlayerGUID = player->GetGUID();
     }
     return true;
 }
@@ -680,13 +649,13 @@ struct TRINITY_DLL_DECL npc_infused_crystalAI : public Scripted_NoMovementAI
         WaveTimer = 0;
     }
 
-    void Aggro(Unit* who){}
+    void EnterCombat(Unit* who){}
 
     void MoveInLineOfSight(Unit* who)
     {
         if( who->GetTypeId() == TYPEID_PLAYER && !m_creature->canStartAttack(who) && !Progress)
         {
-            if( ((Player*)who)->GetQuestStatus(QUEST_POWERING_OUR_DEFENSES) == QUEST_STATUS_INCOMPLETE )
+            if( CAST_PLR(who)->GetQuestStatus(QUEST_POWERING_OUR_DEFENSES) == QUEST_STATUS_INCOMPLETE )
             {
                 float Radius = 10.0;
                 if( m_creature->IsWithinDistInMap(who, Radius) )
@@ -711,7 +680,7 @@ struct TRINITY_DLL_DECL npc_infused_crystalAI : public Scripted_NoMovementAI
         {
             Player* player = Unit::GetPlayer(PlayerGUID);
             if (player)
-                ((Player*)player)->FailQuest(QUEST_POWERING_OUR_DEFENSES);
+                CAST_PLR(player)->FailQuest(QUEST_POWERING_OUR_DEFENSES);
         }
     }
 
@@ -725,7 +694,7 @@ struct TRINITY_DLL_DECL npc_infused_crystalAI : public Scripted_NoMovementAI
             {
                 Player* player = Unit::GetPlayer(PlayerGUID);
                 if(player)
-                    ((Player*)player)->CompleteQuest(QUEST_POWERING_OUR_DEFENSES);
+                    CAST_PLR(player)->CompleteQuest(QUEST_POWERING_OUR_DEFENSES);
             }
             m_creature->DealDamage(m_creature,m_creature->GetHealth(),NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
             m_creature->RemoveCorpse();
@@ -752,11 +721,6 @@ CreatureAI* GetAI_npc_infused_crystalAI(Creature *_Creature)
 void AddSC_eversong_woods()
 {
     Script *newscript;
-
-    newscript = new Script;
-    newscript->Name="mobs_mana_tapped";
-    newscript->GetAI = &GetAI_mobs_mana_tapped;
-    newscript->RegisterSelf();
 
     newscript = new Script;
     newscript->Name= "npc_prospector_anvilward";

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,40 +23,34 @@
 #include "sockets/socket_include.h"
 #include "utf8cpp/utf8.h"
 #include "mersennetwister/MersenneTwister.h"
-#include "zthread/ThreadLocal.h"
+#include <ace/TSS_T.h>
 
-typedef ZThread::ThreadLocal<MTRand> MTRandTSS;
-
-/* NOTE: Not sure if static initialization is ok for TSS objects ,
- * as I see zthread uses custom implementation of the TSS
- * ,and in the consturctor there is no code ,so I suppose its ok
- * If its not ok ,change it to use singleton.
- */
+typedef ACE_TSS<MTRand> MTRandTSS;
 static MTRandTSS mtRand;
 
 int32 irand (int32 min, int32 max)
 {
-  return int32 (mtRand.get ().randInt (max - min)) + min;
+    return int32 (mtRand->randInt (max - min)) + min;
 }
 
 uint32 urand (uint32 min, uint32 max)
 {
-  return mtRand.get ().randInt (max - min) + min;
+    return mtRand->randInt (max - min) + min;
 }
 
 int32 rand32 ()
 {
-  return mtRand.get ().randInt ();
+    return mtRand->randInt ();
 }
 
 double rand_norm(void)
 {
-  return mtRand.get ().randExc ();
+    return mtRand->randExc ();
 }
 
 double rand_chance (void)
 {
-  return mtRand.get ().randExc (100.0);
+    return mtRand->randExc (100.0);
 }
 
 Tokens StrSplit(const std::string &src, const std::string &sep)
@@ -254,8 +248,9 @@ bool Utf8toWStr(char const* utf8str, size_t csize, wchar_t* wstr, size_t& wsize)
         size_t len = utf8::distance(utf8str,utf8str+csize);
         if(len > wsize)
         {
+            if(wsize > 0)
+                wstr[0] = L'\0';
             wsize = 0;
-            wstr = L"";
             return false;
         }
 
@@ -265,8 +260,9 @@ bool Utf8toWStr(char const* utf8str, size_t csize, wchar_t* wstr, size_t& wsize)
     }
     catch(std::exception)
     {
+        if(wsize > 0)
+            wstr[0] = L'\0';
         wsize = 0;
-        wstr = L"";
         return false;
     }
 

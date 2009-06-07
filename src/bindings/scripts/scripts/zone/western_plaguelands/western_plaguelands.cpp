@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -100,7 +100,7 @@ struct TRINITY_DLL_DECL npc_the_scourge_cauldronAI : public ScriptedAI
 
     void Reset() {}
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void DoDie()
     {
@@ -122,32 +122,32 @@ struct TRINITY_DLL_DECL npc_the_scourge_cauldronAI : public ScriptedAI
             switch(m_creature->GetAreaId())
             {
                 case 199:                                   //felstone
-                    if( ((Player*)who)->GetQuestStatus(5216) == QUEST_STATUS_INCOMPLETE ||
-                        ((Player*)who)->GetQuestStatus(5229) == QUEST_STATUS_INCOMPLETE )
+                    if( CAST_PLR(who)->GetQuestStatus(5216) == QUEST_STATUS_INCOMPLETE ||
+                        CAST_PLR(who)->GetQuestStatus(5229) == QUEST_STATUS_INCOMPLETE )
                     {
                         DoSpawnCreature(11075,0,0,0,m_creature->GetOrientation(),TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,600000);
                         DoDie();
                     }
                     break;
                 case 200:                                   //dalson
-                    if( ((Player*)who)->GetQuestStatus(5219) == QUEST_STATUS_INCOMPLETE ||
-                        ((Player*)who)->GetQuestStatus(5231) == QUEST_STATUS_INCOMPLETE )
+                    if( CAST_PLR(who)->GetQuestStatus(5219) == QUEST_STATUS_INCOMPLETE ||
+                        CAST_PLR(who)->GetQuestStatus(5231) == QUEST_STATUS_INCOMPLETE )
                     {
                         DoSpawnCreature(11077,0,0,0,m_creature->GetOrientation(),TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,600000);
                         DoDie();
                     }
                     break;
                 case 201:                                   //gahrron
-                    if( ((Player*)who)->GetQuestStatus(5225) == QUEST_STATUS_INCOMPLETE ||
-                        ((Player*)who)->GetQuestStatus(5235) == QUEST_STATUS_INCOMPLETE )
+                    if( CAST_PLR(who)->GetQuestStatus(5225) == QUEST_STATUS_INCOMPLETE ||
+                        CAST_PLR(who)->GetQuestStatus(5235) == QUEST_STATUS_INCOMPLETE )
                     {
                         DoSpawnCreature(11078,0,0,0,m_creature->GetOrientation(),TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,600000);
                         DoDie();
                     }
                     break;
                 case 202:                                   //writhing
-                    if( ((Player*)who)->GetQuestStatus(5222) == QUEST_STATUS_INCOMPLETE ||
-                        ((Player*)who)->GetQuestStatus(5233) == QUEST_STATUS_INCOMPLETE )
+                    if( CAST_PLR(who)->GetQuestStatus(5222) == QUEST_STATUS_INCOMPLETE ||
+                        CAST_PLR(who)->GetQuestStatus(5233) == QUEST_STATUS_INCOMPLETE )
                     {
                         DoSpawnCreature(11076,0,0,0,m_creature->GetOrientation(),TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,600000);
                         DoDie();

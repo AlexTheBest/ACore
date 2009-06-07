@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,11 +26,10 @@
 #define __WORLDRUNNABLE_H
 
 /// Heartbeat thread for the World
-class WorldRunnable : public ZThread::Runnable
+class WorldRunnable : public ACE_Based::Runnable
 {
     public:
         void run();
 };
 #endif
 /// @}
-

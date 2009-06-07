@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -243,6 +243,32 @@ class ByteBuffer
             _rpos += len;
         }
 
+        bool readPackGUID(uint64& guid)
+        {
+            if(rpos()+1 > size())
+                return false;
+
+            guid = 0;
+
+            uint8 guidmark=0;
+            (*this) >> guidmark;
+
+            for(int i=0;i<8;i++)
+            {
+                if(guidmark & (uint8(1) << i))
+                {
+                    if(rpos()+1 > size())
+                        return false;
+
+                    uint8 bit;
+                    (*this) >> bit;
+                    guid |= (uint64(bit) << (i*8));
+                }
+            }
+
+            return true;
+        }
+
         const uint8 *contents() const { return &_storage[0]; }
 
         size_t size() const { return _storage.size(); }
@@ -285,11 +311,14 @@ class ByteBuffer
         }
         void append(const ByteBuffer& buffer)
         {
-            if(buffer.size()) append(buffer.contents(),buffer.size());
+            if(buffer.wpos()) append(buffer.contents(),buffer.wpos());
         }
 
         void appendPackGUID(uint64 guid)
         {
+            if (_storage.size() < _wpos + sizeof(guid) + 1)
+                _storage.resize(_wpos + sizeof(guid) + 1);
+
             size_t mask_position = wpos();
             *this << uint8(0);
             for(uint8 i = 0; i < 8; i++)
@@ -314,7 +343,7 @@ class ByteBuffer
             if(!sLog.IsOutDebug())                          // optimize disabled debug output
                 return;
 
-            sLog.outDebug("STORAGE_SIZE: %u", size() );
+            sLog.outDebug("STORAGE_SIZE: %lu", (unsigned long)size() );
             for(uint32 i = 0; i < size(); i++)
                 sLog.outDebugInLine("%u - ", read<uint8>(i) );
             sLog.outDebug(" ");
@@ -325,7 +354,7 @@ class ByteBuffer
             if(!sLog.IsOutDebug())                          // optimize disabled debug output
                 return;
 
-            sLog.outDebug("STORAGE_SIZE: %u", size() );
+            sLog.outDebug("STORAGE_SIZE: %lu", (unsigned long)size() );
             for(uint32 i = 0; i < size(); i++)
                 sLog.outDebugInLine("%c", read<uint8>(i) );
             sLog.outDebug(" ");
@@ -337,16 +366,13 @@ class ByteBuffer
                 return;
 
             uint32 j = 1, k = 1;
-            sLog.outDebug("STORAGE_SIZE: %u", size() );
-
-            if(sLog.IsIncludeTime())
-                sLog.outDebugInLine("         ");
+            sLog.outDebug("STORAGE_SIZE: %lu", (unsigned long)size() );
 
             for(uint32 i = 0; i < size(); i++)
             {
                 if ((i == (j*8)) && ((i != (k*16))))
                 {
-                    if (read<uint8>(i) < 0x0F)
+                    if (read<uint8>(i) < 0x10)
                     {
                         sLog.outDebugInLine("| 0%X ", read<uint8>(i) );
                     }
@@ -358,19 +384,15 @@ class ByteBuffer
                 }
                 else if (i == (k*16))
                 {
-                    if (read<uint8>(i) < 0x0F)
+                    if (read<uint8>(i) < 0x10)
                     {
                         sLog.outDebugInLine("\n");
-                        if(sLog.IsIncludeTime())
-                            sLog.outDebugInLine("         ");
 
                         sLog.outDebugInLine("0%X ", read<uint8>(i) );
                     }
                     else
                     {
                         sLog.outDebugInLine("\n");
-                        if(sLog.IsIncludeTime())
-                            sLog.outDebugInLine("         ");
 
                         sLog.outDebugInLine("%X ", read<uint8>(i) );
                     }
@@ -380,7 +402,7 @@ class ByteBuffer
                 }
                 else
                 {
-                    if (read<uint8>(i) < 0x0F)
+                    if (read<uint8>(i) < 0x10)
                     {
                         sLog.outDebugInLine("0%X ", read<uint8>(i) );
                     }
@@ -396,7 +418,7 @@ class ByteBuffer
     protected:
         bool PrintPosError(bool add, size_t pos, size_t esize) const
         {
-            sLog.outError("ERROR: Attempt %s in ByteBuffer (pos: %u size: %u) value with size: %u",(add ? "put" : "get"),pos, size(), esize);
+            sLog.outError("ERROR: Attempt %s in ByteBuffer (pos: %lu size: %lu) value with size: %lu",(add ? "put" : "get"),(unsigned long)pos, (unsigned long)size(), (unsigned long)esize);
 
             // assert must fail after function call
             return false;
@@ -477,6 +499,14 @@ template <typename K, typename V> ByteBuffer &operator>>(ByteBuffer &b, std::map
         m.insert(make_pair(k, v));
     }
     return b;
+}
+
+// TODO: Make a ByteBuffer.cpp and move all this inlining to it.
+template<> inline std::string ByteBuffer::read<std::string>()
+{
+    std::string tmp;
+    *this >> tmp;
+    return tmp;
 }
 #endif
 

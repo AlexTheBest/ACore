@@ -23,10 +23,10 @@
 
 #include "Platform/Define.h"
 #include "Policies/ThreadingModel.h"
-#include "zthread/Lockable.h"
-#include "zthread/Mutex.h"
-#include "zthread/FairReadWriteLock.h"
-#include "Database/DBCStructure.h"
+#include "ace/RW_Thread_Mutex.h"
+#include "ace/Thread_Mutex.h"
+
+#include "DBCStructure.h"
 #include "GridDefines.h"
 #include "Cell.h"
 #include "Timer.h"
@@ -44,15 +44,11 @@ class InstanceData;
 class Group;
 class InstanceSave;
 class WorldObject;
+class TempSummon;
 class CreatureGroup;
 
-namespace ZThread
-{
-    class Lockable;
-    class ReadWriteLock;
-}
 
-typedef ZThread::FairReadWriteLock GridRWLock;
+typedef ACE_RW_Thread_Mutex GridRWLock;
 
 template<class MUTEX, class LOCK_TYPE>
 struct RGuard
@@ -68,19 +64,139 @@ struct WGuard
     Trinity::GeneralLock<LOCK_TYPE> i_lock;
 };
 
-typedef RGuard<GridRWLock, ZThread::Lockable> GridReadGuard;
-typedef WGuard<GridRWLock, ZThread::Lockable> GridWriteGuard;
-typedef Trinity::SingleThreaded<GridRWLock>::Lock NullGuard;
+typedef RGuard<GridRWLock, ACE_Thread_Mutex> GridReadGuard;
+typedef WGuard<GridRWLock, ACE_Thread_Mutex> GridWriteGuard;
+typedef MaNGOS::SingleThreaded<GridRWLock>::Lock NullGuard;
 
-typedef struct
+//******************************************
+// Map file format defines
+//******************************************
+#define MAP_MAGIC             'SPAM'
+#define MAP_VERSION_MAGIC     '0.1w'
+#define MAP_AREA_MAGIC        'AERA'
+#define MAP_HEIGTH_MAGIC      'TGHM'
+#define MAP_LIQUID_MAGIC      'QILM'
+
+struct map_fileheader{
+    uint32 mapMagic;
+    uint32 versionMagic;
+    uint32 areaMapOffset;
+    uint32 areaMapSize;
+    uint32 heightMapOffset;
+    uint32 heightMapSize;
+    uint32 liquidMapOffset;
+    uint32 liquidMapSize;
+};
+
+#define MAP_AREA_NO_AREA      0x0001
+struct map_areaHeader{
+    uint32 fourcc;
+    uint16 flags;
+    uint16 gridArea;
+};
+
+#define MAP_HEIGHT_NO_HIGHT   0x0001
+#define MAP_HEIGHT_AS_INT16   0x0002
+#define MAP_HEIGHT_AS_INT8    0x0004
+
+struct map_heightHeader{
+    uint32 fourcc;
+    uint32 flags;
+    float  gridHeight;
+    float  gridMaxHeight;
+};
+
+#define MAP_LIQUID_NO_TYPE    0x0001
+#define MAP_LIQUID_NO_HIGHT   0x0002
+struct map_liquidHeader{
+    uint32 fourcc;
+    uint16 flags;
+    uint16 liquidType;
+    uint8  offsetX;
+    uint8  offsetY;
+    uint8  width;
+    uint8  height;
+    float  liquidLevel;
+};
+
+enum ZLiquidStatus{
+    LIQUID_MAP_NO_WATER     = 0x00000000,
+    LIQUID_MAP_ABOVE_WATER  = 0x00000001,
+    LIQUID_MAP_WATER_WALK   = 0x00000002,
+    LIQUID_MAP_IN_WATER     = 0x00000004,
+    LIQUID_MAP_UNDER_WATER  = 0x00000008
+};
+
+#define MAP_LIQUID_TYPE_NO_WATER    0x00
+#define MAP_LIQUID_TYPE_WATER       0x01
+#define MAP_LIQUID_TYPE_OCEAN       0x02
+#define MAP_LIQUID_TYPE_MAGMA       0x04
+#define MAP_LIQUID_TYPE_SLIME       0x08
+
+#define MAP_ALL_LIQUIDS   (MAP_LIQUID_TYPE_WATER | MAP_LIQUID_TYPE_OCEAN | MAP_LIQUID_TYPE_MAGMA | MAP_LIQUID_TYPE_SLIME)
+
+#define MAP_LIQUID_TYPE_DARK_WATER  0x10
+#define MAP_LIQUID_TYPE_WMO_WATER   0x20
+
+struct LiquidData{
+    uint32 type;
+    float  level;
+    float  depth_level;
+};
+
+class GridMap
 {
-    uint16 area_flag[16][16];
-    uint8 terrain_type[16][16];
-    float liquid_level[128][128];
-    float v9[16 * 8 + 1][16 * 8 + 1];
-    float v8[16 * 8][16 * 8];
-    //float Z[MAP_RESOLUTION][MAP_RESOLUTION];
-}GridMap;
+    uint32  m_flags;
+    // Area data
+    uint16  m_gridArea;
+    uint16 *m_area_map;
+    // Height level data
+    float   m_gridHeight;
+    float   m_gridIntHeightMultiplier;
+    union{
+        float  *m_V9;
+        uint16 *m_uint16_V9;
+        uint8  *m_uint8_V9;
+    };
+    union{
+        float  *m_V8;
+        uint16 *m_uint16_V8;
+        uint8  *m_uint8_V8;
+    };
+    // Liquid data
+    uint16  m_liquidType;
+    uint8   m_liquid_offX;
+    uint8   m_liquid_offY;
+    uint8   m_liquid_width;
+    uint8   m_liquid_height;
+    float   m_liquidLevel;
+    uint8  *m_liquid_type;
+    float  *m_liquid_map;
+
+    bool  loadAreaData(FILE *in, uint32 offset, uint32 size);
+    bool  loadHeihgtData(FILE *in, uint32 offset, uint32 size);
+    bool  loadLiquidData(FILE *in, uint32 offset, uint32 size);
+
+    // Get height functions and pointers
+    typedef float (GridMap::*pGetHeightPtr) (float x, float y) const;
+    pGetHeightPtr m_gridGetHeight;
+    float  getHeightFromFloat(float x, float y) const;
+    float  getHeightFromUint16(float x, float y) const;
+    float  getHeightFromUint8(float x, float y) const;
+    float  getHeightFromFlat(float x, float y) const;
+
+public:
+    GridMap();
+    ~GridMap();
+    bool  loadData(char *filaname);
+    void  unloadData();
+
+    uint16 getArea(float x, float y);
+    inline float getHeight(float x, float y) {return (this->*m_gridGetHeight)(x, y);}
+    float  getLiquidLevel(float x, float y);
+    uint8  getTerrainType(float x, float y);
+    ZLiquidStatus getLiquidStatus(float x, float y, float z, uint8 ReqLiquidType, LiquidData *data = 0);
+};
 
 struct CreatureMover
 {
@@ -100,9 +216,10 @@ struct CreatureMover
 struct InstanceTemplate
 {
     uint32 map;
-    uint32 parent;    
+    uint32 parent;
     uint32 maxPlayers;
-    uint32 reset_delay;
+    uint32 maxPlayersHeroic;
+    uint32 reset_delay;                                 // FIX ME: now exist normal/heroic raids with possible different time of reset.
     uint32 access_id;
     float startLocX;
     float startLocY;
@@ -130,7 +247,7 @@ typedef UNORDERED_MAP<Creature*, CreatureMover> CreatureMoveList;
 
 typedef std::map<uint32/*leaderDBGUID*/, CreatureGroup*>        CreatureGroupHolderType;
 
-class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::ObjectLevelLockable<Map, ZThread::Mutex>
+class MANGOS_DLL_SPEC Map : public GridRefManager<NGridType>, public MaNGOS::ObjectLevelLockable<Map, ACE_Thread_Mutex>
 {
     friend class MapReference;
     public:
@@ -153,10 +270,10 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
 
         virtual void Update(const uint32&);
 
-        void MessageBroadcast(Player *, WorldPacket *, bool to_self, bool to_possessor);
-        void MessageBroadcast(WorldObject *, WorldPacket *, bool to_possessor);
-        void MessageDistBroadcast(Player *, WorldPacket *, float dist, bool to_self, bool to_possessor, bool own_team_only = false);
-        void MessageDistBroadcast(WorldObject *, WorldPacket *, float dist, bool to_possessor);
+        void MessageBroadcast(Player *, WorldPacket *, bool to_self);
+        void MessageBroadcast(WorldObject *, WorldPacket *);
+        void MessageDistBroadcast(Player *, WorldPacket *, float dist, bool to_self, bool own_team_only = false);
+        void MessageDistBroadcast(WorldObject *, WorldPacket *, float dist);
 
         void PlayerRelocation(Player *, float x, float y, float z, float angl);
         void CreatureRelocation(Creature *creature, float x, float y, float, float);
@@ -183,9 +300,8 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         time_t GetGridExpiry(void) const { return i_gridExpiry; }
         uint32 GetId(void) const { return i_id; }
 
-        static bool ExistMap(uint32 mapid, int x, int y);
-        static bool ExistVMap(uint32 mapid, int x, int y);
-        void LoadMapAndVMap(uint32 mapid, uint32 instanceid, int x, int y);
+        static bool ExistMap(uint32 mapid, int gx, int gy);
+        static bool ExistVMap(uint32 mapid, int gx, int gy);
 
         static void InitStateMachine();
         static void DeleteStateMachine();
@@ -196,22 +312,30 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         float GetVmapHeight(float x, float y, float z, bool useMaps) const;
         bool IsInWater(float x, float y, float z) const;    // does not use z pos. This is for future use
 
-        uint16 GetAreaFlag(float x, float y ) const;
+        ZLiquidStatus getLiquidStatus(float x, float y, float z, uint8 ReqLiquidType, LiquidData *data = 0) const;
+
+        uint16 GetAreaFlag(float x, float y, float z) const;
         uint8 GetTerrainType(float x, float y ) const;
         float GetWaterLevel(float x, float y ) const;
         bool IsUnderWater(float x, float y, float z) const;
 
-        static uint32 GetAreaId(uint16 areaflag,uint32 map_id);
-        static uint32 GetZoneId(uint16 areaflag,uint32 map_id);
+        static uint32 GetAreaIdByAreaFlag(uint16 areaflag,uint32 map_id);
+        static uint32 GetZoneIdByAreaFlag(uint16 areaflag,uint32 map_id);
+        static void GetZoneAndAreaIdByAreaFlag(uint32& zoneid, uint32& areaid, uint16 areaflag,uint32 map_id);
 
-        uint32 GetAreaId(float x, float y) const
+        uint32 GetAreaId(float x, float y, float z) const
         {
-            return GetAreaId(GetAreaFlag(x,y),i_id);
+            return GetAreaIdByAreaFlag(GetAreaFlag(x,y,z),i_id);
         }
 
-        uint32 GetZoneId(float x, float y) const
+        uint32 GetZoneId(float x, float y, float z) const
         {
-            return GetZoneId(GetAreaFlag(x,y),i_id);
+            return GetZoneIdByAreaFlag(GetAreaFlag(x,y,z),i_id);
+        }
+
+        void GetZoneAndAreaId(uint32& zoneid, uint32& areaid, float x, float y, float z) const
+        {
+            GetZoneAndAreaIdByAreaFlag(zoneid,areaid,GetAreaFlag(x,y,z),i_id);
         }
 
         virtual void MoveAllCreaturesInMoveList();
@@ -222,8 +346,8 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         // assert print helper
         bool CheckGridIntegrity(Creature* c, bool moved) const;
 
-        uint32 GetInstanceId() { return i_InstanceId; }
-        uint8 GetSpawnMode() { return (i_spawnMode); }
+        uint32 GetInstanceId() const { return i_InstanceId; }
+        uint8 GetSpawnMode() const { return (i_spawnMode); }
         virtual bool CanEnter(Player* /*player*/) { return true; }
         const char* GetMapName() const;
 
@@ -235,6 +359,17 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         bool IsBattleGround() const { return i_mapEntry && i_mapEntry->IsBattleGround(); }
         bool IsBattleArena() const { return i_mapEntry && i_mapEntry->IsBattleArena(); }
         bool IsBattleGroundOrArena() const { return i_mapEntry && i_mapEntry->IsBattleGroundOrArena(); }
+        bool GetEntrancePos(int32 &mapid, float &x, float &y)
+        {
+            if(!i_mapEntry)
+                return false;
+            if(i_mapEntry->entrance_map < 0)
+                return false;
+            mapid = i_mapEntry->entrance_map;
+            x = i_mapEntry->entrance_x;
+            y = i_mapEntry->entrance_y;
+            return true;
+        }
 
         void AddObjectToRemoveList(WorldObject *obj);
         void AddObjectToSwitchList(WorldObject *obj, bool on);
@@ -247,8 +382,6 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         void resetMarkedCells() { marked_cells.reset(); }
         bool isCellMarked(uint32 pCellId) { return marked_cells.test(pCellId); }
         void markCell(uint32 pCellId) { marked_cells.set(pCellId); }
-        Creature* GetCreatureInMap(uint64 guid);
-        GameObject* GetGameObjectInMap(uint64 guid);
 
         bool HavePlayers() const { return !m_mapRefManager.isEmpty(); }
         uint32 GetPlayersCountExceptGMs() const;
@@ -279,36 +412,25 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         template<class NOTIFIER> void VisitWorld(const float &x, const float &y, float radius, NOTIFIER &notifier);
         template<class NOTIFIER> void VisitGrid(const float &x, const float &y, float radius, NOTIFIER &notifier);
         CreatureGroupHolderType CreatureGroupHolder;
+
+#ifdef MAP_BASED_RAND_GEN
         MTRand mtRand;
+        int32 irand(int32 min, int32 max)       { return int32 (mtRand.randInt(max - min)) + min; }
+        uint32 urand(uint32 min, uint32 max)    { return mtRand.randInt(max - min) + min; }
+        int32 rand32()                          { return mtRand.randInt(); }
+        double rand_norm()                      { return mtRand.randExc(); }
+        double rand_chance()                    { return mtRand.randExc(100.0); }
+#endif
 
-        int32 irand(int32 min, int32 max)
-        {
-          return int32 (mtRand.randInt(max - min)) + min;
-        }
-
-        uint32 urand(uint32 min, uint32 max)
-        {
-          return mtRand.randInt(max - min) + min;
-        }
-
-        int32 rand32()
-        {
-          return mtRand.randInt();
-        }
-
-        double rand_norm(void)
-        {
-          return mtRand.randExc();
-        }
-
-        double rand_chance(void)
-        {
-          return mtRand.randExc(100.0);
-        }
-
+        TempSummon *SummonCreature(uint32 entry, float x, float y, float z, float angle, SummonPropertiesEntry const *properties = NULL, uint32 duration = 0, Unit *summoner = NULL);
+        Creature* GetCreature(uint64 guid);
+        GameObject* GetGameObject(uint64 guid);
+        DynamicObject* GetDynamicObject(uint64 guid);
     private:
-        void LoadVMap(int pX, int pY);
-        void LoadMap(uint32 mapid, uint32 instanceid, int x,int y);
+        void LoadMapAndVMap(int gx, int gy);
+        void LoadVMap(int gx, int gy);
+        void LoadMap(int gx,int gy, bool reload = false);
+        GridMap *GetGrid(float x, float y);
 
         void SetTimer(uint32 t) { i_gridExpiry = t < MIN_GRID_DELAY ? MIN_GRID_DELAY : t; }
         //uint64 CalculateGridMask(const uint32 &y) const;
@@ -324,8 +446,9 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
         CreatureMoveList i_creaturesToMove;
 
         bool loaded(const GridPair &) const;
-        void EnsureGridLoaded(const Cell&, Player* player = NULL);
-        void  EnsureGridCreated(const GridPair &);
+        void EnsureGridCreated(const GridPair &);
+        bool EnsureGridLoaded(Cell const&);
+        void EnsureGridLoadedAtEnter(Cell const&, Player* player = NULL);
 
         void buildNGridLinkage(NGridType* pNGridType) { pNGridType->link(this); }
 
@@ -346,7 +469,7 @@ class TRINITY_DLL_SPEC Map : public GridRefManager<NGridType>, public Trinity::O
     protected:
         void SetUnloadReferenceLock(const GridPair &p, bool on) { getNGrid(p.x_coord, p.y_coord)->setUnloadReferenceLock(on); }
 
-        typedef Trinity::ObjectLevelLockable<Map, ZThread::Mutex>::Lock Guard;
+        typedef MaNGOS::ObjectLevelLockable<Map, ACE_Thread_Mutex>::Lock Guard;
 
         MapEntry const* i_mapEntry;
         uint8 i_spawnMode;
@@ -438,11 +561,11 @@ class TRINITY_DLL_SPEC InstanceMap : public Map
         uint32 GetScriptId() { return i_script_id; }
         InstanceData* GetInstanceData() { return i_data; }
         void PermBindAllPlayers(Player *player);
-        time_t GetResetTime();
         void UnloadAll();
         bool CanEnter(Player* player);
         void SendResetWarnings(uint32 timeLeft) const;
         void SetResetSchedule(bool on);
+        uint32 GetMaxPlayers() const;
     private:
         bool m_resetAfterUnload;
         bool m_unloadWhenEmpty;
