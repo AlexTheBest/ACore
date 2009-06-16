@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -24,7 +24,7 @@ EndScriptData */
 #include "precompiled.h"
 #include "def_black_temple.h"
 
-#define ENCOUNTERS     9
+#define ENCOUNTERS      9
 
 /* Black Temple encounters:
 0 - High Warlord Naj'entus event
@@ -42,6 +42,9 @@ struct TRINITY_DLL_DECL instance_black_temple : public ScriptedInstance
 {
     instance_black_temple(Map *map) : ScriptedInstance(map) {Initialize();};
 
+    uint32 Encounters[ENCOUNTERS];
+    std::string str_data;
+    
     uint64 Najentus;
     uint64 Akama;                                           // This is the Akama that starts the Illidan encounter.
     uint64 Akama_Shade;                                     // This is the Akama that starts the Shade of Akama encounter.
@@ -67,9 +70,6 @@ struct TRINITY_DLL_DECL instance_black_temple : public ScriptedInstance
     uint64 SimpleDoor;//council
     uint64 IllidanGate;
     uint64 IllidanDoor[2];
-
-    uint32 Encounters[ENCOUNTERS];
-    std::string str_data;
 
     void Initialize()
     {
@@ -129,9 +129,9 @@ struct TRINITY_DLL_DECL instance_black_temple : public ScriptedInstance
         return NULL;
     }
 
-    void OnCreatureCreate(Creature *creature, uint32 creature_entry)
+    void OnCreatureCreate(Creature *creature, bool add)
     {
-        switch(creature_entry)
+        switch(creature->GetEntry())
         {
         case 22887:    Najentus = creature->GetGUID();                  break;
         case 23089:    Akama = creature->GetGUID();                     break;
@@ -148,7 +148,7 @@ struct TRINITY_DLL_DECL instance_black_temple : public ScriptedInstance
         }
     }
 
-    void OnObjectCreate(GameObject* go)
+    void OnGameObjectCreate(GameObject *go, bool add)
     {
         switch(go->GetEntry())
         {
@@ -303,9 +303,9 @@ struct TRINITY_DLL_DECL instance_black_temple : public ScriptedInstance
         return 0;
     }
 
-   const char* Save()
+   std::string GetSaveData()
     {
-        return str_data.c_str();
+        return str_data;
     }
 
     void Load(const char* in)

@@ -69,7 +69,7 @@ struct TRINITY_DLL_DECL boss_alarAI : public ScriptedAI
 {
     boss_alarAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance =((ScriptedInstance*)c->GetInstanceData());
+        pInstance =(c->GetInstanceData());
         DefaultMoveSpeedRate = m_creature->GetSpeedRate(MOVE_RUN);
     }
 
@@ -122,7 +122,7 @@ struct TRINITY_DLL_DECL boss_alarAI : public ScriptedAI
         m_creature->setActive(false);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(pInstance)
             pInstance->SetData(DATA_ALAREVENT, IN_PROGRESS);
@@ -150,9 +150,9 @@ struct TRINITY_DLL_DECL boss_alarAI : public ScriptedAI
     void AttackStart(Unit* who)
     {
         if(Phase1)
-            ScriptedAI::AttackStart(who, false);
+            AttackStartNoMove(who);
         else
-            ScriptedAI::AttackStart(who, true);
+            ScriptedAI::AttackStart(who);
     }
 
     void DamageTaken(Unit* pKiller, uint32 &damage)
@@ -241,12 +241,12 @@ struct TRINITY_DLL_DECL boss_alarAI : public ScriptedAI
                         WaitEvent = WE_DUMMY;
                         return;
                     case WE_DIE:
-                        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_DEAD);
+                        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, UNIT_STAND_STATE_DEAD);
                         WaitTimer = 5000;
                         WaitEvent = WE_REVIVE;
                         return;
                     case WE_REVIVE:
-                        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_NONE);
+                        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, UNIT_STAND_STATE_STAND);
                         m_creature->SetHealth(m_creature->GetMaxHealth());
                         m_creature->SetSpeed(MOVE_RUN, DefaultMoveSpeedRate);
                         m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
@@ -352,7 +352,7 @@ struct TRINITY_DLL_DECL boss_alarAI : public ScriptedAI
 
             if(Charge_Timer < diff)
             {
-                Unit *target= SelectUnit(SELECT_TARGET_RANDOM, 1, GetSpellMaxRange(SPELL_CHARGE), true);
+                Unit *target= SelectTarget(SELECT_TARGET_RANDOM, 1, 100, true);
                 if(target)
                     DoCast(target, SPELL_CHARGE);
                 Charge_Timer = 30000;
@@ -432,7 +432,7 @@ struct TRINITY_DLL_DECL mob_ember_of_alarAI : public ScriptedAI
 {
     mob_ember_of_alarAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = (ScriptedInstance*)c->GetInstanceData();
+        pInstance = c->GetInstanceData();
         m_creature->SetUnitMovementFlags(MOVEMENTFLAG_LEVITATING);
         m_creature->ApplySpellImmune(0, IMMUNITY_SCHOOL, SPELL_SCHOOL_MASK_FIRE, true);
     }
@@ -441,7 +441,7 @@ struct TRINITY_DLL_DECL mob_ember_of_alarAI : public ScriptedAI
     bool toDie;
 
     void Reset() {toDie = false;}
-    void Aggro(Unit *who) {DoZoneInCombat();}
+    void EnterCombat(Unit *who) {DoZoneInCombat();}
     void EnterEvadeMode() {m_creature->setDeathState(JUST_DIED);}
 
     void DamageTaken(Unit* pKiller, uint32 &damage)
@@ -492,7 +492,7 @@ struct TRINITY_DLL_DECL mob_flame_patch_alarAI : public ScriptedAI
 {
     mob_flame_patch_alarAI(Creature *c) : ScriptedAI(c) {}
     void Reset() {}
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
     void AttackStart(Unit* who) {}
     void MoveInLineOfSight(Unit* who) {}
     void UpdateAI(const uint32 diff) {}

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -46,6 +46,7 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
     instance_karazhan(Map* map) : ScriptedInstance(map) {Initialize();}
 
     uint32 Encounters[ENCOUNTERS];
+    std::string str_data;
 
     uint32 OperaEvent;
     uint32 OzDeathCount;
@@ -58,6 +59,7 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
     uint64 MoroesGUID;
     uint64 LibraryDoor;                                     // Door at Shade of Aran
     uint64 MassiveDoor;                                     // Door at Netherspite
+    uint64 SideEntranceDoor;                                // Side Entrance
     uint64 GamesmansDoor;                                   // Door before Chess
     uint64 GamesmansExitDoor;                               // Door after Chess
     uint64 NetherspaceDoor;                                // Door at Malchezaar
@@ -82,6 +84,7 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
 
         LibraryDoor         = 0;
         MassiveDoor         = 0;
+        SideEntranceDoor    = 0;
         GamesmansDoor       = 0;
         GamesmansExitDoor   = 0;
         NetherspaceDoor     = 0;
@@ -123,7 +126,7 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
         return 0;
     }
 
-    void OnCreatureCreate(Creature *creature, uint32 entry)
+    void OnCreatureCreate(Creature *creature, bool add)
     {
         switch (creature->GetEntry())
         {
@@ -145,6 +148,7 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
             case DATA_GAMEOBJECT_CURTAINS:         return CurtainGUID;
             case DATA_GAMEOBJECT_LIBRARY_DOOR:     return LibraryDoor;
             case DATA_GAMEOBJECT_MASSIVE_DOOR:     return MassiveDoor;
+            case DATA_GO_SIDE_ENTRANCE_DOOR:       return SideEntranceDoor;
             case DATA_GAMEOBJECT_GAME_DOOR:        return GamesmansDoor;
             case DATA_GAMEOBJECT_GAME_EXIT_DOOR:   return GamesmansExitDoor;
             case DATA_GAMEOBJECT_NETHER_DOOR:      return NetherspaceDoor;
@@ -183,7 +187,19 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
         }
 
         if(data == DONE)
+        {
+            OUT_SAVE_INST_DATA;
+
+            std::ostringstream saveStream;
+            saveStream << Encounters[0] << " " << Encounters[1] << " " << Encounters[2] << " "
+                << Encounters[3] << " " << Encounters[4] << " " << Encounters[5] << " " << Encounters[6] << " "
+                << Encounters[7] << " " << Encounters[8] << " " << Encounters[9] << " " << Encounters[10];
+
+            str_data = saveStream.str();
+
             SaveToDB();
+            OUT_SAVE_INST_DATA_COMPLETE;
+        }
     }
 
      void SetData64(uint32 identifier, uint64 data)
@@ -194,7 +210,7 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
          }
      }
 
-    void OnObjectCreate(GameObject* go)
+    void OnGameObjectCreate(GameObject *go, bool add)
     {
         switch(go->GetEntry())
         {
@@ -208,6 +224,13 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
             case 185134:   NetherspaceDoor      = go->GetGUID();         break;
             case 184274:    MastersTerraceDoor[0] = go->GetGUID();  break;
             case 184280:    MastersTerraceDoor[1] = go->GetGUID();  break;
+            case 184275:
+                SideEntranceDoor = go->GetGUID();
+                if (GetData(DATA_OPERA_EVENT) != DONE)
+                    go->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_LOCKED);
+                else
+                    go->RemoveFlag(GAMEOBJECT_FLAGS, GO_FLAG_LOCKED);
+                break;
         }
 
         switch(OperaEvent)
@@ -224,22 +247,9 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
         }
     }
 
-    const char* Save()
+    std::string GetSaveData()
     {
-        OUT_SAVE_INST_DATA;
-        std::ostringstream stream;
-        stream << Encounters[0] << " "  << Encounters[1] << " "  << Encounters[2] << " "  << Encounters[3] << " "
-            << Encounters[4] << " "  << Encounters[5] << " "  << Encounters[6] << " "  << Encounters[7] << " "
-            << Encounters[8] << " "  << Encounters[9] << " "  << Encounters[10] << " "  << Encounters[11];
-        char* out = new char[stream.str().length() + 1];
-        strcpy(out, stream.str().c_str());
-        if(out)
-        {
-            OUT_SAVE_INST_DATA_COMPLETE;
-            return out;
-        }
-
-        return NULL;
+        return str_data;
     }
 
     void Load(const char* in)
@@ -251,8 +261,8 @@ struct TRINITY_DLL_DECL instance_karazhan : public ScriptedInstance
         }
 
         OUT_LOAD_INST_DATA(in);
-        std::istringstream stream(in);
-        stream >> Encounters[0] >> Encounters[1] >> Encounters[2] >> Encounters[3]
+        std::istringstream loadStream(in);
+        loadStream >> Encounters[0] >> Encounters[1] >> Encounters[2] >> Encounters[3]
             >> Encounters[4] >> Encounters[5] >> Encounters[6] >> Encounters[7]
             >> Encounters[8] >> Encounters[9] >> Encounters[10] >> Encounters[11];
         for(uint8 i = 0; i < ENCOUNTERS; ++i)

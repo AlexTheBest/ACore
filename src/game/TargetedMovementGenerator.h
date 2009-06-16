@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,11 +40,7 @@ class TRINITY_DLL_SPEC TargetedMovementGenerator
 : public MovementGeneratorMedium< T, TargetedMovementGenerator<T> >, public TargetedMovementGeneratorBase
 {
     public:
-
-        TargetedMovementGenerator(Unit &target)
-            : TargetedMovementGeneratorBase(target), i_offset(0), i_angle(0), i_recalculateTravel(false) {}
-        TargetedMovementGenerator(Unit &target, float offset, float angle)
-            : TargetedMovementGeneratorBase(target), i_offset(offset), i_angle(angle), i_recalculateTravel(false) {}
+        TargetedMovementGenerator(Unit &target, float offset = 0, float angle = 0);
         ~TargetedMovementGenerator() {}
 
         void Initialize(T &);
@@ -57,7 +53,7 @@ class TRINITY_DLL_SPEC TargetedMovementGenerator
 
         bool GetDestination(float &x, float &y, float &z) const
         {
-            if(i_destinationHolder.HasArrived()) return false;
+            if(i_destinationHolder.HasArrived() || !i_destinationHolder.HasDestination()) return false;
             i_destinationHolder.GetDestination(x,y,z);
             return true;
         }
@@ -65,12 +61,13 @@ class TRINITY_DLL_SPEC TargetedMovementGenerator
         void unitSpeedChanged() { i_recalculateTravel=true; }
     private:
 
-        void _setTargetLocation(T &);
+        bool _setTargetLocation(T &);
 
         float i_offset;
         float i_angle;
         DestinationHolder< Traveller<T> > i_destinationHolder;
         bool i_recalculateTravel;
+        float i_targetX, i_targetY, i_targetZ;
 };
 #endif
 

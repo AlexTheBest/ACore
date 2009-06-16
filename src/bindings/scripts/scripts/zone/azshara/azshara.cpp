@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -49,13 +49,13 @@ struct TRINITY_DLL_DECL mobs_spitelashesAI : public ScriptedAI
         spellhit = false;
     }
 
-    void Aggro(Unit *who) { }
+    void EnterCombat(Unit *who) { }
 
     void SpellHit(Unit *Hitter, const SpellEntry *Spellkind)
     {
         if( !spellhit &&
             Hitter->GetTypeId() == TYPEID_PLAYER &&
-            ((Player*)Hitter)->GetQuestStatus(9364) == QUEST_STATUS_INCOMPLETE &&
+            CAST_PLR(Hitter)->GetQuestStatus(9364) == QUEST_STATUS_INCOMPLETE &&
             (Spellkind->Id==118 || Spellkind->Id== 12824 || Spellkind->Id== 12825 || Spellkind->Id== 12826) )
         {
             spellhit=true;
@@ -310,7 +310,7 @@ struct TRINITY_DLL_DECL mob_rizzle_sprysprocketAI : public ScriptedAI
                 Player* player = Unit::GetPlayer(PlayerGUID);
                 SendText(MSG_ESCAPE_NOTICE, player);
                 DoCast(m_creature, SPELL_PERIODIC_DEPTH_CHARGE);
-                m_creature->SetUnitMovementFlags(MOVEMENTFLAG_FLYING2 | MOVEMENTFLAG_SWIMMING);
+                m_creature->SetUnitMovementFlags(MOVEMENTFLAG_HOVER | MOVEMENTFLAG_SWIMMING);
                 m_creature->SetSpeed(MOVE_RUN, 0.85f, true);
                 m_creature->GetMotionMaster()->MovementExpired();
                 m_creature->GetMotionMaster()->MovePoint(CurrWP, WPs[CurrWP][0], WPs[CurrWP][1], WPs[CurrWP][2]);
@@ -328,7 +328,7 @@ struct TRINITY_DLL_DECL mob_rizzle_sprysprocketAI : public ScriptedAI
 
         if(Grenade_Timer < diff)
         {
-            Player *player = (Player *)Unit::GetUnit((*m_creature), PlayerGUID);
+            Player *player = Unit::GetPlayer(PlayerGUID);
             if(player)
             {
                DoScriptText(SAY_RIZZLE_GRENADE, m_creature, player);
@@ -339,7 +339,7 @@ struct TRINITY_DLL_DECL mob_rizzle_sprysprocketAI : public ScriptedAI
 
         if(Check_Timer < diff)
         {
-            Player *player = (Player *)Unit::GetUnit((*m_creature), PlayerGUID);
+            Player *player = Unit::GetPlayer(PlayerGUID);
             if(!player)
             {
                 Despawn();
@@ -374,7 +374,7 @@ struct TRINITY_DLL_DECL mob_rizzle_sprysprocketAI : public ScriptedAI
         if (!who || PlayerGUID)
             return;
 
-        if(who->GetTypeId() == TYPEID_PLAYER && ((Player *)who)->GetQuestStatus(10994) == QUEST_STATUS_INCOMPLETE)
+        if(who->GetTypeId() == TYPEID_PLAYER && CAST_PLR(who)->GetQuestStatus(10994) == QUEST_STATUS_INCOMPLETE)
         {
             PlayerGUID = who->GetGUID();
             DoScriptText(SAY_RIZZLE_START, m_creature);
@@ -383,7 +383,7 @@ struct TRINITY_DLL_DECL mob_rizzle_sprysprocketAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void MovementInform(uint32 type, uint32 id)
     {
@@ -417,8 +417,8 @@ bool GossipSelect_mob_rizzle_sprysprocket(Player *player, Creature *_Creature, u
     {
         player->CLOSE_GOSSIP_MENU();
         _Creature->CastSpell(player, SPELL_GIVE_SOUTHFURY_MOONSTONE, true);
-        ((mob_rizzle_sprysprocketAI*)_Creature->AI())->Must_Die_Timer = 3000;
-        ((mob_rizzle_sprysprocketAI*)_Creature->AI())->Must_Die = true;
+        CAST_AI(mob_rizzle_sprysprocketAI, _Creature->AI())->Must_Die_Timer = 3000;
+        CAST_AI(mob_rizzle_sprysprocketAI, _Creature->AI())->Must_Die = true;
     }
     return true;
 }
@@ -441,7 +441,7 @@ struct TRINITY_DLL_DECL mob_depth_chargeAI : public ScriptedAI
 
     void Reset()
     {
-        m_creature->SetUnitMovementFlags(MOVEMENTFLAG_FLYING2 | MOVEMENTFLAG_SWIMMING);
+        m_creature->SetUnitMovementFlags(MOVEMENTFLAG_HOVER | MOVEMENTFLAG_SWIMMING);
         m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
         we_must_die = false;
         must_die_timer = 1000;
@@ -476,7 +476,7 @@ struct TRINITY_DLL_DECL mob_depth_chargeAI : public ScriptedAI
         return;
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         return;
     }

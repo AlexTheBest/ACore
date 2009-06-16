@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -52,7 +52,7 @@ struct TRINITY_DLL_DECL mob_yennikuAI : public ScriptedAI
         if (caster->GetTypeId() == TYPEID_PLAYER)
         {
                                                             //Yenniku's Release
-            if(!bReset && ((Player*)caster)->GetQuestStatus(592) == QUEST_STATUS_INCOMPLETE && spell->Id == 3607)
+            if(!bReset && CAST_PLR(caster)->GetQuestStatus(592) == QUEST_STATUS_INCOMPLETE && spell->Id == 3607)
             {
                 m_creature->SetUInt32Value(UNIT_NPC_EMOTESTATE, EMOTE_STATE_STUN);
                 m_creature->CombatStop();                   //stop combat
@@ -66,7 +66,7 @@ struct TRINITY_DLL_DECL mob_yennikuAI : public ScriptedAI
         return;
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -86,7 +86,7 @@ struct TRINITY_DLL_DECL mob_yennikuAI : public ScriptedAI
                 if(m_creature->getVictim()->GetTypeId() == TYPEID_PLAYER)
                 {
                     Unit *victim = m_creature->getVictim();
-                    if(((Player*)victim)->GetTeam() == HORDE)
+                    if(CAST_PLR(victim)->GetTeam() == HORDE)
                     {
                         m_creature->CombatStop();
                         m_creature->DeleteThreatList();

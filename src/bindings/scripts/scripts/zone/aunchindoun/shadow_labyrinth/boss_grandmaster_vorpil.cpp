@@ -60,12 +60,6 @@ float VoidPortalCoords[5][3] =
     {-261.4533, -297.3298, 17.1}
 };
 
-class EmpoweringShadowsAura: public Aura
-{
-    public:
-        EmpoweringShadowsAura(SpellEntry *spell, uint32 eff, int32 *bp, Unit *target, Unit *caster) : Aura(spell, eff, bp, target, caster, NULL) {}
-};
-
 struct TRINITY_DLL_DECL mob_voidtravelerAI : public ScriptedAI
 {
     mob_voidtravelerAI(Creature *c) : ScriptedAI(c)
@@ -85,7 +79,7 @@ struct TRINITY_DLL_DECL mob_voidtravelerAI : public ScriptedAI
         sacrificed = false;
     }
 
-    void Aggro(Unit *who){}
+    void EnterCombat(Unit *who){}
 
     void UpdateAI(const uint32 diff)
     {
@@ -98,9 +92,9 @@ struct TRINITY_DLL_DECL mob_voidtravelerAI : public ScriptedAI
         {
             if(sacrificed)
             {
-                SpellEntry *spell = (SpellEntry *)GetSpellStore()->LookupEntry(HeroicMode?H_SPELL_EMPOWERING_SHADOWS:SPELL_EMPOWERING_SHADOWS);
+                SpellEntry *spell = GET_SPELL(HeroicMode?H_SPELL_EMPOWERING_SHADOWS:SPELL_EMPOWERING_SHADOWS);
                 if( spell )
-                    Vorpil->AddAura(new EmpoweringShadowsAura(spell, 0, NULL, Vorpil, m_creature));
+                    Vorpil->AddAura(new Aura(spell, 1, NULL, Vorpil, m_creature));
                 Vorpil->SetHealth(Vorpil->GetHealth()+Vorpil->GetMaxHealth()/25);
                 DoCast(m_creature, SPELL_SHADOW_NOVA, true);
                 m_creature->DealDamage(m_creature, m_creature->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
@@ -132,7 +126,7 @@ struct TRINITY_DLL_DECL boss_grandmaster_vorpilAI : public ScriptedAI
 {
     boss_grandmaster_vorpilAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
         HeroicMode = m_creature->GetMap()->IsHeroic();
         Intro = false;
     }
@@ -150,7 +144,7 @@ struct TRINITY_DLL_DECL boss_grandmaster_vorpilAI : public ScriptedAI
 
     void Reset()
     {
-        ShadowBoltVolley_Timer = 15000;
+        ShadowBoltVolley_Timer = 7000 + rand()%7000;
         DrawShadows_Timer = 45000;
         summonTraveler_Timer = 90000;
         banish_Timer = 17000;
@@ -209,7 +203,7 @@ struct TRINITY_DLL_DECL boss_grandmaster_vorpilAI : public ScriptedAI
     void JustSummoned(Creature *summoned)
     {
         if (summoned && summoned->GetEntry() == MOB_VOID_TRAVELER)
-            ((mob_voidtravelerAI*)summoned->AI())->Vorpil = m_creature;
+            CAST_AI(mob_voidtravelerAI, summoned->AI())->Vorpil = m_creature;
     }
 
     void KilledUnit(Unit *victim)
@@ -230,7 +224,7 @@ struct TRINITY_DLL_DECL boss_grandmaster_vorpilAI : public ScriptedAI
             pInstance->SetData(DATA_GRANDMASTERVORPILEVENT, DONE);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         switch(rand()%3)
         {
@@ -246,9 +240,9 @@ struct TRINITY_DLL_DECL boss_grandmaster_vorpilAI : public ScriptedAI
 
     void MoveInLineOfSight(Unit *who)
     {
-        if(who && !m_creature->getVictim() && m_creature->canStartAttack(who))
-            AttackStart(who);
-        if (!Intro && who && m_creature->IsWithinLOSInMap(who)&& m_creature->IsWithinDistInMap(who, 100) && m_creature->IsHostileTo(who))
+        ScriptedAI::MoveInLineOfSight(who);
+
+        if (!Intro && m_creature->IsWithinLOSInMap(who)&& m_creature->IsWithinDistInMap(who, 100) && m_creature->IsHostileTo(who))
         {
             DoScriptText(SAY_INTRO, m_creature);
             Intro = true;
@@ -263,12 +257,12 @@ struct TRINITY_DLL_DECL boss_grandmaster_vorpilAI : public ScriptedAI
         if (ShadowBoltVolley_Timer < diff)
         {
             DoCast(m_creature,SPELL_SHADOWBOLT_VOLLEY);
-            ShadowBoltVolley_Timer = 15000;
+            ShadowBoltVolley_Timer = 15000 + rand()%15000;;
         }else ShadowBoltVolley_Timer -= diff;
 
         if (HeroicMode && banish_Timer < diff)
         {
-            Unit *target = SelectUnit(SELECT_TARGET_RANDOM,0,30,false);
+            Unit *target = SelectTarget(SELECT_TARGET_RANDOM,0,30,false);
             if (target)
             {
                 DoCast(target,SPELL_BANISH);
@@ -282,7 +276,7 @@ struct TRINITY_DLL_DECL boss_grandmaster_vorpilAI : public ScriptedAI
             Map::PlayerList const &PlayerList = map->GetPlayers();
             for(Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
                 if (Player* i_pl = i->getSource())
-                    if (i_pl->isAlive() && !i_pl->HasAura(SPELL_BANISH,0))
+                    if (i_pl->isAlive() && !i_pl->HasAura(SPELL_BANISH))
                         i_pl->TeleportTo(m_creature->GetMapId(), VorpilPosition[0],VorpilPosition[1],VorpilPosition[2], 0, TELE_TO_NOT_LEAVE_COMBAT);
 
             m_creature->Relocate(VorpilPosition[0],VorpilPosition[1],VorpilPosition[2]);
@@ -291,7 +285,7 @@ struct TRINITY_DLL_DECL boss_grandmaster_vorpilAI : public ScriptedAI
             DoCast(m_creature,HeroicMode?H_SPELL_RAIN_OF_FIRE:SPELL_RAIN_OF_FIRE);
 
             ShadowBoltVolley_Timer = 6000;
-            DrawShadows_Timer = 30000;
+            DrawShadows_Timer = 3000;
         }else DrawShadows_Timer -= diff;
 
         if ( summonTraveler_Timer < diff)

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -47,13 +47,13 @@ struct TRINITY_DLL_DECL npc_calvin_montagueAI : public ScriptedAI
         m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_ATTACKABLE_2);
     }
 
-    void Aggro(Unit* who) { }
+    void EnterCombat(Unit* who) { }
 
     void JustDied(Unit* Killer)
     {
         if( Killer->GetTypeId() == TYPEID_PLAYER )
-            if( ((Player*)Killer)->GetQuestStatus(QUEST_590) == QUEST_STATUS_INCOMPLETE )
-                ((Player*)Killer)->AreaExploredOrEventHappens(QUEST_590);
+            if( CAST_PLR(Killer)->GetQuestStatus(QUEST_590) == QUEST_STATUS_INCOMPLETE )
+                CAST_PLR(Killer)->AreaExploredOrEventHappens(QUEST_590);
     }
 
     void UpdateAI(const uint32 diff)
@@ -75,7 +75,7 @@ bool QuestAccept_npc_calvin_montague(Player* player, Creature* creature, Quest c
     {
         creature->setFaction(FACTION_HOSTILE);
         creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_ATTACKABLE_2);
-        ((npc_calvin_montagueAI*)creature->AI())->AttackStart(player);
+        CAST_AI(npc_calvin_montagueAI, creature->AI())->AttackStart(player);
     }
     return true;
 }
@@ -100,7 +100,7 @@ GameObject* SearchMausoleumGo(Unit *source, uint32 entry, float range)
     cell.SetNoCreate();
 
     Trinity::NearestGameObjectEntryInObjectRangeCheck go_check(*source, entry, range);
-    Trinity::GameObjectLastSearcher<Trinity::NearestGameObjectEntryInObjectRangeCheck> searcher(pGo, go_check);
+    Trinity::GameObjectLastSearcher<Trinity::NearestGameObjectEntryInObjectRangeCheck> searcher(source, pGo, go_check);
 
     TypeContainerVisitor<Trinity::GameObjectLastSearcher<Trinity::NearestGameObjectEntryInObjectRangeCheck>, GridTypeMapContainer> go_searcher(searcher);
 
@@ -117,7 +117,7 @@ bool GOHello_go_mausoleum_door(Player *player, GameObject* _GO)
 
     if (GameObject *trigger = SearchMausoleumGo(player, GO_TRIGGER, 30))
     {
-        trigger->SetGoState(1);
+        trigger->SetGoState(GO_STATE_READY);
         player->SummonCreature(C_ULAG, 2390.26, 336.47, 40.01, 2.26, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 300000);
         return false;
     }
@@ -132,7 +132,7 @@ bool GOHello_go_mausoleum_trigger(Player *player, GameObject* _GO)
 
     if (GameObject *door = SearchMausoleumGo(player, GO_DOOR, 30))
     {
-        _GO->SetGoState(0);
+        _GO->SetGoState(GO_STATE_ACTIVE);
         door->RemoveFlag(GAMEOBJECT_FLAGS,GO_FLAG_INTERACT_COND);
         return true;
     }

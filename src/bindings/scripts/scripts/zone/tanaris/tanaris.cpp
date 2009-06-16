@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -17,7 +17,7 @@
 /* ScriptData
 SDName: Tanaris
 SD%Complete: 80
-SDComment: Quest support: 2954, 4005, 10277, 648, 10279(Special flight path). Noggenfogger vendor
+SDComment: Quest support: 648, 2954, 4005, 10277, 10279(Special flight path). Noggenfogger vendor
 SDCategory: Tanaris
 EndScriptData */
 
@@ -66,19 +66,19 @@ struct TRINITY_DLL_DECL mob_aquementasAI : public ScriptedAI
 
     void SendItem(Unit* receiver)
     {
-        if (((Player*)receiver)->HasItemCount(11169,1,false) &&
-            ((Player*)receiver)->HasItemCount(11172,11,false) &&
-            ((Player*)receiver)->HasItemCount(11173,1,false) &&
-            !((Player*)receiver)->HasItemCount(11522,1,true))
+        if (CAST_PLR(receiver)->HasItemCount(11169,1,false) &&
+            CAST_PLR(receiver)->HasItemCount(11172,11,false) &&
+            CAST_PLR(receiver)->HasItemCount(11173,1,false) &&
+            !CAST_PLR(receiver)->HasItemCount(11522,1,true))
         {
             ItemPosCountVec dest;
-            uint8 msg = ((Player*)receiver)->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, 11522, 1, false);
+            uint8 msg = CAST_PLR(receiver)->CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, 11522, 1, false);
             if( msg == EQUIP_ERR_OK )
-                ((Player*)receiver)->StoreNewItem( dest, 11522, 1, true);
+                CAST_PLR(receiver)->StoreNewItem( dest, 11522, 1, true);
         }
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         DoScriptText(AGGRO_YELL_AQUE, m_creature, who);
     }
@@ -179,7 +179,7 @@ struct TRINITY_DLL_DECL npc_custodian_of_timeAI : public npc_escortAI
                 DoScriptText(WHISPER_CUSTODIAN_14, m_creature, pTemp);
                 DoCast(pTemp,34883);
                 //below here is temporary workaround, to be removed when spell works properly
-                ((Player*)pTemp)->AreaExploredOrEventHappens(10277);
+                CAST_PLR(pTemp)->AreaExploredOrEventHappens(10277);
                 break;
         }
     }
@@ -191,18 +191,18 @@ struct TRINITY_DLL_DECL npc_custodian_of_timeAI : public npc_escortAI
 
         if( who->GetTypeId() == TYPEID_PLAYER )
         {
-            if( ((Player*)who)->HasAura(34877,1) && ((Player*)who)->GetQuestStatus(10277) == QUEST_STATUS_INCOMPLETE )
+            if( CAST_PLR(who)->HasAura(34877) && CAST_PLR(who)->GetQuestStatus(10277) == QUEST_STATUS_INCOMPLETE )
             {
                 float Radius = 10.0;
                 if( m_creature->IsWithinDistInMap(who, Radius) )
                 {
-                    ((npc_escortAI*)(m_creature->AI()))->Start(false, false, false, who->GetGUID());
+                    Start(false, false, false, who->GetGUID());
                 }
             }
         }
     }
 
-    void Aggro(Unit* who) { }
+    void EnterCombat(Unit* who) { }
     void Reset() { }
 
     void UpdateAI(const uint32 diff)
@@ -211,40 +211,13 @@ struct TRINITY_DLL_DECL npc_custodian_of_timeAI : public npc_escortAI
     }
 };
 
-CreatureAI* GetAI_npc_custodian_of_time(Creature *_Creature)
+CreatureAI* GetAI_npc_custodian_of_time(Creature* pCreature)
 {
-    npc_custodian_of_timeAI* custodian_of_timeAI = new npc_custodian_of_timeAI(_Creature);
+    npc_custodian_of_timeAI* custodian_of_timeAI = new npc_custodian_of_timeAI(pCreature);
 
-    custodian_of_timeAI->AddWaypoint(0, -8535.57,-4212.61, -212.04);
-    custodian_of_timeAI->AddWaypoint(1, -8456.48,-4211.77, -213.30);
-    custodian_of_timeAI->AddWaypoint(2, -8374.93,-4250.21, -205.05,5000);
-    custodian_of_timeAI->AddWaypoint(3, -8374.93,-4250.21, -204.38,16000);
-    custodian_of_timeAI->AddWaypoint(4, -8374.93,-4250.21, -204.38,10000);
-    custodian_of_timeAI->AddWaypoint(5, -8374.93,-4250.21, -204.38,2000);
-    custodian_of_timeAI->AddWaypoint(6, -8439.40,-4180.05, -209.25);
-    custodian_of_timeAI->AddWaypoint(7, -8437.82,-4120.84, -208.59,10000);
-    custodian_of_timeAI->AddWaypoint(8, -8437.82,-4120.84, -208.59,16000);
-    custodian_of_timeAI->AddWaypoint(9, -8437.82,-4120.84, -208.59,13000);
-    custodian_of_timeAI->AddWaypoint(10, -8437.82,-4120.84, -208.59,18000);
-    custodian_of_timeAI->AddWaypoint(11, -8437.82,-4120.84, -208.59,15000);
-    custodian_of_timeAI->AddWaypoint(12, -8437.82,-4120.84, -208.59,2000);
-    custodian_of_timeAI->AddWaypoint(13, -8467.26,-4198.63, -214.21);
-    custodian_of_timeAI->AddWaypoint(14, -8667.76,-4252.13, -209.56);
-    custodian_of_timeAI->AddWaypoint(15, -8703.71,-4234.58, -209.5,14000);
-    custodian_of_timeAI->AddWaypoint(16, -8703.71,-4234.58, -209.5,2000);
-    custodian_of_timeAI->AddWaypoint(17, -8642.81,-4304.37, -209.57);
-    custodian_of_timeAI->AddWaypoint(18, -8649.06,-4394.36, -208.46,6000);
-    custodian_of_timeAI->AddWaypoint(19, -8649.06,-4394.36, -208.46,18000);
-    custodian_of_timeAI->AddWaypoint(20, -8649.06,-4394.36, -208.46,2000);
-    custodian_of_timeAI->AddWaypoint(21, -8468.72,-4437.67, -215.45);
-    custodian_of_timeAI->AddWaypoint(22, -8427.54,-4426, -211.13);
-    custodian_of_timeAI->AddWaypoint(23, -8364.83,-4393.32, -205.91);
-    custodian_of_timeAI->AddWaypoint(24, -8304.54,-4357.2, -208.2,18000);
-    custodian_of_timeAI->AddWaypoint(25, -8304.54,-4357.2, -208.2,2000);
-    custodian_of_timeAI->AddWaypoint(26, -8375.42,-4250.41, -205.14,5000);
-    custodian_of_timeAI->AddWaypoint(27, -8375.42,-4250.41, -205.14,5000);
+    custodian_of_timeAI->FillPointMovementListForCreature();
 
-    return (CreatureAI*)custodian_of_timeAI;
+    return custodian_of_timeAI;
 }
 
 /*######
@@ -405,16 +378,15 @@ struct TRINITY_DLL_DECL npc_OOX17AI : public npc_escortAI
                 m_creature->SummonCreature(SPAWN_SECOND_2, -7515.07, -4797.50, 9.35, 6.22, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 25000);
                 m_creature->SummonCreature(SPAWN_SECOND_2, -7518.07, -4792.50, 9.35, 6.22, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 25000);
                 DoScriptText(SAY_CHICKEN_AMB, m_creature);
-                {Unit* scoff = FindCreature(SPAWN_SECOND_2, 30, m_creature);
-                if(scoff)
-                    DoScriptText(SAY_SCOFF, scoff);}break;
+                if(Unit* scoff = me->FindNearestCreature(SPAWN_SECOND_2, 30))
+                    DoScriptText(SAY_SCOFF, scoff);
                 break;
 
             case 86:
                 if (player)
                 {
                     DoScriptText(SAY_CHICKEN_COMP, m_creature);
-                    ((Player*)player)->GroupEventHappens(Q_OOX17, m_creature);
+                    player->GroupEventHappens(Q_OOX17, m_creature);
                 }
                 break;
         }
@@ -422,7 +394,7 @@ struct TRINITY_DLL_DECL npc_OOX17AI : public npc_escortAI
 
     void Reset(){}
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         switch (rand()%2)
         {
@@ -441,7 +413,7 @@ struct TRINITY_DLL_DECL npc_OOX17AI : public npc_escortAI
         if (PlayerGUID)
         {
             if (Player* player = Unit::GetPlayer(PlayerGUID))
-                ((Player*)player)->FailQuest(Q_OOX17);
+                CAST_PLR(player)->FailQuest(Q_OOX17);
         }
     }
 
@@ -463,7 +435,7 @@ bool QuestAccept_npc_OOX17(Player* player, Creature* creature, Quest const* ques
         creature->SetUInt32Value(UNIT_FIELD_BYTES_1,0);
         creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_ATTACKABLE_2);
         DoScriptText(SAY_CHICKEN_ACC, creature);
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
 
     }
     return true;
@@ -561,7 +533,7 @@ CreatureAI* GetAI_npc_OOX17(Creature *_Creature)
     OOX17AI->AddWaypoint(85, -6944.81, -4816.58, 1.60);
     OOX17AI->AddWaypoint(86, -6942.06, -4839.40, 0.66,5000);
 
-    return (CreatureAI*)OOX17AI;
+    return OOX17AI;
 }
 
 /*######

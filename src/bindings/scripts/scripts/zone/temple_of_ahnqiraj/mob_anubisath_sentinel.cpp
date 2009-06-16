@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -133,7 +133,7 @@ struct TRINITY_DLL_DECL aqsentinelAI : public ScriptedAI
 
     void GiveBuddyMyList(Creature *c)
     {
-        aqsentinelAI *cai = (aqsentinelAI *)(c->AI());
+        aqsentinelAI *cai = CAST_AI(aqsentinelAI, (c)->AI());
         for (int i=0; i<3; i++)
             if (nearby[i] && nearby[i]!=c)
                 cai->AddBuddyToList(nearby[i]);
@@ -174,7 +174,7 @@ struct TRINITY_DLL_DECL aqsentinelAI : public ScriptedAI
         std::list<Creature*> assistList;
 
         NearbyAQSentinel u_check(nears);
-        Trinity::CreatureListSearcher<NearbyAQSentinel> searcher(assistList, u_check);
+        Trinity::CreatureListSearcher<NearbyAQSentinel> searcher(m_creature, assistList, u_check);
         TypeContainerVisitor<Trinity::CreatureListSearcher<NearbyAQSentinel>, GridTypeMapContainer >  grid_creature_searcher(searcher);
         CellLock<GridReadGuard> cell_lock(cell, p);
         cell_lock->Visit(cell_lock, grid_creature_searcher, *(nears->GetMap()));
@@ -213,13 +213,15 @@ struct TRINITY_DLL_DECL aqsentinelAI : public ScriptedAI
             if (!nearby[bli])
                 break;
             AddSentinelsNear(nearby[bli]);
-            ((aqsentinelAI *)nearby[bli]->AI())->gatherOthersWhenAggro = false;
-            ((aqsentinelAI *)nearby[bli]->AI())->selectAbility(pickAbilityRandom(chosenAbilities));
+            CAST_AI(aqsentinelAI, nearby[bli]->AI())->gatherOthersWhenAggro = false;
+            CAST_AI(aqsentinelAI, nearby[bli]->AI())->selectAbility(pickAbilityRandom(chosenAbilities));
         }
         /*if (bli < 3)
             DoYell("I dont have enough buddies.", LANG_NEUTRAL, 0);*/
         SendMyListToBuddies();
         CallBuddiesToAttack(who);
+
+        delete[] chosenAbilities;
     }
 
     bool gatherOthersWhenAggro;
@@ -245,13 +247,16 @@ struct TRINITY_DLL_DECL aqsentinelAI : public ScriptedAI
     void GainSentinelAbility(uint32 id)
     {
         const SpellEntry *spell = GetSpellStore()->LookupEntry(id);
+        uint8 eff_mask=0;
         for (int i=0; i<3; i++)
         {
             if (!spell->Effect[i])
                 continue;
-            SentinelAbilityAura *a = new SentinelAbilityAura(this, (SpellEntry *)spell, id, i);
-            m_creature->AddAura(a);
+            eff_mask=1<<i;
         }
+        SentinelAbilityAura *a = new SentinelAbilityAura(this, (SpellEntry*)spell, id, eff_mask);
+        m_creature->AddAura(a);
+
         if (id == SPELL_KNOCK_BUFF)
         {
             m_creature->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_TAUNT, true);
@@ -259,7 +264,7 @@ struct TRINITY_DLL_DECL aqsentinelAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if (gatherOthersWhenAggro)
             GetOtherSentinels(who);
@@ -268,7 +273,7 @@ struct TRINITY_DLL_DECL aqsentinelAI : public ScriptedAI
         DoZoneInCombat();
     }
 
-    void JustDied(Unit*)
+    void JustDied(Unit* who)
     {
         for (int ni=0; ni<3; ni++)
         {
@@ -281,7 +286,7 @@ struct TRINITY_DLL_DECL aqsentinelAI : public ScriptedAI
             if (h > sent->GetMaxHealth())
                 h = sent->GetMaxHealth();
             sent->SetHealth(h);
-            ((aqsentinelAI *)sent->AI())->GainSentinelAbility(ability);
+            CAST_AI(aqsentinelAI, sent->AI())->GainSentinelAbility(ability);
         }
     }
 
@@ -339,6 +344,5 @@ SentinelAbilityAura::SentinelAbilityAura(aqsentinelAI *abilityOwner, SpellEntry 
 {
     aOwner = abilityOwner;
     abilityId = ability;
-    currentBasePoints = 0;
 }
 
