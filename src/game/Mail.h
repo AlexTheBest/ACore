@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,30 +27,6 @@ class Item;
 
 #define MAIL_BODY_ITEM_TEMPLATE 8383                        // - plain letter, A Dusty Unsent Letter: 889
 #define MAX_MAIL_ITEMS 12
-
-enum MAIL_RESPONSE
-{
-    MAIL_OK                 = 0,
-    MAIL_MONEY_TAKEN        = 1,
-    MAIL_ITEM_TAKEN         = 2,
-    MAIL_RETURNED_TO_SENDER = 3,
-    MAIL_DELETED            = 4,
-    MAIL_MADE_PERMANENT     = 5
-};
-
-enum MAIL_ERRORS
-{
-    MAIL_ERR_BAG_FULL                  = 1,
-    MAIL_ERR_CANNOT_SEND_TO_SELF       = 2,
-    MAIL_ERR_NOT_ENOUGH_MONEY          = 3,
-    MAIL_ERR_RECIPIENT_NOT_FOUND       = 4,
-    MAIL_ERR_NOT_YOUR_TEAM             = 5,
-    MAIL_ERR_INTERNAL_ERROR            = 6,
-    MAIL_ERR_DISABLED_FOR_TRIAL_ACC    = 14,
-    MAIL_ERR_RECIPIENT_CAP_REACHED     = 15,
-    MAIL_ERR_CANT_SEND_WRAPPED_COD     = 16,
-    MAIL_ERR_MAIL_AND_CHAT_SUSPENDED   = 17
-};
 
 enum MailCheckMask
 {
@@ -196,11 +172,11 @@ struct Mail
         }
     }
 
-    bool RemoveItem(uint32 itemId)
+    bool RemoveItem(uint32 item_guid)
     {
         for(std::vector<MailItemInfo>::iterator itr = items.begin(); itr != items.end(); ++itr)
         {
-            if(itr->item_guid == itemId)
+            if(itr->item_guid == item_guid)
             {
                 items.erase(itr);
                 return true;

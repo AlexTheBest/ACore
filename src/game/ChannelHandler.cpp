@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,14 +18,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+
+#include "Policies/SingletonImp.h"
+
 #include "ObjectMgr.h"                                      // for normalizePlayerName
 #include "ChannelMgr.h"
-#include "Policies/SingletonImp.h"
 
 INSTANTIATE_SINGLETON_1( AllianceChannelMgr );
 INSTANTIATE_SINGLETON_1( HordeChannelMgr );
 
-void WorldSession::HandleChannelJoin(WorldPacket& recvPacket)
+void WorldSession::HandleJoinChannel(WorldPacket& recvPacket)
 {
     sLog.outDebug("Opcode %u", recvPacket.GetOpcode());
     //recvPacket.hexlike();
@@ -50,7 +52,7 @@ void WorldSession::HandleChannelJoin(WorldPacket& recvPacket)
             chn->Join(_player->GetGUID(), pass.c_str());
 }
 
-void WorldSession::HandleChannelLeave(WorldPacket& recvPacket)
+void WorldSession::HandleLeaveChannel(WorldPacket& recvPacket)
 {
     sLog.outDebug("Opcode %u", recvPacket.GetOpcode());
     //recvPacket.hexlike();
@@ -315,7 +317,7 @@ void WorldSession::HandleChannelUnban(WorldPacket& recvPacket)
             chn->UnBan(_player->GetGUID(), otp.c_str());
 }
 
-void WorldSession::HandleChannelAnnounce(WorldPacket& recvPacket)
+void WorldSession::HandleChannelAnnouncements(WorldPacket& recvPacket)
 {
     sLog.outDebug("Opcode %u", recvPacket.GetOpcode());
     //recvPacket.hexlike();
@@ -341,7 +343,7 @@ void WorldSession::HandleChannelModerate(WorldPacket& recvPacket)
             chn->Moderate(_player->GetGUID());
 }
 
-void WorldSession::HandleChannelRosterQuery(WorldPacket &recvPacket)
+void WorldSession::HandleChannelDisplayListQuery(WorldPacket &recvPacket)
 {
     sLog.outDebug("Opcode %u", recvPacket.GetOpcode());
     //recvPacket.hexlike();
@@ -354,7 +356,7 @@ void WorldSession::HandleChannelRosterQuery(WorldPacket &recvPacket)
             chn->List(_player);
 }
 
-void WorldSession::HandleChannelInfoQuery(WorldPacket &recvPacket)
+void WorldSession::HandleGetChannelMemberCount(WorldPacket &recvPacket)
 {
     sLog.outDebug("Opcode %u", recvPacket.GetOpcode());
     //recvPacket.hexlike();
@@ -375,7 +377,7 @@ void WorldSession::HandleChannelInfoQuery(WorldPacket &recvPacket)
     }
 }
 
-void WorldSession::HandleChannelJoinNotify(WorldPacket &recvPacket)
+void WorldSession::HandleSetChannelWatch(WorldPacket &recvPacket)
 {
     sLog.outDebug("Opcode %u", recvPacket.GetOpcode());
     //recvPacket.hexlike();

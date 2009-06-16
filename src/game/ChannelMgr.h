@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,12 +20,13 @@
 #ifndef TRINITYCORE_CHANNELMGR_H
 #define TRINITYCORE_CHANNELMGR_H
 
-#include "Channel.h"
-#include "Policies/Singleton.h"
-#include "World.h"
-
 #include <map>
 #include <string>
+
+#include "Policies/Singleton.h"
+
+#include "Channel.h"
+#include "World.h"
 
 class ChannelMgr
 {
@@ -34,13 +35,13 @@ class ChannelMgr
         ChannelMgr() {}
         ~ChannelMgr()
         {
-            for(ChannelMap::iterator itr = channels.begin();itr!=channels.end(); ++itr)
+            for(ChannelMap::const_iterator itr = channels.begin();itr!=channels.end(); ++itr)
                 delete itr->second;
             channels.clear();
         }
         Channel *GetJoinChannel(const std::string& name, uint32 channel_id)
         {
-            if(channels.count(name) == 0)
+            if (channels.find(name) == channels.end())
             {
                 Channel *nchan = new Channel(name,channel_id);
                 channels[name] = nchan;

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,19 +22,20 @@
 #include "Errors.h"
 #include "Creature.h"
 #include "CreatureAI.h"
-#include "MapManager.h"
 #include "DestinationHolderImp.h"
+#include "World.h"
 
 //----- Point Movement Generator
 template<class T>
 void PointMovementGenerator<T>::Initialize(T &unit)
 {
     unit.StopMoving();
+    unit.clearUnitState(UNIT_STAT_MOVING);
     Traveller<T> traveller(unit);
-    i_destinationHolder.SetDestination(traveller,i_x,i_y,i_z);
+    i_destinationHolder.SetDestination(traveller,i_x,i_y,i_z, !unit.hasUnitState(UNIT_STAT_JUMPING));
 
     if (unit.GetTypeId() == TYPEID_UNIT && ((Creature*)&unit)->canFly())
-        unit.AddUnitMovementFlag(MOVEMENTFLAG_FLYING2);
+        unit.AddUnitMovementFlag(MOVEMENTFLAG_FLYING);
 }
 
 template<class T>
@@ -69,7 +70,7 @@ template<class T>
 void PointMovementGenerator<T>:: Finalize(T &unit)
 {
     if(unit.hasUnitState(UNIT_STAT_CHARGING))
-        unit.clearUnitState(UNIT_STAT_CHARGING);
+        unit.clearUnitState(UNIT_STAT_CHARGING | UNIT_STAT_JUMPING);
     else if(arrived)
         MovementInform(unit);
 }
@@ -92,3 +93,11 @@ template void PointMovementGenerator<Player>::Finalize(Player&);
 template void PointMovementGenerator<Creature>::Initialize(Creature&);
 template bool PointMovementGenerator<Creature>::Update(Creature&, const uint32 &diff);
 template void PointMovementGenerator<Creature>::Finalize(Creature&);
+
+void AssistanceMovementGenerator::Finalize(Unit &unit)
+{
+    ((Creature*)&unit)->SetNoCallAssistance(false);
+    ((Creature*)&unit)->CallAssistance();
+    if (unit.isAlive())
+        unit.GetMotionMaster()->MoveSeekAssistanceDistract(sWorld.getConfig(CONFIG_CREATURE_FAMILY_ASSISTANCE_DELAY));
+}

@@ -66,7 +66,7 @@ struct TRINITY_DLL_DECL boss_moroesAI : public ScriptedAI
         {
             AddId[i] = 0;
         }
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance *pInstance;
@@ -110,7 +110,7 @@ struct TRINITY_DLL_DECL boss_moroesAI : public ScriptedAI
         DoZoneInCombat();
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         StartEvent();
 
@@ -295,11 +295,15 @@ struct TRINITY_DLL_DECL boss_moroesAI : public ScriptedAI
 
             if (Blind_Timer < diff)
             {
-                Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 0, 5, true);
-                if (target && m_creature->IsWithinMeleeRange(target))
+                Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 0);
+                if (target && target->GetTypeId() == TYPEID_PLAYER && m_creature->IsWithinMeleeRange(target))
+                {
                     DoCast(target, SPELL_BLIND);
 
-                Blind_Timer = 40000;
+                    Blind_Timer = 40000;
+                }
+                else
+                    Blind_Timer = 1000;
             }else Blind_Timer -= diff;
         }
 
@@ -336,7 +340,7 @@ struct TRINITY_DLL_DECL boss_moroes_guestAI : public ScriptedAI
         for(uint8 i = 0; i < 4; ++i)
             GuestGUID[i] = 0;
 
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     void Reset()
@@ -344,8 +348,6 @@ struct TRINITY_DLL_DECL boss_moroes_guestAI : public ScriptedAI
         if(pInstance)
             pInstance->SetData(DATA_MOROES_EVENT, NOT_STARTED);
     }
-
-    void Aggro(Unit* who) {}
 
     void AcquireGUID()
     {
@@ -358,7 +360,7 @@ struct TRINITY_DLL_DECL boss_moroes_guestAI : public ScriptedAI
         {
             for(uint8 i = 0; i < 3; ++i)
             {
-                uint64 GUID = ((boss_moroesAI*)Moroes->AI())->AddGUID[i];
+                uint64 GUID = CAST_AI(boss_moroesAI, Moroes->AI())->AddGUID[i];
                 if(GUID && GUID != m_creature->GetGUID())
                     GuestGUID[i+1] = GUID;
             }

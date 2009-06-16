@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,15 +20,16 @@
 
 #include "HomeMovementGenerator.h"
 #include "Creature.h"
+#include "CreatureAI.h"
 #include "Traveller.h"
-#include "MapManager.h"
-#include "ObjectAccessor.h"
 #include "DestinationHolderImp.h"
 #include "WorldPacket.h"
 
 void
 HomeMovementGenerator<Creature>::Initialize(Creature & owner)
 {
+    float x, y, z;
+    owner.GetHomePosition(x, y, z, ori);
     owner.RemoveUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
     _setTargetLocation(owner);
 }
@@ -70,11 +71,14 @@ HomeMovementGenerator<Creature>::Update(Creature &owner, const uint32& time_diff
         // restore orientation of not moving creature at returning to home
         if(owner.GetDefaultMovementType()==IDLE_MOTION_TYPE)
         {
+            //sLog.outDebug("Entering HomeMovement::GetDestination(z,y,z)");
             owner.SetOrientation(ori);
             WorldPacket packet;
             owner.BuildHeartBeatMsg(&packet);
             owner.SendMessageToSet(&packet, false);
         }
+
+        owner.AI()->JustReachedHome();
         return false;
     }
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -72,7 +72,7 @@ struct TRINITY_DLL_DECL boss_high_astromancer_solarianAI : public ScriptedAI
 {
     boss_high_astromancer_solarianAI(Creature *c) : ScriptedAI(c), Summons(m_creature)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
 
         defaultarmor = m_creature->GetArmor();
         defaultsize = m_creature->GetFloatValue(OBJECT_FIELD_SCALE_X);
@@ -120,6 +120,7 @@ struct TRINITY_DLL_DECL boss_high_astromancer_solarianAI : public ScriptedAI
         Jump_Timer=8000;
         Wrath_Timer = 20000+rand()%5000;//twice in phase one
         Phase = 1;
+        Wrath_Timer = 20000+rand()%5000;//twice in phase one
 
         if(pInstance)
             pInstance->SetData(DATA_HIGHASTROMANCERSOLARIANEVENT, NOT_STARTED);
@@ -161,7 +162,7 @@ struct TRINITY_DLL_DECL boss_high_astromancer_solarianAI : public ScriptedAI
             pInstance->SetData(DATA_HIGHASTROMANCERSOLARIANEVENT, DONE);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         StartEvent();
     }
@@ -229,7 +230,7 @@ struct TRINITY_DLL_DECL boss_high_astromancer_solarianAI : public ScriptedAI
             if( Wrath_Timer < diff)
             {
                 m_creature->InterruptNonMeleeSpells(false);
-                DoCast(SelectUnit(SELECT_TARGET_RANDOM,1,100,true), SPELL_WRATH_OF_THE_ASTROMANCER, true);
+                DoCast(SelectTarget(SELECT_TARGET_RANDOM,1,100,true), SPELL_WRATH_OF_THE_ASTROMANCER, true);
                 Wrath_Timer = 20000+rand()%5000;
             }else Wrath_Timer -= diff;
 
@@ -259,7 +260,7 @@ struct TRINITY_DLL_DECL boss_high_astromancer_solarianAI : public ScriptedAI
 
             if (MarkOfTheAstromancer_Timer < diff) //A debuff that lasts for 5 seconds, cast several times each phase on a random raid member, but not the main tank
             {
-                Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 1, 100, true);
+                Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 1, 100, true);
                 if(target)
                     DoCast(target, SPELL_MARK_OF_THE_ASTROMANCER);
                 else DoCast(m_creature->getVictim(), SPELL_MARK_OF_THE_ASTROMANCER);
@@ -392,7 +393,7 @@ struct TRINITY_DLL_DECL mob_solarium_priestAI : public ScriptedAI
 {
     mob_solarium_priestAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     ScriptedInstance *pInstance;
@@ -408,7 +409,7 @@ struct TRINITY_DLL_DECL mob_solarium_priestAI : public ScriptedAI
         aoesilenceTimer = 15000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
@@ -18,17 +18,19 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-#include "WorldPacket.h"
-#include "WorldSession.h"
-#include "Opcodes.h"
-#include "Log.h"
-#include "World.h"
 #include "ObjectMgr.h"
 #include "Player.h"
-#include "UpdateMask.h"
-#include "AuctionHouseMgr.h"
-#include "Util.h"
+#include "World.h"
+#include "WorldPacket.h"
+#include "WorldSession.h"
+
 #include "AuctionHouseBot.h"
+#include "AuctionHouseMgr.h"
+#include "Log.h"
+#include "Opcodes.h"
+#include "UpdateMask.h"
+#include "Util.h"
+
 
 //please DO NOT use iterator++, because it is slower than ++iterator!!!
 //post-incrementation is always slower than pre-incrementation !
@@ -41,7 +43,7 @@ void WorldSession::HandleAuctionHelloOpcode( WorldPacket & recv_data )
     uint64 guid;                                            //NPC guid
     recv_data >> guid;
 
-    Creature *unit = ObjectAccessor::GetNPCIfCanInteractWith(*_player, guid,UNIT_NPC_FLAG_AUCTIONEER);
+    Creature *unit = GetPlayer()->GetNPCIfCanInteractWith(guid,UNIT_NPC_FLAG_AUCTIONEER);
     if (!unit)
     {
         sLog.outDebug( "WORLD: HandleAuctionHelloOpcode - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(guid)) );
@@ -50,7 +52,7 @@ void WorldSession::HandleAuctionHelloOpcode( WorldPacket & recv_data )
 
     // remove fake death
     if(GetPlayer()->hasUnitState(UNIT_STAT_DIED))
-        GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
+        GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
 
     SendAuctionHello(guid, unit);
 }
@@ -168,7 +170,7 @@ void WorldSession::HandleAuctionSellItem( WorldPacket & recv_data )
     if (!item || !bid || !etime)
         return;                                             //check for cheaters
 
-    Creature *pCreature = ObjectAccessor::GetNPCIfCanInteractWith(*_player, auctioneer,UNIT_NPC_FLAG_AUCTIONEER);
+    Creature *pCreature = GetPlayer()->GetNPCIfCanInteractWith(auctioneer,UNIT_NPC_FLAG_AUCTIONEER);
     if (!pCreature)
     {
         sLog.outDebug( "WORLD: HandleAuctionSellItem - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(auctioneer)) );
@@ -199,7 +201,7 @@ void WorldSession::HandleAuctionSellItem( WorldPacket & recv_data )
 
     // remove fake death
     if(GetPlayer()->hasUnitState(UNIT_STAT_DIED))
-        GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
+        GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
 
     Item *it = pl->GetItemByGuid( item );
     //do not allow to sell already auctioned items
@@ -295,7 +297,7 @@ void WorldSession::HandleAuctionPlaceBid( WorldPacket & recv_data )
     if (!auctionId || !price)
         return;                                             //check for cheaters
 
-    Creature *pCreature = ObjectAccessor::GetNPCIfCanInteractWith(*_player, auctioneer,UNIT_NPC_FLAG_AUCTIONEER);
+    Creature *pCreature = GetPlayer()->GetNPCIfCanInteractWith(auctioneer,UNIT_NPC_FLAG_AUCTIONEER);
     if (!pCreature)
     {
         sLog.outDebug( "WORLD: HandleAuctionPlaceBid - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(auctioneer)) );
@@ -304,7 +306,7 @@ void WorldSession::HandleAuctionPlaceBid( WorldPacket & recv_data )
 
     // remove fake death
     if(GetPlayer()->hasUnitState(UNIT_STAT_DIED))
-        GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
+        GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
 
     AuctionHouseObject* auctionHouse = auctionmgr.GetAuctionsMap( pCreature->getFaction() );
 
@@ -367,6 +369,7 @@ void WorldSession::HandleAuctionPlaceBid( WorldPacket & recv_data )
         }
         auction->bidder = pl->GetGUIDLow();
         auction->bid = price;
+        GetPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_AUCTION_BID, price);
 
         // after this update we should save player's money ...
         CharacterDatabase.PExecute("UPDATE auctionhouse SET buyguid = '%u',lastbid = '%u' WHERE id = '%u'", auction->bidder, auction->bid, auction->Id);
@@ -390,6 +393,7 @@ void WorldSession::HandleAuctionPlaceBid( WorldPacket & recv_data )
         }
         auction->bidder = pl->GetGUIDLow();
         auction->bid = auction->buyout;
+        GetPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_AUCTION_BID, auction->buyout);
 
         auctionmgr.SendAuctionSalePendingMail( auction );
         auctionmgr.SendAuctionSuccessfulMail( auction );
@@ -419,7 +423,7 @@ void WorldSession::HandleAuctionRemoveItem( WorldPacket & recv_data )
     recv_data >> auctionId;
     //sLog.outDebug( "Cancel AUCTION AuctionID: %u", auctionId);
 
-    Creature *pCreature = ObjectAccessor::GetNPCIfCanInteractWith(*_player, auctioneer,UNIT_NPC_FLAG_AUCTIONEER);
+    Creature *pCreature = GetPlayer()->GetNPCIfCanInteractWith(auctioneer,UNIT_NPC_FLAG_AUCTIONEER);
     if (!pCreature)
     {
         sLog.outDebug( "WORLD: HandleAuctionRemoveItem - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(auctioneer)) );
@@ -428,7 +432,7 @@ void WorldSession::HandleAuctionRemoveItem( WorldPacket & recv_data )
 
     // remove fake death
     if(GetPlayer()->hasUnitState(UNIT_STAT_DIED))
-        GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
+        GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
 
     AuctionHouseObject* auctionHouse = auctionmgr.GetAuctionsMap( pCreature->getFaction() );
 
@@ -500,11 +504,11 @@ void WorldSession::HandleAuctionListBidderItems( WorldPacket & recv_data )
     recv_data >> outbiddedCount;
     if (recv_data.size() != (16 + outbiddedCount * 4 ))
     {
-        sLog.outError("Client sent bad opcode!!! with count: %u and size : %d (mustbe: %d", outbiddedCount, recv_data.size(),(16 + outbiddedCount * 4 ));
+        sLog.outError("Client sent bad opcode!!! with count: %u and size : %lu (must be: %u)", outbiddedCount, (unsigned long)recv_data.size(),(16 + outbiddedCount * 4 ));
         outbiddedCount = 0;
     }
 
-    Creature *pCreature = ObjectAccessor::GetNPCIfCanInteractWith(*_player, guid,UNIT_NPC_FLAG_AUCTIONEER);
+    Creature *pCreature = GetPlayer()->GetNPCIfCanInteractWith(guid,UNIT_NPC_FLAG_AUCTIONEER);
     if (!pCreature)
     {
         sLog.outDebug( "WORLD: HandleAuctionListBidderItems - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(guid)) );
@@ -513,7 +517,7 @@ void WorldSession::HandleAuctionListBidderItems( WorldPacket & recv_data )
 
     // remove fake death
     if(GetPlayer()->hasUnitState(UNIT_STAT_DIED))
-        GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
+        GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
 
     AuctionHouseObject* auctionHouse = auctionmgr.GetAuctionsMap( pCreature->getFaction() );
 
@@ -553,7 +557,7 @@ void WorldSession::HandleAuctionListOwnerItems( WorldPacket & recv_data )
     recv_data >> guid;
     recv_data >> listfrom;                                  // not used in fact (this list not have page control in client)
 
-    Creature *pCreature = ObjectAccessor::GetNPCIfCanInteractWith(*_player, guid,UNIT_NPC_FLAG_AUCTIONEER);
+    Creature *pCreature = GetPlayer()->GetNPCIfCanInteractWith(guid,UNIT_NPC_FLAG_AUCTIONEER);
     if (!pCreature)
     {
         sLog.outDebug( "WORLD: HandleAuctionListOwnerItems - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(guid)) );
@@ -562,7 +566,7 @@ void WorldSession::HandleAuctionListOwnerItems( WorldPacket & recv_data )
 
     // remove fake death
     if(GetPlayer()->hasUnitState(UNIT_STAT_DIED))
-        GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
+        GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
 
     AuctionHouseObject* auctionHouse = auctionmgr.GetAuctionsMap( pCreature->getFaction() );
 
@@ -600,7 +604,7 @@ void WorldSession::HandleAuctionListItems( WorldPacket & recv_data )
     recv_data >> auctionSlotID >> auctionMainCategory >> auctionSubCategory;
     recv_data >> quality >> usable;
 
-    Creature *pCreature = ObjectAccessor::GetNPCIfCanInteractWith(*_player, guid,UNIT_NPC_FLAG_AUCTIONEER);
+    Creature *pCreature = GetPlayer()->GetNPCIfCanInteractWith(guid,UNIT_NPC_FLAG_AUCTIONEER);
     if (!pCreature)
     {
         sLog.outDebug( "WORLD: HandleAuctionListItems - Unit (GUID: %u) not found or you can't interact with him.", uint32(GUID_LOPART(guid)) );
@@ -609,11 +613,12 @@ void WorldSession::HandleAuctionListItems( WorldPacket & recv_data )
 
     // remove fake death
     if(GetPlayer()->hasUnitState(UNIT_STAT_DIED))
-        GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
+        GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
 
     AuctionHouseObject* auctionHouse = auctionmgr.GetAuctionsMap( pCreature->getFaction() );
 
-    //sLog.outDebug("Auctionhouse search guid: " I64FMTD ", list from: %u, searchedname: %s, levelmin: %u, levelmax: %u, auctionSlotID: %u, auctionMainCategory: %u, auctionSubCategory: %u, quality: %u, usable: %u", guid, listfrom, searchedname.c_str(), levelmin, levelmax, auctionSlotID, auctionMainCategory, auctionSubCategory, quality, usable);
+    //sLog.outDebug("Auctionhouse search (GUID: %u TypeId: %u)", , list from: %u, searchedname: %s, levelmin: %u, levelmax: %u, auctionSlotID: %u, auctionMainCategory: %u, auctionSubCategory: %u, quality: %u, usable: %u",
+    //  GUID_LOPART(guid),GuidHigh2TypeId(GUID_HIPART(guid)), listfrom, searchedname.c_str(), levelmin, levelmax, auctionSlotID, auctionMainCategory, auctionSubCategory, quality, usable);
 
     WorldPacket data( SMSG_AUCTION_LIST_RESULT, (4+4+4) );
     uint32 count = 0;
@@ -638,3 +643,22 @@ void WorldSession::HandleAuctionListItems( WorldPacket & recv_data )
     SendPacket(&data);
 }
 
+void WorldSession::HandleAuctionListPendingSales( WorldPacket & recv_data )
+{
+    sLog.outDebug("CMSG_AUCTION_LIST_PENDING_SALES");
+    recv_data.hexlike();
+
+    uint32 count = 0;
+
+    WorldPacket data(SMSG_AUCTION_LIST_PENDING_SALES, 4);
+    data << uint32(count);                                  // count
+    /*for(uint32 i = 0; i < count; ++i)
+    {
+        data << "";                                         // string
+        data << "";                                         // string
+        data << uint32(0);
+        data << uint32(0);
+        data << float(0);
+    }*/
+    SendPacket(&data);
+}

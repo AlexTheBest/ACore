@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -51,7 +51,7 @@ struct TRINITY_DLL_DECL boss_jandicebarovAI : public ScriptedAI
         Invisible = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -73,7 +73,7 @@ struct TRINITY_DLL_DECL boss_jandicebarovAI : public ScriptedAI
         Rand = 0;
         Summoned = DoSpawnCreature(11439, RandX, RandY, 0, 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 60000);
         if(Summoned)
-            ((CreatureAI*)Summoned->AI())->AttackStart(victim);
+            (Summoned->AI())->AttackStart(victim);
     }
 
     void UpdateAI(const uint32 diff)
@@ -171,7 +171,7 @@ struct TRINITY_DLL_DECL mob_illusionofjandicebarovAI : public ScriptedAI
         m_creature->ApplySpellImmune(0, IMMUNITY_DAMAGE, SPELL_SCHOOL_MASK_MAGIC, true);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 

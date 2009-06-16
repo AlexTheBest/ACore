@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,6 +24,11 @@
 #include "ConfusedMovementGenerator.h"
 #include "DestinationHolderImp.h"
 
+#ifdef MAP_BASED_RAND_GEN
+#define rand_norm() unit.rand_norm()
+#define urand(a,b) unit.urand(a,b)
+#endif
+
 template<class T>
 void
 ConfusedMovementGenerator<T>::Initialize(T &unit)
@@ -44,8 +49,8 @@ ConfusedMovementGenerator<T>::Initialize(T &unit)
 
     for(unsigned int idx=0; idx < MAX_CONF_WAYPOINTS+1; ++idx)
     {
-      const float wanderX=wander_distance*rand_norm() - wander_distance/2;
-      const float wanderY=wander_distance*rand_norm() - wander_distance/2;
+        const float wanderX=wander_distance*rand_norm() - wander_distance/2;
+        const float wanderY=wander_distance*rand_norm() - wander_distance/2;
 
         i_waypoints[idx][0] = x + wanderX;
         i_waypoints[idx][1] = y + wanderY;
@@ -56,11 +61,12 @@ ConfusedMovementGenerator<T>::Initialize(T &unit)
 
         bool is_water = map->IsInWater(i_waypoints[idx][0],i_waypoints[idx][1],z);
         // if generated wrong path just ignore
-        if( is_water && !is_water_ok || !is_water && !is_land_ok )
+        if ((is_water && !is_water_ok) || (!is_water && !is_land_ok))
         {
             i_waypoints[idx][0] = idx > 0 ? i_waypoints[idx-1][0] : x;
             i_waypoints[idx][1] = idx > 0 ? i_waypoints[idx-1][1] : y;
         }
+
         unit.UpdateGroundPositionZ(i_waypoints[idx][0],i_waypoints[idx][1],z);
         i_waypoints[idx][2] =  z;
     }

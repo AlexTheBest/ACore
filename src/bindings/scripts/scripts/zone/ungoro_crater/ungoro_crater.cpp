@@ -77,7 +77,7 @@ struct TRINITY_DLL_DECL npc_ameAI : public npc_escortAI
          case 55:
             DoScriptText(SAY_FINISH, m_creature, player);
             if (player && player->GetTypeId() == TYPEID_PLAYER)
-                ((Player*)player)->GroupEventHappens(QUEST_CHASING_AME,m_creature);
+                CAST_PLR(player)->GroupEventHappens(QUEST_CHASING_AME,m_creature);
             break;
 
         }
@@ -88,7 +88,7 @@ struct TRINITY_DLL_DECL npc_ameAI : public npc_escortAI
       DEMORALIZINGSHOUT_Timer = 5000;
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {}
 
     void JustSummoned(Creature* summoned)
@@ -101,7 +101,7 @@ struct TRINITY_DLL_DECL npc_ameAI : public npc_escortAI
         if (PlayerGUID)
         {
             if (Player* player = Unit::GetPlayer(PlayerGUID))
-                ((Player*)player)->FailQuest(QUEST_CHASING_AME);
+                CAST_PLR(player)->FailQuest(QUEST_CHASING_AME);
         }
     }
 
@@ -124,7 +124,7 @@ bool QuestAccept_npc_ame(Player* player, Creature* creature, Quest const* quest)
 {
     if (quest->GetQuestId() == QUEST_CHASING_AME)
     {
-        ((npc_escortAI*)(creature->AI()))->Start(false, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(false, true, false, player->GetGUID());
         DoScriptText(SAY_READY, creature, player);
         creature->SetUInt32Value(UNIT_FIELD_BYTES_1,0);
         // Change faction so mobs attack
@@ -194,7 +194,7 @@ CreatureAI* GetAI_npc_ame(Creature *_Creature)
    thisAI->AddWaypoint(55, -6302.43, -1181.32, -269.328, 5000);
    thisAI->AddWaypoint(56, -6298.87, -1185.79, -269.278);
 
-    return (CreatureAI*)thisAI;
+    return thisAI;
 }
 
 void AddSC_ungoro_crater()

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,56 +21,56 @@
 #include "Common.h"
 #include "Database/DatabaseEnv.h"
 #include "WorldPacket.h"
-#include "WorldSession.h"
-#include "World.h"
+#include "Vehicle.h"
 #include "Player.h"
 #include "Opcodes.h"
 #include "Chat.h"
 #include "Log.h"
 #include "Unit.h"
-#include "ObjectAccessor.h"
 #include "GossipDef.h"
 #include "Language.h"
-#include "MapManager.h"
 #include "BattleGroundMgr.h"
 #include <fstream>
 #include "ObjectMgr.h"
+#include "Cell.h"
+#include "CellImpl.h"
+#include "GridNotifiers.h"
+#include "GridNotifiersImpl.h"
 
-bool ChatHandler::HandleDebugInArcCommand(const char* /*args*/)
-{
-    Object *obj = getSelectedUnit();
-
-    if(!obj)
-    {
-        SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
-        return true;
-    }
-
-    SendSysMessage(LANG_NOT_IMPLEMENTED);
-
-    return true;
-}
-
-bool ChatHandler::HandleDebugSpellFailCommand(const char* args)
+bool ChatHandler::HandleDebugSendSpellFailCommand(const char* args)
 {
     if(!args)
         return false;
 
     char* px = strtok((char*)args, " ");
-    if(!px)
+    if (!px)
         return false;
 
     uint8 failnum = (uint8)atoi(px);
+    if(failnum==0 && *px!='0')
+        return false;
+
+    char* p1 = strtok(NULL, " ");
+    uint8 failarg1 = p1 ? (uint8)atoi(p1) : 0;
+
+    char* p2 = strtok(NULL, " ");
+    uint8 failarg2 = p2 ? (uint8)atoi(p2) : 0;
 
     WorldPacket data(SMSG_CAST_FAILED, 5);
+    data << uint8(0);
     data << uint32(133);
     data << uint8(failnum);
+    if (p1 || p2)
+        data << uint32(failarg1);
+    if (p2)
+        data << uint32(failarg2);
+
     m_session->SendPacket(&data);
 
     return true;
 }
 
-bool ChatHandler::HandleSetPoiCommand(const char* args)
+bool ChatHandler::HandleDebugSendPoiCommand(const char* args)
 {
     Player *pPlayer = m_session->GetPlayer();
     Unit* target = getSelectedUnit();
@@ -89,9 +89,6 @@ bool ChatHandler::HandleSetPoiCommand(const char* args)
         return false;
 
     uint32 icon = atol(icon_text);
-    if ( icon < 0 )
-        icon = 0;
-
     uint32 flags = atol(flags_text);
 
     sLog.outDetail("Command : POI, NPC = %u, icon = %u flags = %u", target->GetGUIDLow(), icon,flags);
@@ -99,7 +96,7 @@ bool ChatHandler::HandleSetPoiCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleEquipErrorCommand(const char* args)
+bool ChatHandler::HandleDebugSendEquipErrorCommand(const char* args)
 {
     if(!args)
         return false;
@@ -109,7 +106,7 @@ bool ChatHandler::HandleEquipErrorCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleSellErrorCommand(const char* args)
+bool ChatHandler::HandleDebugSendSellErrorCommand(const char* args)
 {
     if(!args)
         return false;
@@ -119,7 +116,7 @@ bool ChatHandler::HandleSellErrorCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleBuyErrorCommand(const char* args)
+bool ChatHandler::HandleDebugSendBuyErrorCommand(const char* args)
 {
     if(!args)
         return false;
@@ -129,7 +126,7 @@ bool ChatHandler::HandleBuyErrorCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleSendOpcodeCommand(const char* /*args*/)
+bool ChatHandler::HandleDebugSendOpcodeCommand(const char* /*args*/)
 {
     Unit *unit = getSelectedUnit();
     Player *player = NULL;
@@ -192,13 +189,45 @@ bool ChatHandler::HandleSendOpcodeCommand(const char* /*args*/)
             ifs >> val6;
             data << val6;
         }
-        else if(type == "pguid")
+        else if(type == "appitsguid")
         {
             data.append(unit->GetPackGUID());
         }
-        else if(type == "myguid")
+        else if(type == "appmyguid")
         {
             data.append(player->GetPackGUID());
+        }
+        else if(type == "appgoguid")
+        {
+            GameObject *obj = GetNearbyGameObject();
+            if(!obj)
+            {
+                PSendSysMessage(LANG_COMMAND_OBJNOTFOUND, 0);
+                SetSentErrorMessage(true);
+                ifs.close();
+                return false;
+            }
+            data.append(obj->GetPackGUID());
+        }
+        else if(type == "goguid")
+        {
+            GameObject *obj = GetNearbyGameObject();
+            if(!obj)
+            {
+                PSendSysMessage(LANG_COMMAND_OBJNOTFOUND, 0);
+                SetSentErrorMessage(true);
+                ifs.close();
+                return false;
+            }
+            data << uint64(obj->GetGUID());
+        }
+        else if(type == "myguid")
+        {
+            data << uint64(player->GetGUID());
+        }
+        else if(type == "itsguid")
+        {
+            data << uint64(unit->GetGUID());
         }
         else if(type == "pos")
         {
@@ -221,12 +250,12 @@ bool ChatHandler::HandleSendOpcodeCommand(const char* /*args*/)
     ifs.close();
     sLog.outDebug("Sending opcode %u", data.GetOpcode());
     data.hexlike();
-    ((Player*)unit)->GetSession()->SendPacket(&data);
+    player->GetSession()->SendPacket(&data);
     PSendSysMessage(LANG_COMMAND_OPCODESENT, data.GetOpcode(), unit->GetName());
     return true;
 }
 
-bool ChatHandler::HandleUpdateWorldStateCommand(const char* args)
+bool ChatHandler::HandleDebugUpdateWorldStateCommand(const char* args)
 {
     char* w = strtok((char*)args, " ");
     char* s = strtok(NULL, " ");
@@ -240,18 +269,94 @@ bool ChatHandler::HandleUpdateWorldStateCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandlePlaySound2Command(const char* args)
+bool ChatHandler::HandleDebugPlayCinematicCommand(const char* args)
 {
-    if(!args)
+    // USAGE: .debug play cinematic #cinematicid
+    // #cinematicid - ID decimal number from CinemaicSequences.dbc (1st column)
+    if( !*args )
+    {
+        SendSysMessage(LANG_BAD_VALUE);
+        SetSentErrorMessage(true);
         return false;
+    }
 
-    uint32 soundid = atoi(args);
-    m_session->GetPlayer()->PlaySound(soundid, false);
+    uint32 dwId = atoi((char*)args);
+
+    if(!sCinematicSequencesStore.LookupEntry(dwId))
+    {
+        PSendSysMessage(LANG_CINEMATIC_NOT_EXIST, dwId);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    m_session->GetPlayer()->SendCinematicStart(dwId);
+    return true;
+}
+
+bool ChatHandler::HandleDebugPlayMovieCommand(const char* args)
+{
+    // USAGE: .debug play movie #movieid
+    // #movieid - ID decimal number from Movie.dbc (1st column)
+    if( !*args )
+    {
+        SendSysMessage(LANG_BAD_VALUE);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    uint32 dwId = atoi((char*)args);
+
+    if(!sMovieStore.LookupEntry(dwId))
+    {
+        PSendSysMessage(LANG_MOVIE_NOT_EXIST, dwId);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    m_session->GetPlayer()->SendMovieStart(dwId);
+    return true;
+}
+
+//Play sound
+bool ChatHandler::HandleDebugPlaySoundCommand(const char* args)
+{
+    // USAGE: .debug playsound #soundid
+    // #soundid - ID decimal number from SoundEntries.dbc (1st column)
+    if( !*args )
+    {
+        SendSysMessage(LANG_BAD_VALUE);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    uint32 dwSoundId = atoi((char*)args);
+
+    if(!sSoundEntriesStore.LookupEntry(dwSoundId))
+    {
+        PSendSysMessage(LANG_SOUND_NOT_EXIST, dwSoundId);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    Unit* unit = getSelectedUnit();
+    if(!unit)
+    {
+        SendSysMessage(LANG_SELECT_CHAR_OR_CREATURE);
+        SetSentErrorMessage(true);
+        return false;
+    }
+
+    if(m_session->GetPlayer()->GetSelection())
+        unit->PlayDistanceSound(dwSoundId,m_session->GetPlayer());
+    else
+        unit->PlayDirectSound(dwSoundId,m_session->GetPlayer());
+
+    PSendSysMessage(LANG_YOU_HEAR_SOUND, dwSoundId);
     return true;
 }
 
 //Send notification in channel
-bool ChatHandler::HandleSendChannelNotifyCommand(const char* args)
+bool ChatHandler::HandleDebugSendChannelNotifyCommand(const char* args)
 {
     if(!args)
         return false;
@@ -269,7 +374,7 @@ bool ChatHandler::HandleSendChannelNotifyCommand(const char* args)
 }
 
 //Send notification in chat
-bool ChatHandler::HandleSendChatMsgCommand(const char* args)
+bool ChatHandler::HandleDebugSendChatMsgCommand(const char* args)
 {
     if(!args)
         return false;
@@ -282,15 +387,14 @@ bool ChatHandler::HandleSendChatMsgCommand(const char* args)
     return true;
 }
 
-bool ChatHandler::HandleSendQuestPartyMsgCommand(const char* args)
+bool ChatHandler::HandleDebugSendQuestPartyMsgCommand(const char* args)
 {
     uint32 msg = atol((char*)args);
-    if (msg >= 0)
-        m_session->GetPlayer()->SendPushToPartyResponse(m_session->GetPlayer(), msg);
+    m_session->GetPlayer()->SendPushToPartyResponse(m_session->GetPlayer(), msg);
     return true;
 }
 
-bool ChatHandler::HandleGetLootRecipient(const char* /*args*/)
+bool ChatHandler::HandleDebugGetLootRecipient(const char* /*args*/)
 {
     Creature* target = getSelectedCreature();
     if(!target)
@@ -300,15 +404,14 @@ bool ChatHandler::HandleGetLootRecipient(const char* /*args*/)
     return true;
 }
 
-bool ChatHandler::HandleSendQuestInvalidMsgCommand(const char* args)
+bool ChatHandler::HandleDebugSendQuestInvalidMsgCommand(const char* args)
 {
     uint32 msg = atol((char*)args);
-    if (msg >= 0)
-        m_session->GetPlayer()->SendCanTakeQuestResponse(msg);
+    m_session->GetPlayer()->SendCanTakeQuestResponse(msg);
     return true;
 }
 
-bool ChatHandler::HandleGetItemState(const char* args)
+bool ChatHandler::HandleDebugGetItemState(const char* args)
 {
     if (!args)
         return false;
@@ -332,7 +435,7 @@ bool ChatHandler::HandleGetItemState(const char* args)
     {
         state_str = "The player has the following " + state_str + " items: ";
         SendSysMessage(state_str.c_str());
-        for (uint8 i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; i++)
+        for (uint8 i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; ++i)
         {
             if(i >= BUYBACK_SLOT_START && i < BUYBACK_SLOT_END)
                 continue;
@@ -349,9 +452,9 @@ bool ChatHandler::HandleGetItemState(const char* args)
                 Bag *bag = (Bag*)item;
                 for (uint8 j = 0; j < bag->GetBagSize(); ++j)
                 {
-                    Item* item = bag->GetItemByPos(j);
-                    if (item && item->GetState() == state)
-                        PSendSysMessage("bag: 255 slot: %d guid: %d owner: %d", item->GetSlot(), item->GetGUIDLow(), GUID_LOPART(item->GetOwnerGUID()));
+                    Item* item2 = bag->GetItemByPos(j);
+                    if (item2 && item2->GetState() == state)
+                        PSendSysMessage("bag: 255 slot: %d guid: %d owner: %d", item2->GetSlot(), item2->GetGUIDLow(), GUID_LOPART(item2->GetOwnerGUID()));
                 }
             }
         }
@@ -360,7 +463,7 @@ bool ChatHandler::HandleGetItemState(const char* args)
     if (list_queue)
     {
         std::vector<Item *> &updateQueue = player->GetItemUpdateQueue();
-        for(size_t i = 0; i < updateQueue.size(); i++)
+        for(size_t i = 0; i < updateQueue.size(); ++i)
         {
             Item *item = updateQueue[i];
             if(!item) continue;
@@ -387,7 +490,7 @@ bool ChatHandler::HandleGetItemState(const char* args)
     {
         bool error = false;
         std::vector<Item *> &updateQueue = player->GetItemUpdateQueue();
-        for (uint8 i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; i++)
+        for (uint8 i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; ++i)
         {
             if(i >= BUYBACK_SLOT_START && i < BUYBACK_SLOT_END)
                 continue;
@@ -445,65 +548,65 @@ bool ChatHandler::HandleGetItemState(const char* args)
                 Bag *bag = (Bag*)item;
                 for (uint8 j = 0; j < bag->GetBagSize(); ++j)
                 {
-                    Item* item = bag->GetItemByPos(j);
-                    if (!item) continue;
+                    Item* item2 = bag->GetItemByPos(j);
+                    if (!item2) continue;
 
-                    if (item->GetSlot() != j)
+                    if (item2->GetSlot() != j)
                     {
-                        PSendSysMessage("the item in bag %d slot %d, guid %d has an incorrect slot value: %d", bag->GetSlot(), j, item->GetGUIDLow(), item->GetSlot());
+                        PSendSysMessage("the item in bag %d slot %d, guid %d has an incorrect slot value: %d", bag->GetSlot(), j, item2->GetGUIDLow(), item2->GetSlot());
                         error = true; continue;
                     }
 
-                    if (item->GetOwnerGUID() != player->GetGUID())
+                    if (item2->GetOwnerGUID() != player->GetGUID())
                     {
-                        PSendSysMessage("for the item in bag %d at slot %d and itemguid %d, owner's guid (%d) and player's guid (%d) don't match!", bag->GetSlot(), item->GetSlot(), item->GetGUIDLow(), GUID_LOPART(item->GetOwnerGUID()), player->GetGUIDLow());
+                        PSendSysMessage("for the item in bag %d at slot %d and itemguid %d, owner's guid (%d) and player's guid (%d) don't match!", bag->GetSlot(), item2->GetSlot(), item2->GetGUIDLow(), GUID_LOPART(item2->GetOwnerGUID()), player->GetGUIDLow());
                         error = true; continue;
                     }
 
-                    Bag *container = item->GetContainer();
+                    Bag *container = item2->GetContainer();
                     if (!container)
                     {
-                        PSendSysMessage("the item in bag %d at slot %d with guid %d has no container!", bag->GetSlot(), item->GetSlot(), item->GetGUIDLow());
+                        PSendSysMessage("the item in bag %d at slot %d with guid %d has no container!", bag->GetSlot(), item2->GetSlot(), item2->GetGUIDLow());
                         error = true; continue;
                     }
 
                     if (container != bag)
                     {
-                        PSendSysMessage("the item in bag %d at slot %d with guid %d has a different container(slot %d guid %d)!", bag->GetSlot(), item->GetSlot(), item->GetGUIDLow(), container->GetSlot(), container->GetGUIDLow());
+                        PSendSysMessage("the item in bag %d at slot %d with guid %d has a different container(slot %d guid %d)!", bag->GetSlot(), item2->GetSlot(), item2->GetGUIDLow(), container->GetSlot(), container->GetGUIDLow());
                         error = true; continue;
                     }
 
-                    if (item->IsInUpdateQueue())
+                    if (item2->IsInUpdateQueue())
                     {
-                        uint16 qp = item->GetQueuePos();
+                        uint16 qp = item2->GetQueuePos();
                         if (qp > updateQueue.size())
                         {
-                            PSendSysMessage("item in bag: %d at slot: %d guid: %d has a queuepos (%d) larger than the update queue size! ", bag->GetSlot(), item->GetSlot(), item->GetGUIDLow(), qp);
+                            PSendSysMessage("item in bag: %d at slot: %d guid: %d has a queuepos (%d) larger than the update queue size! ", bag->GetSlot(), item2->GetSlot(), item2->GetGUIDLow(), qp);
                             error = true; continue;
                         }
 
                         if (updateQueue[qp] == NULL)
                         {
-                            PSendSysMessage("item in bag: %d at slot: %d guid: %d has a queuepos (%d) that points to NULL in the queue!", bag->GetSlot(), item->GetSlot(), item->GetGUIDLow(), qp);
+                            PSendSysMessage("item in bag: %d at slot: %d guid: %d has a queuepos (%d) that points to NULL in the queue!", bag->GetSlot(), item2->GetSlot(), item2->GetGUIDLow(), qp);
                             error = true; continue;
                         }
 
-                        if (updateQueue[qp] != item)
+                        if (updateQueue[qp] != item2)
                         {
-                            PSendSysMessage("item in bag: %d at slot: %d guid: %d has has a queuepos (%d) that points to another item in the queue (bag: %d, slot: %d, guid: %d)", bag->GetSlot(), item->GetSlot(), item->GetGUIDLow(), qp, updateQueue[qp]->GetBagSlot(), updateQueue[qp]->GetSlot(), updateQueue[qp]->GetGUIDLow());
+                            PSendSysMessage("item in bag: %d at slot: %d guid: %d has has a queuepos (%d) that points to another item in the queue (bag: %d, slot: %d, guid: %d)", bag->GetSlot(), item2->GetSlot(), item2->GetGUIDLow(), qp, updateQueue[qp]->GetBagSlot(), updateQueue[qp]->GetSlot(), updateQueue[qp]->GetGUIDLow());
                             error = true; continue;
                         }
                     }
-                    else if (item->GetState() != ITEM_UNCHANGED)
+                    else if (item2->GetState() != ITEM_UNCHANGED)
                     {
-                        PSendSysMessage("item in bag: %d at slot: %d guid: %d is not in queue but should be (state: %d)!", bag->GetSlot(), item->GetSlot(), item->GetGUIDLow(), item->GetState());
+                        PSendSysMessage("item in bag: %d at slot: %d guid: %d is not in queue but should be (state: %d)!", bag->GetSlot(), item2->GetSlot(), item2->GetGUIDLow(), item2->GetState());
                         error = true; continue;
                     }
                 }
             }
         }
 
-        for(size_t i = 0; i < updateQueue.size(); i++)
+        for(size_t i = 0; i < updateQueue.size(); ++i)
         {
             Item *item = updateQueue[i];
             if(!item) continue;
@@ -539,6 +642,12 @@ bool ChatHandler::HandleGetItemState(const char* args)
             SendSysMessage("All OK!");
     }
 
+    return true;
+}
+
+bool ChatHandler::HandleDebugBattlegroundCommand(const char * /*args*/)
+{
+    sBattleGroundMgr.ToggleTesting();
     return true;
 }
 
@@ -591,3 +700,157 @@ bool ChatHandler::HandleDebugHostilRefList(const char * /*args*/)
     return true;
 }
 
+bool ChatHandler::HandleDebugSetVehicleId(const char *args)
+{
+    Unit* target = getSelectedUnit();
+    if(!target || target->GetTypeId() != TYPEID_UNIT || !((Creature*)target)->isVehicle())
+        return false;
+
+    if(!args)
+        return false;
+
+    char* i = strtok((char*)args, " ");
+    if(!i)
+        return false;
+
+    uint32 id = (uint32)atoi(i);
+    ((Vehicle*)target)->SetVehicleId(id);
+    target->SendUpdateObjectToAllExcept(NULL);
+    PSendSysMessage("Vehicle id set to %u", id);
+    return true;
+}
+
+bool ChatHandler::HandleDebugEnterVehicle(const char * args)
+{
+    Unit* target = getSelectedUnit();
+    if(!target || target->GetTypeId() != TYPEID_UNIT || !((Creature*)target)->isVehicle())
+        return false;
+
+    if(!args)
+        return false;
+
+    char* i = strtok((char*)args, " ");
+    if(!i)
+        return false;
+
+    char* j = strtok(NULL, " ");
+
+    uint32 entry = (uint32)atoi(i);
+    int8 seatId = j ? (int8)atoi(j) : -1;
+
+    if(!entry)
+        m_session->GetPlayer()->EnterVehicle((Vehicle*)target, seatId);
+    else
+    {
+        Creature *passenger = NULL;
+        Trinity::AllCreaturesOfEntryInRange check(m_session->GetPlayer(), entry, 20.0f);
+	    Trinity::CreatureSearcher<Trinity::AllCreaturesOfEntryInRange> searcher(m_session->GetPlayer(), passenger, check);
+        m_session->GetPlayer()->VisitNearbyObject(30.0f, searcher);
+        if(!passenger || passenger == target)
+            return false;
+        passenger->EnterVehicle((Vehicle*)target, seatId);
+    }
+
+    PSendSysMessage("Unit %u entered vehicle %d", entry, (int32)seatId);
+    return true;
+}
+
+bool ChatHandler::HandleDebugSpawnVehicle(const char* args)
+{
+    if(!args)
+        return false;
+
+    char* e = strtok((char*)args, " ");
+    char* i = strtok(NULL, " ");
+
+    if (!e)
+        return false;
+
+    uint32 entry = (uint32)atoi(e);
+
+    float x, y, z, o = m_session->GetPlayer()->GetOrientation();
+    m_session->GetPlayer()->GetClosePoint(x, y, z, m_session->GetPlayer()->GetObjectSize());
+
+    if(!i)
+        return m_session->GetPlayer()->SummonVehicle(entry, x, y, z, o);
+
+    uint32 id = (uint32)atoi(i);
+
+    CreatureInfo const *ci = objmgr.GetCreatureTemplate(entry);
+
+    if(!ci)
+        return false;
+
+    VehicleEntry const *ve = sVehicleStore.LookupEntry(id);
+
+    if(!ve)
+        return false;
+
+    Vehicle *v = new Vehicle;
+    Map *map = m_session->GetPlayer()->GetMap();
+
+    if(!v->Create(objmgr.GenerateLowGuid(HIGHGUID_VEHICLE), map, m_session->GetPlayer()->GetPhaseMask(), entry, id, m_session->GetPlayer()->GetTeam(), x, y, z, o))
+    {
+        delete v;
+        return false;
+    }
+
+    map->Add((Creature*)v);
+
+    return true;
+}
+
+bool ChatHandler::HandleDebugSendLargePacketCommand(const char* /*args*/)
+{
+    const char* stuffingString = "This is a dummy string to push the packet's size beyond 128000 bytes. ";
+    std::ostringstream ss;
+    while(ss.str().size() < 128000)
+        ss << stuffingString;
+    SendSysMessage(ss.str().c_str());
+    return true;
+}
+
+bool ChatHandler::HandleDebugSendSetPhaseShiftCommand(const char* args)
+{
+    if(!args)
+        return false;
+
+    uint32 PhaseShift = atoi(args);
+    m_session->SendSetPhaseShift(PhaseShift);
+    return true;
+}
+
+bool ChatHandler::HandleDebugSetItemFlagCommand(const char* args)
+{
+    if(!args)
+        return false;
+
+    char* e = strtok((char*)args, " ");
+    char* f = strtok(NULL, " ");
+
+    if (!e || !f)
+        return false;
+
+    uint32 guid = (uint32)atoi(e);
+    uint32 flag = (uint32)atoi(f);
+
+    Item *i = m_session->GetPlayer()->GetItemByGuid(MAKE_NEW_GUID(guid, 0, HIGHGUID_ITEM));
+
+    if(!i)
+        return false;
+
+    i->SetUInt32Value(ITEM_FIELD_FLAGS, flag);
+
+    return true;
+}
+
+//show animation
+bool ChatHandler::HandleDebugAnimCommand(const char* args)
+{
+    if (!*args)
+        return false;
+
+    uint32 anim_id = atoi((char*)args);
+    m_session->GetPlayer()->HandleEmoteCommand(anim_id);
+    return true;
+}

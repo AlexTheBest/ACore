@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -24,8 +24,10 @@ EndScriptData */
 #include "precompiled.h"
 #include "def_zulgurub.h"
 
-#define SPELL_AMBUSH         24337
-#define SPELL_THOUSANDBLADES 24649
+#define SPELL_AMBUSH            24337
+#define SPELL_THOUSANDBLADES    24649
+
+#define EQUIP_ID_MAIN_HAND      0           //was item display id 31818, but this id does not exist
 
 struct TRINITY_DLL_DECL boss_renatakiAI : public ScriptedAI
 {
@@ -52,7 +54,7 @@ struct TRINITY_DLL_DECL boss_renatakiAI : public ScriptedAI
         Ambushed = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -65,11 +67,11 @@ struct TRINITY_DLL_DECL boss_renatakiAI : public ScriptedAI
         if (Invisible_Timer < diff)
         {
             m_creature->InterruptSpell(CURRENT_GENERIC_SPELL);
-            m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 0);
-            m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_INFO , 218171138);
-            m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_INFO  + 1, 3);
+
+            SetEquipmentSlots(false, EQUIP_UNEQUIP, EQUIP_NO_CHANGE, EQUIP_NO_CHANGE);
+            m_creature->SetDisplayId(11686);
+            
             m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-            m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID,11686);
             Invisible = true;
 
             Invisible_Timer = 15000 + rand()%15000;
@@ -97,11 +99,10 @@ struct TRINITY_DLL_DECL boss_renatakiAI : public ScriptedAI
             if (Visible_Timer < diff)
             {
                 m_creature->InterruptSpell(CURRENT_GENERIC_SPELL);
-                m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID,15268);
-                m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-                m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 31818);
-                m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_INFO , 218171138);
-                m_creature->SetUInt32Value( UNIT_VIRTUAL_ITEM_INFO  + 1, 3);
+
+                m_creature->SetDisplayId(15268);
+                SetEquipmentSlots(false, EQUIP_ID_MAIN_HAND, EQUIP_NO_CHANGE, EQUIP_NO_CHANGE);
+
                 m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                 Invisible = false;
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -69,7 +69,7 @@ struct TRINITY_DLL_DECL instance_shadow_labyrinth : public ScriptedInstance
         return false;
     }
 
-    void OnObjectCreate(GameObject *go)
+    void OnGameObjectCreate(GameObject *go, bool add)
     {
         switch(go->GetEntry())
         {
@@ -78,9 +78,9 @@ struct TRINITY_DLL_DECL instance_shadow_labyrinth : public ScriptedInstance
         }
     }
 
-    void OnCreatureCreate(Creature *creature, uint32 creature_entry)
+    void OnCreatureCreate(Creature *creature, bool add)
     {
-        switch(creature_entry)
+        switch(creature->GetEntry())
         {
             case 18732:
                 GrandmasterVorpil = creature->GetGUID();
@@ -109,20 +109,6 @@ struct TRINITY_DLL_DECL instance_shadow_labyrinth : public ScriptedInstance
         return NULL;
     }
 
-    void HandleGameObject(uint64 guid, uint32 state)
-    {
-        Player *player = GetPlayerInMap();
-
-        if (!player || !guid)
-        {
-            debug_log("TSCR: Shadow Labyrinth: HandleGameObject fail");
-            return;
-        }
-
-        if (GameObject *go = GameObject::GetGameObject(*player,guid))
-            go->SetGoState(state);
-    }
-
     void SetData(uint32 type, uint32 data)
     {
         switch(type)
@@ -149,7 +135,7 @@ struct TRINITY_DLL_DECL instance_shadow_labyrinth : public ScriptedInstance
             case DATA_BLACKHEARTTHEINCITEREVENT:
                 if( data == DONE )
                 {
-                    HandleGameObject(RefectoryDoorGUID,0);
+                    HandleGameObject(RefectoryDoorGUID, true);
                 }
                 Encounter[2] = data;
                 break;
@@ -157,7 +143,7 @@ struct TRINITY_DLL_DECL instance_shadow_labyrinth : public ScriptedInstance
             case DATA_GRANDMASTERVORPILEVENT:
                 if( data == DONE )
                 {
-                    HandleGameObject(ScreamingHallDoorGUID,0);
+                    HandleGameObject(ScreamingHallDoorGUID, true);
                 }
                 Encounter[3] = data;
                 break;
@@ -205,9 +191,9 @@ struct TRINITY_DLL_DECL instance_shadow_labyrinth : public ScriptedInstance
         return 0;
     }
 
-    const char* Save()
+    std::string GetSaveData()
     {
-        return str_data.c_str();
+        return str_data;
     }
 
     void Load(const char* in)

@@ -85,7 +85,7 @@ struct TRINITY_DLL_DECL boss_nazanAI : public ScriptedAI
         UnsummonCheck = 5000;
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void JustSummoned(Creature *summoned)
     {
@@ -133,7 +133,7 @@ struct TRINITY_DLL_DECL boss_nazanAI : public ScriptedAI
                 flight = false;
                 BellowingRoar_Timer = 6000;
                 ConeOfFire_Timer = 12000;
-                m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT + MOVEMENTFLAG_LEVITATING);
+                m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
                 m_creature->AddUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
                 m_creature->GetMotionMaster()->Clear();
                 if(Unit *victim = SelectUnit(SELECT_TARGET_NEAREST,0))
@@ -190,7 +190,7 @@ struct TRINITY_DLL_DECL boss_vazrudenAI : public ScriptedAI
         WipeSaid = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         switch(rand()%3)
         {
@@ -281,7 +281,7 @@ struct TRINITY_DLL_DECL boss_vazruden_the_heraldAI : public ScriptedAI
         {
             Creature *Nazan = Unit::GetCreature(*m_creature, NazanGUID);
             Creature *Vazruden = Unit::GetCreature(*m_creature, VazrudenGUID);
-            if(Nazan || (Nazan = (Creature *)FindCreature(ENTRY_NAZAN, 5000, m_creature)))
+            if(Nazan || (Nazan = me->FindNearestCreature(ENTRY_NAZAN, 5000)))
             {
                 Nazan->SetLootRecipient(NULL);
                 Nazan->SetVisibility(VISIBILITY_OFF);
@@ -289,7 +289,7 @@ struct TRINITY_DLL_DECL boss_vazruden_the_heraldAI : public ScriptedAI
                 Nazan->RemoveCorpse();
                 NazanGUID = 0;
             }
-            if(Vazruden || (Vazruden = (Creature *)FindCreature(ENTRY_VAZRUDEN, 5000, m_creature)))
+            if(Vazruden || (Vazruden = me->FindNearestCreature(ENTRY_VAZRUDEN, 5000)))
             {
                 Vazruden->SetLootRecipient(NULL);
                 Vazruden->SetVisibility(VISIBILITY_OFF);
@@ -319,7 +319,7 @@ struct TRINITY_DLL_DECL boss_vazruden_the_heraldAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(phase==0)
         {
@@ -335,11 +335,11 @@ struct TRINITY_DLL_DECL boss_vazruden_the_heraldAI : public ScriptedAI
         Unit *victim = m_creature->getVictim();
         if(summoned->GetEntry() == ENTRY_NAZAN)
         {
-            ((boss_nazanAI *)summoned->AI())->VazrudenGUID = VazrudenGUID;
-            summoned->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT + MOVEMENTFLAG_LEVITATING);
+            CAST_AI(boss_nazanAI, summoned->AI())->VazrudenGUID = VazrudenGUID;
+            summoned->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
             summoned->SetSpeed(MOVE_FLIGHT, 2.5);
             if(victim)
-                ((ScriptedAI*)summoned->AI())->AttackStart(victim,false);
+                AttackStartNoMove(victim);
         }
         else if(victim)
             summoned->AI()->AttackStart(victim);
@@ -349,7 +349,7 @@ struct TRINITY_DLL_DECL boss_vazruden_the_heraldAI : public ScriptedAI
     {
         if(sentryDown)
         {
-            AttackStart(killer, false);
+            AttackStartNoMove(killer);
             sentryDown = false;
         }
         else
@@ -419,12 +419,12 @@ struct TRINITY_DLL_DECL mob_hellfire_sentryAI : public ScriptedAI
         KidneyShot_Timer = 3000+rand()%4000;
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void JustDied(Unit* who)
     {
-        if(Creature *herald = (Creature *)FindCreature(ENTRY_VAZRUDEN_HERALD,150, m_creature))
-            ((boss_vazruden_the_heraldAI *)herald->AI())->SentryDownBy(who);
+        if(Creature *herald = me->FindNearestCreature(ENTRY_VAZRUDEN_HERALD,150))
+            CAST_AI(boss_vazruden_the_heraldAI, herald->AI())->SentryDownBy(who);
     }
 
     void UpdateAI(const uint32 diff)

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -24,6 +24,8 @@ EndScriptData */
 #include "precompiled.h"
 #include "def_scholomance.h"
 
+#define EMOTE_GENERIC_FRENZY_KILL   -1000001
+
 #define SPELL_REND              18106
 #define SPELL_CLEAVE            15584
 #define SPELL_FRENZY            28371
@@ -45,17 +47,17 @@ struct TRINITY_DLL_DECL boss_theolenkrastinovAI : public ScriptedAI
 
     void JustDied(Unit *killer)
     {
-        ScriptedInstance *pInstance = (m_creature->GetInstanceData()) ? ((ScriptedInstance*)m_creature->GetInstanceData()) : NULL;
+        ScriptedInstance *pInstance = (m_creature->GetInstanceData()) ? (m_creature->GetInstanceData()) : NULL;
         if(pInstance)
         {
             pInstance->SetData(DATA_DOCTORTHEOLENKRASTINOV_DEATH, 0);
 
-            if(pInstance->GetData(DATA_CANSPAWNGANDLING))
+            if (pInstance->GetData(TYPE_GANDLING) == IN_PROGRESS)
                 m_creature->SummonCreature(1853, 180.73, -9.43856, 75.507, 1.61399, TEMPSUMMON_DEAD_DESPAWN, 0);
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -84,7 +86,7 @@ struct TRINITY_DLL_DECL boss_theolenkrastinovAI : public ScriptedAI
             if (Frenzy_Timer < diff)
             {
                 DoCast(m_creature,SPELL_FRENZY);
-                DoTextEmote("goes into a killing frenzy!",NULL);
+                DoScriptText(EMOTE_GENERIC_FRENZY_KILL, m_creature);
 
                 Frenzy_Timer = 8000;
             }else Frenzy_Timer -= diff;
