@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -54,7 +54,7 @@ struct TRINITY_DLL_DECL boss_general_angerforgeAI : public ScriptedAI
         Medics = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -76,7 +76,7 @@ struct TRINITY_DLL_DECL boss_general_angerforgeAI : public ScriptedAI
         Rand1 = 0;
         SummonedAdds = DoSpawnCreature(8901, Rand1X, Rand1Y, 0, 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 120000);
         if(SummonedAdds)
-            ((CreatureAI*)SummonedAdds->AI())->AttackStart(victim);
+            (SummonedAdds->AI())->AttackStart(victim);
     }
 
     void SummonMedics(Unit* victim)
@@ -97,7 +97,7 @@ struct TRINITY_DLL_DECL boss_general_angerforgeAI : public ScriptedAI
         Rand2 = 0;
         SummonedMedics = DoSpawnCreature(8894, Rand2X, Rand2Y, 0, 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 120000);
         if(SummonedMedics)
-            ((CreatureAI*)SummonedMedics->AI())->AttackStart(victim);
+            (SummonedMedics->AI())->AttackStart(victim);
     }
 
     void UpdateAI(const uint32 diff)

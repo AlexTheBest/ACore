@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 #ifndef OUTDOOR_PVP_SI_
 #define OUTDOOR_PVP_SI_
 
-#include "OutdoorPvP.h"
+#include "OutdoorPvPImpl.h"
 
 const uint32 SI_SILITHYST_FLAG_GO_SPELL = 29518;
 
@@ -64,7 +64,6 @@ public:
     bool HandleAreaTrigger(Player * plr, uint32 trigger);
     bool HandleDropFlag(Player * plr, uint32 spellId);
     bool HandleCustomSpell(Player * plr, uint32 spellId, GameObject *go);
-    void BuffTeam(uint32 team);
     void UpdateWorldState();
 private:
     uint32 m_Gathered_A;

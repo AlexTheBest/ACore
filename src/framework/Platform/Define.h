@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 Mangos <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,6 +57,8 @@
 #  define TRINITY_GET_PROC_ADDR dlsym
 #  if defined(__APPLE_CC__) && defined(BIG_ENDIAN)
 #    define TRINITY_IMPORT __attribute__ ((longcall))
+#  elif defined(__x86_64__)
+#    define TRINITY_IMPORT
 #  else
 #    define TRINITY_IMPORT __attribute__ ((cdecl))
 #  endif //__APPLE_CC__ && BIG_ENDIAN
@@ -134,6 +136,14 @@ typedef uint32      DWORD;
 #endif //COMPILER
 
 typedef uint64 OBJECT_HANDLE;
+
+#define MAP_BASED_RAND_GEN
+
+#define MaNGOS              Trinity
+#define MANGOS_DLL_DECL     TRINITY_DLL_DECL
+#define MANGOS_DLL_SPEC     TRINITY_DLL_SPEC
+#define MANGOS_DEBUG        TRINITY_DEBUG
+#define GetMangosString     GetTrinityString
 
 #endif //TRINITY_DEFINE_H
 

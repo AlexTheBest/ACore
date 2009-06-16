@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -43,7 +43,7 @@ struct TRINITY_DLL_DECL mob_webbed_creatureAI : public ScriptedAI
     {
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
     }
 
@@ -56,7 +56,7 @@ struct TRINITY_DLL_DECL mob_webbed_creatureAI : public ScriptedAI
             case 0:
                 spawnCreatureID = 17681;
                 if (Killer->GetTypeId() == TYPEID_PLAYER)
-                    ((Player*)Killer)->KilledMonster(spawnCreatureID, m_creature->GetGUID());
+                    CAST_PLR(Killer)->KilledMonster(spawnCreatureID, m_creature->GetGUID());
                 break;
             case 1:
             case 2:
@@ -81,7 +81,7 @@ CreatureAI* GetAI_mob_webbed_creature(Creature *_Creature)
 
 bool GossipHello_npc_captured_sunhawk_agent(Player *player, Creature *_Creature)
 {
-    if (player->HasAura(31609,1) && player->GetQuestStatus(9756) == QUEST_STATUS_INCOMPLETE)
+    if (player->HasAura(31609) && player->GetQuestStatus(9756) == QUEST_STATUS_INCOMPLETE)
     {
         player->ADD_GOSSIP_ITEM( 0, "[PH] ", GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
         player->SEND_GOSSIP_MENU(9136, _Creature->GetGUID());

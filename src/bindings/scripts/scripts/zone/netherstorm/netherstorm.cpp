@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -25,8 +25,6 @@ EndScriptData */
 npc_manaforge_control_console
 go_manaforge_control_console
 npc_commander_dawnforge
-npc_protectorate_nether_drake
-npc_veronia
 npc_bessy
 EndContentData */
 
@@ -83,7 +81,7 @@ struct TRINITY_DLL_DECL npc_manaforge_control_consoleAI : public ScriptedAI
         Creature* add = NULL;
     }
 
-    void Aggro(Unit *who) { return; }
+    void EnterCombat(Unit *who) { return; }
 
     /*void SpellHit(Unit *caster, const SpellEntry *spell)
     {
@@ -105,20 +103,20 @@ struct TRINITY_DLL_DECL npc_manaforge_control_consoleAI : public ScriptedAI
                 switch( m_creature->GetEntry() )
                 {
                     case ENTRY_BNAAR_C_CONSOLE:
-                        ((Player*)p)->FailQuest(10299);
-                        ((Player*)p)->FailQuest(10329);
+                        CAST_PLR(p)->FailQuest(10299);
+                        CAST_PLR(p)->FailQuest(10329);
                         break;
                     case ENTRY_CORUU_C_CONSOLE:
-                        ((Player*)p)->FailQuest(10321);
-                        ((Player*)p)->FailQuest(10330);
+                        CAST_PLR(p)->FailQuest(10321);
+                        CAST_PLR(p)->FailQuest(10330);
                         break;
                     case ENTRY_DURO_C_CONSOLE:
-                        ((Player*)p)->FailQuest(10322);
-                        ((Player*)p)->FailQuest(10338);
+                        CAST_PLR(p)->FailQuest(10322);
+                        CAST_PLR(p)->FailQuest(10338);
                         break;
                     case ENTRY_ARA_C_CONSOLE:
-                        ((Player*)p)->FailQuest(10323);
-                        ((Player*)p)->FailQuest(10365);
+                        CAST_PLR(p)->FailQuest(10323);
+                        CAST_PLR(p)->FailQuest(10365);
                         break;
                 }
             }
@@ -257,7 +255,7 @@ struct TRINITY_DLL_DECL npc_manaforge_control_consoleAI : public ScriptedAI
                     {
                         Unit* u = Unit::GetUnit((*m_creature),someplayer);
                         if( u && u->GetTypeId() == TYPEID_PLAYER )
-                            ((Player*)u)->KilledMonster(m_creature->GetEntry(),m_creature->GetGUID());
+                            CAST_PLR(u)->KilledMonster(m_creature->GetEntry(),m_creature->GetGUID());
                         DoCast(m_creature,SPELL_DISABLE_VISUAL);
                     }
                     if( goConsole )
@@ -326,8 +324,8 @@ bool GOHello_go_manaforge_control_console(Player *player, GameObject* _GO)
 
     if( manaforge )
     {
-        ((npc_manaforge_control_consoleAI*)manaforge->AI())->someplayer = player->GetGUID();
-        ((npc_manaforge_control_consoleAI*)manaforge->AI())->goConsole = _GO->GetGUID();
+        CAST_AI(npc_manaforge_control_consoleAI, manaforge->AI())->someplayer = player->GetGUID();
+        CAST_AI(npc_manaforge_control_consoleAI, manaforge->AI())->goConsole = _GO->GetGUID();
         _GO->SetFlag(GAMEOBJECT_FLAGS, GO_FLAG_IN_USE);
     }
     return true;
@@ -354,11 +352,11 @@ bool GOHello_go_manaforge_control_console(Player *player, GameObject* _GO)
 #define SPELL_SUNFURY_DISGUISE              34603
 
 // Entries of Arcanist Ardonis, Commander Dawnforge, Pathaleon the Curators Image
-int CreatureEntry[3][1] =
+const uint32 CreatureEntry[3] =
 {
-    {19830},                                                // Ardonis
-    {19831},                                                // Dawnforge
-    {21504}                                                 // Pathaleon
+    19830,                                                // Ardonis
+    19831,                                                // Dawnforge
+    21504                                                 // Pathaleon
 };
 
 struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
@@ -391,7 +389,7 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
         isEvent = false;
     }
 
-    void Aggro(Unit *who) { }
+    void EnterCombat(Unit *who) { }
 
     //Select any creature in a grid
     Creature* SelectCreatureInGrid(uint32 entry, float range)
@@ -404,7 +402,7 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
         cell.SetNoCreate();
 
         Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck creature_check(*m_creature, entry, true, range);
-        Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(pCreature, creature_check);
+        Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(m_creature, pCreature, creature_check);
 
         TypeContainerVisitor<Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck>, GridTypeMapContainer> creature_searcher(searcher);
 
@@ -441,8 +439,8 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
         ardonis->SendUpdateToPlayer(player);
 
         //Set them to kneel
-        m_creature->SetStandState(PLAYER_STATE_KNEEL);
-        ardonis->SetStandState(PLAYER_STATE_KNEEL);
+        m_creature->SetStandState(UNIT_STAND_STATE_KNEEL);
+        ardonis->SetStandState(UNIT_STAND_STATE_KNEEL);
     }
 
     //Set them back to each other
@@ -466,8 +464,8 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
             ardonis->SendUpdateToPlayer(player);
 
             //Set state
-            m_creature->SetStandState(PLAYER_STATE_NONE);
-            ardonis->SetStandState(PLAYER_STATE_NONE);
+            m_creature->SetStandState(UNIT_STAND_STATE_STAND);
+            ardonis->SetStandState(UNIT_STAND_STATE_STAND);
         }
     }
 
@@ -475,7 +473,7 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
     {
         if (!isEvent)
         {
-            Creature *ardonis = SelectCreatureInGrid(CreatureEntry[0][0], 10.0f);
+            Creature *ardonis = SelectCreatureInGrid(CreatureEntry[0], 10.0f);
             if (!ardonis)
                 return false;
 
@@ -544,7 +542,7 @@ struct TRINITY_DLL_DECL npc_commander_dawnforgeAI : public ScriptedAI
             //Phase 4 Pathaleon spawns up to phase 9
         case 4:
             //spawn pathaleon's image
-            m_creature->SummonCreature(CreatureEntry[2][0], 2325.851563, 2799.534668, 133.084229, 6.038996, TEMPSUMMON_TIMED_DESPAWN, 90000);
+            m_creature->SummonCreature(CreatureEntry[2], 2325.851563, 2799.534668, 133.084229, 6.038996, TEMPSUMMON_TIMED_DESPAWN, 90000);
             ++Phase;
             Phase_Timer = 500;
             break;
@@ -639,7 +637,7 @@ Creature* SearchDawnforge(Player *source, uint32 entry, float range)
     cell.SetNoCreate();
 
     Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck creature_check(*source, entry, true, range);
-    Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(pCreature, creature_check);
+    Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(source, pCreature, creature_check);
 
     TypeContainerVisitor<Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck>, GridTypeMapContainer> creature_searcher(searcher);
 
@@ -652,53 +650,20 @@ Creature* SearchDawnforge(Player *source, uint32 entry, float range)
 bool AreaTrigger_at_commander_dawnforge(Player *player, AreaTriggerEntry *at)
 {
     //if player lost aura or not have at all, we should not try start event.
-    if (!player->HasAura(SPELL_SUNFURY_DISGUISE,0))
+    if (!player->HasAura(SPELL_SUNFURY_DISGUISE))
         return false;
 
     if (player->isAlive() && player->GetQuestStatus(QUEST_INFO_GATHERING) == QUEST_STATUS_INCOMPLETE)
     {
-        Creature* Dawnforge = SearchDawnforge(player, CreatureEntry[1][0], 30.0f);
+        Creature* Dawnforge = SearchDawnforge(player, CreatureEntry[1], 30.0f);
 
         if (!Dawnforge)
             return false;
 
-        if (((npc_commander_dawnforgeAI*)Dawnforge->AI())->CanStartEvent(player))
+        if(CAST_AI(npc_commander_dawnforgeAI, Dawnforge->AI())->CanStartEvent(player))
             return true;
     }
     return false;
-}
-
-/*######
-## npc_protectorate_nether_drake
-######*/
-
-#define GOSSIP_ITEM "I'm ready to fly! Take me up, dragon!"
-
-bool GossipHello_npc_protectorate_nether_drake(Player *player, Creature *_Creature)
-{
-    //On Nethery Wings
-    if (player->GetQuestStatus(10438) == QUEST_STATUS_INCOMPLETE && player->HasItemCount(29778,1) )
-        player->ADD_GOSSIP_ITEM(0, GOSSIP_ITEM, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
-
-    player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
-
-    return true;
-}
-
-bool GossipSelect_npc_protectorate_nether_drake(Player *player, Creature *_Creature, uint32 sender, uint32 action )
-{
-    if (action == GOSSIP_ACTION_INFO_DEF+1)
-    {
-        player->CLOSE_GOSSIP_MENU();
-
-        std::vector<uint32> nodes;
-
-        nodes.resize(2);
-        nodes[0] = 152;                                     //from drake
-        nodes[1] = 153;                                     //end at drake
-        player->ActivateTaxiPathTo(nodes);                  //TaxiPath 627 (possibly 627+628(152->153->154->155) )
-    }
-    return true;
 }
 
 /*######
@@ -745,36 +710,6 @@ bool QuestAccept_npc_professor_dabiri(Player *player, Creature *creature, Quest 
 }
 
 /*######
-## npc_veronia
-######*/
-
-#define GOSSIP_HV "Fly me to Manaforge Coruu please"
-
-bool GossipHello_npc_veronia(Player *player, Creature *_Creature)
-{
-    if (_Creature->isQuestGiver())
-        player->PrepareQuestMenu( _Creature->GetGUID() );
-
-    //Behind Enemy Lines
-    if (player->GetQuestStatus(10652) && !player->GetQuestRewardStatus(10652))
-        player->ADD_GOSSIP_ITEM(0, GOSSIP_HV, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
-
-    player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
-
-    return true;
-}
-
-bool GossipSelect_npc_veronia(Player *player, Creature *_Creature, uint32 sender, uint32 action )
-{
-    if (action == GOSSIP_ACTION_INFO_DEF)
-    {
-        player->CLOSE_GOSSIP_MENU();
-        player->CastSpell(player,34905,true);               //TaxiPath 606
-    }
-    return true;
-}
-
-/*######
 ## mob_phase_hunter
 ######*/
 
@@ -814,7 +749,7 @@ struct TRINITY_DLL_DECL mob_phase_hunterAI : public ScriptedAI
         ManaBurnTimer = 5000 + (rand()%3 * 1000); // 5-8 sec cd
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(Player *player = who->GetCharmerOrOwnerPlayerOrPlayerItself())
             PlayerGUID = player->GetGUID();
@@ -853,12 +788,12 @@ struct TRINITY_DLL_DECL mob_phase_hunterAI : public ScriptedAI
             Unit* target = Unit::GetUnit((*m_creature), PlayerGUID);
 
             if(target && !Weak && m_creature->GetHealth() < (m_creature->GetMaxHealth() / 100 * WeakPercent)
-                && ((Player*)target)->GetQuestStatus(10190) == QUEST_STATUS_INCOMPLETE)
+                && CAST_PLR(target)->GetQuestStatus(10190) == QUEST_STATUS_INCOMPLETE)
             {
                 DoScriptText(EMOTE_WEAK, m_creature);
                 Weak = true;
             }
-            if(Weak && !Drained && m_creature->HasAura(34219, 0))
+            if(Weak && !Drained && m_creature->HasAura(34219))
             {
                 Drained = true;
 
@@ -916,7 +851,7 @@ struct TRINITY_DLL_DECL npc_bessyAI : public npc_escortAI
         if (PlayerGUID)
         {
             if (Player* player = Unit::GetPlayer(PlayerGUID))
-                ((Player*)player)->FailQuest(Q_ALMABTRIEB);
+                CAST_PLR(player)->FailQuest(Q_ALMABTRIEB);
         }
     }
 
@@ -943,14 +878,14 @@ struct TRINITY_DLL_DECL npc_bessyAI : public npc_escortAI
             case 12:
                 if (player)
                 {
-                    ((Player*)player)->GroupEventHappens(Q_ALMABTRIEB, m_creature);
+                    CAST_PLR(player)->GroupEventHappens(Q_ALMABTRIEB, m_creature);
                     Completed = true;
                 }
-                {Unit* Thadell = FindCreature(N_THADELL, 30, m_creature);
+                {Unit* Thadell = me->FindNearestCreature(N_THADELL, 30);
                 if(Thadell)
                     DoScriptText(SAY_THADELL_1, m_creature);}break;
             case 13:
-                {Unit* Thadell = FindCreature(N_THADELL, 30, m_creature);
+                {Unit* Thadell = me->FindNearestCreature(N_THADELL, 30);
                 if(Thadell)
                     DoScriptText(SAY_THADELL_2, m_creature, player);}break;
         }
@@ -961,7 +896,7 @@ struct TRINITY_DLL_DECL npc_bessyAI : public npc_escortAI
         summoned->AI()->AttackStart(m_creature);
     }
 
-    void Aggro(Unit* who){}
+    void EnterCombat(Unit* who){}
 
     void Reset()
     {
@@ -982,7 +917,7 @@ bool QuestAccept_npc_bessy(Player* player, Creature* creature, Quest const* ques
     {
         creature->setFaction(113);
         creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
     }
     return true;
 }
@@ -1006,7 +941,7 @@ CreatureAI* GetAI_npc_bessy(Creature *_Creature)
     bessyAI->AddWaypoint(12, 2297.68, 2266.79, 95.07,4000);
     bessyAI->AddWaypoint(13, 2297.67, 2266.76, 95.07,4000);
 
-    return (CreatureAI*)bessyAI;
+    return bessyAI;
 }
 
 /*######
@@ -1038,22 +973,10 @@ void AddSC_netherstorm()
     newscript->RegisterSelf();
 
     newscript = new Script;
-    newscript->Name="npc_protectorate_nether_drake";
-    newscript->pGossipHello =   &GossipHello_npc_protectorate_nether_drake;
-    newscript->pGossipSelect =  &GossipSelect_npc_protectorate_nether_drake;
-    newscript->RegisterSelf();
-
-    newscript = new Script;
     newscript->Name = "npc_professor_dabiri";
     newscript->pGossipHello =   &GossipHello_npc_professor_dabiri;
     newscript->pGossipSelect =  &GossipSelect_npc_professor_dabiri;
     newscript->pQuestAccept = &QuestAccept_npc_professor_dabiri;
-    newscript->RegisterSelf();
-
-    newscript = new Script;
-    newscript->Name="npc_veronia";
-    newscript->pGossipHello =   &GossipHello_npc_veronia;
-    newscript->pGossipSelect =  &GossipSelect_npc_veronia;
     newscript->RegisterSelf();
 
     newscript = new Script;

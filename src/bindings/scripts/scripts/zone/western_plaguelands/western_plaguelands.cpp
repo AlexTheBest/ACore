@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -23,6 +23,7 @@ EndScriptData */
 
 /* ContentData
 npcs_dithers_and_arbington
+npc_myranda_the_hag
 npc_the_scourge_cauldron
 EndContentData */
 
@@ -91,6 +92,47 @@ bool GossipSelect_npcs_dithers_and_arbington(Player *player, Creature *_Creature
 }
 
 /*######
+## npc_myranda_the_hag
+######*/
+
+enum
+{
+    QUEST_SUBTERFUGE        = 5862,
+    QUEST_IN_DREAMS         = 5944,
+    SPELL_SCARLET_ILLUSION  = 17961
+};
+
+#define GOSSIP_ITEM_ILLUSION    "I am ready for the illusion, Myranda."
+
+bool GossipHello_npc_myranda_the_hag(Player* pPlayer, Creature* pCreature)
+{
+    if(pCreature->isQuestGiver())
+        pPlayer->PrepareQuestMenu(pCreature->GetGUID());
+
+    if(pPlayer->GetQuestStatus(QUEST_SUBTERFUGE) == QUEST_STATUS_COMPLETE &&
+        !pPlayer->GetQuestRewardStatus(QUEST_IN_DREAMS) && !pPlayer->HasAura(SPELL_SCARLET_ILLUSION))
+    {
+        pPlayer->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM_ILLUSION, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+        pPlayer->SEND_GOSSIP_MENU(4773, pCreature->GetGUID());
+        return true;
+    }
+    else
+        pPlayer->SEND_GOSSIP_MENU(pCreature->GetNpcTextId(), pCreature->GetGUID());
+
+    return true;
+}
+
+bool GossipSelect_npc_myranda_the_hag(Player* pPlayer, Creature* pCreature, uint32 Sender, uint32 Action)
+{
+    if(Action == GOSSIP_ACTION_INFO_DEF + 1)
+    {
+        pPlayer->CLOSE_GOSSIP_MENU();
+        pCreature->CastSpell(pPlayer, SPELL_SCARLET_ILLUSION, false);
+    }
+    return true;
+}
+
+/*######
 ## npc_the_scourge_cauldron
 ######*/
 
@@ -100,7 +142,7 @@ struct TRINITY_DLL_DECL npc_the_scourge_cauldronAI : public ScriptedAI
 
     void Reset() {}
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void DoDie()
     {
@@ -122,32 +164,32 @@ struct TRINITY_DLL_DECL npc_the_scourge_cauldronAI : public ScriptedAI
             switch(m_creature->GetAreaId())
             {
                 case 199:                                   //felstone
-                    if( ((Player*)who)->GetQuestStatus(5216) == QUEST_STATUS_INCOMPLETE ||
-                        ((Player*)who)->GetQuestStatus(5229) == QUEST_STATUS_INCOMPLETE )
+                    if( CAST_PLR(who)->GetQuestStatus(5216) == QUEST_STATUS_INCOMPLETE ||
+                        CAST_PLR(who)->GetQuestStatus(5229) == QUEST_STATUS_INCOMPLETE )
                     {
                         DoSpawnCreature(11075,0,0,0,m_creature->GetOrientation(),TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,600000);
                         DoDie();
                     }
                     break;
                 case 200:                                   //dalson
-                    if( ((Player*)who)->GetQuestStatus(5219) == QUEST_STATUS_INCOMPLETE ||
-                        ((Player*)who)->GetQuestStatus(5231) == QUEST_STATUS_INCOMPLETE )
+                    if( CAST_PLR(who)->GetQuestStatus(5219) == QUEST_STATUS_INCOMPLETE ||
+                        CAST_PLR(who)->GetQuestStatus(5231) == QUEST_STATUS_INCOMPLETE )
                     {
                         DoSpawnCreature(11077,0,0,0,m_creature->GetOrientation(),TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,600000);
                         DoDie();
                     }
                     break;
                 case 201:                                   //gahrron
-                    if( ((Player*)who)->GetQuestStatus(5225) == QUEST_STATUS_INCOMPLETE ||
-                        ((Player*)who)->GetQuestStatus(5235) == QUEST_STATUS_INCOMPLETE )
+                    if( CAST_PLR(who)->GetQuestStatus(5225) == QUEST_STATUS_INCOMPLETE ||
+                        CAST_PLR(who)->GetQuestStatus(5235) == QUEST_STATUS_INCOMPLETE )
                     {
                         DoSpawnCreature(11078,0,0,0,m_creature->GetOrientation(),TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,600000);
                         DoDie();
                     }
                     break;
                 case 202:                                   //writhing
-                    if( ((Player*)who)->GetQuestStatus(5222) == QUEST_STATUS_INCOMPLETE ||
-                        ((Player*)who)->GetQuestStatus(5233) == QUEST_STATUS_INCOMPLETE )
+                    if( CAST_PLR(who)->GetQuestStatus(5222) == QUEST_STATUS_INCOMPLETE ||
+                        CAST_PLR(who)->GetQuestStatus(5233) == QUEST_STATUS_INCOMPLETE )
                     {
                         DoSpawnCreature(11076,0,0,0,m_creature->GetOrientation(),TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,600000);
                         DoDie();
@@ -174,6 +216,12 @@ void AddSC_western_plaguelands()
     newscript->Name="npcs_dithers_and_arbington";
     newscript->pGossipHello = &GossipHello_npcs_dithers_and_arbington;
     newscript->pGossipSelect = &GossipSelect_npcs_dithers_and_arbington;
+    newscript->RegisterSelf();
+
+    newscript = new Script;
+    newscript->Name = "npc_myranda_the_hag";
+    newscript->pGossipHello = &GossipHello_npc_myranda_the_hag;
+    newscript->pGossipSelect = &GossipSelect_npc_myranda_the_hag;
     newscript->RegisterSelf();
 
     newscript = new Script;

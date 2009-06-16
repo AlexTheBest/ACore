@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -54,7 +54,7 @@ struct TRINITY_DLL_DECL boss_thekalAI : public ScriptedAI
 {
     boss_thekalAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     uint32 MortalCleave_Timer;
@@ -92,7 +92,7 @@ struct TRINITY_DLL_DECL boss_thekalAI : public ScriptedAI
             pInstance->SetData(DATA_THEKAL_ALIVE, 0);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoScriptText(SAY_AGGRO, m_creature);
     }
@@ -159,7 +159,7 @@ struct TRINITY_DLL_DECL boss_thekalAI : public ScriptedAI
             if (!PhaseTwo && !WasDead && m_creature->GetHealth() <= m_creature->GetMaxHealth() * 0.05)
             {
                 m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-                m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, 3);
+                m_creature->SetStandState(UNIT_STAND_STATE_SLEEP);
                 m_creature->AttackStop();
 
                 if(pInstance)
@@ -175,7 +175,7 @@ struct TRINITY_DLL_DECL boss_thekalAI : public ScriptedAI
                 {
                     DoCast(m_creature,SPELL_TIGER_FORM);
                     m_creature->SetFloatValue(OBJECT_FIELD_SCALE_X, 2.00f);
-                    m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, 0);
+                    m_creature->SetStandState(UNIT_STAND_STATE_STAND);
                     m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                     m_creature->SetHealth(int(m_creature->GetMaxHealth()*1.0));
                     const CreatureInfo *cinfo = m_creature->GetCreatureInfo();
@@ -241,7 +241,7 @@ struct TRINITY_DLL_DECL mob_zealot_lorkhanAI : public ScriptedAI
 {
     mob_zealot_lorkhanAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     uint32 Shield_Timer;
@@ -271,7 +271,7 @@ struct TRINITY_DLL_DECL mob_zealot_lorkhanAI : public ScriptedAI
         m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -366,7 +366,7 @@ struct TRINITY_DLL_DECL mob_zealot_lorkhanAI : public ScriptedAI
         if (m_creature->GetHealth() <= m_creature->GetMaxHealth() * 0.05)
         {
             m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-            m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, 3);
+            m_creature->SetStandState(UNIT_STAND_STATE_SLEEP);
             m_creature->setFaction(35);
             m_creature->AttackStop();
 
@@ -385,7 +385,7 @@ struct TRINITY_DLL_DECL mob_zealot_zathAI : public ScriptedAI
 {
     mob_zealot_zathAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = (c->GetInstanceData());
     }
 
     uint32 SweepingStrikes_Timer;
@@ -413,11 +413,11 @@ struct TRINITY_DLL_DECL mob_zealot_zathAI : public ScriptedAI
         if(pInstance)
             pInstance->SetData(DATA_ZATH_ALIVE, 0);
 
-        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, 0);
+        m_creature->SetStandState(UNIT_STAND_STATE_STAND);
         m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -503,7 +503,7 @@ struct TRINITY_DLL_DECL mob_zealot_zathAI : public ScriptedAI
         if (m_creature->GetHealth() <= m_creature->GetMaxHealth() * 0.05)
         {
             m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-            m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, 3);
+            m_creature->SetStandState(UNIT_STAND_STATE_SLEEP);
             m_creature->setFaction(35);
             m_creature->AttackStop();
 

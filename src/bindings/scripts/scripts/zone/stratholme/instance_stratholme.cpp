@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -146,11 +146,11 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
             if (withRestoreTime)
                 go->UseDoorOrButton(10);
             else
-                go->SetGoState(newState);
+                go->SetGoState((GOState)newState);
         }
     }
 
-    void OnCreatureCreate(Creature *creature, uint32 creature_entry)
+    void OnCreatureCreate(Creature *creature, bool add)
     {
         switch(creature->GetEntry())
         {
@@ -162,7 +162,7 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
         }
     }
 
-    void OnObjectCreate(GameObject *go)
+    void OnGameObjectCreate(GameObject *go, bool add)
     {
         switch(go->GetEntry())
         {
@@ -280,10 +280,10 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
                             if (!pGroupie)
                                 continue;
 
-                            if (pGroupie->HasAura(SPELL_BARON_ULTIMATUM,0))
+                            if (pGroupie->HasAura(SPELL_BARON_ULTIMATUM))
                                 pGroupie->RemoveAurasDueToSpell(SPELL_BARON_ULTIMATUM);
                         }
-                    } else if (player->HasAura(SPELL_BARON_ULTIMATUM,0))
+                    } else if (player->HasAura(SPELL_BARON_ULTIMATUM))
                         player->RemoveAurasDueToSpell(SPELL_BARON_ULTIMATUM);
 
                     if (Unit *temp = Unit::GetUnit(*player,GetData64(DATA_BARON)))

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -64,7 +64,7 @@ npc_swiftmountainAI(Creature *c) : npc_escortAI(c) {}
          case 70:
             DoScriptText(SAY_FINISH, m_creature, player);
             if (player && player->GetTypeId() == TYPEID_PLAYER)
-                ((Player*)player)->GroupEventHappens(QUEST_HOMEWARD_BOUND,m_creature);
+                CAST_PLR(player)->GroupEventHappens(QUEST_HOMEWARD_BOUND,m_creature);
             break;
 
         }
@@ -75,7 +75,7 @@ npc_swiftmountainAI(Creature *c) : npc_escortAI(c) {}
         m_creature->setFaction(104);
     }
 
-    void Aggro(Unit* who){}
+    void EnterCombat(Unit* who){}
 
     void JustSummoned(Creature* summoned)
     {
@@ -87,7 +87,7 @@ npc_swiftmountainAI(Creature *c) : npc_escortAI(c) {}
         if (PlayerGUID)
         {
             if (Player* player = Unit::GetPlayer(PlayerGUID))
-                ((Player*)player)->FailQuest(QUEST_HOMEWARD_BOUND);
+                CAST_PLR(player)->FailQuest(QUEST_HOMEWARD_BOUND);
         }
     }
 
@@ -101,7 +101,7 @@ bool QuestAccept_npc_swiftmountain(Player* player, Creature* creature, Quest con
 {
     if (quest->GetQuestId() == QUEST_HOMEWARD_BOUND)
     {
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
         DoScriptText(SAY_READY, creature, player);
         creature->setFaction(113);
     }
@@ -186,7 +186,7 @@ CreatureAI* GetAI_npc_swiftmountain(Creature *_Creature)
    thisAI->AddWaypoint(70, -4938.3, -1100.41, -50.71, 5000);
    thisAI->AddWaypoint(71, -4937.34, -1102.87, -49.82);
 
-    return (CreatureAI*)thisAI;
+    return thisAI;
 }
 
 /*#####
@@ -217,7 +217,7 @@ struct TRINITY_DLL_DECL npc_pluckyAI : public ScriptedAI
        ChickenTimer = 0;
        }
 
-    void Aggro(Unit *who){}
+    void EnterCombat(Unit *who){}
 
     void TransformHuman(uint32 emoteid)
     {
@@ -259,19 +259,17 @@ struct TRINITY_DLL_DECL npc_pluckyAI : public ScriptedAI
 
         DoMeleeAttackIfReady();
    }
-};
 
-bool ReceiveEmote_npc_plucky( Player *player, Creature *_Creature, uint32 emote )
-{
-    if( (emote == TEXTEMOTE_BECKON || emote == TEXTEMOTE_CHICKEN &&
-        player->GetQuestStatus(QUEST_GET_THE_SCOOP) == QUEST_STATUS_INCOMPLETE) )
+    void ReceiveEmote( Player *player, uint32 emote )
     {
-        _Creature->SetInFront(player);
-        ((npc_pluckyAI*)((Creature*)_Creature)->AI())->TransformHuman(emote);
+        if( (emote == TEXTEMOTE_BECKON || emote == TEXTEMOTE_CHICKEN &&
+            player->GetQuestStatus(QUEST_GET_THE_SCOOP) == QUEST_STATUS_INCOMPLETE) )
+        {
+            m_creature->SetInFront(player);
+            TransformHuman(emote);
+        }
     }
-
-    return true;
-}
+};
 
 bool GossipHello_npc_plucky(Player *player, Creature *_Creature)
 {
@@ -316,7 +314,6 @@ void AddSC_thousand_needles()
     newscript = new Script;
     newscript->Name = "npc_plucky";
     newscript->GetAI = &GetAI_npc_plucky;
-    newscript->pReceiveEmote =  &ReceiveEmote_npc_plucky;
     newscript->pGossipHello =   &GossipHello_npc_plucky;
     newscript->pGossipSelect = &GossipSelect_npc_plucky;
     newscript->RegisterSelf();

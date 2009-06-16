@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 
 #include "Platform/Define.h"
 #include "Policies/Singleton.h"
-#include "zthread/FastMutex.h"
+#include <ace/Thread_Mutex.h>
 #include "Utilities/UnorderedMap.h"
 #include "Policies/ThreadingModel.h"
 
@@ -41,6 +41,7 @@ class Corpse;
 class Unit;
 class GameObject;
 class DynamicObject;
+class Vehicle;
 class WorldObject;
 class Map;
 
@@ -50,17 +51,15 @@ class HashMapHolder
     public:
 
         typedef UNORDERED_MAP< uint64, T* >   MapType;
-        typedef ZThread::FastMutex LockType;
-        typedef Trinity::GeneralLock<LockType > Guard;
+        typedef ACE_Thread_Mutex LockType;
+        typedef MaNGOS::GeneralLock<LockType > Guard;
 
         static void Insert(T* o) { m_objectMap[o->GetGUID()] = o; }
 
         static void Remove(T* o)
         {
             Guard guard(i_lock);
-            typename MapType::iterator itr = m_objectMap.find(o->GetGUID());
-            if (itr != m_objectMap.end())
-                m_objectMap.erase(itr);
+            m_objectMap.erase(o->GetGUID());
         }
 
         static T* Find(uint64 guid)
@@ -81,7 +80,7 @@ class HashMapHolder
         static MapType  m_objectMap;
 };
 
-class TRINITY_DLL_DECL ObjectAccessor : public Trinity::Singleton<ObjectAccessor, Trinity::ClassLevelLockable<ObjectAccessor, ZThread::FastMutex> >
+class MANGOS_DLL_DECL ObjectAccessor : public MaNGOS::Singleton<ObjectAccessor, MaNGOS::ClassLevelLockable<ObjectAccessor, ACE_Thread_Mutex> >
 {
 
     friend class Trinity::OperatorNew<ObjectAccessor>;
@@ -104,13 +103,16 @@ class TRINITY_DLL_DECL ObjectAccessor : public Trinity::Singleton<ObjectAccessor
             if(!guid)
                 return NULL;
 
-            if (IS_PLAYER_GUID(guid))
+            if(IS_PLAYER_GUID(guid))
                 return (Unit*)HashMapHolder<Player>::Find(guid);
 
-            if (Unit* u = (Unit*)HashMapHolder<Pet>::Find(guid))
-                return u;
+            if(IS_CREATURE_GUID(guid))
+                return (Unit*)HashMapHolder<Creature>::Find(guid);
 
-            return (Unit*)HashMapHolder<Creature>::Find(guid);
+            if(IS_PET_GUID(guid))
+                return (Unit*)HashMapHolder<Pet>::Find(guid);
+
+            return (Unit*)HashMapHolder<Vehicle>::Find(guid);
         }
 
         template<class T> static T* GetObjectInWorld(uint32 mapid, float x, float y, uint64 guid, T* /*fake*/)
@@ -128,7 +130,7 @@ class TRINITY_DLL_DECL ObjectAccessor : public Trinity::Singleton<ObjectAccessor
             CellPair q = Trinity::ComputeCellPair(obj->GetPositionX(),obj->GetPositionY());
             if(q.x_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP || q.y_coord >= TOTAL_NUMBER_OF_CELLS_PER_MAP )
             {
-                sLog.outError("ObjectAccessor::GetObjecInWorld: object "I64FMTD" has invalid coordinates X:%f Y:%f grid cell [%u:%u]", obj->GetGUID(), obj->GetPositionX(), obj->GetPositionY(), q.x_coord, q.y_coord);
+                sLog.outError("ObjectAccessor::GetObjecInWorld: object (GUID: %u TypeId: %u) has invalid coordinates X:%f Y:%f grid cell [%u:%u]", obj->GetGUIDLow(), obj->GetTypeId(), obj->GetPositionX(), obj->GetPositionY(), q.x_coord, q.y_coord);
                 return NULL;
             }
 
@@ -139,17 +141,14 @@ class TRINITY_DLL_DECL ObjectAccessor : public Trinity::Singleton<ObjectAccessor
             else return NULL;
         }
 
-        static Object*   GetObjectByTypeMask(Player const &, uint64, uint32 typemask);
-        static Creature* GetNPCIfCanInteractWith(Player const &player, uint64 guid, uint32 npcflagmask);
-        static Creature* GetCreature(WorldObject const &, uint64);
-        static Creature* GetCreatureOrPet(WorldObject const &, uint64);
-        static Unit* GetUnit(WorldObject const &, uint64);
+        static Object*   GetObjectByTypeMask(WorldObject const &, uint64, uint32 typemask);
+        static Creature* GetCreatureOrPetOrVehicle(WorldObject const &, uint64);
+        static Unit* GetUnit(WorldObject const &, uint64 guid) { return GetObjectInWorld(guid, (Unit*)NULL); }
         static Pet* GetPet(Unit const &, uint64 guid) { return GetPet(guid); }
         static Player* GetPlayer(Unit const &, uint64 guid) { return FindPlayer(guid); }
-        static GameObject* GetGameObject(WorldObject const &, uint64);
-        static DynamicObject* GetDynamicObject(Unit const &, uint64);
         static Corpse* GetCorpse(WorldObject const &u, uint64 guid);
         static Pet* GetPet(uint64 guid);
+        static Vehicle* GetVehicle(uint64 guid);
         static Player* FindPlayer(uint64);
 
         Player* FindPlayerByName(const char *name) ;
@@ -157,6 +156,16 @@ class TRINITY_DLL_DECL ObjectAccessor : public Trinity::Singleton<ObjectAccessor
         HashMapHolder<Player>::MapType& GetPlayers()
         {
             return HashMapHolder<Player>::GetContainer();
+        }
+
+        HashMapHolder<Creature>::MapType& GetCreatures()
+        {
+            return HashMapHolder<Creature>::GetContainer();
+        }
+
+        HashMapHolder<GameObject>::MapType& GetGameObjects()
+        {
+            return HashMapHolder<GameObject>::GetContainer();
         }
 
         template<class T> void AddObject(T *object)
@@ -174,16 +183,22 @@ class TRINITY_DLL_DECL ObjectAccessor : public Trinity::Singleton<ObjectAccessor
             HashMapHolder<Player>::Remove(pl);
 
             Guard guard(i_updateGuard);
-
-            std::set<Object *>::iterator iter2 = std::find(i_objects.begin(), i_objects.end(), (Object *)pl);
-            if( iter2 != i_objects.end() )
-                i_objects.erase(iter2);
+            i_objects.erase((Object *)pl);
         }
 
         void SaveAllPlayers();
 
-        void AddUpdateObject(Object *obj);
-        void RemoveUpdateObject(Object *obj);
+        void AddUpdateObject(Object *obj)
+        {
+            Guard guard(i_updateGuard);
+            i_objects.insert(obj);
+        }
+
+        void RemoveUpdateObject(Object *obj)
+        {
+            Guard guard(i_updateGuard);
+            i_objects.erase( obj );
+        }
 
         void Update(uint32 diff);
         void UpdatePlayers(uint32 diff);
@@ -216,8 +231,8 @@ class TRINITY_DLL_DECL ObjectAccessor : public Trinity::Singleton<ObjectAccessor
         friend struct WorldObjectChangeAccumulator;
         Player2CorpsesMapType   i_player2corpse;
 
-        typedef ZThread::FastMutex LockType;
-        typedef Trinity::GeneralLock<LockType > Guard;
+        typedef ACE_Thread_Mutex LockType;
+        typedef MaNGOS::GeneralLock<LockType > Guard;
 
         static void _buildChangeObjectForPlayer(WorldObject *, UpdateDataMapType &);
         static void _buildPacket(Player *, Object *, UpdateDataMapType &);

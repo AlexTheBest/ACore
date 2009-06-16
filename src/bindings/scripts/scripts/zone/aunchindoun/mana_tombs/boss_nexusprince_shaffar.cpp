@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -140,7 +140,7 @@ struct TRINITY_DLL_DECL boss_nexusprince_shaffarAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         switch(rand()%3)
         {
@@ -269,17 +269,17 @@ struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
         Check_Timer = 1000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         // Send Shaffar to fight
-        Unit* Shaffar = FindCreature(ENTRY_SHAFFAR, 100, m_creature);
+        Unit* Shaffar = me->FindNearestCreature(ENTRY_SHAFFAR, 100);
         if(!Shaffar || Shaffar->isDead())
         {
             KillSelf();
             return;
         }
         if(!Shaffar->isInCombat())
-            ((Creature*)Shaffar)->AI()->AttackStart(who);
+            CAST_CRE(Shaffar)->AI()->AttackStart(who);
     }
 
     void JustSummoned(Creature *summoned)
@@ -289,9 +289,9 @@ struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
 
     void JustDied(Unit* Killer)
     {
-        Unit *Shaffar = FindCreature(ENTRY_SHAFFAR, 100, m_creature);
+        Unit *Shaffar = me->FindNearestCreature(ENTRY_SHAFFAR, 100);
         if(Shaffar)
-            ((boss_nexusprince_shaffarAI*)(((Creature*)Shaffar)->AI()))->RemoveBeaconFromList(m_creature);
+            CAST_AI(boss_nexusprince_shaffarAI, (CAST_CRE(Shaffar)->AI()))->RemoveBeaconFromList(m_creature);
     }
 
     void UpdateAI(const uint32 diff)
@@ -301,7 +301,7 @@ struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
 
         if(Check_Timer < diff)
         {
-            Unit *Shaffar = FindCreature(ENTRY_SHAFFAR, 100, m_creature);
+            Unit *Shaffar = me->FindNearestCreature(ENTRY_SHAFFAR, 100);
             if(!Shaffar || Shaffar->isDead() || !Shaffar->isInCombat())
             {
                 KillSelf();
@@ -322,8 +322,6 @@ struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
                 m_creature->InterruptNonMeleeSpells(true);
 
             m_creature->CastSpell(m_creature,SPELL_ETHEREAL_APPRENTICE,true);
-            if( m_creature->isPet() )
-                ((Pet*)m_creature)->SetDuration(0);
             KillSelf();
             return;
         }else Apprentice_Timer -= diff;

@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
  */
 
 #include "Creature.h"
+#include "CreatureAI.h"
 #include "MapManager.h"
 #include "FleeingMovementGenerator.h"
 #include "DestinationHolderImp.h"
@@ -44,7 +45,7 @@ FleeingMovementGenerator<T>::_setTargetLocation(T &owner)
     if(!_getPoint(owner, x, y, z))
         return;
 
-    owner.addUnitState(UNIT_STAT_FLEEING);
+    owner.addUnitState(UNIT_STAT_FLEEING | UNIT_STAT_ROAMING);
     Traveller<T> traveller(owner);
     i_destinationHolder.SetDestination(traveller, x, y, z);
 }
@@ -79,7 +80,7 @@ FleeingMovementGenerator<T>::_getPoint(T &owner, float &x, float &y, float &z)
     float temp_x, temp_y, angle;
     const Map * _map = MapManager::Instance().GetBaseMap(owner.GetMapId());
     //primitive path-finding
-    for(uint8 i = 0; i < 18; i++)
+    for(uint8 i = 0; i < 18; ++i)
     {
         if(i_only_forward && i > 2)
             break;
@@ -301,19 +302,26 @@ FleeingMovementGenerator<T>::Initialize(T &owner)
     if(!&owner)
         return;
 
-    Unit * fright = ObjectAccessor::GetUnit(owner, i_frightGUID);
-    if(!fright)
-        return;
-
     _Init(owner);
     owner.CastStop();
-    owner.addUnitState(UNIT_STAT_FLEEING);
+    owner.addUnitState(UNIT_STAT_FLEEING | UNIT_STAT_ROAMING);
     owner.SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING);
     owner.SetUInt64Value(UNIT_FIELD_TARGET, 0);
     owner.RemoveUnitMovementFlag(MOVEMENTFLAG_WALK_MODE);
-    i_caster_x = fright->GetPositionX();
-    i_caster_y = fright->GetPositionY();
-    i_caster_z = fright->GetPositionZ();
+
+    if(Unit * fright = ObjectAccessor::GetUnit(owner, i_frightGUID))
+    {
+        i_caster_x = fright->GetPositionX();
+        i_caster_y = fright->GetPositionY();
+        i_caster_z = fright->GetPositionZ();
+    }
+    else
+    {
+        i_caster_x = owner.GetPositionX();
+        i_caster_y = owner.GetPositionY();
+        i_caster_z = owner.GetPositionZ();
+    }
+
     i_only_forward = true;
     i_cur_angle = 0.0f;
     i_last_distance_from_caster = 0.0f;
@@ -345,7 +353,7 @@ void
 FleeingMovementGenerator<T>::Finalize(T &owner)
 {
     owner.RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_FLEEING);
-    owner.clearUnitState(UNIT_STAT_FLEEING);
+    owner.clearUnitState(UNIT_STAT_FLEEING | UNIT_STAT_ROAMING);
     if(owner.GetTypeId() == TYPEID_UNIT && owner.getVictim())
         owner.SetUInt64Value(UNIT_FIELD_TARGET, owner.getVictim()->GetGUID());
 }
@@ -403,3 +411,32 @@ template void FleeingMovementGenerator<Creature>::Reset(Creature &);
 template bool FleeingMovementGenerator<Player>::Update(Player &, const uint32 &);
 template bool FleeingMovementGenerator<Creature>::Update(Creature &, const uint32 &);
 
+void TimedFleeingMovementGenerator::Finalize(Unit &owner)
+{
+    owner.clearUnitState(UNIT_STAT_FLEEING | UNIT_STAT_ROAMING);
+    if (Unit* victim = owner.getVictim())
+    {
+        if (owner.isAlive())
+        {
+            owner.AttackStop();
+            ((Creature*)&owner)->AI()->AttackStart(victim);
+        }
+    }
+}
+
+bool TimedFleeingMovementGenerator::Update(Unit & owner, const uint32 & time_diff)
+{
+    if( !owner.isAlive() )
+        return false;
+
+    if( owner.hasUnitState(UNIT_STAT_ROOT | UNIT_STAT_STUNNED) )
+        return true;
+
+    i_totalFleeTime.Update(time_diff);
+    if (i_totalFleeTime.Passed())
+        return false;
+
+    // This calls grant-parent Update method hiden by FleeingMovementGenerator::Update(Creature &, const uint32 &) version
+    // This is done instead of casting Unit& to Creature& and call parent method, then we can use Unit directly
+    return MovementGeneratorMedium< Creature, FleeingMovementGenerator<Creature> >::Update(owner, time_diff);
+}

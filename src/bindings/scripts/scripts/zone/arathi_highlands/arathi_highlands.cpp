@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -75,7 +75,7 @@ struct TRINITY_DLL_DECL npc_professor_phizzlethorpeAI : public npc_escortAI
             DoScriptText(SAY_PROGRESS_9, m_creature, player);
             Completed = true;
             if(player)
-                ((Player*)player)->GroupEventHappens(QUEST_SUNKEN_TREASURE, m_creature);
+                CAST_PLR(player)->GroupEventHappens(QUEST_SUNKEN_TREASURE, m_creature);
             break;
         }
     }
@@ -91,7 +91,7 @@ struct TRINITY_DLL_DECL npc_professor_phizzlethorpeAI : public npc_escortAI
         m_creature->setFaction(35);
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         DoScriptText(SAY_AGGRO, m_creature, NULL);
     }
@@ -102,7 +102,7 @@ struct TRINITY_DLL_DECL npc_professor_phizzlethorpeAI : public npc_escortAI
         {
             Player* player = Unit::GetPlayer(PlayerGUID);
             if (player)
-                ((Player*)player)->FailQuest(QUEST_SUNKEN_TREASURE);
+                CAST_PLR(player)->FailQuest(QUEST_SUNKEN_TREASURE);
         }
     }
 
@@ -117,7 +117,7 @@ bool QuestAccept_npc_professor_phizzlethorpe(Player* player, Creature* creature,
     if (quest->GetQuestId() == QUEST_SUNKEN_TREASURE)
     {
         DoScriptText(SAY_PROGRESS_1, creature, player);
-        ((npc_escortAI*)(creature->AI()))->Start(false, false, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(false, false, false, player->GetGUID());
         creature->setFaction(113);
     }
     return true;
@@ -127,29 +127,9 @@ CreatureAI* GetAI_npc_professor_phizzlethorpeAI(Creature *_Creature)
 {
     npc_professor_phizzlethorpeAI* professor_phizzlethorpeAI = new npc_professor_phizzlethorpeAI(_Creature);
 
-    professor_phizzlethorpeAI->AddWaypoint(0, -2066.45, -2085.96, 9.08);
-    professor_phizzlethorpeAI->AddWaypoint(1, -2077.99, -2105.33, 13.24);
-    professor_phizzlethorpeAI->AddWaypoint(2, -2074.60, -2109.67, 14.24);
-    professor_phizzlethorpeAI->AddWaypoint(3, -2076.60, -2117.46, 16.67);
-    professor_phizzlethorpeAI->AddWaypoint(4, -2073.51, -2123.46, 18.42, 2000);
-    professor_phizzlethorpeAI->AddWaypoint(5, -2073.51, -2123.46, 18.42, 4000);
-    professor_phizzlethorpeAI->AddWaypoint(6, -2066.60, -2131.85, 21.56);
-    professor_phizzlethorpeAI->AddWaypoint(7, -2053.85, -2143.19, 20.31);
-    professor_phizzlethorpeAI->AddWaypoint(8, -2043.49, -2153.73, 20.20, 12000);
-    professor_phizzlethorpeAI->AddWaypoint(9, -2043.49, -2153.73, 20.20, 14000);
-    professor_phizzlethorpeAI->AddWaypoint(10, -2043.49, -2153.73, 20.20, 10000);
-    professor_phizzlethorpeAI->AddWaypoint(11, -2043.49, -2153.73, 20.20, 2000);
-    professor_phizzlethorpeAI->AddWaypoint(12, -2053.85, -2143.19, 20.31);
-    professor_phizzlethorpeAI->AddWaypoint(13, -2066.60, -2131.85, 21.56);
-    professor_phizzlethorpeAI->AddWaypoint(14, -2073.51, -2123.46, 18.42);
-    professor_phizzlethorpeAI->AddWaypoint(15, -2076.60, -2117.46, 16.67);
-    professor_phizzlethorpeAI->AddWaypoint(16, -2074.60, -2109.67, 14.24);
-    professor_phizzlethorpeAI->AddWaypoint(17, -2077.99, -2105.33, 13.24);
-    professor_phizzlethorpeAI->AddWaypoint(18, -2066.45, -2085.96, 9.08);
-    professor_phizzlethorpeAI->AddWaypoint(19, -2066.41, -2086.21, 8.97, 6000);
-    professor_phizzlethorpeAI->AddWaypoint(20, -2066.41, -2086.21, 8.97, 2000);
+    professor_phizzlethorpeAI->FillPointMovementListForCreature();
 
-    return (CreatureAI*)professor_phizzlethorpeAI;
+    return professor_phizzlethorpeAI;
 }
 
 void AddSC_arathi_highlands()

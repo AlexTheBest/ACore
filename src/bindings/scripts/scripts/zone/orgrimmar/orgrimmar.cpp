@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -69,7 +69,10 @@ bool GossipSelect_npc_neeru_fireblade(Player *player, Creature *_Creature, uint3
 ## npc_shenthul
 ######*/
 
-#define QUEST_2460  2460
+enum
+{
+    QUEST_SHATTERED_SALUTE  = 2460
+};
 
 struct TRINITY_DLL_DECL npc_shenthulAI : public ScriptedAI
 {
@@ -90,33 +93,52 @@ struct TRINITY_DLL_DECL npc_shenthulAI : public ScriptedAI
         playerGUID = 0;
     }
 
-    void Aggro(Unit* who) { }
+    void EnterCombat(Unit* who) { }
 
     void UpdateAI(const uint32 diff)
     {
         if( CanEmote )
-            if( Reset_Timer < diff )
         {
-            if( Unit* temp = Unit::GetUnit((*m_creature),playerGUID) )
-                if( temp->GetTypeId() == TYPEID_PLAYER )
-                    ((Player*)temp)->FailQuest(QUEST_2460);
-            Reset();
-        } else Reset_Timer -= diff;
+            if (Reset_Timer < diff)
+            {
+                if (Player* pPlayer = (Player*)Unit::GetUnit((*m_creature),playerGUID))
+                {
+                    if (pPlayer->GetTypeId() == TYPEID_PLAYER && pPlayer->GetQuestStatus(QUEST_SHATTERED_SALUTE) == QUEST_STATUS_INCOMPLETE)
+                        pPlayer->FailQuest(QUEST_SHATTERED_SALUTE);
+                }
+                Reset();
+            } else Reset_Timer -= diff;
+        }
 
         if( CanTalk && !CanEmote )
-            if( Salute_Timer < diff )
         {
-            m_creature->HandleEmoteCommand(EMOTE_ONESHOT_SALUTE);
-            CanEmote = true;
-            Reset_Timer = 60000;
-        } else Salute_Timer -= diff;
+            if (Salute_Timer < diff)
+            {
+                m_creature->HandleEmoteCommand(EMOTE_ONESHOT_SALUTE);
+                CanEmote = true;
+                Reset_Timer = 60000;
+            } else Salute_Timer -= diff;
+        }
 
         if (!UpdateVictim())
             return;
 
         DoMeleeAttackIfReady();
     }
+
+    void ReciveEmote_npc_shenthul(Player *player, uint32 emote)
+    {
+        if( emote == TEXTEMOTE_SALUTE && player->GetQuestStatus(QUEST_SHATTERED_SALUTE) == QUEST_STATUS_INCOMPLETE )
+        {
+            if(CanEmote)
+            {
+                player->AreaExploredOrEventHappens(QUEST_SHATTERED_SALUTE);
+                Reset();
+            }
+        }
+    }
 };
+
 CreatureAI* GetAI_npc_shenthul(Creature *_Creature)
 {
     return new npc_shenthulAI (_Creature);
@@ -124,21 +146,10 @@ CreatureAI* GetAI_npc_shenthul(Creature *_Creature)
 
 bool QuestAccept_npc_shenthul(Player* player, Creature* creature, Quest const* quest)
 {
-    if( quest->GetQuestId() == QUEST_2460 )
+    if( quest->GetQuestId() == QUEST_SHATTERED_SALUTE )
     {
-        ((npc_shenthulAI*)creature->AI())->CanTalk = true;
-        ((npc_shenthulAI*)creature->AI())->playerGUID = player->GetGUID();
-    }
-    return true;
-}
-
-bool ReciveEmote_npc_shenthul(Player *player, Creature *_Creature, uint32 emote)
-{
-    if( emote == TEXTEMOTE_SALUTE && player->GetQuestStatus(QUEST_2460) == QUEST_STATUS_INCOMPLETE )
-        if( ((npc_shenthulAI*)_Creature->AI())->CanEmote )
-    {
-        player->AreaExploredOrEventHappens(QUEST_2460);
-        ((npc_shenthulAI*)_Creature->AI())->Reset();
+        CAST_AI(npc_shenthulAI, creature->AI())->CanTalk = true;
+        CAST_AI(npc_shenthulAI, creature->AI())->playerGUID = player->GetGUID();
     }
     return true;
 }
@@ -174,7 +185,7 @@ struct TRINITY_DLL_DECL npc_thrall_warchiefAI : public ScriptedAI
         Shock_Timer = 8000;
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -263,7 +274,6 @@ void AddSC_orgrimmar()
     newscript->Name="npc_shenthul";
     newscript->GetAI = &GetAI_npc_shenthul;
     newscript->pQuestAccept =  &QuestAccept_npc_shenthul;
-    newscript->pReceiveEmote = &ReciveEmote_npc_shenthul;
     newscript->RegisterSelf();
 
     newscript = new Script;

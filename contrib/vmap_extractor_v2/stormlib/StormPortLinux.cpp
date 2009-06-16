@@ -97,7 +97,7 @@ DWORD GetFileSize(HANDLE hFile, DWORD *ulOffSetHigh)
 
     struct stat fileinfo;
     fstat((int)hFile, &fileinfo);
-
+    
     return fileinfo.st_size;
 }
 
@@ -166,4 +166,3 @@ BOOL MoveFile(const char *lpExistingFileName, const char *lpNewFileName)
 }
 
 #endif
-
