@@ -140,7 +140,7 @@ void PlayerTaxi::InitTaxiNodesForLevel(uint32 race, uint32 chrClass, uint32 leve
     {
         case CLASS_DEATH_KNIGHT:
         {
-            for(int i = 0; i < TaxiMaskSize; ++i)
+            for(uint8 i = 0; i < TaxiMaskSize; ++i)
                 m_taximask[i] |= sOldContinentsNodesMask[i];
             break;
         }
@@ -177,7 +177,7 @@ void PlayerTaxi::LoadTaxiMask(const char* data)
 {
     Tokens tokens = StrSplit(data, " ");
 
-    int index;
+    uint8 index;
     Tokens::iterator iter;
     for (iter = tokens.begin(), index = 0;
         (index < TaxiMaskSize) && (iter != tokens.end()); ++iter, ++index)
@@ -265,7 +265,7 @@ uint32 PlayerTaxi::GetCurrentTaxiPath() const
 std::ostringstream& operator<< (std::ostringstream& ss, PlayerTaxi const& taxi)
 {
     ss << "'";
-    for(int i = 0; i < TaxiMaskSize; ++i)
+    for(uint8 i = 0; i < TaxiMaskSize; ++i)
         ss << taxi.m_taximask[i] << " ";
     ss << "'";
     return ss;
@@ -352,7 +352,7 @@ Player::Player (WorldSession *session): Unit(), m_achievementMgr(this), m_reputa
     m_DailyQuestChanged = false;
     m_lastDailyQuestTime = 0;
 
-    for (int i=0; i<MAX_TIMERS; i++)
+    for (uint8 i=0; i<MAX_TIMERS; i++)
         m_MirrorTimer[i] = DISABLED_MIRROR_TIMER;
 
     m_MirrorTimerFlags = UNDERWATER_NONE;
@@ -412,7 +412,7 @@ Player::Player (WorldSession *session): Unit(), m_achievementMgr(this), m_reputa
     m_resetTalentsTime = 0;
     m_itemUpdateQueueBlocked = false;
 
-    for (int i = 0; i < MAX_MOVE_TYPE; ++i)
+    for (uint8 i = 0; i < MAX_MOVE_TYPE; ++i)
         m_forced_speed_changes[i] = 0;
 
     m_stableSlots = 0;
@@ -428,13 +428,13 @@ Player::Player (WorldSession *session): Unit(), m_achievementMgr(this), m_reputa
     m_activeSpec = 0;
     m_specsCount = 0;
 
-    for (int i = 0; i < BASEMOD_END; ++i)
+    for (uint8 i = 0; i < BASEMOD_END; ++i)
     {
         m_auraBaseMod[i][FLAT_MOD] = 0.0f;
         m_auraBaseMod[i][PCT_MOD] = 1.0f;
     }
 
-    for (int i = 0; i < MAX_COMBAT_RATING; i++)
+    for (uint8 i = 0; i < MAX_COMBAT_RATING; i++)
         m_baseRatingValue[i] = 0;
 
     m_baseSpellDamage = 0;
@@ -479,7 +479,7 @@ Player::~Player ()
     //m_social = NULL;
 
     // Note: buy back item already deleted from DB when player was saved
-    for(int i = 0; i < PLAYER_SLOTS_COUNT; ++i)
+    for(uint8 i = 0; i < PLAYER_SLOTS_COUNT; ++i)
     {
         if(m_items[i])
             delete m_items[i];
@@ -536,7 +536,7 @@ bool Player::Create( uint32 guidlow, const std::string& name, uint8 race, uint8 
         return false;
     }
 
-    for (int i = 0; i < PLAYER_SLOTS_COUNT; i++)
+    for (uint8 i = 0; i < PLAYER_SLOTS_COUNT; i++)
         m_items[i] = NULL;
 
     m_race = race;
@@ -708,18 +708,18 @@ bool Player::Create( uint32 guidlow, const std::string& name, uint8 race, uint8 
 
     // original action bar
     std::list<uint16>::const_iterator action_itr[4];
-    for(int i=0; i<4; i++)
+    for(uint8 i=0; i<4; i++)
         action_itr[i] = info->action[i].begin();
 
     for (; action_itr[0]!=info->action[0].end() && action_itr[1]!=info->action[1].end();)
     {
         uint16 taction[4];
-        for(int i=0; i<4 ;i++)
+        for(uint8 i=0; i<4 ;i++)
             taction[i] = (*action_itr[i]);
 
         addActionButton((uint8)taction[0], taction[1], (uint8)taction[2], (uint8)taction[3]);
 
-        for(int i=0; i<4 ;i++)
+        for(uint8 i=0; i<4 ;i++)
             ++action_itr[i];
     }
 
@@ -786,7 +786,7 @@ bool Player::Create( uint32 guidlow, const std::string& name, uint8 race, uint8 
     // bags and main-hand weapon must equipped at this moment
     // now second pass for not equipped (offhand weapon/shield if it attempt equipped before main-hand weapon)
     // or ammo not equipped in special bag
-    for(int i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
+    for(uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
     {
         if(Item* pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
         {
@@ -1064,7 +1064,7 @@ void Player::HandleDrowning(uint32 time_diff)
 
     // Recheck timers flag
     m_MirrorTimerFlags&=~UNDERWATER_EXIST_TIMERS;
-    for (int i = 0; i< MAX_TIMERS; ++i)
+    for (uint8 i = 0; i< MAX_TIMERS; ++i)
         if (m_MirrorTimer[i]!=DISABLED_MIRROR_TIMER)
         {
             m_MirrorTimerFlags|=UNDERWATER_EXIST_TIMERS;
@@ -1820,7 +1820,7 @@ void Player::AddToWorld()
     ///- The player should only be added when logging in
     Unit::AddToWorld();
 
-    for(int i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; ++i)
+    for(uint8 i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; ++i)
     {
         if(m_items[i])
             m_items[i]->AddToWorld();
@@ -1843,7 +1843,7 @@ void Player::RemoveFromWorld()
     ///- The player should only be removed when logging out
     Unit::RemoveFromWorld();
 
-    for(int i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; ++i)
+    for(uint8 i = PLAYER_SLOT_START; i < PLAYER_SLOT_END; ++i)
     {
         if(m_items[i])
             m_items[i]->RemoveFromWorld();
@@ -2363,7 +2363,7 @@ void Player::GiveLevel(uint32 level)
     data << uint32(0);
     data << uint32(0);
     // end for
-    for(int i = STAT_STRENGTH; i < MAX_STATS; ++i)          // Stats loop (0-4)
+    for(uint8 i = STAT_STRENGTH; i < MAX_STATS; ++i)          // Stats loop (0-4)
         data << uint32(int32(info.stats[i]) - GetCreateStat(Stats(i)));
 
     GetSession()->SendPacket(&data);
@@ -2377,7 +2377,7 @@ void Player::GiveLevel(uint32 level)
     UpdateSkillsForLevel ();
 
     // save base values (bonuses already included in stored stats
-    for(int i = STAT_STRENGTH; i < MAX_STATS; ++i)
+    for(uint8 i = STAT_STRENGTH; i < MAX_STATS; ++i)
         SetCreateStat(Stats(i), info.stats[i]);
 
     SetCreateHealth(classInfo.basehealth);
@@ -2464,10 +2464,10 @@ void Player::InitStatsForLevel(bool reapplyMods)
     SetFloatValue(OBJECT_FIELD_SCALE_X,1.0f);
 
     // save base values (bonuses already included in stored stats
-    for(int i = STAT_STRENGTH; i < MAX_STATS; ++i)
+    for(uint8 i = STAT_STRENGTH; i < MAX_STATS; ++i)
         SetCreateStat(Stats(i), info.stats[i]);
 
-    for(int i = STAT_STRENGTH; i < MAX_STATS; ++i)
+    for(uint8 i = STAT_STRENGTH; i < MAX_STATS; ++i)
         SetStat(Stats(i), info.stats[i]);
 
     SetCreateHealth(classInfo.basehealth);
@@ -2484,7 +2484,7 @@ void Player::InitStatsForLevel(bool reapplyMods)
         SetUInt32Value(index, 0);
 
     SetUInt32Value(PLAYER_FIELD_MOD_HEALING_DONE_POS,0);
-    for (int i = 0; i < 7; i++)
+    for (uint8 i = 0; i < 7; i++)
     {
         SetUInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_NEG+i, 0);
         SetUInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_POS+i, 0);
@@ -2531,7 +2531,7 @@ void Player::InitStatsForLevel(bool reapplyMods)
     SetResistanceBuffMods(SpellSchools(0), true, 0.0f);
     SetResistanceBuffMods(SpellSchools(0), false, 0.0f);
     // set other resistance to original value (0)
-    for (int i = 1; i < MAX_SPELL_SCHOOL; i++)
+    for (uint8 i = 1; i < MAX_SPELL_SCHOOL; i++)
     {
         SetResistance(SpellSchools(i), 0);
         SetResistanceBuffMods(SpellSchools(i), true, 0.0f);
@@ -2540,19 +2540,19 @@ void Player::InitStatsForLevel(bool reapplyMods)
 
     SetUInt32Value(PLAYER_FIELD_MOD_TARGET_RESISTANCE,0);
     SetUInt32Value(PLAYER_FIELD_MOD_TARGET_PHYSICAL_RESISTANCE,0);
-    for(int i = 0; i < MAX_SPELL_SCHOOL; ++i)
+    for(uint8 i = 0; i < MAX_SPELL_SCHOOL; ++i)
     {
         SetUInt32Value(UNIT_FIELD_POWER_COST_MODIFIER+i,0);
         SetFloatValue(UNIT_FIELD_POWER_COST_MULTIPLIER+i,0.0f);
     }
     // Reset no reagent cost field
-    for(int i = 0; i < 3; i++)
+    for(uint8 i = 0; i < 3; i++)
         SetUInt32Value(PLAYER_NO_REAGENT_COST_1 + i, 0);
     // Init data for form but skip reapply item mods for form
     InitDataForForm(reapplyMods);
 
     // save new stats
-    for (int i = POWER_MANA; i < MAX_POWERS; i++)
+    for (uint8 i = POWER_MANA; i < MAX_POWERS; i++)
         SetMaxPower(Powers(i),  uint32(GetCreatePowers(Powers(i))));
 
     SetMaxHealth(classInfo.basehealth);                     // stamina bonus will applied later
@@ -2888,7 +2888,7 @@ bool Player::addSpell(uint32 spell_id, bool active, bool learning, bool dependen
         {
             if(TalentEntry const *talentInfo = sTalentStore.LookupEntry( talentPos->talent_id ))
             {
-                for(int i=0; i < MAX_TALENT_RANK; ++i)
+                for(uint8 i=0; i < MAX_TALENT_RANK; ++i)
                 {
                     // skip learning spell and no rank spell case
                     uint32 rankSpellId = talentInfo->RankID[i];
@@ -3553,7 +3553,7 @@ bool Player::resetTalents(bool no_cost)
         }
     }
 
-    for (unsigned int i = 0; i < sTalentStore.GetNumRows(); i++)
+    for (uint32 i = 0; i < sTalentStore.GetNumRows(); i++)
     {
         TalentEntry const *talentInfo = sTalentStore.LookupEntry(i);
 
@@ -3746,9 +3746,9 @@ void Player::InitVisibleBits()
         updateVisualBits.SetBit(i);
 
     // Players visible items are not inventory stuff
-    for(uint16 i = 0; i < EQUIPMENT_SLOT_END; ++i)
+    for(uint8 i = 0; i < EQUIPMENT_SLOT_END; ++i)
     {
-        uint32 offset = i * 2;
+        uint16 offset = i * 2;
 
         // item entry
         updateVisualBits.SetBit(PLAYER_VISIBLE_ITEM_1_ENTRYID + offset);
@@ -3761,7 +3761,7 @@ void Player::InitVisibleBits()
 
 void Player::BuildCreateUpdateBlockForPlayer( UpdateData *data, Player *target ) const
 {
-    for(int i = 0; i < EQUIPMENT_SLOT_END; i++)
+    for(uint8 i = 0; i < EQUIPMENT_SLOT_END; i++)
     {
         if(m_items[i] == NULL)
             continue;
@@ -3771,14 +3771,14 @@ void Player::BuildCreateUpdateBlockForPlayer( UpdateData *data, Player *target )
 
     if(target == this)
     {
-        for(int i = INVENTORY_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
+        for(uint8 i = INVENTORY_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
         {
             if(m_items[i] == NULL)
                 continue;
 
             m_items[i]->BuildCreateUpdateBlockForPlayer( data, target );
         }
-        for(int i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+        for(uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
         {
             if(m_items[i] == NULL)
                 continue;
@@ -3794,7 +3794,7 @@ void Player::DestroyForPlayer( Player *target ) const
 {
     Unit::DestroyForPlayer( target );
 
-    for(int i = 0; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = 0; i < INVENTORY_SLOT_BAG_END; i++)
     {
         if(m_items[i] == NULL)
             continue;
@@ -3804,14 +3804,14 @@ void Player::DestroyForPlayer( Player *target ) const
 
     if(target == this)
     {
-        for(int i = INVENTORY_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
+        for(uint8 i = INVENTORY_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
         {
             if(m_items[i] == NULL)
                 continue;
 
             m_items[i]->DestroyForPlayer( target );
         }
-        for(int i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+        for(uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
         {
             if(m_items[i] == NULL)
                 continue;
@@ -4266,7 +4266,7 @@ void Player::CreateCorpse()
     uint32 iDisplayID;
     uint16 iIventoryType;
     uint32 _cfi;
-    for (int i = 0; i < EQUIPMENT_SLOT_END; i++)
+    for (uint8 i = 0; i < EQUIPMENT_SLOT_END; i++)
     {
         if(m_items[i])
         {
@@ -4301,7 +4301,7 @@ Corpse* Player::GetCorpse() const
 
 void Player::DurabilityLossAll(double percent, bool inventory)
 {
-    for(int i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; i++)
+    for(uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; i++)
         if(Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
             DurabilityLoss(pItem,percent);
 
@@ -4310,14 +4310,14 @@ void Player::DurabilityLossAll(double percent, bool inventory)
         // bags not have durability
         // for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
 
-        for(int i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
+        for(uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
             if(Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
                 DurabilityLoss(pItem,percent);
 
         // keys not have durability
         //for(int i = KEYRING_SLOT_START; i < KEYRING_SLOT_END; i++)
 
-        for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+        for(uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
             if(Bag* pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
                 for(uint32 j = 0; j < pBag->GetBagSize(); j++)
                     if(Item* pItem = GetItemByPos( i, j ))
@@ -4345,7 +4345,7 @@ void Player::DurabilityLoss(Item* item, double percent)
 
 void Player::DurabilityPointsLossAll(int32 points, bool inventory)
 {
-    for(int i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; i++)
+    for(uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; i++)
         if(Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
             DurabilityPointsLoss(pItem,points);
 
@@ -4354,14 +4354,14 @@ void Player::DurabilityPointsLossAll(int32 points, bool inventory)
         // bags not have durability
         // for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
 
-        for(int i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
+        for(uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
             if(Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
                 DurabilityPointsLoss(pItem,points);
 
         // keys not have durability
         //for(int i = KEYRING_SLOT_START; i < KEYRING_SLOT_END; i++)
 
-        for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+        for(uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
             if(Bag* pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
                 for(uint32 j = 0; j < pBag->GetBagSize(); j++)
                     if(Item* pItem = GetItemByPos( i, j ))
@@ -4406,14 +4406,14 @@ uint32 Player::DurabilityRepairAll(bool cost, float discountMod, bool guildBank)
 {
     uint32 TotalCost = 0;
     // equipped, backpack, bags itself
-    for(int i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; i++)
+    for(uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; i++)
         TotalCost += DurabilityRepair(( (INVENTORY_SLOT_BAG_0 << 8) | i ),cost,discountMod, guildBank);
 
     // bank, buyback and keys not repaired
 
     // items in inventory bags
-    for(int j = INVENTORY_SLOT_BAG_START; j < INVENTORY_SLOT_BAG_END; j++)
-        for(int i = 0; i < MAX_BAG_SIZE; i++)
+    for(uint8 j = INVENTORY_SLOT_BAG_START; j < INVENTORY_SLOT_BAG_END; j++)
+        for(uint8 i = 0; i < MAX_BAG_SIZE; i++)
             TotalCost += DurabilityRepair(( (j << 8) | i ),cost,discountMod, guildBank);
     return TotalCost;
 }
@@ -5010,7 +5010,7 @@ void Player::ApplyRatingMod(CombatRating cr, int32 value, bool apply)
 
 void Player::SetRegularAttackTime()
 {
-    for(int i = 0; i < MAX_ATTACK; ++i)
+    for(uint8 i = 0; i < MAX_ATTACK; ++i)
     {
         Item *tmpitem = GetWeaponForAttack(WeaponAttackType(i));
         if(tmpitem && !tmpitem->IsBroken())
@@ -5524,7 +5524,7 @@ int16 Player::GetSkillPermBonusValue(uint32 skill) const
     if(!skill)
         return 0;
 
-    for (int i = 0; i < PLAYER_MAX_SKILLS; i++)
+    for (uint8 i = 0; i < PLAYER_MAX_SKILLS; i++)
     {
         if ((GetUInt32Value(PLAYER_SKILL_INDEX(i)) & 0x0000FFFF) == skill)
         {
@@ -5540,7 +5540,7 @@ int16 Player::GetSkillTempBonusValue(uint32 skill) const
     if(!skill)
         return 0;
 
-    for (int i = 0; i < PLAYER_MAX_SKILLS; i++)
+    for (uint8 i = 0; i < PLAYER_MAX_SKILLS; i++)
     {
         if ((GetUInt32Value(PLAYER_SKILL_INDEX(i)) & 0x0000FFFF) == skill)
         {
@@ -5934,7 +5934,7 @@ void Player::RewardReputation(Unit *pVictim, float rate)
 void Player::RewardReputation(Quest const *pQuest)
 {
     // quest reputation reward/loss
-    for(int i = 0; i < QUEST_REPUTATIONS_COUNT; ++i)
+    for(uint8 i = 0; i < QUEST_REPUTATIONS_COUNT; ++i)
     {
         if(pQuest->RewRepFaction[i] && pQuest->RewRepValue[i] )
         {
@@ -6569,7 +6569,7 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
     ScalingStatDistributionEntry const *ssd = proto->ScalingStatDistribution ? sScalingStatDistributionStore.LookupEntry(proto->ScalingStatDistribution) : 0;
     ScalingStatValuesEntry const *ssv = proto->ScalingStatValue ? sScalingStatValuesStore.LookupEntry(getLevel()) : 0;
 
-    for (int i = 0; i < MAX_ITEM_PROTO_STATS; ++i)
+    for (uint8 i = 0; i < MAX_ITEM_PROTO_STATS; ++i)
     {
         uint32 statType = 0;
         int32  val = 0;
@@ -6922,7 +6922,7 @@ void Player::ApplyItemEquipSpell(Item *item, bool apply, bool form_change)
     if(!proto)
         return;
 
-    for (int i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
+    for (uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
     {
         _Spell const& spellData = proto->Spells[i];
 
@@ -6981,7 +6981,7 @@ void Player::ApplyEquipSpell(SpellEntry const* spellInfo, Item* item, bool apply
 
 void Player::UpdateEquipSpellsAtFormChange()
 {
-    for (int i = 0; i < INVENTORY_SLOT_BAG_END; i++)
+    for (uint8 i = 0; i < INVENTORY_SLOT_BAG_END; i++)
     {
         if(m_items[i] && !m_items[i]->IsBroken())
         {
@@ -7209,7 +7209,7 @@ void Player::_RemoveAllItemMods()
 {
     sLog.outDebug("_RemoveAllItemMods start.");
 
-    for (int i = 0; i < INVENTORY_SLOT_BAG_END; i++)
+    for (uint8 i = 0; i < INVENTORY_SLOT_BAG_END; i++)
     {
         if(m_items[i])
         {
@@ -7229,7 +7229,7 @@ void Player::_RemoveAllItemMods()
         }
     }
 
-    for (int i = 0; i < INVENTORY_SLOT_BAG_END; i++)
+    for (uint8 i = 0; i < INVENTORY_SLOT_BAG_END; i++)
     {
         if(m_items[i])
         {
@@ -7257,7 +7257,7 @@ void Player::_ApplyAllItemMods()
 {
     sLog.outDebug("_ApplyAllItemMods start.");
 
-    for (int i = 0; i < INVENTORY_SLOT_BAG_END; i++)
+    for (uint8 i = 0; i < INVENTORY_SLOT_BAG_END; i++)
     {
         if(m_items[i])
         {
@@ -7279,7 +7279,7 @@ void Player::_ApplyAllItemMods()
         }
     }
 
-    for (int i = 0; i < INVENTORY_SLOT_BAG_END; i++)
+    for (uint8 i = 0; i < INVENTORY_SLOT_BAG_END; i++)
     {
         if(m_items[i])
         {
@@ -8436,7 +8436,7 @@ uint8 Player::FindEquipSlot( ItemPrototype const* proto, uint32 slot, bool swap 
     {
         if( swap || !GetItemByPos( INVENTORY_SLOT_BAG_0, slot ) )
         {
-            for (int i = 0; i < 4; i++)
+            for (uint8 i = 0; i < 4; i++)
             {
                 if ( slots[i] == slot )
                     return slot;
@@ -8446,7 +8446,7 @@ uint8 Player::FindEquipSlot( ItemPrototype const* proto, uint32 slot, bool swap 
     else
     {
         // search free slot at first
-        for (int i = 0; i < 4; i++)
+        for (uint8 i = 0; i < 4; i++)
         {
             if ( slots[i] != NULL_SLOT && !GetItemByPos( INVENTORY_SLOT_BAG_0, slots[i] ) )
             {
@@ -8457,7 +8457,7 @@ uint8 Player::FindEquipSlot( ItemPrototype const* proto, uint32 slot, bool swap 
         }
 
         // if not found free and can swap return first appropriate from used
-        for (int i = 0; i < 4; i++)
+        for (uint8 i = 0; i < 4; i++)
         {
             if ( slots[i] != NULL_SLOT && swap )
                 return slots[i];
@@ -8475,7 +8475,7 @@ uint8 Player::CanUnequipItems( uint32 item, uint32 count ) const
 
     uint8 res = EQUIP_ERR_OK;
 
-    for(int i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_BAG_END; i++)
     {
         pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pItem && pItem->GetEntry() == item )
@@ -8491,7 +8491,7 @@ uint8 Player::CanUnequipItems( uint32 item, uint32 count ) const
                 res = ires;
         }
     }
-    for(int i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
+    for(uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
     {
         pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pItem && pItem->GetEntry() == item )
@@ -8501,7 +8501,7 @@ uint8 Player::CanUnequipItems( uint32 item, uint32 count ) const
                 return EQUIP_ERR_OK;
         }
     }
-    for(int i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for(uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
     {
         pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pItem && pItem->GetEntry() == item )
@@ -8512,7 +8512,7 @@ uint8 Player::CanUnequipItems( uint32 item, uint32 count ) const
         }
     }
     Bag *pBag;
-    for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
     {
         pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pBag )
@@ -8537,19 +8537,19 @@ uint8 Player::CanUnequipItems( uint32 item, uint32 count ) const
 uint32 Player::GetItemCount( uint32 item, bool inBankAlso, Item* skipItem ) const
 {
     uint32 count = 0;
-    for(int i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; i++)
+    for(uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; i++)
     {
         Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pItem && pItem != skipItem &&  pItem->GetEntry() == item )
             count += pItem->GetCount();
     }
-    for(int i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for(uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
     {
         Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pItem && pItem != skipItem && pItem->GetEntry() == item )
             count += pItem->GetCount();
     }
-    for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
     {
         Bag* pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pBag )
@@ -8558,7 +8558,7 @@ uint32 Player::GetItemCount( uint32 item, bool inBankAlso, Item* skipItem ) cons
 
     if(skipItem && skipItem->GetProto()->GemProperties)
     {
-        for(int i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; i++)
+        for(uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; i++)
         {
             Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
             if( pItem && pItem != skipItem && pItem->GetProto()->Socket[0].Color )
@@ -8568,13 +8568,13 @@ uint32 Player::GetItemCount( uint32 item, bool inBankAlso, Item* skipItem ) cons
 
     if(inBankAlso)
     {
-        for(int i = BANK_SLOT_ITEM_START; i < BANK_SLOT_ITEM_END; i++)
+        for(uint8 i = BANK_SLOT_ITEM_START; i < BANK_SLOT_ITEM_END; i++)
         {
             Item* pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
             if( pItem && pItem != skipItem && pItem->GetEntry() == item )
                 count += pItem->GetCount();
         }
-        for(int i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
+        for(uint8 i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
         {
             Bag* pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i );
             if( pBag )
@@ -8583,7 +8583,7 @@ uint32 Player::GetItemCount( uint32 item, bool inBankAlso, Item* skipItem ) cons
 
         if(skipItem && skipItem->GetProto()->GemProperties)
         {
-            for(int i = BANK_SLOT_ITEM_START; i < BANK_SLOT_ITEM_END; i++)
+            for(uint8 i = BANK_SLOT_ITEM_START; i < BANK_SLOT_ITEM_END; i++)
             {
                 Item* pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
                 if( pItem && pItem != skipItem && pItem->GetProto()->Socket[0].Color )
@@ -8597,20 +8597,20 @@ uint32 Player::GetItemCount( uint32 item, bool inBankAlso, Item* skipItem ) cons
 
 Item* Player::GetItemByGuid( uint64 guid ) const
 {
-    for(int i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; i++)
+    for(uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; i++)
     {
         Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pItem && pItem->GetGUID() == guid )
             return pItem;
     }
-    for(int i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for(uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
     {
         Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pItem && pItem->GetGUID() == guid )
             return pItem;
     }
 
-    for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
     {
         Bag *pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pBag )
@@ -8623,7 +8623,7 @@ Item* Player::GetItemByGuid( uint64 guid ) const
             }
         }
     }
-    for(int i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
+    for(uint8 i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
     {
         Bag *pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pBag )
@@ -8830,7 +8830,7 @@ bool Player::IsValidPos( uint8 bag, uint8 slot )
 bool Player::HasItemCount( uint32 item, uint32 count, bool inBankAlso ) const
 {
     uint32 tempcount = 0;
-    for(int i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; i++)
+    for(uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_ITEM_END; i++)
     {
         Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pItem && pItem->GetEntry() == item )
@@ -8840,7 +8840,7 @@ bool Player::HasItemCount( uint32 item, uint32 count, bool inBankAlso ) const
                 return true;
         }
     }
-    for(int i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for(uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
     {
         Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pItem && pItem->GetEntry() == item )
@@ -8850,7 +8850,7 @@ bool Player::HasItemCount( uint32 item, uint32 count, bool inBankAlso ) const
                 return true;
         }
     }
-    for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
     {
         if(Bag* pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
         {
@@ -8869,7 +8869,7 @@ bool Player::HasItemCount( uint32 item, uint32 count, bool inBankAlso ) const
 
     if(inBankAlso)
     {
-        for(int i = BANK_SLOT_ITEM_START; i < BANK_SLOT_ITEM_END; i++)
+        for(uint8 i = BANK_SLOT_ITEM_START; i < BANK_SLOT_ITEM_END; i++)
         {
             Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
             if( pItem && pItem->GetEntry() == item )
@@ -8879,7 +8879,7 @@ bool Player::HasItemCount( uint32 item, uint32 count, bool inBankAlso ) const
                     return true;
             }
         }
-        for(int i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
+        for(uint8 i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
         {
             if(Bag* pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
             {
@@ -8903,9 +8903,9 @@ bool Player::HasItemCount( uint32 item, uint32 count, bool inBankAlso ) const
 bool Player::HasItemOrGemWithIdEquipped( uint32 item, uint32 count, uint8 except_slot ) const
 {
     uint32 tempcount = 0;
-    for(int i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+    for(uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
     {
-        if(i==int(except_slot))
+        if(i == except_slot)
             continue;
 
         Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
@@ -8920,9 +8920,9 @@ bool Player::HasItemOrGemWithIdEquipped( uint32 item, uint32 count, uint8 except
     ItemPrototype const *pProto = objmgr.GetItemPrototype(item);
     if (pProto && pProto->GemProperties)
     {
-        for(int i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+        for(uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
         {
-            if(i==int(except_slot))
+            if(i == except_slot)
                 continue;
 
             Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
@@ -8941,9 +8941,9 @@ bool Player::HasItemOrGemWithIdEquipped( uint32 item, uint32 count, uint8 except
 bool Player::HasItemOrGemWithLimitCategoryEquipped( uint32 limitCategory, uint32 count, uint8 except_slot ) const
 {
     uint32 tempcount = 0;
-    for(int i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
+    for(uint8 i = EQUIPMENT_SLOT_START; i < EQUIPMENT_SLOT_END; ++i)
     {
-        if(i==int(except_slot))
+        if(i == except_slot)
             continue;
 
         Item *pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
@@ -9508,7 +9508,7 @@ uint8 Player::_CanStoreItem( uint8 bag, uint8 slot, ItemPosCountVec &dest, uint3
 
         if( pProto->BagFamily )
         {
-            for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+            for(uint32 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
             {
                 res = _CanStoreItem_InBag(i,dest,pProto,count,true,false,pItem,bag,slot);
                 if(res!=EQUIP_ERR_OK)
@@ -9526,7 +9526,7 @@ uint8 Player::_CanStoreItem( uint8 bag, uint8 slot, ItemPosCountVec &dest, uint3
             }
         }
 
-        for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+        for(uint32 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
         {
             res = _CanStoreItem_InBag(i,dest,pProto,count,true,true,pItem,bag,slot);
             if(res!=EQUIP_ERR_OK)
@@ -9589,7 +9589,7 @@ uint8 Player::_CanStoreItem( uint8 bag, uint8 slot, ItemPosCountVec &dest, uint3
             }
         }
 
-        for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+        for(uint32 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
         {
             res = _CanStoreItem_InBag(i,dest,pProto,count,false,false,pItem,bag,slot);
             if(res!=EQUIP_ERR_OK)
@@ -9626,7 +9626,7 @@ uint8 Player::_CanStoreItem( uint8 bag, uint8 slot, ItemPosCountVec &dest, uint3
         return EQUIP_ERR_CANT_CARRY_MORE_OF_THIS;
     }
 
-    for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
     {
         res = _CanStoreItem_InBag(i,dest,pProto,count,false,true,pItem,bag,slot);
         if(res!=EQUIP_ERR_OK)
@@ -9665,7 +9665,7 @@ uint8 Player::CanStoreItems( Item **pItems,int count) const
     memset(inv_keys,0,sizeof(int)*(KEYRING_SLOT_END-KEYRING_SLOT_START));
     memset(inv_tokens,0,sizeof(int)*(CURRENCYTOKEN_SLOT_END-CURRENCYTOKEN_SLOT_START));
 
-    for(int i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
+    for(uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
     {
         pItem2 = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
 
@@ -9675,7 +9675,7 @@ uint8 Player::CanStoreItems( Item **pItems,int count) const
         }
     }
 
-    for(int i = KEYRING_SLOT_START; i < KEYRING_SLOT_END; i++)
+    for(uint8 i = KEYRING_SLOT_START; i < KEYRING_SLOT_END; i++)
     {
         pItem2 = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
 
@@ -9685,7 +9685,7 @@ uint8 Player::CanStoreItems( Item **pItems,int count) const
         }
     }
 
-    for(int i = CURRENCYTOKEN_SLOT_START; i < CURRENCYTOKEN_SLOT_END; i++)
+    for(uint8 i = CURRENCYTOKEN_SLOT_START; i < CURRENCYTOKEN_SLOT_END; i++)
     {
         pItem2 = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
 
@@ -9695,7 +9695,7 @@ uint8 Player::CanStoreItems( Item **pItems,int count) const
         }
     }
 
-    for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
     {
         if(Bag* pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
         {
@@ -9985,7 +9985,7 @@ uint8 Player::CanEquipItem( uint8 slot, uint16 &dest, Item *pItem, bool swap, bo
             // check unique-equipped special item classes
             if (pProto->Class == ITEM_CLASS_QUIVER)
             {
-                for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; ++i)
+                for(uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; ++i)
                 {
                     if (Item* pBag = GetItemByPos(INVENTORY_SLOT_BAG_0, i))
                     {
@@ -10210,7 +10210,7 @@ uint8 Player::CanBankItem( uint8 bag, uint8 slot, ItemPosCountVec &dest, Item *p
         // in special bags
         if( pProto->BagFamily )
         {
-            for(int i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
+            for(uint8 i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
             {
                 res = _CanStoreItem_InBag(i,dest,pProto,count,true,false,pItem,bag,slot);
                 if(res!=EQUIP_ERR_OK)
@@ -10221,7 +10221,7 @@ uint8 Player::CanBankItem( uint8 bag, uint8 slot, ItemPosCountVec &dest, Item *p
             }
         }
 
-        for(int i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
+        for(uint8 i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
         {
             res = _CanStoreItem_InBag(i,dest,pProto,count,true,true,pItem,bag,slot);
             if(res!=EQUIP_ERR_OK)
@@ -10235,7 +10235,7 @@ uint8 Player::CanBankItem( uint8 bag, uint8 slot, ItemPosCountVec &dest, Item *p
     // search free place in special bag
     if( pProto->BagFamily )
     {
-        for(int i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
+        for(uint8 i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
         {
             res = _CanStoreItem_InBag(i,dest,pProto,count,false,false,pItem,bag,slot);
             if(res!=EQUIP_ERR_OK)
@@ -10254,7 +10254,7 @@ uint8 Player::CanBankItem( uint8 bag, uint8 slot, ItemPosCountVec &dest, Item *p
     if(count==0)
         return EQUIP_ERR_OK;
 
-    for(int i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
+    for(uint8 i = BANK_SLOT_BAG_START; i < BANK_SLOT_BAG_END; i++)
     {
         res = _CanStoreItem_InBag(i,dest,pProto,count,false,true,pItem,bag,slot);
         if(res!=EQUIP_ERR_OK)
@@ -10872,7 +10872,7 @@ void Player::DestroyItem( uint8 bag, uint8 slot, bool update )
         // start from destroy contained items (only equipped bag can have its)
         if (pItem->IsBag() && pItem->IsEquipped())          // this also prevent infinity loop if empty bag stored in bag==slot
         {
-            for (int i = 0; i < MAX_BAG_SIZE; ++i)
+            for (uint8 i = 0; i < MAX_BAG_SIZE; ++i)
                 DestroyItem(slot, i, update);
         }
 
@@ -10952,7 +10952,7 @@ void Player::DestroyItemCount( uint32 item, uint32 count, bool update, bool uneq
     uint32 remcount = 0;
 
     // in inventory
-    for(int i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
+    for(uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
     {
         if (Item* pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
         {
@@ -10980,7 +10980,7 @@ void Player::DestroyItemCount( uint32 item, uint32 count, bool update, bool uneq
         }
     }
 
-    for(int i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for(uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
     {
         if (Item* pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
         {
@@ -11009,7 +11009,7 @@ void Player::DestroyItemCount( uint32 item, uint32 count, bool update, bool uneq
     }
 
     // in inventory bags
-    for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
     {
         if(Bag *pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
         {
@@ -11044,7 +11044,7 @@ void Player::DestroyItemCount( uint32 item, uint32 count, bool update, bool uneq
     }
 
     // in equipment and bag list
-    for(int i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_BAG_END; i++)
     {
         if (Item* pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
         {
@@ -11080,18 +11080,18 @@ void Player::DestroyZoneLimitedItem( bool update, uint32 new_zone )
     sLog.outDebug( "STORAGE: DestroyZoneLimitedItem in map %u and area %u", GetMapId(), new_zone );
 
     // in inventory
-    for(int i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
+    for(uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
         if (Item* pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
             if (pItem->IsLimitedToAnotherMapOrZone(GetMapId(), new_zone))
                 DestroyItem( INVENTORY_SLOT_BAG_0, i, update);
 
-    for(int i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
+    for(uint8 i = KEYRING_SLOT_START; i < CURRENCYTOKEN_SLOT_END; ++i)
         if (Item* pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
             if (pItem->IsLimitedToAnotherMapOrZone(GetMapId(), new_zone))
                 DestroyItem( INVENTORY_SLOT_BAG_0, i, update);
 
     // in inventory bags
-    for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
         if (Bag* pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
             for(uint32 j = 0; j < pBag->GetBagSize(); j++)
                 if (Item* pItem = pBag->GetItemByPos(j))
@@ -11099,7 +11099,7 @@ void Player::DestroyZoneLimitedItem( bool update, uint32 new_zone )
                         DestroyItem(i, j, update);
 
     // in equipment and bag list
-    for(int i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_BAG_END; i++)
         if (Item* pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
             if (pItem->IsLimitedToAnotherMapOrZone(GetMapId(), new_zone))
                 DestroyItem( INVENTORY_SLOT_BAG_0, i, update);
@@ -11112,13 +11112,13 @@ void Player::DestroyConjuredItems( bool update )
     sLog.outDebug( "STORAGE: DestroyConjuredItems" );
 
     // in inventory
-    for(int i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
+    for(uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
         if (Item* pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
             if (pItem->IsConjuredConsumable())
                 DestroyItem( INVENTORY_SLOT_BAG_0, i, update);
 
     // in inventory bags
-    for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
         if (Bag* pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
             for(uint32 j = 0; j < pBag->GetBagSize(); j++)
                 if (Item* pItem = pBag->GetItemByPos(j))
@@ -11126,7 +11126,7 @@ void Player::DestroyConjuredItems( bool update )
                         DestroyItem( i, j, update);
 
     // in equipment and bag list
-    for(int i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = EQUIPMENT_SLOT_START; i < INVENTORY_SLOT_BAG_END; i++)
         if (Item* pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i ))
             if (pItem->IsConjuredConsumable())
                 DestroyItem( INVENTORY_SLOT_BAG_0, i, update);
@@ -11501,7 +11501,7 @@ void Player::SwapItem( uint16 src, uint16 dst )
 
             uint32 count = 0;
 
-            for(int i=0; i < fullBag->GetBagSize(); ++i)
+            for(uint32 i=0; i < fullBag->GetBagSize(); ++i)
             {
                 Item *bagItem = fullBag->GetItemByPos(i);
                 if (!bagItem)
@@ -11528,7 +11528,7 @@ void Player::SwapItem( uint16 src, uint16 dst )
 
             // Items swap
             count = 0;                                      // will pos in new bag
-            for(int i = 0; i< fullBag->GetBagSize(); ++i)
+            for(uint32 i = 0; i< fullBag->GetBagSize(); ++i)
             {
                 Item *bagItem = fullBag->GetItemByPos(i);
                 if (!bagItem)
@@ -11708,7 +11708,7 @@ void Player::ClearTrade()
 {
     tradeGold = 0;
     acceptTrade = false;
-    for(int i = 0; i < TRADE_SLOT_COUNT; i++)
+    for(uint8 i = 0; i < TRADE_SLOT_COUNT; i++)
         tradeItems[i] = NULL_SLOT;
 }
 
@@ -11834,7 +11834,7 @@ void Player::RemoveArenaEnchantments(EnchantmentSlot slot)
     // remove enchants from inventory items
     // NOTE: no need to remove these from stats, since these aren't equipped
     // in inventory
-    for(int i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
+    for(uint8 i = INVENTORY_SLOT_ITEM_START; i < INVENTORY_SLOT_ITEM_END; i++)
     {
         Item* pItem = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pItem && pItem->GetEnchantmentId(slot) )
@@ -11842,7 +11842,7 @@ void Player::RemoveArenaEnchantments(EnchantmentSlot slot)
     }
 
     // in inventory bags
-    for(int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
+    for(uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END; i++)
     {
         Bag* pBag = (Bag*)GetItemByPos( INVENTORY_SLOT_BAG_0, i );
         if( pBag )
@@ -12547,7 +12547,7 @@ bool Player::CanCompleteQuest( uint32 quest_id )
 
             if ( qInfo->HasFlag( QUEST_TRINITY_FLAGS_DELIVER ) )
             {
-                for(int i = 0; i < QUEST_OBJECTIVES_COUNT; i++)
+                for(uint8 i = 0; i < QUEST_OBJECTIVES_COUNT; i++)
                 {
                     if( qInfo->ReqItemCount[i]!= 0 && q_status.m_itemcount[i] < qInfo->ReqItemCount[i] )
                         return false;
@@ -12556,7 +12556,7 @@ bool Player::CanCompleteQuest( uint32 quest_id )
 
             if ( qInfo->HasFlag(QUEST_TRINITY_FLAGS_KILL_OR_CAST | QUEST_TRINITY_FLAGS_SPEAKTO) )
             {
-                for(int i = 0; i < QUEST_OBJECTIVES_COUNT; i++)
+                for(uint8 i = 0; i < QUEST_OBJECTIVES_COUNT; i++)
                 {
                     if( qInfo->ReqCreatureOrGOId[i] == 0 )
                         continue;
@@ -12597,7 +12597,7 @@ bool Player::CanCompleteRepeatableQuest( Quest const *pQuest )
         return false;
 
     if (pQuest->HasFlag( QUEST_TRINITY_FLAGS_DELIVER) )
-        for(int i = 0; i < QUEST_OBJECTIVES_COUNT; i++)
+        for(uint8 i = 0; i < QUEST_OBJECTIVES_COUNT; i++)
             if( pQuest->ReqItemId[i] && pQuest->ReqItemCount[i] && !HasItemCount(pQuest->ReqItemId[i],pQuest->ReqItemCount[i]) )
                 return false;
 
@@ -12624,7 +12624,7 @@ bool Player::CanRewardQuest( Quest const *pQuest, bool msg )
     // prevent receive reward with quest items in bank
     if ( pQuest->HasFlag( QUEST_TRINITY_FLAGS_DELIVER ) )
     {
-        for(int i = 0; i < QUEST_OBJECTIVES_COUNT; i++)
+        for(uint8 i = 0; i < QUEST_OBJECTIVES_COUNT; i++)
         {
             if( pQuest->ReqItemCount[i]!= 0 &&
                 GetItemCount(pQuest->ReqItemId[i]) < pQuest->ReqItemCount[i] )
@@ -12699,13 +12699,13 @@ void Player::AddQuest( Quest const *pQuest, Object *questGiver )
 
     if ( pQuest->HasFlag( QUEST_TRINITY_FLAGS_DELIVER ) )
     {
-        for(int i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
+        for(uint8 i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
             questStatusData.m_itemcount[i] = 0;
     }
 
     if ( pQuest->HasFlag(QUEST_TRINITY_FLAGS_KILL_OR_CAST | QUEST_TRINITY_FLAGS_SPEAKTO) )
     {
-        for(int i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
+        for(uint8 i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
             questStatusData.m_creatureOrGOcount[i] = 0;
     }
 
@@ -12793,7 +12793,7 @@ void Player::RewardQuest( Quest const *pQuest, uint32 reward, Object* questGiver
 {
     uint32 quest_id = pQuest->GetQuestId();
 
-    for (int i = 0; i < QUEST_OBJECTIVES_COUNT; i++ )
+    for (uint8 i = 0; i < QUEST_OBJECTIVES_COUNT; i++ )
     {
         if ( pQuest->ReqItemId[i] )
             DestroyItemCount( pQuest->ReqItemId[i], pQuest->ReqItemCount[i], true);
@@ -13506,7 +13506,7 @@ void Player::AdjustQuestReqItemCount( Quest const* pQuest, QuestStatusData& ques
 {
     if ( pQuest->HasFlag( QUEST_TRINITY_FLAGS_DELIVER ) )
     {
-        for(int i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
+        for(uint8 i = 0; i < QUEST_OBJECTIVES_COUNT; ++i)
         {
             uint32 reqitemcount = pQuest->ReqItemCount[i];
             if( reqitemcount != 0 )
@@ -13570,7 +13570,7 @@ void Player::GroupEventHappens( uint32 questId, WorldObject const* pEventObject 
 
 void Player::ItemAddedQuestCheck( uint32 entry, uint32 count )
 {
-    for( int i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
+    for( uint8 i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
     {
         uint32 questid = GetQuestSlotQuestId(i);
         if ( questid == 0 )
@@ -13611,7 +13611,7 @@ void Player::ItemAddedQuestCheck( uint32 entry, uint32 count )
 
 void Player::ItemRemovedQuestCheck( uint32 entry, uint32 count )
 {
-    for( int i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
+    for( uint8 i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
     {
         uint32 questid = GetQuestSlotQuestId(i);
         if(!questid)
@@ -13654,7 +13654,7 @@ void Player::KilledMonster( uint32 entry, uint64 guid )
 {
     uint32 addkillcount = 1;
     GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_KILL_CREATURE, entry, addkillcount);
-    for( int i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
+    for( uint8 i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
     {
         uint32 questid = GetQuestSlotQuestId(i);
         if(!questid)
@@ -13709,7 +13709,7 @@ void Player::CastedCreatureOrGO( uint32 entry, uint64 guid, uint32 spell_id )
     bool isCreature = IS_CREATURE_GUID(guid);
 
     uint32 addCastCount = 1;
-    for( int i = 0; i < MAX_QUEST_LOG_SIZE; ++i)
+    for( uint8 i = 0; i < MAX_QUEST_LOG_SIZE; ++i)
     {
         uint32 questid = GetQuestSlotQuestId(i);
         if(!questid)
@@ -13776,7 +13776,7 @@ void Player::CastedCreatureOrGO( uint32 entry, uint64 guid, uint32 spell_id )
 void Player::TalkedToCreature( uint32 entry, uint64 guid )
 {
     uint32 addTalkCount = 1;
-    for( int i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
+    for( uint8 i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
     {
         uint32 questid = GetQuestSlotQuestId(i);
         if(!questid)
@@ -13831,7 +13831,7 @@ void Player::TalkedToCreature( uint32 entry, uint64 guid )
 
 void Player::MoneyChanged( uint32 count )
 {
-    for( int i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
+    for( uint8 i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
     {
         uint32 questid = GetQuestSlotQuestId(i);
         if (!questid)
@@ -13861,7 +13861,7 @@ void Player::MoneyChanged( uint32 count )
 
 void Player::ReputationChanged(FactionEntry const* factionEntry )
 {
-    for( int i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
+    for( uint8 i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
     {
         if(uint32 questid = GetQuestSlotQuestId(i))
         {
@@ -13889,7 +13889,7 @@ void Player::ReputationChanged(FactionEntry const* factionEntry )
 
 bool Player::HasQuestForItem( uint32 itemid ) const
 {
-    for( int i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
+    for( uint8 i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
     {
         uint32 questid = GetQuestSlotQuestId(i);
         if ( questid == 0 )
@@ -14107,7 +14107,7 @@ bool Player::MinimalLoadFromDB( QueryResult *result, uint32 guid )
     if (delete_result)
         delete result;
 
-    for (int i = 0; i < PLAYER_SLOTS_COUNT; i++)
+    for (uint8 i = 0; i < PLAYER_SLOTS_COUNT; i++)
         m_items[i] = NULL;
 
     if (HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST))
@@ -14126,7 +14126,7 @@ void Player::_LoadDeclinedNames(QueryResult* result)
 
     m_declinedname = new DeclinedName;
     Field *fields = result->Fetch();
-    for(int i = 0; i < MAX_DECLINED_NAME_CASES; ++i)
+    for(uint8 i = 0; i < MAX_DECLINED_NAME_CASES; ++i)
         m_declinedname->name[i] = fields[i].GetCppString();
 
     delete result;
@@ -15204,7 +15204,7 @@ void Player::_LoadInventory(QueryResult *result, uint32 timediff)
             // fill mail
             MailItemsInfo mi;                               // item list preparing
 
-            for(int i = 0; !problematicItems.empty() && i < MAX_MAIL_ITEMS; ++i)
+            for(uint8 i = 0; !problematicItems.empty() && i < MAX_MAIL_ITEMS; ++i)
             {
                 Item* item = problematicItems.front();
                 problematicItems.pop_front();
@@ -15646,7 +15646,7 @@ void Player::SendRaidInfo()
 
     time_t now = time(NULL);
 
-    for(int i = 0; i < TOTAL_DIFFICULTIES; ++i)
+    for(uint8 i = 0; i < TOTAL_DIFFICULTIES; ++i)
     {
         for (BoundInstancesMap::iterator itr = m_boundInstances[i].begin(); itr != m_boundInstances[i].end(); ++itr)
         {
@@ -15878,7 +15878,7 @@ void Player::SaveToDB()
     // first save/honor gain after midnight will also update the player's honor fields
     UpdateHonorFields();
 
-    int is_save_resting = HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) ? 1 : 0;
+    uint8 is_save_resting = HasFlag(PLAYER_FLAGS, PLAYER_FLAGS_RESTING) ? 1 : 0;
                                                             //save, far from tavern/city
                                                             //save, but in tavern/city
     sLog.outDebug("The value of player %s at save: ", m_name.c_str());
@@ -16412,7 +16412,7 @@ bool Player::SaveValuesArrayInDB(Tokens const& tokens, uint64 guid)
 {
     std::ostringstream ss2;
     ss2<<"UPDATE characters SET data='";
-    int i=0;
+    uint32 i=0;
     for (Tokens::const_iterator iter = tokens.begin(); iter != tokens.end(); ++iter, ++i)
     {
         ss2<<tokens[i]<<" ";
@@ -17126,7 +17126,7 @@ void Player::RestoreSpellMods(Spell * spell)
     if (!spell || spell->m_appliedMods.empty())
         return;
 
-    for(int i=0;i<MAX_SPELLMOD;++i)
+    for(uint8 i=0;i<MAX_SPELLMOD;++i)
     {
         for (SpellModList::iterator itr = m_spellMods[i].begin(); itr != m_spellMods[i].end();++itr)
         {
@@ -17193,7 +17193,7 @@ void Player::RemoveSpellMods(Spell * spell)
     if (spell->m_appliedMods.empty())
         return;
 
-    for(int i=0;i<MAX_SPELLMOD;++i)
+    for(uint8 i=0;i<MAX_SPELLMOD;++i)
     {
         for (SpellModList::iterator itr = m_spellMods[i].begin(); itr != m_spellMods[i].end();)
         {
@@ -17774,7 +17774,7 @@ bool Player::BuyItemFromVendor(uint64 vendorguid, uint32 item, uint8 count, uint
         }
         else
         {
-            for (int i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END;i++)
+            for (uint8 i = INVENTORY_SLOT_BAG_START; i < INVENTORY_SLOT_BAG_END;i++)
             {
                 pBag = (Bag*)GetItemByPos(INVENTORY_SLOT_BAG_0,i);
                 if( pBag )
@@ -17890,7 +17890,7 @@ uint32 Player::GetMaxPersonalArenaRatingRequirement()
     // the personal rating of the arena team must match the required limit as well
     // so return max[in arenateams](min(personalrating[teamtype], teamrating[teamtype]))
     uint32 max_personal_rating = 0;
-    for(int i = 0; i < MAX_ARENA_SLOT; ++i)
+    for(uint8 i = 0; i < MAX_ARENA_SLOT; ++i)
     {
         if(ArenaTeam * at = objmgr.GetArenaTeamById(GetArenaTeamId(i)))
         {
@@ -18009,7 +18009,7 @@ void Player::AddSpellAndCategoryCooldowns(SpellEntry const* spellInfo, uint32 it
     {
         if(ItemPrototype const* proto = ObjectMgr::GetItemPrototype(itemId))
         {
-            for(int idx = 0; idx < 5; ++idx)
+            for(uint8 idx = 0; idx < 5; ++idx)
             {
                 if(proto->Spells[idx].SpellId == spellInfo->Id)
                 {
@@ -18121,7 +18121,7 @@ void Player::UpdatePotionCooldown(Spell* spell)
     {
         // spell/item pair let set proper cooldown (except not existed charged spell cooldown spellmods for potions)
         if(ItemPrototype const* proto = ObjectMgr::GetItemPrototype(m_lastPotionId))
-            for(int idx = 0; idx < 5; ++idx)
+            for(uint8 idx = 0; idx < 5; ++idx)
                 if(proto->Spells[idx].SpellId && proto->Spells[idx].SpellTrigger == ITEM_SPELLTRIGGER_ON_USE)
                     if(SpellEntry const* spellInfo = sSpellStore.LookupEntry(proto->Spells[idx].SpellId))
                         SendCooldownEvent(spellInfo,m_lastPotionId);
@@ -18189,7 +18189,7 @@ bool Player::EnchantmentFitsRequirements(uint32 enchantmentcondition, int8 slot)
 
     bool activate = true;
 
-    for(int i = 0; i < 5; i++)
+    for(uint8 i = 0; i < 5; i++)
     {
         if(!Condition->Color[i])
             continue;
@@ -18847,7 +18847,7 @@ void Player::SendInstanceResetWarning( uint32 mapid, uint32 difficulty, uint32 t
 
 void Player::ApplyEquipCooldown( Item * pItem )
 {
-    for(int i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
+    for(uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
     {
         _Spell const& spellData = pItem->GetProto()->Spells[i];
 
@@ -18917,7 +18917,7 @@ void Player::learnQuestRewardedSpells(Quest const* quest)
 
     // check learned spells state
     bool found = false;
-    for(int i=0; i < 3; ++i)
+    for(uint8 i=0; i < 3; ++i)
     {
         if(spellInfo->Effect[i] == SPELL_EFFECT_LEARN_SPELL && !HasSpell(spellInfo->EffectTriggerSpell[i]))
         {
@@ -19172,7 +19172,7 @@ bool Player::IsSpellFitByClassAndRace( uint32 spell_id ) const
 
 bool Player::HasQuestForGO(int32 GOId) const
 {
-    for( int i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
+    for( uint8 i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
     {
         uint32 questid = GetQuestSlotQuestId(i);
         if ( questid == 0 )
@@ -19346,7 +19346,7 @@ bool Player::HasItemFitToSpellReqirements(SpellEntry const* spellInfo, Item cons
     {
         case ITEM_CLASS_WEAPON:
         {
-            for(int i= EQUIPMENT_SLOT_MAINHAND; i < EQUIPMENT_SLOT_TABARD; ++i)
+            for(uint8 i= EQUIPMENT_SLOT_MAINHAND; i < EQUIPMENT_SLOT_TABARD; ++i)
                 if(Item *item = GetUseableItemByPos( INVENTORY_SLOT_BAG_0, i ))
                     if(item!=ignoreItem && item->IsFitToSpellRequirements(spellInfo))
                         return true;
@@ -19355,7 +19355,7 @@ bool Player::HasItemFitToSpellReqirements(SpellEntry const* spellInfo, Item cons
         case ITEM_CLASS_ARMOR:
         {
             // tabard not have dependent spells
-            for(int i= EQUIPMENT_SLOT_START; i< EQUIPMENT_SLOT_MAINHAND; ++i)
+            for(uint8 i= EQUIPMENT_SLOT_START; i< EQUIPMENT_SLOT_MAINHAND; ++i)
                 if(Item *item = GetUseableItemByPos( INVENTORY_SLOT_BAG_0, i ))
                     if(item!=ignoreItem && item->IsFitToSpellRequirements(spellInfo))
                         return true;
@@ -20543,7 +20543,7 @@ void Player::LearnTalent(uint32 talentId, uint32 talentRank)
         if(TalentEntry const *depTalentInfo = sTalentStore.LookupEntry(talentInfo->DependsOn))
         {
             bool hasEnoughRank = false;
-            for (int i = talentInfo->DependsOnRank; i < MAX_TALENT_RANK; i++)
+            for (uint32 i = talentInfo->DependsOnRank; i < MAX_TALENT_RANK; i++)
             {
                 if (depTalentInfo->RankID[i] != 0)
                     if (HasSpell(depTalentInfo->RankID[i]))
@@ -20560,8 +20560,8 @@ void Player::LearnTalent(uint32 talentId, uint32 talentRank)
     uint32 tTab = talentInfo->TalentTab;
     if (talentInfo->Row > 0)
     {
-        unsigned int numRows = sTalentStore.GetNumRows();
-        for (unsigned int i = 0; i < numRows; i++)          // Loop through all talents.
+        uint32 numRows = sTalentStore.GetNumRows();
+        for (uint32 i = 0; i < numRows; i++)          // Loop through all talents.
         {
             // Someday, someone needs to revamp
             const TalentEntry *tmpTalent = sTalentStore.LookupEntry(i);
@@ -20655,7 +20655,7 @@ void Player::LearnPetTalent(uint64 petGuid, uint32 talentId, uint32 talentRank)
 
     // find current max talent rank
     int32 curtalent_maxrank = 0;
-    for(uint8 k = MAX_TALENT_RANK-1; k > -1; --k)
+    for(int8 k = MAX_TALENT_RANK-1; k > -1; --k)
     {
         if(talentInfo->RankID[k] && pet->HasSpell(talentInfo->RankID[k]))
         {
@@ -20678,7 +20678,7 @@ void Player::LearnPetTalent(uint64 petGuid, uint32 talentId, uint32 talentRank)
         if(TalentEntry const *depTalentInfo = sTalentStore.LookupEntry(talentInfo->DependsOn))
         {
             bool hasEnoughRank = false;
-            for (int i = talentInfo->DependsOnRank; i < MAX_TALENT_RANK; i++)
+            for (uint32 i = talentInfo->DependsOnRank; i < MAX_TALENT_RANK; i++)
             {
                 if (depTalentInfo->RankID[i] != 0)
                     if (pet->HasSpell(depTalentInfo->RankID[i]))
@@ -20695,8 +20695,8 @@ void Player::LearnPetTalent(uint64 petGuid, uint32 talentId, uint32 talentRank)
     uint32 tTab = talentInfo->TalentTab;
     if (talentInfo->Row > 0)
     {
-        unsigned int numRows = sTalentStore.GetNumRows();
-        for (unsigned int i = 0; i < numRows; ++i)          // Loop through all talents.
+        uint32 numRows = sTalentStore.GetNumRows();
+        for (uint32 i = 0; i < numRows; ++i)          // Loop through all talents.
         {
             // Someday, someone needs to revamp
             const TalentEntry *tmpTalent = sTalentStore.LookupEntry(i);
