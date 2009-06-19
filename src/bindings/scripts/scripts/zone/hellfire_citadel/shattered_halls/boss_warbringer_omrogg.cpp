@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -29,8 +29,22 @@ EndContentData */
 #include "precompiled.h"
 #include "def_shattered_halls.h"
 
-#define ENTRY_LEFT_HEAD             19523
-#define ENTRY_RIGHT_HEAD            19524
+enum
+{
+    YELL_DIE_L                  = -1540039,
+    YELL_DIE_R                  = -1540040,
+    EMOTE_ENRAGE                = -1540041,
+
+    SPELL_BLAST_WAVE            = 30600,
+    SPELL_FEAR                  = 30584,
+    SPELL_THUNDERCLAP           = 30633,
+
+    SPELL_BURNING_MAUL          = 30598,
+    H_SPELL_BURNING_MAUL        = 36056,
+
+    NPC_LEFT_HEAD               = 19523,
+    NPC_RIGHT_HEAD              = 19524
+};
 
 struct Yell
 {
@@ -40,60 +54,49 @@ struct Yell
 
 static Yell GoCombat[]=
 {
-    {-1540018, ENTRY_LEFT_HEAD},
-    {-1540019, ENTRY_LEFT_HEAD},
-    {-1540020, ENTRY_LEFT_HEAD},
+    {-1540018, NPC_LEFT_HEAD},
+    {-1540019, NPC_LEFT_HEAD},
+    {-1540020, NPC_LEFT_HEAD},
 };
 static Yell GoCombatDelay[]=
 {
-    {-1540021, ENTRY_RIGHT_HEAD},
-    {-1540022, ENTRY_RIGHT_HEAD},
-    {-1540023, ENTRY_RIGHT_HEAD},
+    {-1540021, NPC_RIGHT_HEAD},
+    {-1540022, NPC_RIGHT_HEAD},
+    {-1540023, NPC_RIGHT_HEAD},
 };
 
 static Yell Threat[]=
 {
-    {-1540024, ENTRY_LEFT_HEAD},
-    {-1540025, ENTRY_RIGHT_HEAD},
-    {-1540026, ENTRY_LEFT_HEAD},
-    {-1540027, ENTRY_LEFT_HEAD},
+    {-1540024, NPC_LEFT_HEAD},
+    {-1540025, NPC_RIGHT_HEAD},
+    {-1540026, NPC_LEFT_HEAD},
+    {-1540027, NPC_LEFT_HEAD},
 };
 static Yell ThreatDelay1[]=
 {
-    {-1540028, ENTRY_RIGHT_HEAD},
-    {-1540029, ENTRY_LEFT_HEAD},
-    {-1540030, ENTRY_RIGHT_HEAD},
-    {-1540031, ENTRY_RIGHT_HEAD},
+    {-1540028, NPC_RIGHT_HEAD},
+    {-1540029, NPC_LEFT_HEAD},
+    {-1540030, NPC_RIGHT_HEAD},
+    {-1540031, NPC_RIGHT_HEAD},
 };
 static Yell ThreatDelay2[]=
 {
-    {-1540032, ENTRY_LEFT_HEAD},
-    {-1540033, ENTRY_RIGHT_HEAD},
-    {-1540034, ENTRY_LEFT_HEAD},
-    {-1540035, ENTRY_LEFT_HEAD},
+    {-1540032, NPC_LEFT_HEAD},
+    {-1540033, NPC_RIGHT_HEAD},
+    {-1540034, NPC_LEFT_HEAD},
+    {-1540035, NPC_LEFT_HEAD},
 };
 
 static Yell Killing[]=
 {
-    {-1540036, ENTRY_LEFT_HEAD},
-    {-1540037, ENTRY_RIGHT_HEAD},
+    {-1540036, NPC_LEFT_HEAD},
+    {-1540037, NPC_RIGHT_HEAD},
 };
 static Yell KillingDelay[]=
 {
-    {-1540038, ENTRY_RIGHT_HEAD},
-    {-1000000, ENTRY_LEFT_HEAD},
+    {-1540038, NPC_RIGHT_HEAD},
+    {-1000000, NPC_LEFT_HEAD},
 };
-
-#define YELL_DIE_L                  -1540039
-#define YELL_DIE_R                  -1540040
-#define EMOTE_ENRAGE                -1540041
-
-#define SPELL_BLAST_WAVE            30600
-#define SPELL_FEAR                  30584
-#define SPELL_THUNDERCLAP           30633
-
-#define SPELL_BURNING_MAUL          30598
-#define H_SPELL_BURNING_MAUL        36056
 
 struct TRINITY_DLL_DECL mob_omrogg_headsAI : public ScriptedAI
 {
@@ -102,12 +105,15 @@ struct TRINITY_DLL_DECL mob_omrogg_headsAI : public ScriptedAI
     bool DeathYell;
     uint32 Death_Timer;
 
-    void Reset() {}
-    void Aggro(Unit* who) { }
+    void Reset()
+    {
+        Death_Timer = 4000;
+        DeathYell = false;
+    }
+    void EnterCombat(Unit* who) { }
 
     void DoDeathYell()
     {
-        Death_Timer = 4000;
         DeathYell = true;
     }
 
@@ -119,7 +125,8 @@ struct TRINITY_DLL_DECL mob_omrogg_headsAI : public ScriptedAI
         if (Death_Timer < diff)
         {
             DoScriptText(YELL_DIE_R, m_creature);
-            DeathYell = false;
+            Death_Timer = false;
+            m_creature->setDeathState(JUST_DIED);
         }else Death_Timer -= diff;
     }
 };
@@ -128,15 +135,17 @@ struct TRINITY_DLL_DECL boss_warbringer_omroggAI : public ScriptedAI
 {
     boss_warbringer_omroggAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        LeftHeadGUID  = 0;
+        RightHeadGUID = 0;
+        pInstance = c->GetInstanceData();
         HeroicMode = m_creature->GetMap()->IsHeroic();
     }
 
     ScriptedInstance* pInstance;
     bool HeroicMode;
 
-    uint64 LeftHead;
-    uint64 RightHead;
+    uint64 LeftHeadGUID;
+    uint64 RightHeadGUID;
     int iaggro;
     int ithreat;
     int ikilling;
@@ -156,11 +165,18 @@ struct TRINITY_DLL_DECL boss_warbringer_omroggAI : public ScriptedAI
 
     void Reset()
     {
-        m_creature->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_TAUNT, true);
-        m_creature->ApplySpellImmune(0, IMMUNITY_EFFECT,SPELL_EFFECT_ATTACK_ME, true);
+        if (Unit* pLeftHead  = Unit::GetUnit(*m_creature,LeftHeadGUID))
+        {
+            pLeftHead->setDeathState(JUST_DIED);
+            LeftHeadGUID = 0;
+        }
 
-        LeftHead = 0;
-        RightHead = 0;
+        if (Unit* pRightHead  = Unit::GetUnit(*m_creature,RightHeadGUID))
+        {
+            pRightHead->setDeathState(JUST_DIED);
+            RightHeadGUID = 0;
+        }
+
 
         AggroYell = false;
         ThreatYell = false;
@@ -175,41 +191,41 @@ struct TRINITY_DLL_DECL boss_warbringer_omroggAI : public ScriptedAI
         ThunderClap_Timer = 15000;
         ResetThreat_Timer = 30000;
 
+        m_creature->ApplySpellImmune(0, IMMUNITY_STATE, SPELL_AURA_MOD_TAUNT, true);
+        m_creature->ApplySpellImmune(1, IMMUNITY_EFFECT,SPELL_EFFECT_ATTACK_ME, true);
+
         if (pInstance)
             pInstance->SetData(TYPE_OMROGG, NOT_STARTED);   //End boss can use this later. O'mrogg must be defeated(DONE) or he will come to aid.
     }
 
     void DoYellForThreat()
     {
-        if (LeftHead && RightHead)
-        {
-            Unit *Left  = Unit::GetUnit(*m_creature,LeftHead);
-            Unit *Right = Unit::GetUnit(*m_creature,RightHead);
+        Unit *pLeftHead  = Unit::GetUnit(*m_creature,LeftHeadGUID);
+        Unit *pRightHead = Unit::GetUnit(*m_creature,RightHeadGUID);
 
-            if (!Left || !Right)
-                return;
+        if (!pLeftHead || !pRightHead)
+            return;
 
-            ithreat = rand()%4;
+        ithreat = rand()%4;
 
-            Unit *source = (Left->GetEntry() == Threat[ithreat].creature ? Left : Right);
+        Unit *source = (pLeftHead->GetEntry() == Threat[ithreat].creature ? pLeftHead : pRightHead);
 
-            DoScriptText(Threat[ithreat].id, source);
+        DoScriptText(Threat[ithreat].id, source);
 
-            Delay_Timer = 3500;
-            ThreatYell = true;
-        }
+        Delay_Timer = 3500;
+        ThreatYell = true;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
-        DoSpawnCreature(ENTRY_LEFT_HEAD,0,0,0,0,TEMPSUMMON_TIMED_DESPAWN,1800000);
-        DoSpawnCreature(ENTRY_RIGHT_HEAD,0,0,0,0,TEMPSUMMON_TIMED_DESPAWN,1800000);
+        DoSpawnCreature(NPC_LEFT_HEAD,0,0,0,0,TEMPSUMMON_TIMED_DESPAWN,90000);
+        DoSpawnCreature(NPC_RIGHT_HEAD,0,0,0,0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,90000);
 
-        if (Unit *Left = Unit::GetUnit(*m_creature,LeftHead))
+        if (Unit *pLeftHead = Unit::GetUnit(*m_creature,LeftHeadGUID))
         {
             iaggro = rand()%3;
 
-            DoScriptText(GoCombat[iaggro].id, Left);
+            DoScriptText(GoCombat[iaggro].id, pLeftHead);
 
             Delay_Timer = 3500;
             AggroYell = true;
@@ -221,11 +237,11 @@ struct TRINITY_DLL_DECL boss_warbringer_omroggAI : public ScriptedAI
 
     void JustSummoned(Creature *summoned)
     {
-        if (summoned->GetEntry() == ENTRY_LEFT_HEAD)
-            LeftHead = summoned->GetGUID();
+        if (summoned->GetEntry() == NPC_LEFT_HEAD)
+            LeftHeadGUID = summoned->GetGUID();
 
-        if (summoned->GetEntry() == ENTRY_RIGHT_HEAD)
-            RightHead = summoned->GetGUID();
+        if (summoned->GetEntry() == NPC_RIGHT_HEAD)
+            RightHeadGUID = summoned->GetGUID();
 
         //summoned->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
         //summoned->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
@@ -234,47 +250,42 @@ struct TRINITY_DLL_DECL boss_warbringer_omroggAI : public ScriptedAI
 
     void KilledUnit(Unit* victim)
     {
-        if (LeftHead && RightHead)
+        Unit* pLeftHead  = Unit::GetUnit(*m_creature,LeftHeadGUID);
+        Unit* pRightHead = Unit::GetUnit(*m_creature,RightHeadGUID);
+
+
+        if (!pLeftHead || !pRightHead)
+            return;
+
+        ikilling = rand()%2;
+
+        Unit *source = (pLeftHead->GetEntry() == Killing[ikilling].creature ? pLeftHead : pRightHead);
+
+        switch(ikilling)
         {
-            Unit *Left  = Unit::GetUnit(*m_creature,LeftHead);
-            Unit *Right = Unit::GetUnit(*m_creature,RightHead);
-
-            if (!Left || !Right)
-                return;
-
-            ikilling = rand()%2;
-
-            Unit *source = (Left->GetEntry() == Killing[ikilling].creature ? Left : Right);
-
-            switch(ikilling)
-            {
-                case 0:
-                    DoScriptText(Killing[ikilling].id, source);
-                    Delay_Timer = 3500;
-                    KillingYell = true;
-                    break;
-                case 1:
-                    DoScriptText(Killing[ikilling].id, source);
-                    KillingYell = false;
-                    break;
-            }
+            case 0:
+                DoScriptText(Killing[ikilling].id, source);
+                Delay_Timer = 3500;
+                KillingYell = true;
+                break;
+            case 1:
+                DoScriptText(Killing[ikilling].id, source);
+                KillingYell = false;
+                break;
         }
     }
 
     void JustDied(Unit* Killer)
     {
-        if (LeftHead && RightHead)
-        {
-            Unit *Left  = Unit::GetUnit(*m_creature,LeftHead);
-            Unit *Right = Unit::GetUnit(*m_creature,RightHead);
+        Unit* pLeftHead  = Unit::GetUnit(*m_creature,LeftHeadGUID);
+        Unit* pRightHead = Unit::GetUnit(*m_creature,RightHeadGUID);
 
-            if (!Left || !Right)
-                return;
+        if (!pLeftHead || !pRightHead)
+            return;
 
-            DoScriptText(YELL_DIE_L, Left);
+        DoScriptText(YELL_DIE_L, pLeftHead);
 
-            ((mob_omrogg_headsAI*)((Creature*)Right)->AI())->DoDeathYell();
-        }
+        CAST_AI(mob_omrogg_headsAI, CAST_CRE(pRightHead)->AI())->DoDeathYell();
 
         if (pInstance)
             pInstance->SetData(TYPE_OMROGG, DONE);
@@ -286,24 +297,21 @@ struct TRINITY_DLL_DECL boss_warbringer_omroggAI : public ScriptedAI
         {
             Delay_Timer = 3500;
 
-            if (!LeftHead || !RightHead)
-                return;
+            Unit* pLeftHead  = Unit::GetUnit(*m_creature,LeftHeadGUID);
+            Unit* pRightHead = Unit::GetUnit(*m_creature,RightHeadGUID);
 
-            Unit *Left  = Unit::GetUnit(*m_creature,LeftHead);
-            Unit *Right = Unit::GetUnit(*m_creature,RightHead);
-
-            if (!Left || !Right)
+            if (!pLeftHead || !pRightHead)
                 return;
 
             if (AggroYell)
             {
-                DoScriptText(GoCombatDelay[iaggro].id, Right);
+                DoScriptText(GoCombatDelay[iaggro].id, pRightHead);
                 AggroYell = false;
             }
 
             if (ThreatYell2)
             {
-                Unit *source = (Left->GetEntry() == ThreatDelay2[ithreat].creature ? Left : Right);
+                Unit *source = (pLeftHead->GetEntry() == ThreatDelay2[ithreat].creature ? pLeftHead : pRightHead);
 
                 DoScriptText(ThreatDelay2[ithreat].id, source);
                 ThreatYell2 = false;
@@ -311,7 +319,7 @@ struct TRINITY_DLL_DECL boss_warbringer_omroggAI : public ScriptedAI
 
             if (ThreatYell)
             {
-                Unit *source = (Left->GetEntry() == ThreatDelay1[ithreat].creature ? Left : Right);
+                Unit *source = (pLeftHead->GetEntry() == ThreatDelay1[ithreat].creature ? pLeftHead : pRightHead);
 
                 DoScriptText(ThreatDelay1[ithreat].id, source);
                 ThreatYell = false;
@@ -320,7 +328,7 @@ struct TRINITY_DLL_DECL boss_warbringer_omroggAI : public ScriptedAI
 
             if (KillingYell)
             {
-                Unit *source = (Left->GetEntry() == KillingDelay[ikilling].creature ? Left : Right);
+                Unit *source = (pLeftHead->GetEntry() == KillingDelay[ikilling].creature ? pLeftHead : pRightHead);
 
                 DoScriptText(KillingDelay[ikilling].id, source);
                 KillingYell = false;
@@ -357,19 +365,19 @@ struct TRINITY_DLL_DECL boss_warbringer_omroggAI : public ScriptedAI
                 DoResetThreat();
                 m_creature->AddThreat(target, 0.0f);
             }
-            ResetThreat_Timer = 35000+rand()%10000;
+            ResetThreat_Timer = 25000+rand()%15000;
         }else ResetThreat_Timer -= diff;
 
         if (Fear_Timer < diff)
         {
             DoCast(m_creature,SPELL_FEAR);
-            Fear_Timer = 15000+rand()%25000;
+            Fear_Timer = 15000+rand()%20000;
         }else Fear_Timer -= diff;
 
         if (ThunderClap_Timer < diff)
         {
             DoCast(m_creature,SPELL_THUNDERCLAP);
-            ThunderClap_Timer = 25000+rand()%15000;
+            ThunderClap_Timer = 15000+rand()%15000;
         }else ThunderClap_Timer -= diff;
 
         DoMeleeAttackIfReady();

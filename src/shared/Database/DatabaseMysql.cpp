@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +23,7 @@
 #include "Util.h"
 #include "Policies/SingletonImp.h"
 #include "Platform/Define.h"
-#include "../src/zthread/ThreadImpl.h"
+#include "Threading.h"
 #include "DatabaseEnv.h"
 #include "Database/MySQLDelayThread.h"
 #include "Database/SqlOperations.h"
@@ -192,26 +192,22 @@ bool DatabaseMysql::Initialize(const char *infoString)
     }
 }
 
-QueryResult* DatabaseMysql::Query(const char *sql)
+bool DatabaseMysql::_Query(const char *sql, MYSQL_RES **pResult, MYSQL_FIELD **pFields, uint64* pRowCount, uint32* pFieldCount)
 {
     if (!mMysql)
         return 0;
 
-    MYSQL_RES *result = 0;
-    uint64 rowCount = 0;
-    uint32 fieldCount = 0;
-
     {
         // guarded block for thread-safe mySQL request
-        ZThread::Guard<ZThread::FastMutex> query_connection_guard(mMutex);
-        #ifdef TRINITY_DEBUG
+        ACE_Guard<ACE_Thread_Mutex> query_connection_guard(mMutex);
+        #ifdef MANGOS_DEBUG
         uint32 _s = getMSTime();
         #endif
         if(mysql_query(mMysql, sql))
         {
             sLog.outErrorDb( "SQL: %s", sql );
             sLog.outErrorDb("query ERROR: %s", mysql_error(mMysql));
-            return NULL;
+            return false;
         }
         else
         {
@@ -220,27 +216,61 @@ QueryResult* DatabaseMysql::Query(const char *sql)
             #endif
         }
 
-        result = mysql_store_result(mMysql);
-
-        rowCount = mysql_affected_rows(mMysql);
-        fieldCount = mysql_field_count(mMysql);
+        *pResult = mysql_store_result(mMysql);
+        *pRowCount = mysql_affected_rows(mMysql);
+        *pFieldCount = mysql_field_count(mMysql);
         // end guarded block
     }
 
-    if (!result )
-        return NULL;
+    if (!*pResult )
+        return false;
 
-    if (!rowCount)
+    if (!*pRowCount)
     {
-        mysql_free_result(result);
-        return NULL;
+        mysql_free_result(*pResult);
+        return false;
     }
 
-    QueryResultMysql *queryResult = new QueryResultMysql(result, rowCount, fieldCount);
+    *pFields = mysql_fetch_fields(*pResult);
+    return true;
+}
+
+QueryResult* DatabaseMysql::Query(const char *sql)
+{
+    MYSQL_RES *result = NULL;
+    MYSQL_FIELD *fields = NULL;
+    uint64 rowCount = 0;
+    uint32 fieldCount = 0;
+
+    if(!_Query(sql,&result,&fields,&rowCount,&fieldCount))
+        return NULL;
+
+    QueryResultMysql *queryResult = new QueryResultMysql(result, fields, rowCount, fieldCount);
 
     queryResult->NextRow();
 
     return queryResult;
+}
+
+QueryNamedResult* DatabaseMysql::QueryNamed(const char *sql)
+{
+    MYSQL_RES *result = NULL;
+    MYSQL_FIELD *fields = NULL;
+    uint64 rowCount = 0;
+    uint32 fieldCount = 0;
+
+    if(!_Query(sql,&result,&fields,&rowCount,&fieldCount))
+        return NULL;
+
+    QueryFieldNames names(fieldCount);
+    for (uint32 i = 0; i < fieldCount; i++)
+        names[i] = fields[i].name;
+
+    QueryResultMysql *queryResult = new QueryResultMysql(result, fields, rowCount, fieldCount);
+
+    queryResult->NextRow();
+
+    return new QueryNamedResult(queryResult,names);
 }
 
 bool DatabaseMysql::Execute(const char *sql)
@@ -251,7 +281,7 @@ bool DatabaseMysql::Execute(const char *sql)
     // don't use queued execution if it has not been initialized
     if (!m_threadBody) return DirectExecute(sql);
 
-    tranThread = ZThread::ThreadImpl::current();            // owner of this transaction
+    tranThread = ACE_Based::Thread::current();              // owner of this transaction
     TransactionQueues::iterator i = m_tranQueues.find(tranThread);
     if (i != m_tranQueues.end() && i->second != NULL)
     {                                                       // Statement for transaction
@@ -273,8 +303,9 @@ bool DatabaseMysql::DirectExecute(const char* sql)
 
     {
         // guarded block for thread-safe mySQL request
-        ZThread::Guard<ZThread::FastMutex> query_connection_guard(mMutex);
-        #ifdef TRINITY_DEBUG
+        ACE_Guard<ACE_Thread_Mutex> query_connection_guard(mMutex);
+
+        #ifdef MANGOS_DEBUG
         uint32 _s = getMSTime();
         #endif
         if(mysql_query(mMysql, sql))
@@ -318,8 +349,9 @@ bool DatabaseMysql::BeginTransaction()
     // don't use queued execution if it has not been initialized
     if (!m_threadBody)
     {
-        if (tranThread==ZThread::ThreadImpl::current())
+        if (tranThread == ACE_Based::Thread::current())
             return false;                                   // huh? this thread already started transaction
+
         mMutex.acquire();
         if (!_TransactionCmd("START TRANSACTION"))
         {
@@ -329,7 +361,7 @@ bool DatabaseMysql::BeginTransaction()
         return true;                                        // transaction started
     }
 
-    tranThread = ZThread::ThreadImpl::current();            // owner of this transaction
+    tranThread = ACE_Based::Thread::current();              // owner of this transaction
     TransactionQueues::iterator i = m_tranQueues.find(tranThread);
     if (i != m_tranQueues.end() && i->second != NULL)
         // If for thread exists queue and also contains transaction
@@ -349,7 +381,7 @@ bool DatabaseMysql::CommitTransaction()
     // don't use queued execution if it has not been initialized
     if (!m_threadBody)
     {
-        if (tranThread!=ZThread::ThreadImpl::current())
+        if (tranThread != ACE_Based::Thread::current())
             return false;
         bool _res = _TransactionCmd("COMMIT");
         tranThread = NULL;
@@ -357,7 +389,7 @@ bool DatabaseMysql::CommitTransaction()
         return _res;
     }
 
-    tranThread = ZThread::ThreadImpl::current();
+    tranThread = ACE_Based::Thread::current();
     TransactionQueues::iterator i = m_tranQueues.find(tranThread);
     if (i != m_tranQueues.end() && i->second != NULL)
     {
@@ -377,7 +409,7 @@ bool DatabaseMysql::RollbackTransaction()
     // don't use queued execution if it has not been initialized
     if (!m_threadBody)
     {
-        if (tranThread!=ZThread::ThreadImpl::current())
+        if (tranThread != ACE_Based::Thread::current())
             return false;
         bool _res = _TransactionCmd("ROLLBACK");
         tranThread = NULL;
@@ -385,7 +417,7 @@ bool DatabaseMysql::RollbackTransaction()
         return _res;
     }
 
-    tranThread = ZThread::ThreadImpl::current();
+    tranThread = ACE_Based::Thread::current();
     TransactionQueues::iterator i = m_tranQueues.find(tranThread);
     if (i != m_tranQueues.end() && i->second != NULL)
     {
@@ -408,7 +440,8 @@ void DatabaseMysql::InitDelayThread()
     assert(!m_delayThread);
 
     //New delay thread for delay execute
-    m_delayThread = new ZThread::Thread(m_threadBody = new MySQLDelayThread(this));
+    m_threadBody = new MySQLDelayThread(this);
+    m_delayThread = new ACE_Based::Thread(*m_threadBody);
 }
 
 void DatabaseMysql::HaltDelayThread()

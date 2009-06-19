@@ -94,12 +94,11 @@ enum Creatures
 struct TRINITY_DLL_DECL boss_sacrolashAI : public ScriptedAI
 {
     boss_sacrolashAI(Creature *c) : ScriptedAI(c){
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance *pInstance;
 
-    bool InCombat;
     bool SisterDeath;
     bool Enraged;
 
@@ -112,7 +111,6 @@ struct TRINITY_DLL_DECL boss_sacrolashAI : public ScriptedAI
 
     void Reset()
     {
-        InCombat = false;
         Enraged = false;
 
         if(pInstance)
@@ -121,18 +119,17 @@ struct TRINITY_DLL_DECL boss_sacrolashAI : public ScriptedAI
             if (Temp)
                 if (Temp->isDead())
                 {
-                    ((Creature*)Temp)->Respawn();
+                    CAST_CRE(Temp)->Respawn();
                 }else
                 {
                     if(Temp->getVictim())
                     {
                         m_creature->getThreatManager().addThreat(Temp->getVictim(),0.0f);
-                        InCombat = true;
                     }
                 }
         }
 
-        if(!InCombat)
+        if(!m_creature->isInCombat())
         {
             ShadowbladesTimer = 10000;
             ShadownovaTimer = 30000;
@@ -147,8 +144,8 @@ struct TRINITY_DLL_DECL boss_sacrolashAI : public ScriptedAI
         if(pInstance)
             pInstance->SetData(DATA_EREDAR_TWINS_EVENT, NOT_STARTED);
     }
-
-    void Aggro(Unit *who)
+    
+    void EnterCombat(Unit *who)
     {
         DoZoneInCombat();
 
@@ -156,7 +153,7 @@ struct TRINITY_DLL_DECL boss_sacrolashAI : public ScriptedAI
         {
             Unit* Temp =  Unit::GetUnit((*m_creature),pInstance->GetData64(DATA_ALYTHESS));
             if (Temp && Temp->isAlive() && !(Temp->getVictim()))
-                ((Creature*)Temp)->AI()->AttackStart(who);
+                CAST_CRE(Temp)->AI()->AttackStart(who);
         }
 
         if(pInstance)
@@ -210,9 +207,9 @@ struct TRINITY_DLL_DECL boss_sacrolashAI : public ScriptedAI
         switch(TouchedType)
         {
         case SPELL_FLAME_TOUCHED:
-            if(!target->HasAura(SPELL_DARK_FLAME, 0))
+            if(!target->HasAura(SPELL_DARK_FLAME))
             {
-                if(target->HasAura(SPELL_DARK_TOUCHED, 0))
+                if(target->HasAura(SPELL_DARK_TOUCHED))
                 {
                     target->RemoveAurasDueToSpell(SPELL_DARK_TOUCHED);
                     target->CastSpell(target, SPELL_DARK_FLAME, true);
@@ -220,9 +217,9 @@ struct TRINITY_DLL_DECL boss_sacrolashAI : public ScriptedAI
             }
             break;
         case SPELL_DARK_TOUCHED:
-            if(!target->HasAura(SPELL_DARK_FLAME, 0))
+            if(!target->HasAura(SPELL_DARK_FLAME))
             {
-                if(target->HasAura(SPELL_FLAME_TOUCHED, 0))
+                if(target->HasAura(SPELL_FLAME_TOUCHED))
                 {
                     target->RemoveAurasDueToSpell(SPELL_FLAME_TOUCHED);
                     target->CastSpell(target, SPELL_DARK_FLAME, true);
@@ -306,7 +303,7 @@ struct TRINITY_DLL_DECL boss_sacrolashAI : public ScriptedAI
         {
             Unit* target = NULL;
             Creature* temp = NULL;
-            for(int i = 0;i<3;i++)
+            for(uint8 i = 0;i<3;i++)
             {
                 target = SelectUnit(SELECT_TARGET_RANDOM, 0);
                 temp = DoSpawnCreature(MOB_SHADOW_IMAGE,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN,10000);
@@ -354,13 +351,12 @@ CreatureAI* GetAI_boss_sacrolash(Creature *_Creature)
 struct TRINITY_DLL_DECL boss_alythessAI : public Scripted_NoMovementAI
 {
     boss_alythessAI(Creature *c) : Scripted_NoMovementAI(c){
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         IntroStepCounter = 10;
     }
 
     ScriptedInstance *pInstance;
 
-    bool InCombat;
     bool SisterDeath;
     bool Enraged;
 
@@ -376,7 +372,6 @@ struct TRINITY_DLL_DECL boss_alythessAI : public Scripted_NoMovementAI
 
     void Reset()
     {
-        InCombat = false;
         Enraged = false;
 
         if(pInstance)
@@ -385,18 +380,17 @@ struct TRINITY_DLL_DECL boss_alythessAI : public Scripted_NoMovementAI
             if (Temp)
                 if (Temp->isDead())
                 {
-                    ((Creature*)Temp)->Respawn();
+                    CAST_CRE(Temp)->Respawn();
                 }else
                 {
                     if(Temp->getVictim())
                     {
                         m_creature->getThreatManager().addThreat(Temp->getVictim(),0.0f);
-                        InCombat = true;
                     }
                 }
         }
 
-        if(!InCombat)
+        if(!m_creature->isInCombat())
         {
             ConflagrationTimer = 45000;
             BlazeTimer = 100;
@@ -412,8 +406,8 @@ struct TRINITY_DLL_DECL boss_alythessAI : public Scripted_NoMovementAI
         if(pInstance)
             pInstance->SetData(DATA_EREDAR_TWINS_EVENT, NOT_STARTED);
     }
-
-    void Aggro(Unit *who)
+    
+    void EnterCombat(Unit *who)
     {
         DoZoneInCombat();
 
@@ -421,7 +415,7 @@ struct TRINITY_DLL_DECL boss_alythessAI : public Scripted_NoMovementAI
         {
             Unit* Temp =  Unit::GetUnit((*m_creature),pInstance->GetData64(DATA_SACROLASH));
             if (Temp && Temp->isAlive() && !(Temp->getVictim()))
-                ((Creature*)Temp)->AI()->AttackStart(who);
+                CAST_CRE(Temp)->AI()->AttackStart(who);
         }
 
         if(pInstance)
@@ -430,7 +424,7 @@ struct TRINITY_DLL_DECL boss_alythessAI : public Scripted_NoMovementAI
 
     void AttackStart(Unit *who)
     {
-        if (!InCombat)
+        if (!m_creature->isInCombat())
         {
             Scripted_NoMovementAI::AttackStart(who);
         }
@@ -447,11 +441,9 @@ struct TRINITY_DLL_DECL boss_alythessAI : public Scripted_NoMovementAI
             float attackRadius = m_creature->GetAttackDistance(who);
             if (m_creature->IsWithinDistInMap(who, attackRadius) && m_creature->GetDistanceZ(who) <= CREATURE_Z_ATTACK_RANGE && m_creature->IsWithinLOSInMap(who))
             {
-                if (!InCombat)
+                if (!m_creature->isInCombat())
                 {
                     DoStartNoMovement(who);
-                    Aggro(who);
-                    InCombat = true;
                 }
             }
         }
@@ -508,9 +500,9 @@ struct TRINITY_DLL_DECL boss_alythessAI : public Scripted_NoMovementAI
         switch(TouchedType)
         {
         case SPELL_FLAME_TOUCHED:
-            if(!target->HasAura(SPELL_DARK_FLAME, 0))
+            if(!target->HasAura(SPELL_DARK_FLAME))
             {
-                if(target->HasAura(SPELL_DARK_TOUCHED, 0))
+                if(target->HasAura(SPELL_DARK_TOUCHED))
                 {
                     target->RemoveAurasDueToSpell(SPELL_DARK_TOUCHED);
                     target->CastSpell(target, SPELL_DARK_FLAME, true);
@@ -521,9 +513,9 @@ struct TRINITY_DLL_DECL boss_alythessAI : public Scripted_NoMovementAI
             }
             break;
         case SPELL_DARK_TOUCHED:
-            if(!target->HasAura(SPELL_DARK_FLAME, 0))
+            if(!target->HasAura(SPELL_DARK_FLAME))
             {
-                if(target->HasAura(SPELL_FLAME_TOUCHED, 0))
+                if(target->HasAura(SPELL_FLAME_TOUCHED))
                 {
                     target->RemoveAurasDueToSpell(SPELL_FLAME_TOUCHED);
                     target->CastSpell(target, SPELL_DARK_FLAME, true);
@@ -535,7 +527,7 @@ struct TRINITY_DLL_DECL boss_alythessAI : public Scripted_NoMovementAI
 
     uint32 IntroStep(uint32 step)
     {
-        Creature* Sacrolash = (Creature*)Unit::GetUnit((*m_creature),pInstance->GetData64(DATA_SACROLASH));
+        Creature* Sacrolash = Unit::GetCreature((*m_creature),pInstance->GetData64(DATA_SACROLASH));
         switch (step)
         {
         case 0: return 0;
@@ -688,7 +680,7 @@ struct TRINITY_DLL_DECL mob_shadow_imageAI : public ScriptedAI
         KillTimer = 15000;
     }
 
-    void Aggro(Unit *who){}
+    void EnterCombat(Unit *who){}
 
     void SpellHitTarget(Unit* target,const SpellEntry* spell)
     {
@@ -697,9 +689,9 @@ struct TRINITY_DLL_DECL mob_shadow_imageAI : public ScriptedAI
 
         case SPELL_SHADOW_FURY:
         case SPELL_DARK_STRIKE:
-            if(!target->HasAura(SPELL_DARK_FLAME, 0))
+            if(!target->HasAura(SPELL_DARK_FLAME))
             {
-                if(target->HasAura(SPELL_FLAME_TOUCHED, 0))
+                if(target->HasAura(SPELL_FLAME_TOUCHED))
                 {
                     target->RemoveAurasDueToSpell(SPELL_FLAME_TOUCHED);
                     target->CastSpell(target, SPELL_DARK_FLAME, true);
@@ -711,7 +703,7 @@ struct TRINITY_DLL_DECL mob_shadow_imageAI : public ScriptedAI
 
     void UpdateAI(const uint32 diff)
     {
-        if(!m_creature->HasAura(SPELL_IMAGE_VISUAL, 0))
+        if(!m_creature->HasAura(SPELL_IMAGE_VISUAL))
             DoCast(m_creature, SPELL_IMAGE_VISUAL);
 
         if(KillTimer < diff)

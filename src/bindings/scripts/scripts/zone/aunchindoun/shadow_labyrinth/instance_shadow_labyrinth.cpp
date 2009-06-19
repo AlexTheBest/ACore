@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -69,18 +69,26 @@ struct TRINITY_DLL_DECL instance_shadow_labyrinth : public ScriptedInstance
         return false;
     }
 
-    void OnObjectCreate(GameObject *go)
+    void OnGameObjectCreate(GameObject *go, bool add)
     {
         switch(go->GetEntry())
         {
-        case REFECTORY_DOOR: RefectoryDoorGUID = go->GetGUID(); break;
-        case SCREAMING_HALL_DOOR: ScreamingHallDoorGUID = go->GetGUID(); break;
+            case REFECTORY_DOOR:
+                RefectoryDoorGUID = go->GetGUID();
+                if (Encounter[2] == DONE)
+                    DoUseDoorOrButton(RefectoryDoorGUID);
+                break;
+            case SCREAMING_HALL_DOOR:
+                ScreamingHallDoorGUID = go->GetGUID();
+                if (Encounter[3] == DONE)
+                    DoUseDoorOrButton(ScreamingHallDoorGUID);
+                break;
         }
     }
 
-    void OnCreatureCreate(Creature *creature, uint32 creature_entry)
+    void OnCreatureCreate(Creature *creature, bool add)
     {
-        switch(creature_entry)
+        switch(creature->GetEntry())
         {
             case 18732:
                 GrandmasterVorpil = creature->GetGUID();
@@ -90,37 +98,6 @@ struct TRINITY_DLL_DECL instance_shadow_labyrinth : public ScriptedInstance
                 debug_log("TSCR: Shadow Labyrinth: counting %u Fel Overseers.",FelOverseerCount);
                 break;
         }
-    }
-
-    Player* GetPlayerInMap()
-    {
-        Map::PlayerList const& players = instance->GetPlayers();
-
-        if (!players.isEmpty())
-        {
-            for(Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
-            {
-                if (Player* plr = itr->getSource())
-                    return plr;
-            }
-        }
-
-        debug_log("TSCR: Instance Shadow Labyrinth: GetPlayerInMap, but PlayerList is empty!");
-        return NULL;
-    }
-
-    void HandleGameObject(uint64 guid, uint32 state)
-    {
-        Player *player = GetPlayerInMap();
-
-        if (!player || !guid)
-        {
-            debug_log("TSCR: Shadow Labyrinth: HandleGameObject fail");
-            return;
-        }
-
-        if (GameObject *go = GameObject::GetGameObject(*player,guid))
-            go->SetGoState(state);
     }
 
     void SetData(uint32 type, uint32 data)
@@ -148,17 +125,13 @@ struct TRINITY_DLL_DECL instance_shadow_labyrinth : public ScriptedInstance
 
             case DATA_BLACKHEARTTHEINCITEREVENT:
                 if( data == DONE )
-                {
-                    HandleGameObject(RefectoryDoorGUID,0);
-                }
+                    DoUseDoorOrButton(RefectoryDoorGUID);
                 Encounter[2] = data;
                 break;
 
             case DATA_GRANDMASTERVORPILEVENT:
                 if( data == DONE )
-                {
-                    HandleGameObject(ScreamingHallDoorGUID,0);
-                }
+                    DoUseDoorOrButton(ScreamingHallDoorGUID);
                 Encounter[3] = data;
                 break;
 
@@ -205,9 +178,9 @@ struct TRINITY_DLL_DECL instance_shadow_labyrinth : public ScriptedInstance
         return 0;
     }
 
-    const char* Save()
+    std::string GetSaveData()
     {
-        return str_data.c_str();
+        return str_data;
     }
 
     void Load(const char* in)

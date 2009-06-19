@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,7 +26,6 @@
 #include "Log.h"
 #include "Opcodes.h"
 #include "Guild.h"
-#include "MapManager.h"
 #include "GossipDef.h"
 #include "SocialMgr.h"
 
@@ -65,7 +64,7 @@ void WorldSession::HandleGuildCreateOpcode(WorldPacket& recvPacket)
         return;
 
     Guild *guild = new Guild;
-    if(!guild->create(GetPlayer()->GetGUID(),gname))
+    if(!guild->create(GetPlayer(),gname))
     {
         delete guild;
         return;
@@ -315,10 +314,6 @@ void WorldSession::HandleGuildPromoteOpcode(WorldPacket& recvPacket)
 
     uint32 newRankId = slot->RankId < guild->GetNrRanks() ? slot->RankId-1 : guild->GetNrRanks()-1;
 
-    guild->ChangeRank(plGuid, newRankId);
-    // Put record into guildlog
-    guild->LogGuildEvent(GUILD_EVENT_LOG_PROMOTE_PLAYER, GetPlayer()->GetGUIDLow(), GUID_LOPART(plGuid), newRankId);
-
     WorldPacket data(SMSG_GUILD_EVENT, (2+30));             // guess size
     data << (uint8)GE_PROMOTION;
     data << (uint8)3;
@@ -326,6 +321,10 @@ void WorldSession::HandleGuildPromoteOpcode(WorldPacket& recvPacket)
     data << plName;
     data << guild->GetRankName(newRankId);
     guild->BroadcastPacket(&data);
+    
+    guild->ChangeRank(plGuid, newRankId);
+    // Put record into guildlog
+    guild->LogGuildEvent(GUILD_EVENT_LOG_PROMOTE_PLAYER, GetPlayer()->GetGUIDLow(), GUID_LOPART(plGuid), newRankId);
 }
 
 void WorldSession::HandleGuildDemoteOpcode(WorldPacket& recvPacket)
@@ -375,7 +374,7 @@ void WorldSession::HandleGuildDemoteOpcode(WorldPacket& recvPacket)
 
     guild->ChangeRank(plGuid, (slot->RankId+1));
     // Put record into guildlog
-    guild->LogGuildEvent(GUILD_EVENT_LOG_DEMOTE_PLAYER, GetPlayer()->GetGUIDLow(), GUID_LOPART(plGuid), (slot->RankId));
+    guild->LogGuildEvent(GUILD_EVENT_LOG_DEMOTE_PLAYER, GetPlayer()->GetGUIDLow(), GUID_LOPART(plGuid), slot->RankId);
 
     WorldPacket data(SMSG_GUILD_EVENT, (2+30));             // guess size
     data << (uint8)GE_DEMOTION;
@@ -663,7 +662,7 @@ void WorldSession::HandleGuildRankOpcode(WorldPacket& recvPacket)
     guild->SetRankName(rankId, rankname);
 
     if(rankId==GR_GUILDMASTER)                              // prevent loss leader rights
-        rights |= GR_RIGHT_ALL;
+        rights = GR_RIGHT_ALL;
 
     guild->SetRankRights(rankId, rights);
 
@@ -741,7 +740,7 @@ void WorldSession::SendGuildCommandResult(uint32 typecmd, const std::string& str
     //sLog.outDebug("WORLD: Sent (SMSG_GUILD_COMMAND_RESULT)");
 }
 
-void WorldSession::HandleGuildChangeInfoOpcode(WorldPacket& recvPacket)
+void WorldSession::HandleGuildChangeInfoTextOpcode(WorldPacket& recvPacket)
 {
     CHECK_PACKET_SIZE(recvPacket, 1);
 
@@ -767,7 +766,7 @@ void WorldSession::HandleGuildChangeInfoOpcode(WorldPacket& recvPacket)
     guild->SetGINFO(GINFO);
 }
 
-void WorldSession::HandleGuildSaveEmblemOpcode(WorldPacket& recvPacket)
+void WorldSession::HandleSaveGuildEmblemOpcode(WorldPacket& recvPacket)
 {
     CHECK_PACKET_SIZE(recvPacket, 8+4+4+4+4+4);
 
@@ -783,18 +782,18 @@ void WorldSession::HandleGuildSaveEmblemOpcode(WorldPacket& recvPacket)
 
     recvPacket >> vendorGuid;
 
-    Creature *pCreature = ObjectAccessor::GetNPCIfCanInteractWith(*_player, vendorGuid,UNIT_NPC_FLAG_TABARDDESIGNER);
+    Creature *pCreature = GetPlayer()->GetNPCIfCanInteractWith(vendorGuid,UNIT_NPC_FLAG_TABARDDESIGNER);
     if (!pCreature)
     {
         //"That's not an emblem vendor!"
         SendSaveGuildEmblem(ERR_GUILDEMBLEM_INVALIDVENDOR);
-        sLog.outDebug("WORLD: HandleGuildSaveEmblemOpcode - Unit (GUID: %u) not found or you can't interact with him.", GUID_LOPART(vendorGuid));
+        sLog.outDebug("WORLD: HandleSaveGuildEmblemOpcode - Unit (GUID: %u) not found or you can't interact with him.", GUID_LOPART(vendorGuid));
         return;
     }
 
     // remove fake death
     if(GetPlayer()->hasUnitState(UNIT_STAT_DIED))
-        GetPlayer()->RemoveSpellsCausingAura(SPELL_AURA_FEIGN_DEATH);
+        GetPlayer()->RemoveAurasByType(SPELL_AURA_FEIGN_DEATH);
 
     recvPacket >> EmblemStyle;
     recvPacket >> EmblemColor;
@@ -833,7 +832,7 @@ void WorldSession::HandleGuildSaveEmblemOpcode(WorldPacket& recvPacket)
     guild->Query(this);
 }
 
-void WorldSession::HandleGuildEventLogOpcode(WorldPacket& /* recvPacket */)
+void WorldSession::HandleGuildEventLogQueryOpcode(WorldPacket& /* recvPacket */)
 {
                                                             // empty
     sLog.outDebug("WORLD: Received (MSG_GUILD_EVENT_LOG_QUERY)");
@@ -852,7 +851,7 @@ void WorldSession::HandleGuildEventLogOpcode(WorldPacket& /* recvPacket */)
 
 /******  GUILD BANK  *******/
 
-void WorldSession::HandleGuildBankGetMoneyAmount( WorldPacket & /* recv_data */ )
+void WorldSession::HandleGuildBankMoneyWithdrawn( WorldPacket & /* recv_data */ )
 {
     sLog.outDebug("WORLD: Received (MSG_GUILD_BANK_MONEY_WITHDRAWN)");
     //recv_data.hexlike();
@@ -868,7 +867,7 @@ void WorldSession::HandleGuildBankGetMoneyAmount( WorldPacket & /* recv_data */ 
     pGuild->SendMoneyInfo(this, GetPlayer()->GetGUIDLow());
 }
 
-void WorldSession::HandleGuildBankGetRights( WorldPacket& /* recv_data */ )
+void WorldSession::HandleGuildPermissions( WorldPacket& /* recv_data */ )
 {
     sLog.outDebug("WORLD: Received (MSG_GUILD_PERMISSIONS)");
 
@@ -898,7 +897,7 @@ void WorldSession::HandleGuildBankGetRights( WorldPacket& /* recv_data */ )
 }
 
 /* Called when clicking on Guild bank gameobject */
-void WorldSession::HandleGuildBankQuery( WorldPacket & recv_data )
+void WorldSession::HandleGuildBankerActivate( WorldPacket & recv_data )
 {
     sLog.outDebug("WORLD: Received (CMSG_GUILD_BANKER_ACTIVATE)");
     CHECK_PACKET_SIZE(recv_data,8+1);
@@ -906,7 +905,7 @@ void WorldSession::HandleGuildBankQuery( WorldPacket & recv_data )
     uint8  unk;
     recv_data >> GoGuid >> unk;
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     if (uint32 GuildId = GetPlayer()->GetGuildId())
@@ -922,7 +921,7 @@ void WorldSession::HandleGuildBankQuery( WorldPacket & recv_data )
 }
 
 /* Called when opening guild bank tab only (first one) */
-void WorldSession::HandleGuildBankTabColon( WorldPacket & recv_data )
+void WorldSession::HandleGuildBankQueryTab( WorldPacket & recv_data )
 {
     sLog.outDebug("WORLD: Received (CMSG_GUILD_BANK_QUERY_TAB)");
     CHECK_PACKET_SIZE(recv_data,8+1+1);
@@ -930,7 +929,7 @@ void WorldSession::HandleGuildBankTabColon( WorldPacket & recv_data )
     uint8 TabId,unk1;
     recv_data >> GoGuid >> TabId >> unk1;
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     uint32 GuildId = GetPlayer()->GetGuildId();
@@ -948,7 +947,7 @@ void WorldSession::HandleGuildBankTabColon( WorldPacket & recv_data )
     pGuild->DisplayGuildBankContent(this, TabId);
 }
 
-void WorldSession::HandleGuildBankDeposit( WorldPacket & recv_data )
+void WorldSession::HandleGuildBankDepositMoney( WorldPacket & recv_data )
 {
     sLog.outDebug("WORLD: Received (CMSG_GUILD_BANK_DEPOSIT_MONEY)");
     CHECK_PACKET_SIZE(recv_data,8+4);
@@ -959,7 +958,7 @@ void WorldSession::HandleGuildBankDeposit( WorldPacket & recv_data )
     if (!money)
         return;
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     uint32 GuildId = GetPlayer()->GetGuildId();
@@ -996,7 +995,7 @@ void WorldSession::HandleGuildBankDeposit( WorldPacket & recv_data )
     pGuild->DisplayGuildBankMoneyUpdate();
 }
 
-void WorldSession::HandleGuildBankWithdraw( WorldPacket & recv_data )
+void WorldSession::HandleGuildBankWithdrawMoney( WorldPacket & recv_data )
 {
     sLog.outDebug("WORLD: Received (CMSG_GUILD_BANK_WITHDRAW_MONEY)");
     CHECK_PACKET_SIZE(recv_data,8+4);
@@ -1007,7 +1006,7 @@ void WorldSession::HandleGuildBankWithdraw( WorldPacket & recv_data )
     if (!money)
         return;
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     uint32 GuildId = GetPlayer()->GetGuildId();
@@ -1046,7 +1045,7 @@ void WorldSession::HandleGuildBankWithdraw( WorldPacket & recv_data )
     pGuild->DisplayGuildBankMoneyUpdate();
 }
 
-void WorldSession::HandleGuildBankDepositItem( WorldPacket & recv_data )
+void WorldSession::HandleGuildBankSwapItems( WorldPacket & recv_data )
 {
     sLog.outDebug("WORLD: Received (CMSG_GUILD_BANK_SWAP_ITEMS)");
     //recv_data.hexlike();
@@ -1109,7 +1108,7 @@ void WorldSession::HandleGuildBankDepositItem( WorldPacket & recv_data )
             return;
     }
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     uint32 GuildId = GetPlayer()->GetGuildId();
@@ -1195,7 +1194,7 @@ void WorldSession::HandleGuildBankDepositItem( WorldPacket & recv_data )
             else                                            // swap
             {
                 gDest.clear();
-                uint8 msg = pGuild->CanStoreItem(BankTabDst,BankTabSlotDst,gDest,pItemSrc->GetCount(),pItemSrc,true);
+                msg = pGuild->CanStoreItem(BankTabDst,BankTabSlotDst,gDest,pItemSrc->GetCount(),pItemSrc,true);
                 if( msg != EQUIP_ERR_OK )
                 {
                     pl->SendEquipError( msg, pItemSrc, NULL );
@@ -1564,7 +1563,7 @@ void WorldSession::HandleGuildBankBuyTab( WorldPacket & recv_data )
     recv_data >> GoGuid;
     recv_data >> TabId;
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     uint32 GuildId = GetPlayer()->GetGuildId();
@@ -1575,7 +1574,7 @@ void WorldSession::HandleGuildBankBuyTab( WorldPacket & recv_data )
     if(!pGuild)
         return;
 
-    uint32 TabCost = objmgr.GetGuildBankTabPrice(TabId) * GOLD;
+    uint32 TabCost = GetGuildBankTabPrice(TabId) * GOLD;
     if (!TabCost)
         return;
 
@@ -1600,7 +1599,7 @@ void WorldSession::HandleGuildBankBuyTab( WorldPacket & recv_data )
     pGuild->DisplayGuildBankTabsInfo(this);
 }
 
-void WorldSession::HandleGuildBankModifyTab( WorldPacket & recv_data )
+void WorldSession::HandleGuildBankUpdateTab( WorldPacket & recv_data )
 {
     sLog.outDebug("WORLD: Received (CMSG_GUILD_BANK_UPDATE_TAB)");
     //recv_data.hexlike();
@@ -1621,7 +1620,7 @@ void WorldSession::HandleGuildBankModifyTab( WorldPacket & recv_data )
     if(IconIndex.empty())
         return;
 
-    if (!objmgr.IsGuildVaultGameObject(_player, GoGuid))
+    if (!GetPlayer()->GetGameObjectIfCanInteractWith(GoGuid, GAMEOBJECT_TYPE_GUILD_BANK))
         return;
 
     uint32 GuildId = GetPlayer()->GetGuildId();
@@ -1637,7 +1636,7 @@ void WorldSession::HandleGuildBankModifyTab( WorldPacket & recv_data )
     pGuild->DisplayGuildBankContent(this, TabId);
 }
 
-void WorldSession::HandleGuildBankLog( WorldPacket & recv_data )
+void WorldSession::HandleGuildBankLogQuery( WorldPacket & recv_data )
 {
     sLog.outDebug("WORLD: Received (MSG_GUILD_BANK_LOG_QUERY)");
     CHECK_PACKET_SIZE(recv_data, 1);
@@ -1656,7 +1655,7 @@ void WorldSession::HandleGuildBankLog( WorldPacket & recv_data )
     pGuild->DisplayGuildBankLogs(this, TabId);
 }
 
-void WorldSession::HandleGuildBankTabText(WorldPacket &recv_data)
+void WorldSession::HandleQueryGuildBankTabText(WorldPacket &recv_data)
 {
     sLog.outDebug("WORLD: Received MSG_QUERY_GUILD_BANK_TEXT");
     CHECK_PACKET_SIZE(recv_data, 1);
@@ -1675,7 +1674,7 @@ void WorldSession::HandleGuildBankTabText(WorldPacket &recv_data)
     pGuild->SendGuildBankTabText(this, TabId);
 }
 
-void WorldSession::HandleGuildBankSetTabText(WorldPacket &recv_data)
+void WorldSession::HandleSetGuildBankTabText(WorldPacket &recv_data)
 {
     sLog.outDebug("WORLD: Received CMSG_SET_GUILD_BANK_TEXT");
     CHECK_PACKET_SIZE(recv_data, 1+1);

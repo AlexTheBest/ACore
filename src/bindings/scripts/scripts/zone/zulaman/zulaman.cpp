@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -40,14 +40,14 @@ struct TRINITY_DLL_DECL npc_forest_frogAI : public ScriptedAI
 {
     npc_forest_frogAI(Creature* c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance *pInstance;
 
     void Reset() { }
 
-    void Aggro(Unit *who) { }
+    void EnterCombat(Unit *who) { }
 
     void DoSpawnRandom()
     {
@@ -111,8 +111,8 @@ struct TRINITY_DLL_DECL npc_zulaman_hostageAI : public ScriptedAI
     bool IsLoot;
     uint64 PlayerGUID;
     void Reset() {}
-    void Aggro(Unit *who) {}
-    void JustDied(Unit *)
+    void EnterCombat(Unit *who) {}
+    void JustDied(Unit* who)
     {
         Player* player = Unit::GetPlayer(PlayerGUID);
         if(player) player->SendLoot(m_creature->GetGUID(), LOOT_CORPSE);
@@ -139,7 +139,7 @@ bool GossipSelect_npc_zulaman_hostage(Player* player, Creature* _Creature, uint3
         return true;
     _Creature->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
 
-    ScriptedInstance* pInstance = ((ScriptedInstance*)_Creature->GetInstanceData());
+    ScriptedInstance* pInstance = (_Creature->GetInstanceData());
     if(pInstance)
     {
         //uint8 progress = pInstance->GetData(DATA_CHESTLOOTED);
@@ -158,8 +158,8 @@ bool GossipSelect_npc_zulaman_hostage(Player* player, Creature* _Creature, uint3
         /*Creature* summon = _Creature->SummonCreature(HostageInfo[progress], x-2, y, z, 0, TEMPSUMMON_DEAD_DESPAWN, 0);
         if(summon)
         {
-            ((npc_zulaman_hostageAI*)summon->AI())->PlayerGUID = player->GetGUID();
-            ((npc_zulaman_hostageAI*)summon->AI())->IsLoot = true;
+            CAST_AI(npc_zulaman_hostageAI, summon->AI())->PlayerGUID = player->GetGUID();
+            CAST_AI(npc_zulaman_hostageAI, summon->AI())->IsLoot = true;
             summon->SetDisplayId(10056);
             summon->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
             summon->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);

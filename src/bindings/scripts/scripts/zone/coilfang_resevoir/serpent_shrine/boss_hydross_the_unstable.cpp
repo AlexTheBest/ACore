@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -78,7 +78,7 @@ struct TRINITY_DLL_DECL boss_hydross_the_unstableAI : public ScriptedAI
 {
     boss_hydross_the_unstableAI(Creature *c) : ScriptedAI(c), Summons(m_creature)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance* pInstance;
@@ -114,7 +114,7 @@ struct TRINITY_DLL_DECL boss_hydross_the_unstableAI : public ScriptedAI
         m_creature->ApplySpellImmune(0, IMMUNITY_SCHOOL, SPELL_SCHOOL_MASK_FROST, true);
         m_creature->ApplySpellImmune(0, IMMUNITY_SCHOOL, SPELL_SCHOOL_MASK_NATURE, false);
 
-        m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, MODEL_CLEAN);
+        m_creature->SetDisplayId( MODEL_CLEAN);
 
         if (pInstance)
             pInstance->SetData(DATA_HYDROSSTHEUNSTABLEEVENT, NOT_STARTED);
@@ -128,7 +128,7 @@ struct TRINITY_DLL_DECL boss_hydross_the_unstableAI : public ScriptedAI
         if(beamer)
         {
             beamer->CastSpell(m_creature,SPELL_BLUE_BEAM,true);
-            beamer->SetUInt32Value(UNIT_FIELD_DISPLAYID , 11686);  //invisible
+            beamer->SetDisplayId(11686);  //invisible
             beamer->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
             beams[0]=beamer->GetGUID();
         }
@@ -136,7 +136,7 @@ struct TRINITY_DLL_DECL boss_hydross_the_unstableAI : public ScriptedAI
         if(beamer)
         {
             beamer->CastSpell(m_creature,SPELL_BLUE_BEAM,true);
-            beamer->SetUInt32Value(UNIT_FIELD_DISPLAYID , 11686);  //invisible
+            beamer->SetDisplayId(11686);  //invisible
             beamer->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
             beams[1]=beamer->GetGUID();
         }
@@ -153,7 +153,7 @@ struct TRINITY_DLL_DECL boss_hydross_the_unstableAI : public ScriptedAI
             }
         }
     }
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoScriptText(SAY_AGGRO, m_creature);
 
@@ -270,7 +270,7 @@ struct TRINITY_DLL_DECL boss_hydross_the_unstableAI : public ScriptedAI
                 if (m_creature->GetDistance2d(HYDROSS_X, HYDROSS_Y) < SWITCH_RADIUS)
                 {
                     // switch to clean form
-                    m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, MODEL_CLEAN);
+                    m_creature->SetDisplayId( MODEL_CLEAN);
                     CorruptedForm = false;
                     MarkOfHydross_Count = 0;
 
@@ -337,7 +337,7 @@ struct TRINITY_DLL_DECL boss_hydross_the_unstableAI : public ScriptedAI
                 if (m_creature->GetDistance2d(HYDROSS_X, HYDROSS_Y) >= SWITCH_RADIUS)
                 {
                     // switch to corrupted form
-                    m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, MODEL_CORRUPT);
+                    m_creature->SetDisplayId( MODEL_CORRUPT);
                     MarkOfCorruption_Count = 0;
                     CorruptedForm = true;
 

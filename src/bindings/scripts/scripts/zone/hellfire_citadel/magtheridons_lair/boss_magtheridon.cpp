@@ -128,7 +128,7 @@ struct TRINITY_DLL_DECL mob_abyssalAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit*) {DoZoneInCombat();}
+    void EnterCombat(Unit* who) {DoZoneInCombat();}
     void AttackStart(Unit *who) {if(!trigger) ScriptedAI::AttackStart(who);}
     void MoveInLineOfSight(Unit *who) {if(!trigger) ScriptedAI::MoveInLineOfSight(who);}
 
@@ -170,19 +170,19 @@ struct TRINITY_DLL_DECL boss_magtheridonAI : public ScriptedAI
 {
     boss_magtheridonAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance =(ScriptedInstance*)m_creature->GetInstanceData();
+        pInstance =m_creature->GetInstanceData();
         m_creature->SetFloatValue(UNIT_FIELD_BOUNDINGRADIUS, 10);
         m_creature->SetFloatValue(UNIT_FIELD_COMBATREACH, 10);
 
         // target 7, random target with certain entry spell, need core fix
         SpellEntry *TempSpell;
-        TempSpell = (SpellEntry*)GetSpellStore()->LookupEntry(SPELL_BLAZE_TARGET);
+        TempSpell = GET_SPELL(SPELL_BLAZE_TARGET);
         if(TempSpell && TempSpell->EffectImplicitTargetA[0] != 6)
         {
             TempSpell->EffectImplicitTargetA[0] = 6;
             TempSpell->EffectImplicitTargetB[0] = 0;
         }
-        TempSpell = (SpellEntry*)GetSpellStore()->LookupEntry(SPELL_QUAKE_TRIGGER);
+        TempSpell = GET_SPELL(SPELL_QUAKE_TRIGGER);
         if(TempSpell && TempSpell->EffectTriggerSpell[0] != SPELL_QUAKE_KNOCKBACK)
         {
             TempSpell->EffectTriggerSpell[0] = SPELL_QUAKE_KNOCKBACK;
@@ -221,6 +221,7 @@ struct TRINITY_DLL_DECL boss_magtheridonAI : public ScriptedAI
         RandChat_Timer = 90000;
 
         Phase3 = false;
+        NeedCheckCube = false;
 
         m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
         m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
@@ -257,7 +258,7 @@ struct TRINITY_DLL_DECL boss_magtheridonAI : public ScriptedAI
         for(CubeMap::iterator i = Cube.begin(); i != Cube.end(); ++i)
         {
             Unit *clicker = Unit::GetUnit(*m_creature, (*i).second);
-            if(!clicker || !clicker->HasAura(SPELL_SHADOW_GRASP, 1))
+            if(!clicker || !clicker->HasAura(SPELL_SHADOW_GRASP))
             {
                 DebuffClicker(clicker);
                 (*i).second = 0;
@@ -265,12 +266,12 @@ struct TRINITY_DLL_DECL boss_magtheridonAI : public ScriptedAI
         }
 
         // if 5 clickers from other cubes apply shadow cage
-        if(ClickerNum >= CLICKERS_COUNT && !m_creature->HasAura(SPELL_SHADOW_CAGE, 0))
+        if(ClickerNum >= CLICKERS_COUNT && !m_creature->HasAura(SPELL_SHADOW_CAGE))
         {
             DoScriptText(SAY_BANISH, m_creature);
             m_creature->CastSpell(m_creature, SPELL_SHADOW_CAGE, true);
         }
-        else if(ClickerNum < CLICKERS_COUNT && m_creature->HasAura(SPELL_SHADOW_CAGE, 0))
+        else if(ClickerNum < CLICKERS_COUNT && m_creature->HasAura(SPELL_SHADOW_CAGE))
             m_creature->RemoveAurasDueToSpell(SPELL_SHADOW_CAGE);
 
         if(!ClickerNum) NeedCheckCube = false;
@@ -289,7 +290,7 @@ struct TRINITY_DLL_DECL boss_magtheridonAI : public ScriptedAI
         DoScriptText(SAY_DEATH, m_creature);
     }
 
-    void MoveInLineOfSight(Unit*) {}
+    void MoveInLineOfSight(Unit* who) {}
 
     void AttackStart(Unit *who)
     {
@@ -297,7 +298,7 @@ struct TRINITY_DLL_DECL boss_magtheridonAI : public ScriptedAI
             ScriptedAI::AttackStart(who);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(pInstance)
             pInstance->SetData(DATA_MAGTHERIDON_EVENT, IN_PROGRESS);
@@ -311,7 +312,7 @@ struct TRINITY_DLL_DECL boss_magtheridonAI : public ScriptedAI
 
     void UpdateAI(const uint32 diff)
     {
-        if (!InCombat)
+        if (!m_creature->isInCombat())
         {
             if (RandChat_Timer < diff)
             {
@@ -368,7 +369,7 @@ struct TRINITY_DLL_DECL boss_magtheridonAI : public ScriptedAI
                 Creature *summon = m_creature->SummonCreature(MOB_ABYSSAL, x, y, z, 0, TEMPSUMMON_CORPSE_DESPAWN, 0);
                 if(summon)
                 {
-                    ((mob_abyssalAI*)summon->AI())->SetTrigger(2);
+                    CAST_AI(mob_abyssalAI, summon->AI())->SetTrigger(2);
                     m_creature->CastSpell(summon, SPELL_BLAZE_TARGET, true);
                     summon->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                 }
@@ -398,7 +399,7 @@ struct TRINITY_DLL_DECL boss_magtheridonAI : public ScriptedAI
                     float x, y, z;
                     target->GetPosition(x, y, z);
                     Creature *summon = m_creature->SummonCreature(MOB_ABYSSAL, x, y, z, 0, TEMPSUMMON_CORPSE_DESPAWN, 0);
-                    if(summon) ((mob_abyssalAI*)summon->AI())->SetTrigger(1);
+                    if(summon) CAST_AI(mob_abyssalAI, summon->AI())->SetTrigger(1);
                 }
                 Debris_Timer = 10000;
             }else Debris_Timer -= diff;
@@ -412,7 +413,7 @@ struct TRINITY_DLL_DECL mob_hellfire_channelerAI : public ScriptedAI
 {
     mob_hellfire_channelerAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance =(ScriptedInstance*)m_creature->GetInstanceData();
+        pInstance =m_creature->GetInstanceData();
     }
 
     ScriptedInstance* pInstance;
@@ -439,7 +440,7 @@ struct TRINITY_DLL_DECL mob_hellfire_channelerAI : public ScriptedAI
         m_creature->CastSpell(m_creature, SPELL_SHADOW_GRASP_C, false);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(pInstance)
             pInstance->SetData(DATA_CHANNELER_EVENT, IN_PROGRESS);
@@ -450,7 +451,7 @@ struct TRINITY_DLL_DECL mob_hellfire_channelerAI : public ScriptedAI
 
     void JustSummoned(Creature *summon) {summon->AI()->AttackStart(m_creature->getVictim());}
 
-    void MoveInLineOfSight(Unit*) {}
+    void MoveInLineOfSight(Unit* who) {}
 
     void DamageTaken(Unit*, uint32 &damage)
     {
@@ -458,7 +459,7 @@ struct TRINITY_DLL_DECL mob_hellfire_channelerAI : public ScriptedAI
             m_creature->CastSpell(m_creature, SPELL_SOUL_TRANSFER, true);
     }
 
-    void JustDied(Unit*)
+    void JustDied(Unit* who)
     {
         if(pInstance)
             pInstance->SetData(DATA_CHANNELER_EVENT, DONE);
@@ -503,20 +504,20 @@ struct TRINITY_DLL_DECL mob_hellfire_channelerAI : public ScriptedAI
 //Manticron Cube
 bool GOHello_go_Manticron_Cube(Player *player, GameObject* _GO)
 {
-    ScriptedInstance* pInstance =(ScriptedInstance*)_GO->GetInstanceData();
+    ScriptedInstance* pInstance =_GO->GetInstanceData();
     if(!pInstance) return true;
     if(pInstance->GetData(DATA_MAGTHERIDON_EVENT) != IN_PROGRESS) return true;
     Creature *Magtheridon =Unit::GetCreature(*_GO, pInstance->GetData64(DATA_MAGTHERIDON));
     if(!Magtheridon || !Magtheridon->isAlive()) return true;
 
     // if exhausted or already channeling return
-    if(player->HasAura(SPELL_MIND_EXHAUSTION, 0) || player->HasAura(SPELL_SHADOW_GRASP, 1))
+    if(player->HasAura(SPELL_MIND_EXHAUSTION) || player->HasAura(SPELL_SHADOW_GRASP))
         return true;
 
     player->InterruptNonMeleeSpells(false);
     player->CastSpell(player, SPELL_SHADOW_GRASP, true);
     player->CastSpell(player, SPELL_SHADOW_GRASP_VISUAL, false);
-    ((boss_magtheridonAI*)Magtheridon->AI())->SetClicker(_GO->GetGUID(), player->GetGUID());
+    CAST_AI(boss_magtheridonAI, Magtheridon->AI())->SetClicker(_GO->GetGUID(), player->GetGUID());
     return true;
 }
 

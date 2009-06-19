@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -16,8 +16,8 @@
 
 /* ScriptData
 SDName: Instance_Shadowfang_Keep
-SD%Complete: 75
-SDComment: TODO: check what other parts would require additional code (ex: make sure door are in open state if boss dead)
+SD%Complete: 90
+SDComment:
 SDCategory: Shadowfang Keep
 EndScriptData */
 
@@ -26,6 +26,19 @@ EndScriptData */
 
 #define ENCOUNTERS              4
 
+enum
+{
+    SAY_BOSS_DIE_AD         = -1033007,
+    SAY_BOSS_DIE_AS         = -1033008,
+
+    NPC_ASH                 = 3850,
+    NPC_ADA                 = 3849,
+
+    GO_COURTYARD_DOOR       = 18895,                        //door to open when talking to NPC's
+    GO_SORCERER_DOOR        = 18972,                        //door to open when Fenrus the Devourer
+    GO_ARUGAL_DOOR          = 18971                         //door to open when Wolf Master Nandos
+};
+
 struct TRINITY_DLL_DECL instance_shadowfang_keep : public ScriptedInstance
 {
     instance_shadowfang_keep(Map *map) : ScriptedInstance(map) {Initialize();};
@@ -33,12 +46,18 @@ struct TRINITY_DLL_DECL instance_shadowfang_keep : public ScriptedInstance
     uint32 Encounter[ENCOUNTERS];
     std::string str_data;
 
+    uint64 uiAshGUID;
+    uint64 uiAdaGUID;
+
     uint64 DoorCourtyardGUID;
     uint64 DoorSorcererGUID;
     uint64 DoorArugalGUID;
 
     void Initialize()
     {
+        uiAshGUID = 0;
+        uiAdaGUID = 0;
+
         DoorCourtyardGUID = 0;
         DoorSorcererGUID = 0;
         DoorArugalGUID = 0;
@@ -47,44 +66,47 @@ struct TRINITY_DLL_DECL instance_shadowfang_keep : public ScriptedInstance
              Encounter[i] = NOT_STARTED;
     }
 
-    Player* GetPlayerInMap()
+    void OnCreatureCreate(Creature* pCreature, bool add)
     {
-        Map::PlayerList const& players = instance->GetPlayers();
-
-        if (!players.isEmpty())
+        switch(pCreature->GetEntry())
         {
-            for(Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
-            {
-                if (Player* plr = itr->getSource())
-                    return plr;
-            }
+            case NPC_ASH: uiAshGUID = pCreature->GetGUID(); break;
+            case NPC_ADA: uiAdaGUID = pCreature->GetGUID(); break;
         }
-        debug_log("TSCR: Instance Shadowfang Keep: GetPlayerInMap, but PlayerList is empty!");
-        return NULL;
     }
 
-    void OnObjectCreate(GameObject *go)
+    void OnGameObjectCreate(GameObject *go, bool add)
     {
         switch(go->GetEntry())
         {
-        case 18895: DoorCourtyardGUID = go->GetGUID(); break;
-        case 18972: DoorSorcererGUID = go->GetGUID(); break;
-        case 18971: DoorArugalGUID = go->GetGUID(); break;
+            case GO_COURTYARD_DOOR:
+                DoorCourtyardGUID = go->GetGUID();
+                if (Encounter[0] == DONE)
+                    DoUseDoorOrButton(DoorCourtyardGUID);
+                break;
+            case GO_SORCERER_DOOR:
+                DoorSorcererGUID = go->GetGUID();
+                if (Encounter[2] == DONE)
+                    DoUseDoorOrButton(DoorSorcererGUID);
+                break;
+            case GO_ARUGAL_DOOR:
+                DoorArugalGUID = go->GetGUID();
+                if (Encounter[3] == DONE)
+                    DoUseDoorOrButton(DoorArugalGUID);
+                break;
         }
     }
 
-    void HandleGameObject(uint64 guid, uint32 state)
+    void DoSpeech()
     {
-        Player *player = GetPlayerInMap();
+        Creature* pAda = instance->GetCreature(uiAdaGUID);
+        Creature* pAsh = instance->GetCreature(uiAshGUID);
 
-        if (!player || !guid)
+        if (pAda && pAda->isAlive() && pAsh && pAsh->isAlive())
         {
-            debug_log("TSCR: Instance Shadowfang Keep: HandleGameObject fail");
-            return;
+            DoScriptText(SAY_BOSS_DIE_AD,pAda);
+            DoScriptText(SAY_BOSS_DIE_AS,pAsh);
         }
-
-        if (GameObject *go = GameObject::GetGameObject(*player,guid))
-            go->SetGoState(state);
     }
 
     void SetData(uint32 type, uint32 data)
@@ -93,20 +115,22 @@ struct TRINITY_DLL_DECL instance_shadowfang_keep : public ScriptedInstance
         {
             case TYPE_FREE_NPC:
                 if(data == DONE)
-                    HandleGameObject(DoorCourtyardGUID,0);
+                    DoUseDoorOrButton(DoorCourtyardGUID);
                 Encounter[0] = data;
                 break;
             case TYPE_RETHILGORE:
+                if (data == DONE)
+                    DoSpeech();
                 Encounter[1] = data;
                 break;
             case TYPE_FENRUS:
                 if(data == DONE)
-                    HandleGameObject(DoorSorcererGUID,0);
+                    DoUseDoorOrButton(DoorSorcererGUID);
                 Encounter[2] = data;
                 break;
             case TYPE_NANDOS:
                 if(data == DONE)
-                    HandleGameObject(DoorArugalGUID,0);
+                    DoUseDoorOrButton(DoorArugalGUID);
                 Encounter[3] = data;
                 break;
         }
@@ -141,9 +165,9 @@ struct TRINITY_DLL_DECL instance_shadowfang_keep : public ScriptedInstance
         return 0;
     }
 
-    const char* Save()
+    std::string GetSaveData()
     {
-        return str_data.c_str();
+        return str_data;
     }
 
     void Load(const char* in)
@@ -160,8 +184,10 @@ struct TRINITY_DLL_DECL instance_shadowfang_keep : public ScriptedInstance
         loadStream >> Encounter[0] >> Encounter[1] >> Encounter[2] >> Encounter[3];
 
         for(uint8 i = 0; i < ENCOUNTERS; ++i)
+        {
             if (Encounter[i] == IN_PROGRESS)
                 Encounter[i] = NOT_STARTED;
+        }
 
         OUT_LOAD_INST_DATA_COMPLETE;
     }

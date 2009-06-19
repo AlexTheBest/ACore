@@ -46,7 +46,7 @@ struct TRINITY_DLL_DECL boss_angerrelAI : public ScriptedAI
         Strike_Timer = 12000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -104,7 +104,7 @@ struct TRINITY_DLL_DECL boss_doperelAI : public ScriptedAI
         Gouge_Timer = 6000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -164,7 +164,7 @@ struct TRINITY_DLL_DECL boss_haterelAI : public ScriptedAI
         Strike_Timer = 12000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -236,7 +236,7 @@ struct TRINITY_DLL_DECL boss_vilerelAI : public ScriptedAI
         Shield_Timer = 3000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -309,7 +309,7 @@ struct TRINITY_DLL_DECL boss_seethrelAI : public ScriptedAI
         m_creature->CastSpell(m_creature,SPELL_FROSTARMOR,true);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -385,7 +385,7 @@ struct TRINITY_DLL_DECL boss_gloomrelAI : public ScriptedAI
         m_creature->setFaction(FACTION_NEUTRAL);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -457,7 +457,11 @@ bool GossipSelect_boss_gloomrel(Player *player, Creature *_Creature, uint32 send
             break;
         case GOSSIP_ACTION_INFO_DEF+22:
             player->CLOSE_GOSSIP_MENU();
-            //re-spawn object here
+            if (ScriptedInstance* pInstance = (ScriptedInstance*)_Creature->GetInstanceData())
+            {
+                //are 5 minutes expected? go template may have data to despawn when used at quest
+                pInstance->DoRespawnGameObject(pInstance->GetData64(DATA_GO_CHALICE),MINUTE*5);
+            }
             break;
     }
     return true;
@@ -493,7 +497,7 @@ struct TRINITY_DLL_DECL boss_doomrelAI : public ScriptedAI
         m_creature->setFaction(FACTION_NEUTRAL);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -515,7 +519,7 @@ struct TRINITY_DLL_DECL boss_doomrelAI : public ScriptedAI
         Rand = 0;
         Summoned = DoSpawnCreature(16119, RandX, RandY, 0, 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 120000);
         if(Summoned)
-            ((CreatureAI*)Summoned->AI())->AttackStart(victim);
+            (Summoned->AI())->AttackStart(victim);
     }
 
     void UpdateAI(const uint32 diff)

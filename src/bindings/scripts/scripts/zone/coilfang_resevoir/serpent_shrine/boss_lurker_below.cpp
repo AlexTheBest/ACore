@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -76,8 +76,8 @@ struct TRINITY_DLL_DECL boss_the_lurker_belowAI : public Scripted_NoMovementAI
 {
     boss_the_lurker_belowAI(Creature *c) : Scripted_NoMovementAI(c), Summons(m_creature)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
-        SpellEntry *TempSpell = (SpellEntry*)GetSpellStore()->LookupEntry(SPELL_SPOUT_ANIM);
+        pInstance = c->GetInstanceData();
+        SpellEntry *TempSpell = GET_SPELL(SPELL_SPOUT_ANIM);
         if(TempSpell)
         {
             TempSpell->Effect[0] = 0;//remove all spell effect, only anim is needed
@@ -152,7 +152,7 @@ struct TRINITY_DLL_DECL boss_the_lurker_belowAI : public Scripted_NoMovementAI
         }
      }
 
-     void Aggro(Unit *who)
+     void EnterCombat(Unit *who)
      {
          if(pInstance)
             pInstance->SetData(DATA_THELURKERBELOWEVENT, IN_PROGRESS);
@@ -267,7 +267,7 @@ struct TRINITY_DLL_DECL boss_the_lurker_belowAI : public Scripted_NoMovementAI
 
              for (Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
              {
-                 if (i->getSource()->isAlive() && i->getSource()->IsInWater() && !i->getSource()->HasAura(SPELL_SCALDINGWATER, 0))
+                 if (i->getSource()->isAlive() && i->getSource()->IsInWater() && !i->getSource()->HasAura(SPELL_SCALDINGWATER))
                      i->getSource()->CastSpell(i->getSource(), SPELL_SCALDINGWATER, true);
                  else if(!i->getSource()->IsInWater())
                      i->getSource()->RemoveAurasDueToSpell(SPELL_SCALDINGWATER);
@@ -322,7 +322,7 @@ struct TRINITY_DLL_DECL boss_the_lurker_belowAI : public Scripted_NoMovementAI
 
              if(WaterboltTimer < diff)
              {
-                 Unit* target = SelectUnit(SELECT_TARGET_NEAREST,0,14,true);
+                 Unit* target = SelectTarget(SELECT_TARGET_NEAREST,0,14,true);
                  if(!target)
                  {
                      target = SelectUnit(SELECT_TARGET_RANDOM,0);
@@ -358,7 +358,7 @@ struct TRINITY_DLL_DECL boss_the_lurker_belowAI : public Scripted_NoMovementAI
              }else PhaseTimer-=diff;
 
              if(!m_creature->isInCombat())
-                 m_creature->SetInCombatState(false);
+                 DoZoneInCombat();
 
              if(!Spawned)
              {
@@ -403,7 +403,7 @@ struct TRINITY_DLL_DECL mob_coilfang_ambusherAI : public Scripted_NoMovementAI
 {
     mob_coilfang_ambusherAI(Creature *c) : Scripted_NoMovementAI(c)
     {
-        SpellEntry *TempSpell = (SpellEntry*)GetSpellStore()->LookupEntry(SPELL_SHOOT);
+        SpellEntry *TempSpell = GET_SPELL(SPELL_SHOOT);
         if(TempSpell)
             TempSpell->Effect[0] = 2;//change spell effect from weapon % dmg to simple phisical dmg
     }
@@ -418,7 +418,7 @@ struct TRINITY_DLL_DECL mob_coilfang_ambusherAI : public Scripted_NoMovementAI
 
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
 
     }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -107,7 +107,7 @@ bool ItemUse_item_attuned_crystal_cores(Player *player, Item* _Item, SpellCastTa
         targets.getUnitTarget()->GetEntry() == 24972 && targets.getUnitTarget()->isDead() &&
         (player->GetQuestStatus(11524) == QUEST_STATUS_INCOMPLETE || player->GetQuestStatus(11525) == QUEST_STATUS_INCOMPLETE) )
     {
-        ((Creature*)targets.getUnitTarget())->RemoveCorpse();
+        CAST_CRE(targets.getUnitTarget())->RemoveCorpse();
         return false;
     }
 
@@ -191,7 +191,7 @@ bool ItemUse_item_nether_wraith_beacon(Player *player, Item* _Item, SpellCastTar
         Nether = player->SummonCreature(22408,player->GetPositionX() ,player->GetPositionY()+20, player->GetPositionZ(), 0,TEMPSUMMON_TIMED_DESPAWN,180000);
         Nether = player->SummonCreature(22408,player->GetPositionX() ,player->GetPositionY()-20, player->GetPositionZ(), 0,TEMPSUMMON_TIMED_DESPAWN,180000);
         if (Nether)
-            ((CreatureAI*)Nether->AI())->AttackStart(player);
+            (Nether->AI())->AttackStart(player);
     }
     return false;
 }
@@ -223,7 +223,7 @@ bool ItemUse_item_flying_machine(Player *player, Item* _Item, SpellCastTargets c
 bool ItemUse_item_gor_dreks_ointment(Player *player, Item* _Item, SpellCastTargets const& targets)
 {
     if( targets.getUnitTarget() && targets.getUnitTarget()->GetTypeId()==TYPEID_UNIT &&
-        targets.getUnitTarget()->GetEntry() == 20748 && !targets.getUnitTarget()->HasAura(32578,0) )
+        targets.getUnitTarget()->GetEntry() == 20748 && !targets.getUnitTarget()->HasAura(32578) )
         return false;
 
     player->SendEquipError(EQUIP_ERR_CANT_DO_RIGHT_NOW,_Item,NULL);
@@ -276,7 +276,7 @@ bool ItemUse_item_muiseks_vessel(Player *player, Item* _Item, SpellCastTargets c
         if( uTarget && uTarget->GetTypeId()==TYPEID_UNIT && uTarget->isDead() &&
             (uTarget->GetEntry()==cEntry || uTarget->GetEntry()==cEntry2 || uTarget->GetEntry()==cEntry3 || uTarget->GetEntry()==cEntry4) )
         {
-            ((Creature*)uTarget)->RemoveCorpse();
+            CAST_CRE(uTarget)->RemoveCorpse();
             return false;
         }
     }
@@ -463,7 +463,7 @@ bool ItemUse_item_yehkinyas_bramble(Player *player, Item* _Item, SpellCastTarget
                                                             // cast only on corpse 5307 or 5308
             (unit_target->GetEntry()==5307 || unit_target->GetEntry()==5308) )
         {
-            ((Creature*)unit_target)->RemoveCorpse();       // remove corpse for cancelling second use
+            CAST_CRE(unit_target)->RemoveCorpse();       // remove corpse for cancelling second use
             return false;                                   // all ok
         }
     }

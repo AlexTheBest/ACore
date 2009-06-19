@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -49,7 +49,7 @@ CreatureAI* GetAI_mob_ancient_core_hound(Creature *_Creature)
     ai->Spell[0].First_Cast       = 10000;
     ai->Spell[0].Cast_Target_Type = CAST_HOSTILE_TARGET;
 
-    uint32 RandDebuff;
+    uint32 RandDebuff = 0;
     switch(rand()%6)
     {
         case 0 : RandDebuff = SPELL_GROUND_STOMP;       break;

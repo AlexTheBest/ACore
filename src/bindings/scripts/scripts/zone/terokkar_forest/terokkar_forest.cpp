@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -27,7 +27,6 @@ mob_infested_root_walker
 mob_rotting_forest_rager
 mob_netherweb_victim
 npc_floon
-npc_skyguard_handler_deesak
 npc_isla_starmane
 EndContentData */
 
@@ -60,20 +59,20 @@ struct TRINITY_DLL_DECL mob_unkor_the_ruthlessAI : public ScriptedAI
         CanDoQuest = false;
         UnkorUnfriendly_Timer = 0;
         Pulverize_Timer = 3000;
-        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_NONE);
+        m_creature->SetStandState(UNIT_STAND_STATE_STAND);
         m_creature->setFaction(FACTION_HOSTILE);
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void DoNice()
     {
         DoScriptText(SAY_SUBMIT, m_creature);
         m_creature->setFaction(FACTION_FRIENDLY);
-        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_SIT);
+        m_creature->SetStandState(UNIT_STAND_STATE_SIT);
         m_creature->RemoveAllAuras();
         m_creature->DeleteThreatList();
-        m_creature->CombatStop();
+        m_creature->CombatStop(true);
         UnkorUnfriendly_Timer = 60000;
     }
 
@@ -82,7 +81,7 @@ struct TRINITY_DLL_DECL mob_unkor_the_ruthlessAI : public ScriptedAI
         if( done_by->GetTypeId() == TYPEID_PLAYER )
             if( (m_creature->GetHealth()-damage)*100 / m_creature->GetMaxHealth() < 30 )
         {
-            if( Group* pGroup = ((Player*)done_by)->GetGroup() )
+            if( Group* pGroup = CAST_PLR(done_by)->GetGroup() )
             {
                 for(GroupReference *itr = pGroup->GetFirstMember(); itr != NULL; itr = itr->next())
                 {
@@ -97,10 +96,10 @@ struct TRINITY_DLL_DECL mob_unkor_the_ruthlessAI : public ScriptedAI
                     }
                 }
             } else
-            if( ((Player*)done_by)->GetQuestStatus(QUEST_DONTKILLTHEFATONE) == QUEST_STATUS_INCOMPLETE &&
-                ((Player*)done_by)->GetReqKillOrCastCurrentCount(QUEST_DONTKILLTHEFATONE, 18260) == 10 )
+            if( CAST_PLR(done_by)->GetQuestStatus(QUEST_DONTKILLTHEFATONE) == QUEST_STATUS_INCOMPLETE &&
+                CAST_PLR(done_by)->GetReqKillOrCastCurrentCount(QUEST_DONTKILLTHEFATONE, 18260) == 10 )
             {
-                ((Player*)done_by)->AreaExploredOrEventHappens(QUEST_DONTKILLTHEFATONE);
+                CAST_PLR(done_by)->AreaExploredOrEventHappens(QUEST_DONTKILLTHEFATONE);
                 CanDoQuest = true;
             }
         }
@@ -152,7 +151,7 @@ struct TRINITY_DLL_DECL mob_infested_root_walkerAI : public ScriptedAI
     mob_infested_root_walkerAI(Creature *c) : ScriptedAI(c) {}
 
     void Reset() { }
-    void Aggro(Unit *who) { }
+    void EnterCombat(Unit *who) { }
 
     void DamageTaken(Unit *done_by, uint32 &damage)
     {
@@ -177,7 +176,7 @@ struct TRINITY_DLL_DECL mob_rotting_forest_ragerAI : public ScriptedAI
     mob_rotting_forest_ragerAI(Creature *c) : ScriptedAI(c) {}
 
     void Reset() { }
-    void Aggro(Unit *who) { }
+    void EnterCombat(Unit *who) { }
 
     void DamageTaken(Unit *done_by, uint32 &damage)
     {
@@ -209,19 +208,19 @@ struct TRINITY_DLL_DECL mob_netherweb_victimAI : public ScriptedAI
     mob_netherweb_victimAI(Creature *c) : ScriptedAI(c) {}
 
     void Reset() { }
-    void Aggro(Unit *who) { }
+    void EnterCombat(Unit *who) { }
     void MoveInLineOfSight(Unit *who) { }
 
     void JustDied(Unit* Killer)
     {
         if( Killer->GetTypeId() == TYPEID_PLAYER )
         {
-            if( ((Player*)Killer)->GetQuestStatus(10873) == QUEST_STATUS_INCOMPLETE )
+            if( CAST_PLR(Killer)->GetQuestStatus(10873) == QUEST_STATUS_INCOMPLETE )
             {
                 if( rand()%100 < 25 )
                 {
                     DoSpawnCreature(QUEST_TARGET,0,0,0,0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,60000);
-                    ((Player*)Killer)->KilledMonster(QUEST_TARGET, m_creature->GetGUID());
+                    CAST_PLR(Killer)->KilledMonster(QUEST_TARGET, m_creature->GetGUID());
                 }else
                 DoSpawnCreature(netherwebVictims[rand()%6],0,0,0,0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,60000);
 
@@ -269,7 +268,7 @@ struct TRINITY_DLL_DECL npc_floonAI : public ScriptedAI
         m_creature->setFaction(FACTION_FRIENDLY_FL);
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -323,36 +322,7 @@ bool GossipSelect_npc_floon(Player *player, Creature *_Creature, uint32 sender, 
         player->CLOSE_GOSSIP_MENU();
         _Creature->setFaction(FACTION_HOSTILE_FL);
         DoScriptText(SAY_FLOON_ATTACK, _Creature, player);
-        ((npc_floonAI*)_Creature->AI())->AttackStart(player);
-    }
-    return true;
-}
-
-/*######
-## npc_skyguard_handler_deesak
-######*/
-
-#define GOSSIP_SKYGUARD "Fly me to Ogri'la please"
-
-bool GossipHello_npc_skyguard_handler_deesak(Player *player, Creature *_Creature )
-{
-    if (_Creature->isQuestGiver())
-        player->PrepareQuestMenu( _Creature->GetGUID() );
-
-    if (player->GetReputationRank(1031) >= REP_HONORED)
-        player->ADD_GOSSIP_ITEM( 2, GOSSIP_SKYGUARD, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
-
-    player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
-
-    return true;
-}
-
-bool GossipSelect_npc_skyguard_handler_deesak(Player *player, Creature *_Creature, uint32 sender, uint32 action )
-{
-    if (action == GOSSIP_ACTION_INFO_DEF+1)
-    {
-        player->CLOSE_GOSSIP_MENU();
-        player->CastSpell(player,41279,true);               //TaxiPath 705 (Taxi - Skettis to Skyguard Outpost)
+        _Creature->AI()->AttackStart(player);
     }
     return true;
 }
@@ -388,9 +358,9 @@ struct TRINITY_DLL_DECL npc_isla_starmaneAI : public npc_escortAI
         {
         case 0:
             {
-            GameObject* Cage = FindGameObject(GO_CAGE, 10, m_creature);
+            GameObject* Cage = me->FindNearestGameObject(GO_CAGE, 10);
             if(Cage)
-                Cage->SetGoState(0);
+                Cage->SetGoState(GO_STATE_ACTIVE);
             }break;
         case 2: DoScriptText(SAY_PROGRESS_1, m_creature, player); break;
         case 5: DoScriptText(SAY_PROGRESS_2, m_creature, player); break;
@@ -398,10 +368,10 @@ struct TRINITY_DLL_DECL npc_isla_starmaneAI : public npc_escortAI
         case 29:DoScriptText(SAY_PROGRESS_4, m_creature, player);
             if (player)
             {
-                if(((Player*)player)->GetTeam() == ALLIANCE)
-                    ((Player*)player)->GroupEventHappens(QUEST_EFTW_A, m_creature);
-                else if(((Player*)player)->GetTeam() == HORDE)
-                    ((Player*)player)->GroupEventHappens(QUEST_EFTW_H, m_creature);
+                if(CAST_PLR(player)->GetTeam() == ALLIANCE)
+                    CAST_PLR(player)->GroupEventHappens(QUEST_EFTW_A, m_creature);
+                else if(CAST_PLR(player)->GetTeam() == HORDE)
+                    CAST_PLR(player)->GroupEventHappens(QUEST_EFTW_H, m_creature);
             } Completed = true;
             m_creature->SetInFront(player); break;
         case 30: m_creature->HandleEmoteCommand(EMOTE_ONESHOT_WAVE); break;
@@ -416,7 +386,7 @@ struct TRINITY_DLL_DECL npc_isla_starmaneAI : public npc_escortAI
         m_creature->setFaction(1660);
     }
 
-    void Aggro(Unit* who){}
+    void EnterCombat(Unit* who){}
 
     void JustDied(Unit* killer)
     {
@@ -425,10 +395,10 @@ struct TRINITY_DLL_DECL npc_isla_starmaneAI : public npc_escortAI
             Player* player = Unit::GetPlayer(PlayerGUID);
             if (player && !Completed)
             {
-                if(((Player*)player)->GetTeam() == ALLIANCE)
-                    ((Player*)player)->FailQuest(QUEST_EFTW_A);
-                else if(((Player*)player)->GetTeam() == HORDE)
-                    ((Player*)player)->FailQuest(QUEST_EFTW_H);
+                if(CAST_PLR(player)->GetTeam() == ALLIANCE)
+                    CAST_PLR(player)->FailQuest(QUEST_EFTW_A);
+                else if(CAST_PLR(player)->GetTeam() == HORDE)
+                    CAST_PLR(player)->FailQuest(QUEST_EFTW_H);
             }
         }
     }
@@ -443,7 +413,7 @@ bool QuestAccept_npc_isla_starmane(Player* player, Creature* creature, Quest con
 {
     if (quest->GetQuestId() == QUEST_EFTW_H || quest->GetQuestId() == QUEST_EFTW_A)
     {
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
         creature->setFaction(113);
     }
     return true;
@@ -489,7 +459,7 @@ CreatureAI* GetAI_npc_isla_starmaneAI(Creature *_Creature)
     thisAI->AddWaypoint(33, -2396.81, 3517.17, -3.55);
     thisAI->AddWaypoint(34, -2439.23, 3523.00, -1.05);
 
-    return (CreatureAI*)thisAI;
+    return thisAI;
 }
 
 /*######
@@ -570,12 +540,7 @@ void AddSC_terokkar_forest()
     newscript->Name="npc_floon";
     newscript->pGossipHello =  &GossipHello_npc_floon;
     newscript->pGossipSelect = &GossipSelect_npc_floon;
-    newscript->RegisterSelf();
-
-    newscript = new Script;
-    newscript->Name="npc_skyguard_handler_deesak";
-    newscript->pGossipHello =  &GossipHello_npc_skyguard_handler_deesak;
-    newscript->pGossipSelect = &GossipSelect_npc_skyguard_handler_deesak;
+    newscript->GetAI = &GetAI_npc_floon;
     newscript->RegisterSelf();
 
     newscript = new Script;

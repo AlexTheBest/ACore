@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -32,28 +32,34 @@ update `instance_template` set `script`='instance_blackrock_depths' where `map`=
 #include "precompiled.h"
 #include "def_blackrock_depths.h"
 
-#define ENCOUNTERS              6
+enum
+{
+    ENCOUNTERS              = 6,
 
-#define C_EMPEROR               9019
-#define C_PHALANX               9502
-
-#define GO_ARENA1               161525
-#define GO_ARENA2               161522
-#define GO_ARENA3               161524
-#define GO_ARENA4               161523
-#define GO_SHADOW_LOCK          161460
-#define GO_SHADOW_MECHANISM     161461
-#define GO_SHADOW_GIANT_DOOR    157923
-#define GO_SHADOW_DUMMY         161516
-#define GO_BAR_KEG_SHOT         170607
-#define GO_BAR_KEG_TRAP         171941
-#define GO_BAR_DOOR             170571
-#define GO_TOMB_ENTER           170576
-#define GO_TOMB_EXIT            170577
-#define GO_LYCEUM               170558
-#define GO_GOLEM_ROOM_N         170573
-#define GO_GOLEM_ROOM_S         170574
-#define GO_THONE_ROOM           170575
+    NPC_EMPEROR             = 9019,
+    NPC_PHALANX             = 9502,
+ 
+    GO_ARENA1               = 161525,
+    GO_ARENA2               = 161522,
+    GO_ARENA3               = 161524,
+    GO_ARENA4               = 161523,
+    GO_SHADOW_LOCK          = 161460,
+    GO_SHADOW_MECHANISM     = 161461,
+    GO_SHADOW_GIANT_DOOR    = 157923,
+    GO_SHADOW_DUMMY         = 161516,
+    GO_BAR_KEG_SHOT         = 170607,
+    GO_BAR_KEG_TRAP         = 171941,
+    GO_BAR_DOOR             = 170571,
+    GO_TOMB_ENTER           = 170576,
+    GO_TOMB_EXIT            = 170577,
+    GO_LYCEUM               = 170558,
+    GO_GOLEM_ROOM_N         = 170573,
+    GO_GOLEM_ROOM_S         = 170574,
+    GO_THONE_ROOM           = 170575,
+ 
+    GO_SPECTRAL_CHALICE     = 164869,
+    GO_CHEST_SEVEN          = 169243
+};
 
 struct TRINITY_DLL_DECL instance_blackrock_depths : public ScriptedInstance
 {
@@ -114,33 +120,16 @@ struct TRINITY_DLL_DECL instance_blackrock_depths : public ScriptedInstance
             Encounter[i] = NOT_STARTED;
     }
 
-    Player* GetPlayerInMap()
-    {
-        Map::PlayerList const& players = instance->GetPlayers();
-
-        if (!players.isEmpty())
-        {
-            for(Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
-            {
-                if (Player* plr = itr->getSource())
-                    return plr;
-            }
-        }
-
-        debug_log("TSCR: Instance Blackrock Depths: GetPlayerInMap, but PlayerList is empty!");
-        return NULL;
-    }
-
-    void OnCreatureCreate(Creature *creature, uint32 creature_entry)
+    void OnCreatureCreate(Creature *creature, bool add)
     {
         switch(creature->GetEntry())
         {
-        case C_EMPEROR: EmperorGUID = creature->GetGUID(); break;
-        case C_PHALANX: PhalanxGUID = creature->GetGUID(); break;
+        case NPC_EMPEROR: EmperorGUID = creature->GetGUID(); break;
+        case NPC_PHALANX: PhalanxGUID = creature->GetGUID(); break;
         }
     }
 
-    void OnObjectCreate(GameObject* go)
+    void OnGameObjectCreate(GameObject *go, bool add)
     {
         switch(go->GetEntry())
         {
@@ -166,14 +155,6 @@ struct TRINITY_DLL_DECL instance_blackrock_depths : public ScriptedInstance
 
     void SetData(uint32 type, uint32 data)
     {
-        Player *player = GetPlayerInMap();
-
-        if (!player)
-        {
-            debug_log("TSCR: Instance Blackrock Depths: SetData (Type: %u Data %u) cannot find any player.", type, data);
-            return;
-        }
-
         debug_log("TSCR: Instance Blackrock Depths: SetData update (Type: %u Data %u)", type, data);
 
         switch(type)
@@ -265,9 +246,9 @@ struct TRINITY_DLL_DECL instance_blackrock_depths : public ScriptedInstance
         return 0;
     }
 
-    const char* Save()
+    std::string GetSaveData()
     {
-        return str_data.c_str();
+        return str_data;
     }
 
     void Load(const char* in)

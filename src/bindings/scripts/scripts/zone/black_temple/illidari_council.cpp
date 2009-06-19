@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -135,7 +135,7 @@ struct TRINITY_DLL_DECL mob_blood_elf_council_voice_triggerAI : public ScriptedA
     // finds and stores the GUIDs for each Council member using instance data system.
     void LoadCouncilGUIDs()
     {
-        if(ScriptedInstance* pInstance = ((ScriptedInstance*)m_creature->GetInstanceData()))
+        if(ScriptedInstance* pInstance = (m_creature->GetInstanceData()))
         {
             Council[0] = pInstance->GetData64(DATA_GATHIOSTHESHATTERER);
             Council[1] = pInstance->GetData64(DATA_VERASDARKSHADOW);
@@ -144,7 +144,7 @@ struct TRINITY_DLL_DECL mob_blood_elf_council_voice_triggerAI : public ScriptedA
         }else error_log(ERROR_INST_DATA);
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void AttackStart(Unit* who) {}
     void MoveInLineOfSight(Unit* who) {}
@@ -192,7 +192,7 @@ struct TRINITY_DLL_DECL mob_illidari_councilAI : public ScriptedAI
 {
     mob_illidari_councilAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         for(uint8 i = 0; i < 4; ++i)
             Council[i] = 0;
     }
@@ -240,10 +240,10 @@ struct TRINITY_DLL_DECL mob_illidari_councilAI : public ScriptedAI
 
         m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
         m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-        m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, 11686);
+        m_creature->SetDisplayId(11686);
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
     void AttackStart(Unit* who) {}
     void MoveInLineOfSight(Unit* who) {}
 
@@ -261,8 +261,8 @@ struct TRINITY_DLL_DECL mob_illidari_councilAI : public ScriptedAI
             // Start the event for the Voice Trigger
             if(Creature* VoiceTrigger = (Unit::GetCreature(*m_creature, pInstance->GetData64(DATA_BLOOD_ELF_COUNCIL_VOICE))))
             {
-                ((mob_blood_elf_council_voice_triggerAI*)VoiceTrigger->AI())->LoadCouncilGUIDs();
-                ((mob_blood_elf_council_voice_triggerAI*)VoiceTrigger->AI())->EventStarted = true;
+                CAST_AI(mob_blood_elf_council_voice_triggerAI, VoiceTrigger->AI())->LoadCouncilGUIDs();
+                CAST_AI(mob_blood_elf_council_voice_triggerAI, VoiceTrigger->AI())->EventStarted = true;
             }
 
             for(uint8 i = 0; i < 4; ++i)
@@ -272,7 +272,7 @@ struct TRINITY_DLL_DECL mob_illidari_councilAI : public ScriptedAI
                 {
                     Member = Unit::GetUnit((*m_creature), Council[i]);
                     if(Member && Member->isAlive())
-                        ((Creature*)Member)->AI()->AttackStart(target);
+                        CAST_CRE(Member)->AI()->AttackStart(target);
                 }
             }
 
@@ -348,7 +348,7 @@ struct TRINITY_DLL_DECL boss_illidari_councilAI : public ScriptedAI
 {
     boss_illidari_councilAI(Creature* c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         for(uint8 i = 0; i < 4; ++i)
             Council[i] = 0;
         LoadedGUIDs = false;
@@ -360,13 +360,13 @@ struct TRINITY_DLL_DECL boss_illidari_councilAI : public ScriptedAI
 
     bool LoadedGUIDs;
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         if(pInstance)
         {
             Creature* Controller = (Unit::GetCreature(*m_creature, pInstance->GetData64(DATA_ILLIDARICOUNCIL)));
             if(Controller)
-                ((mob_illidari_councilAI*)Controller->AI())->StartEvent(who);
+                CAST_AI(mob_illidari_councilAI, Controller->AI())->StartEvent(who);
         }
         else
         {
@@ -405,9 +405,12 @@ struct TRINITY_DLL_DECL boss_illidari_councilAI : public ScriptedAI
         damage /= 4;
         for(uint8 i = 0; i < 4; ++i)
         {
-            if(Unit* pUnit = Unit::GetUnit(*m_creature, Council[i]))
+            if(Creature* pUnit = Unit::GetCreature(*m_creature, Council[i]))
                 if(pUnit != m_creature && damage < pUnit->GetHealth())
+                {
                     pUnit->SetHealth(pUnit->GetHealth() - damage);
+                    pUnit->LowerPlayerDamageReq(damage);
+                }
         }
     }
 

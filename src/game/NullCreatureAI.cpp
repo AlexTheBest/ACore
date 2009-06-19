@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,7 @@
 
 #include "NullCreatureAI.h"
 #include "Creature.h"
+#include "TemporarySummon.h"
 
 void PassiveAI::UpdateAI(const uint32)
 {
@@ -67,4 +68,14 @@ void CritterAI::EnterEvadeMode()
     if(me->hasUnitState(UNIT_STAT_FLEEING))
         me->SetControlled(false, UNIT_STAT_FLEEING);
     CreatureAI::EnterEvadeMode();
+}
+
+void TriggerAI::UpdateAI(const uint32 diff)
+{
+    if(!casted)
+    {
+        casted = true;
+        if(me->m_spells[0] && me->isSummon())
+            me->CastSpell(me, me->m_spells[0], false, 0, 0, ((TempSummon*)me)->GetSummonerGUID());
+    }
 }

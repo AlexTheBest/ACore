@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -28,35 +28,34 @@ EndContentData */
 
 #include "precompiled.h"
 
-#define SAY_INTRO                       -1557000
+enum
+{
+    SAY_INTRO                       = -1557000,
+    SAY_AGGRO_1                     = -1557001,
+    SAY_AGGRO_2                     = -1557002,
+    SAY_AGGRO_3                     = -1557003,
+    SAY_SLAY_1                      = -1557004,
+    SAY_SLAY_2                      = -1557005,
+    SAY_SUMMON                      = -1557006,
+    SAY_DEAD                        = -1557007,
 
-#define SAY_AGGRO_1                     -1557001
-#define SAY_AGGRO_2                     -1557002
-#define SAY_AGGRO_3                     -1557003
+    SPELL_BLINK                     = 34605,
+    SPELL_FROSTBOLT                 = 32364,
+    SPELL_FIREBALL                  = 32363,
+    SPELL_FROSTNOVA                 = 32365,
 
-#define SAY_SLAY_1                      -1557004
-#define SAY_SLAY_2                      -1557005
+    SPELL_ETHEREAL_BEACON           = 32371,                // Summons NPC_BEACON
+    SPELL_ETHEREAL_BEACON_VISUAL    = 32368,
+ 
+    NPC_BEACON                      = 18431,
+    NPC_SHAFFAR                     = 18344,
 
-#define SAY_SUMMON                      -1557006
-
-#define SAY_DEAD                        -1557007
-
-#define SPELL_BLINK                     34605
-#define SPELL_FROSTBOLT                 32370
-#define SPELL_FIREBALL                  20420
-#define SPELL_FROSTNOVA                 32365
-
-#define SPELL_ETHEREAL_BEACON           32371               // Summon 18431
-#define SPELL_ETHEREAL_BEACON_VISUAL    32368
-
-#define ENTRY_BEACON                    18431
-#define ENTRY_SHAFFAR                   18344
-
-#define NR_INITIAL_BEACONS              3
+    NR_INITIAL_BEACONS              = 3
+};
 
 struct TRINITY_DLL_DECL boss_nexusprince_shaffarAI : public ScriptedAI
 {
-    boss_nexusprince_shaffarAI(Creature *c) : ScriptedAI(c) {}
+    boss_nexusprince_shaffarAI(Creature *c) : ScriptedAI(c) { HasTaunted = false; }
 
     uint32 Blink_Timer;
     uint32 Beacon_Timer;
@@ -84,16 +83,15 @@ struct TRINITY_DLL_DECL boss_nexusprince_shaffarAI : public ScriptedAI
         Frostbolt_Timer = 4000;
         FrostNova_Timer = 15000;
 
-        HasTaunted = false;
         CanBlink = false;
 
         float dist = 8.0f;
         float posX, posY, posZ, angle;
         m_creature->GetHomePosition(posX, posY, posZ, angle);
 
-        Beacon[0] = m_creature->SummonCreature(ENTRY_BEACON, posX - dist, posY - dist, posZ, angle, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 7200000);
-        Beacon[1] = m_creature->SummonCreature(ENTRY_BEACON, posX - dist, posY + dist, posZ, angle, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 7200000);
-        Beacon[2] = m_creature->SummonCreature(ENTRY_BEACON, posX + dist, posY, posZ, angle, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 7200000);
+        Beacon[0] = m_creature->SummonCreature(NPC_BEACON, posX - dist, posY - dist, posZ, angle, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 7200000);
+        Beacon[1] = m_creature->SummonCreature(NPC_BEACON, posX - dist, posY + dist, posZ, angle, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 7200000);
+        Beacon[2] = m_creature->SummonCreature(NPC_BEACON, posX + dist, posY, posZ, angle, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 7200000);
 
         for(uint8 i = 0; i < NR_INITIAL_BEACONS; i++)
         {
@@ -120,27 +118,14 @@ struct TRINITY_DLL_DECL boss_nexusprince_shaffarAI : public ScriptedAI
 
     void MoveInLineOfSight(Unit *who)
     {
-        if( !m_creature->getVictim() && who->isTargetableForAttack() && ( m_creature->IsHostileTo( who )) && who->isInAccessiblePlaceFor(m_creature) )
+        if (!HasTaunted && who->GetTypeId() == TYPEID_PLAYER && m_creature->IsWithinDistInMap(who, 100.0f))
         {
-            if( !HasTaunted && m_creature->IsWithinDistInMap(who, 100.0) )
-            {
-                DoScriptText(SAY_INTRO, m_creature);
-                HasTaunted = true;
-            }
-
-            if (!m_creature->canFly() && m_creature->GetDistanceZ(who) > CREATURE_Z_ATTACK_RANGE)
-                return;
-
-            float attackRadius = m_creature->GetAttackDistance(who);
-            if( m_creature->IsWithinDistInMap(who, attackRadius) && m_creature->IsWithinLOSInMap(who) )
-            {
-                //who->RemoveSpellsCausingAura(SPELL_AURA_MOD_STEALTH);
-                AttackStart(who);
-            }
+            DoScriptText(SAY_INTRO, m_creature);
+            HasTaunted = true;
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         switch(rand()%3)
         {
@@ -157,7 +142,7 @@ struct TRINITY_DLL_DECL boss_nexusprince_shaffarAI : public ScriptedAI
 
     void JustSummoned(Creature *summoned)
     {
-        if( summoned->GetEntry() == ENTRY_BEACON )
+        if( summoned->GetEntry() == NPC_BEACON )
         {
             summoned->CastSpell(summoned,SPELL_ETHEREAL_BEACON_VISUAL,false);
 
@@ -214,6 +199,11 @@ struct TRINITY_DLL_DECL boss_nexusprince_shaffarAI : public ScriptedAI
                 if( m_creature->IsNonMeleeSpellCasted(false) )
                     m_creature->InterruptNonMeleeSpells(true);
 
+                //expire movement, will prevent from running right back to victim after cast
+                //(but should MoveChase be used again at a certain time or should he not move?)
+                if (m_creature->GetMotionMaster()->GetCurrentMovementGeneratorType() == TARGETED_MOTION_TYPE)
+                    m_creature->GetMotionMaster()->MovementExpired();
+
                 DoCast(m_creature,SPELL_BLINK);
                 Blink_Timer = 1000 + rand()%1500;
                 CanBlink = false;
@@ -228,7 +218,7 @@ struct TRINITY_DLL_DECL boss_nexusprince_shaffarAI : public ScriptedAI
             if( !urand(0,3) )
                 DoScriptText(SAY_SUMMON, m_creature);
 
-            DoCast(m_creature,SPELL_ETHEREAL_BEACON);
+            DoCast(m_creature,SPELL_ETHEREAL_BEACON, true);
 
             Beacon_Timer = 10000;
         }else Beacon_Timer -= diff;
@@ -242,8 +232,11 @@ CreatureAI* GetAI_boss_nexusprince_shaffar(Creature *_Creature)
     return new boss_nexusprince_shaffarAI (_Creature);
 }
 
-#define SPELL_ARCANE_BOLT               15254
-#define SPELL_ETHEREAL_APPRENTICE       32372               // Summon 18430
+enum
+{
+    SPELL_ARCANE_BOLT               = 15254,
+    SPELL_ETHEREAL_APPRENTICE       = 32372                 // Summon 18430
+};
 
 struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
 {
@@ -269,17 +262,17 @@ struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
         Check_Timer = 1000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         // Send Shaffar to fight
-        Unit* Shaffar = FindCreature(ENTRY_SHAFFAR, 100, m_creature);
+        Unit* Shaffar = me->FindNearestCreature(NPC_SHAFFAR, 100);
         if(!Shaffar || Shaffar->isDead())
         {
             KillSelf();
             return;
         }
         if(!Shaffar->isInCombat())
-            ((Creature*)Shaffar)->AI()->AttackStart(who);
+            CAST_CRE(Shaffar)->AI()->AttackStart(who);
     }
 
     void JustSummoned(Creature *summoned)
@@ -289,9 +282,9 @@ struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
 
     void JustDied(Unit* Killer)
     {
-        Unit *Shaffar = FindCreature(ENTRY_SHAFFAR, 100, m_creature);
+        Unit *Shaffar = me->FindNearestCreature(NPC_SHAFFAR, 100);
         if(Shaffar)
-            ((boss_nexusprince_shaffarAI*)(((Creature*)Shaffar)->AI()))->RemoveBeaconFromList(m_creature);
+            CAST_AI(boss_nexusprince_shaffarAI, (CAST_CRE(Shaffar)->AI()))->RemoveBeaconFromList(m_creature);
     }
 
     void UpdateAI(const uint32 diff)
@@ -301,7 +294,7 @@ struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
 
         if(Check_Timer < diff)
         {
-            Unit *Shaffar = FindCreature(ENTRY_SHAFFAR, 100, m_creature);
+            Unit *Shaffar = me->FindNearestCreature(NPC_SHAFFAR, 100);
             if(!Shaffar || Shaffar->isDead() || !Shaffar->isInCombat())
             {
                 KillSelf();
@@ -322,8 +315,6 @@ struct TRINITY_DLL_DECL mob_ethereal_beaconAI : public ScriptedAI
                 m_creature->InterruptNonMeleeSpells(true);
 
             m_creature->CastSpell(m_creature,SPELL_ETHEREAL_APPRENTICE,true);
-            if( m_creature->isPet() )
-                ((Pet*)m_creature)->SetDuration(0);
             KillSelf();
             return;
         }else Apprentice_Timer -= diff;
@@ -335,8 +326,11 @@ CreatureAI* GetAI_mob_ethereal_beacon(Creature *_Creature)
     return new mob_ethereal_beaconAI (_Creature);
 }
 
-#define SPELL_ETHEREAL_APPRENTICE_FIREBOLT          32369
-#define SPELL_ETHEREAL_APPRENTICE_FROSTBOLT         32370
+enum
+{
+    SPELL_ETHEREAL_APPRENTICE_FIREBOLT          = 32369,
+    SPELL_ETHEREAL_APPRENTICE_FROSTBOLT         = 32370
+};
 
 struct TRINITY_DLL_DECL mob_ethereal_apprenticeAI : public ScriptedAI
 {
@@ -351,8 +345,6 @@ struct TRINITY_DLL_DECL mob_ethereal_apprenticeAI : public ScriptedAI
         Cast_Timer = 3000;
         isFireboltTurn = true;
     }
-
-    void Aggro(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {

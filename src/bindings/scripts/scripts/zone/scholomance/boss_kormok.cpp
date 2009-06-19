@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -53,7 +53,7 @@ struct TRINITY_DLL_DECL boss_kormokAI : public ScriptedAI
         Mages = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -75,7 +75,7 @@ struct TRINITY_DLL_DECL boss_kormokAI : public ScriptedAI
         Rand1 = 0;
         SummonedMinions = DoSpawnCreature(16119, Rand1X, Rand1Y, 0, 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 120000);
         if(SummonedMinions)
-            ((CreatureAI*)SummonedMinions->AI())->AttackStart(victim);
+            (SummonedMinions->AI())->AttackStart(victim);
     }
 
     void SummonMages(Unit* victim)
@@ -96,7 +96,7 @@ struct TRINITY_DLL_DECL boss_kormokAI : public ScriptedAI
         Rand2 = 0;
         SummonedMages = DoSpawnCreature(16120, Rand2X, Rand2Y, 0, 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 120000);
         if(SummonedMages)
-            ((CreatureAI*)SummonedMages->AI())->AttackStart(victim);
+            (SummonedMages->AI())->AttackStart(victim);
     }
 
     void UpdateAI(const uint32 diff)

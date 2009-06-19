@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -73,7 +73,7 @@ struct TRINITY_DLL_DECL boss_taerarAI : public ScriptedAI
         Shades = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -98,7 +98,7 @@ struct TRINITY_DLL_DECL boss_taerarAI : public ScriptedAI
         Rand = 0;
         Summoned = DoSpawnCreature(15302, RandX, RandY, 0, 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 300000);
         if(Summoned)
-            ((CreatureAI*)Summoned->AI())->AttackStart(victim);
+            (Summoned->AI())->AttackStart(victim);
     }
 
     void UpdateAI(const uint32 diff)
@@ -256,7 +256,7 @@ struct TRINITY_DLL_DECL boss_shadeoftaerarAI : public ScriptedAI
         PosionBreath_Timer = 12000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 

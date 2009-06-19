@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,10 +21,12 @@
 #ifndef TRINITY_CELL_H
 #define TRINITY_CELL_H
 
+#include <cmath>
+
 #include "GameSystem/TypeContainer.h"
 #include "GameSystem/TypeContainerVisitor.h"
+
 #include "GridDefines.h"
-#include <cmath>
 
 class Map;
 
@@ -93,13 +95,13 @@ struct TRINITY_DLL_DECL Cell
         y = data.Part.grid_y*MAX_NUMBER_OF_CELLS + data.Part.cell_y;
     }
 
-    inline bool DiffCell(const Cell &cell) const
+    bool DiffCell(const Cell &cell) const
     {
         return( data.Part.cell_x != cell.data.Part.cell_x ||
             data.Part.cell_y != cell.data.Part.cell_y );
     }
 
-    inline bool DiffGrid(const Cell &cell) const
+    bool DiffGrid(const Cell &cell) const
     {
         return( data.Part.grid_x != cell.data.Part.grid_x ||
             data.Part.grid_y != cell.data.Part.grid_y );

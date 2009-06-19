@@ -51,7 +51,7 @@ struct TRINITY_DLL_DECL boss_archaedasAI : public ScriptedAI
 {
     boss_archaedasAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)m_creature->GetInstanceData());
+        pInstance = (m_creature->GetInstanceData());
     }
 
     uint32 Tremor_Timer;
@@ -59,7 +59,6 @@ struct TRINITY_DLL_DECL boss_archaedasAI : public ScriptedAI
     uint32 WallMinionTimer;
     bool wakingUp;
 
-    bool InCombat;
     bool guardiansAwake;
     bool vaultWalkersAwake;
     ScriptedInstance* pInstance;
@@ -70,7 +69,6 @@ struct TRINITY_DLL_DECL boss_archaedasAI : public ScriptedAI
         Awaken_Timer = 0;
         WallMinionTimer = 10000;
 
-        InCombat = false;
         wakingUp = false;
         guardiansAwake = false;
         vaultWalkersAwake = false;
@@ -94,7 +92,7 @@ struct TRINITY_DLL_DECL boss_archaedasAI : public ScriptedAI
     }
 
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         m_creature->setFaction (14);
         m_creature->RemoveFlag (UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
@@ -210,14 +208,13 @@ struct TRINITY_DLL_DECL mob_archaedas_minionsAI : public ScriptedAI
 {
     mob_archaedas_minionsAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)m_creature->GetInstanceData());
+        pInstance = (m_creature->GetInstanceData());
     }
 
     uint32 Arcing_Timer;
     int32 Awaken_Timer;
     bool wakingUp;
 
-    bool InCombat;
     bool amIAwake;
     ScriptedInstance* pInstance;
 
@@ -226,7 +223,6 @@ struct TRINITY_DLL_DECL mob_archaedas_minionsAI : public ScriptedAI
         Arcing_Timer = 3000;
         Awaken_Timer = 0;
 
-        InCombat = false;
         wakingUp = false;
         amIAwake = false;
 
@@ -236,7 +232,7 @@ struct TRINITY_DLL_DECL mob_archaedas_minionsAI : public ScriptedAI
         m_creature->RemoveAllAuras();
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         m_creature->setFaction (14);
         m_creature->RemoveAllAuras();
@@ -336,7 +332,7 @@ bool GOHello_go_altar_of_archaedas(Player *player, GameObject* go)
         return false;            // not enough people
     }
 
-    ScriptedInstance* pInstance = ((ScriptedInstance*)player->GetInstanceData());
+    ScriptedInstance* pInstance = (player->GetInstanceData());
     if (!pInstance) return false;
     pInstance->SetData(NULL,0);
     pInstance->SetData64(0,player->GetGUID());     // activate archaedas
@@ -359,22 +355,20 @@ struct TRINITY_DLL_DECL mob_stonekeepersAI : public ScriptedAI
 {
     mob_stonekeepersAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)m_creature->GetInstanceData());
+        pInstance = (m_creature->GetInstanceData());
     }
 
-    bool InCombat;
     ScriptedInstance* pInstance;
 
     void Reset()
     {
-        InCombat = false;
         m_creature->setFaction(35);
         m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
         m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
         m_creature->RemoveAllAuras();
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         m_creature->setFaction (14);
         m_creature->RemoveFlag (UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
@@ -423,7 +417,7 @@ static uint32 altarOfTheKeeperCounter=0;
 
 bool GOHello_go_altar_of_the_keepers(Player *player, GameObject* go)
 {
-    ScriptedInstance* pInstance = ((ScriptedInstance*)player->GetInstanceData());
+    ScriptedInstance* pInstance = (player->GetInstanceData());
     if (!pInstance) return true;
 
     bool alreadyUsed;

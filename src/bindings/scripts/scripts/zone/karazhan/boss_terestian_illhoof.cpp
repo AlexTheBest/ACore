@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -45,9 +45,9 @@ EndScriptData */
 #define SPELL_FIENDISH_PORTAL       30171                   // Opens portal and summons Fiendish Portal, 2 sec cast
 #define SPELL_FIENDISH_PORTAL_1     30179                   // Opens portal and summons Fiendish Portal, instant cast
 
+#define SPELL_FIREBOLT              30050                   // Blasts a target for 150 Fire damage.
 #define SPELL_BROKEN_PACT           30065                   // All damage taken increased by 25%.
 #define SPELL_AMPLIFY_FLAMES        30053                   // Increases the Fire damage taken by an enemy by 500 for 25 sec.
-#define SPELL_FIREBOLT              18086                   // Blasts a target for 150 Fire damage.
 
 #define CREATURE_DEMONCHAINS    17248
 #define CREATURE_FIENDISHIMP    17267
@@ -65,7 +65,7 @@ struct TRINITY_DLL_DECL mob_kilrekAI : public ScriptedAI
 {
     mob_kilrekAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance* pInstance;
@@ -77,11 +77,10 @@ struct TRINITY_DLL_DECL mob_kilrekAI : public ScriptedAI
     void Reset()
     {
         TerestianGUID = 0;
-
-        AmplifyTimer = 0;
+        AmplifyTimer = 2000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(!pInstance)
         {
@@ -119,13 +118,10 @@ struct TRINITY_DLL_DECL mob_kilrekAI : public ScriptedAI
             m_creature->InterruptNonMeleeSpells(false);
             DoCast(m_creature->getVictim(),SPELL_AMPLIFY_FLAMES);
 
-            AmplifyTimer = 20000;
+            AmplifyTimer = 10000 + rand()%10000;
         }else AmplifyTimer -= diff;
 
-        //Chain cast
-        if (!m_creature->IsNonMeleeSpellCasted(false) && m_creature->IsWithinDistInMap(m_creature->getVictim(), 30))
-            DoCast(m_creature->getVictim(),SPELL_FIREBOLT);
-        else DoMeleeAttackIfReady();
+        DoMeleeAttackIfReady();
     }
 };
 
@@ -140,7 +136,7 @@ struct TRINITY_DLL_DECL mob_demon_chainAI : public ScriptedAI
         SacrificeGUID = 0;
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
     void AttackStart(Unit* who) {}
     void MoveInLineOfSight(Unit* who) {}
 
@@ -159,7 +155,9 @@ struct TRINITY_DLL_DECL boss_terestianAI : public ScriptedAI
 {
     boss_terestianAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        for(uint8 i = 0; i < 2; ++i)
+            PortalGUID[i] = 0;
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance *pInstance;
@@ -173,6 +171,7 @@ struct TRINITY_DLL_DECL boss_terestianAI : public ScriptedAI
     uint32 SummonTimer;
     uint32 BerserkTimer;
 
+    bool ReSummon;
     bool SummonKilrek;
     bool SummonedPortals;
     bool Berserk;
@@ -199,19 +198,26 @@ struct TRINITY_DLL_DECL boss_terestianAI : public ScriptedAI
 
         SummonedPortals     = false;
         Berserk             = false;
+        ReSummon            = false;
 
         if(pInstance)
             pInstance->SetData(DATA_TERESTIAN_EVENT, NOT_STARTED);
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         DoScriptText(SAY_AGGRO, m_creature);
 
         if(pInstance)
         {
-            // Put Kil'rek in combat against our target so players don't skip him
             Creature* Kilrek = (Unit::GetCreature(*m_creature, pInstance->GetData64(DATA_KILREK)));
+            // Respawn Kil'rek on aggro if Kil'rek is dead.
+            if (Kilrek && !Kilrek->isAlive())
+            {
+                Kilrek->Respawn();
+            }
+
+            // Put Kil'rek in combat against our target so players don't skip him
             if(Kilrek && !Kilrek->getVictim())
                 Kilrek->AddThreat(who, 1.0f);
 
@@ -255,18 +261,22 @@ struct TRINITY_DLL_DECL boss_terestianAI : public ScriptedAI
 
         if(CheckKilrekTimer < diff)
         {
+
             CheckKilrekTimer = 5000;
 
             if(pInstance)
                 uint64 KilrekGUID = pInstance->GetData64(DATA_KILREK);
             else ERROR_INST_DATA(m_creature);
 
-            Creature* Kilrek = (Unit::GetCreature((*m_creature), KilrekGUID));
+            Creature* Kilrek = (Unit::GetCreature(*m_creature, pInstance->GetData64(DATA_KILREK)));
             if(SummonKilrek && Kilrek)
             {
                 Kilrek->Respawn();
                 if(Kilrek->AI())
+                {
                     Kilrek->AI()->AttackStart(m_creature->getVictim());
+                    m_creature->RemoveAurasDueToSpell(SPELL_BROKEN_PACT);
+                }
 
                 SummonKilrek = false;
             }
@@ -287,7 +297,7 @@ struct TRINITY_DLL_DECL boss_terestianAI : public ScriptedAI
                 Creature* Chains = m_creature->SummonCreature(CREATURE_DEMONCHAINS, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 21000);
                 if(Chains)
                 {
-                    ((mob_demon_chainAI*)Chains->AI())->SacrificeGUID = target->GetGUID();
+                    CAST_AI(mob_demon_chainAI, Chains->AI())->SacrificeGUID = target->GetGUID();
                     Chains->CastSpell(Chains, SPELL_DEMON_CHAINS, true);
                     switch(rand()%2)
                     {
@@ -355,10 +365,12 @@ struct TRINITY_DLL_DECL mob_fiendish_impAI : public ScriptedAI
 
     void Reset()
     {
-        FireboltTimer = 3000;
+        FireboltTimer = 2000;
+
+        m_creature->ApplySpellImmune(0, IMMUNITY_SCHOOL, SPELL_SCHOOL_MASK_FIRE, true);
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -369,7 +381,7 @@ struct TRINITY_DLL_DECL mob_fiendish_impAI : public ScriptedAI
         if(FireboltTimer < diff)
         {
             DoCast(m_creature->getVictim(), SPELL_FIREBOLT);
-            FireboltTimer = 1500;
+            FireboltTimer = 2200;
         }else FireboltTimer -= diff;
 
         DoMeleeAttackIfReady();

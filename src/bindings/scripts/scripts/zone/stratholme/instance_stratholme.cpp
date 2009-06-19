@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -76,11 +76,11 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
 
     void Initialize()
     {
-        for(uint8 i = 0; i < ENCOUNTERS; i++)
+        for(uint8 i = 0; i < ENCOUNTERS; ++i)
             Encounter[i] = NOT_STARTED;
 
-        for(uint8 i = 0; i < 5; i++)
-            IsSilverHandDead[5] = false;
+        for(uint8 i = 0; i < 5; ++i)
+            IsSilverHandDead[i] = false;
 
         BaronRun_Timer = 0;
         SlaugtherSquare_Timer = 0;
@@ -102,23 +102,6 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
         abomnationGUID.clear();
     }
 
-    Player* GetPlayerInMap()
-    {
-        Map::PlayerList const& players = instance->GetPlayers();
-
-        if (!players.isEmpty())
-        {
-            for(Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
-            {
-                if (Player* plr = itr->getSource())
-                    return plr;
-            }
-        }
-
-        debug_log("TSCR: Instance Stratholme: GetPlayerInMap, but PlayerList is empty!");
-        return NULL;
-    }
-
     bool StartSlaugtherSquare()
     {
         //change to DONE when crystals implemented
@@ -136,21 +119,19 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
     //if withRestoreTime true, then newState will be ignored and GO should be restored to original state after 10 seconds
     void UpdateGoState(uint64 goGuid, uint32 newState, bool withRestoreTime)
     {
-        Player *player = GetPlayerInMap();
-
-        if (!player || !goGuid)
+        if (!goGuid)
             return;
 
-        if (GameObject *go = GameObject::GetGameObject(*player, goGuid))
+        if (GameObject *go = instance->GetGameObject(goGuid))
         {
             if (withRestoreTime)
                 go->UseDoorOrButton(10);
             else
-                go->SetGoState(newState);
+                go->SetGoState((GOState)newState);
         }
     }
 
-    void OnCreatureCreate(Creature *creature, uint32 creature_entry)
+    void OnCreatureCreate(Creature *creature, bool add)
     {
         switch(creature->GetEntry())
         {
@@ -162,7 +143,7 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
         }
     }
 
-    void OnObjectCreate(GameObject *go)
+    void OnGameObjectCreate(GameObject *go, bool add)
     {
         switch(go->GetEntry())
         {
@@ -185,14 +166,6 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
 
     void SetData(uint32 type, uint32 data)
     {
-        Player *player = GetPlayerInMap();
-
-        if (!player)
-        {
-            debug_log("TSCR: Instance Stratholme: SetData (Type: %u Data %u) cannot find any player.", type, data);
-            return;
-        }
-
         switch(type)
         {
         case TYPE_BARON_RUN:
@@ -208,8 +181,10 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
                 //may add code to remove aura from players, but in theory the time should be up already and removed.
                 break;
             case DONE:
-                if (Unit *t = Unit::GetUnit(*player, ysidaTriggerGUID))
-                    t->SummonCreature(C_YSIDA,t->GetPositionX(),t->GetPositionY(),t->GetPositionZ(),t->GetOrientation(),TEMPSUMMON_TIMED_DESPAWN,1800000);
+                if (Creature* pYsidaT = instance->GetCreature(ysidaTriggerGUID))
+                    pYsidaT->SummonCreature(C_YSIDA,
+                    pYsidaT->GetPositionX(),pYsidaT->GetPositionY(),pYsidaT->GetPositionZ(),pYsidaT->GetOrientation(),
+                    TEMPSUMMON_TIMED_DESPAWN,1800000);
                 BaronRun_Timer = 0;
                 break;
             }
@@ -218,21 +193,21 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
         case TYPE_BARONESS:
             Encounter[1] = data;
             if (data == IN_PROGRESS)
-                UpdateGoState(ziggurat1GUID,0,false);
+                UpdateGoState(ziggurat1GUID,GO_STATE_ACTIVE,false);
             if (data == IN_PROGRESS)                    //change to DONE when crystals implemented
                 StartSlaugtherSquare();
             break;
         case TYPE_NERUB:
             Encounter[2] = data;
             if (data == IN_PROGRESS)
-                UpdateGoState(ziggurat2GUID,0,false);
+                UpdateGoState(ziggurat2GUID,GO_STATE_ACTIVE,false);
             if (data == IN_PROGRESS)                    //change to DONE when crystals implemented
                 StartSlaugtherSquare();
             break;
         case TYPE_PALLID:
             Encounter[3] = data;
             if (data == IN_PROGRESS)
-                UpdateGoState(ziggurat3GUID,0,false);
+                UpdateGoState(ziggurat3GUID,GO_STATE_ACTIVE,false);
             if (data == IN_PROGRESS)                    //change to DONE when crystals implemented
                 StartSlaugtherSquare();
             break;
@@ -240,14 +215,14 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
             if (data == IN_PROGRESS)
             {
                 if (Encounter[4] != IN_PROGRESS)
-                    UpdateGoState(portGauntletGUID,1,false);
+                    UpdateGoState(portGauntletGUID,GO_STATE_READY,false);
 
                 uint32 count = abomnationGUID.size();
                 for(std::set<uint64>::iterator i = abomnationGUID.begin(); i != abomnationGUID.end(); ++i)
                 {
-                    if (Unit* abom = Unit::GetUnit(*player, *i))
+                    if (Creature* pAbom = instance->GetCreature(*i))
                     {
-                        if (!abom->isAlive())
+                        if (!pAbom->isAlive())
                             --count;
                     }
                 }
@@ -256,9 +231,12 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
                 {
                     //a bit itchy, it should close the door after 10 secs, but it doesn't. skipping it for now.
                     //UpdateGoState(ziggurat4GUID,0,true);
-                    player->SummonCreature(C_RAMSTEIN,4032.84,-3390.24,119.73,4.71,TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,1800000);
+                    if (Creature* pBaron = instance->GetCreature(baronGUID))
+                        pBaron->SummonCreature(C_RAMSTEIN,4032.84,-3390.24,119.73,4.71,TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,1800000);
                     debug_log("TSCR: Instance Stratholme: Ramstein spawned.");
-                } else debug_log("TSCR: Instance Stratholme: %u Abomnation left to kill.",count);
+                }
+                else
+                    debug_log("TSCR: Instance Stratholme: %u Abomnation left to kill.",count);
             }
             if (data == DONE)
             {
@@ -272,22 +250,22 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
             {
                 if (GetData(TYPE_BARON_RUN) == IN_PROGRESS)
                 {
-                    if (Group *pGroup = player->GetGroup())
+                    Map::PlayerList const& players = instance->GetPlayers();
+
+                    if (!players.isEmpty())
                     {
-                        for(GroupReference *itr = pGroup->GetFirstMember(); itr != NULL; itr = itr->next())
+                        for(Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
                         {
-                            Player* pGroupie = itr->getSource();
-                            if (!pGroupie)
-                                continue;
+                            if (Player* pPlayer = itr->getSource())
+                            {
+                                if (pPlayer->HasAura(SPELL_BARON_ULTIMATUM))
+                                    pPlayer->RemoveAurasDueToSpell(SPELL_BARON_ULTIMATUM);
 
-                            if (pGroupie->HasAura(SPELL_BARON_ULTIMATUM,0))
-                                pGroupie->RemoveAurasDueToSpell(SPELL_BARON_ULTIMATUM);
+                                if (pPlayer->GetQuestStatus(QUEST_DEAD_MAN_PLEA) == QUEST_STATUS_INCOMPLETE)
+                                    pPlayer->AreaExploredOrEventHappens(QUEST_DEAD_MAN_PLEA);
+                            }
                         }
-                    } else if (player->HasAura(SPELL_BARON_ULTIMATUM,0))
-                        player->RemoveAurasDueToSpell(SPELL_BARON_ULTIMATUM);
-
-                    if (Unit *temp = Unit::GetUnit(*player,GetData64(DATA_BARON)))
-                        player->GroupEventHappens(QUEST_DEAD_MAN_PLEA,temp);
+                    }
 
                     SetData(TYPE_BARON_RUN,DONE);
                 }
@@ -365,13 +343,13 @@ struct TRINITY_DLL_DECL instance_stratholme : public ScriptedInstance
         {
             if (SlaugtherSquare_Timer <= diff)
             {
-                if (Player *p = GetPlayerInMap())
+                if (Creature* pBaron = instance->GetCreature(baronGUID))
                 {
                     for(uint8 i = 0; i < 4; i++)
-                        p->SummonCreature(C_BLACK_GUARD,4032.84,-3390.24,119.73,4.71,TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,1800000);
+                        pBaron->SummonCreature(C_BLACK_GUARD,4032.84,-3390.24,119.73,4.71,TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,1800000);
 
-                    UpdateGoState(ziggurat4GUID,0,false);
-                    UpdateGoState(ziggurat5GUID,0,false);
+                    UpdateGoState(ziggurat4GUID,GO_STATE_ACTIVE,false);
+                    UpdateGoState(ziggurat5GUID,GO_STATE_ACTIVE,false);
                     debug_log("TSCR: Instance Stratholme: Black guard sentries spawned. Opening gates to baron.");
                 }
                 SlaugtherSquare_Timer = 0;

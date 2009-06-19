@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -49,7 +49,7 @@ struct TRINITY_DLL_DECL mob_shattered_rumblerAI : public ScriptedAI
         Spawn = false;
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void SpellHit(Unit *Hitter, const SpellEntry *Spellkind)
     {
@@ -109,22 +109,33 @@ struct TRINITY_DLL_DECL mob_lumpAI : public ScriptedAI
         m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
     }
 
+    void AttackedBy(Unit* pAttacker)
+    {
+        if (m_creature->getVictim())
+            return;
+
+        if (m_creature->IsFriendlyTo(pAttacker))
+            return;
+
+        AttackStart(pAttacker);
+    }
+
     void DamageTaken(Unit *done_by, uint32 & damage)
     {
         if (done_by->GetTypeId() == TYPEID_PLAYER && (m_creature->GetHealth() - damage)*100 / m_creature->GetMaxHealth() < 30)
         {
-            if (!bReset && ((Player*)done_by)->GetQuestStatus(9918) == QUEST_STATUS_INCOMPLETE)
+            if (!bReset && CAST_PLR(done_by)->GetQuestStatus(9918) == QUEST_STATUS_INCOMPLETE)
             {
                 //Take 0 damage
                 damage = 0;
 
-                ((Player*)done_by)->AttackStop();
+                CAST_PLR(done_by)->AttackStop();
                 m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
                 m_creature->RemoveAllAuras();
                 m_creature->DeleteThreatList();
-                m_creature->CombatStop();
+                m_creature->CombatStop(true);
                 m_creature->setFaction(1080);               //friendly
-                m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_SIT);
+                m_creature->SetStandState(UNIT_STAND_STATE_SIT);
                 DoScriptText(LUMP_DEFEAT, m_creature);
 
                 bReset = true;
@@ -132,13 +143,13 @@ struct TRINITY_DLL_DECL mob_lumpAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
-        if (m_creature->HasAura(SPELL_VISUAL_SLEEP,0))
-            m_creature->RemoveAura(SPELL_VISUAL_SLEEP,0);
+        if (m_creature->HasAura(SPELL_VISUAL_SLEEP))
+            m_creature->RemoveAura(SPELL_VISUAL_SLEEP);
 
         if (!m_creature->IsStandState())
-            m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, PLAYER_STATE_NONE);
+             m_creature->SetStandState(UNIT_STAND_STATE_STAND);
 
         switch(rand()%2)
         {
@@ -227,10 +238,10 @@ struct TRINITY_DLL_DECL mob_sunspring_villagerAI : public ScriptedAI
     void Reset()
     {
         m_creature->SetUInt32Value(UNIT_DYNAMIC_FLAGS, 32);
-        m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1,7);   // lay down
+        m_creature->SetStandState(UNIT_STAND_STATE_DEAD);
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void SpellHit(Unit *caster, const SpellEntry *spell)
     {
@@ -333,13 +344,7 @@ bool QuestAccept_npc_altruis_the_sufferer(Player *player, Creature *creature, Qu
     if ( !player->GetQuestRewardStatus(9991) )              //Survey the Land, q-id 9991
     {
         player->CLOSE_GOSSIP_MENU();
-
-        std::vector<uint32> nodes;
-
-        nodes.resize(2);
-        nodes[0] = 113;                                     //from
-        nodes[1] = 114;                                     //end at
-        player->ActivateTaxiPathTo(nodes);                  //TaxiPath 532
+        player->ActivateTaxiPathTo(532);                  //TaxiPath 532
     }
     return true;
 }
@@ -526,7 +531,7 @@ struct TRINITY_DLL_DECL npc_creditmarker_visit_with_ancestorsAI : public Scripte
 
     void Reset() {}
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void MoveInLineOfSight(Unit *who)
     {
@@ -535,14 +540,14 @@ struct TRINITY_DLL_DECL npc_creditmarker_visit_with_ancestorsAI : public Scripte
 
         if(who->GetTypeId() == TYPEID_PLAYER)
         {
-            if(((Player*)who)->GetQuestStatus(10085) == QUEST_STATUS_INCOMPLETE)
+            if(CAST_PLR(who)->GetQuestStatus(10085) == QUEST_STATUS_INCOMPLETE)
             {
                 uint32 creditMarkerId = m_creature->GetEntry();
                 if((creditMarkerId >= 18840) && (creditMarkerId <= 18843))
                 {
                     // 18840: Sunspring, 18841: Laughing, 18842: Garadar, 18843: Bleeding
-                    if(!((Player*)who)->GetReqKillOrCastCurrentCount(10085, creditMarkerId))
-                        ((Player*)who)->KilledMonster(creditMarkerId, m_creature->GetGUID());
+                    if(!CAST_PLR(who)->GetReqKillOrCastCurrentCount(10085, creditMarkerId))
+                        CAST_PLR(who)->KilledMonster(creditMarkerId, m_creature->GetGUID());
                 }
             }
         }
@@ -585,14 +590,14 @@ struct TRINITY_DLL_DECL mob_sparrowhawkAI : public ScriptedAI
         ScriptedAI::AttackStart(who);
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void MoveInLineOfSight(Unit *who)
     {
         if(!who || PlayerGUID)
             return;
 
-        if(!PlayerGUID && who->GetTypeId() == TYPEID_PLAYER && m_creature->IsWithinDistInMap(((Player *)who), 30) && ((Player *)who)->GetQuestStatus(10987) == QUEST_STATUS_INCOMPLETE)
+        if(!PlayerGUID && who->GetTypeId() == TYPEID_PLAYER && m_creature->IsWithinDistInMap(who, 30) && CAST_PLR(who)->GetQuestStatus(10987) == QUEST_STATUS_INCOMPLETE)
         {
             PlayerGUID = who->GetGUID();
             return;
@@ -610,7 +615,7 @@ struct TRINITY_DLL_DECL mob_sparrowhawkAI : public ScriptedAI
                 if(fleeing && m_creature->GetMotionMaster()->GetCurrentMovementGeneratorType() != FLEEING_MOTION_TYPE)
                     fleeing = false;
 
-                Player *player = (Player *)Unit::GetUnit((*m_creature), PlayerGUID);
+                Player *player = Unit::GetPlayer(PlayerGUID);
                 if(player && m_creature->IsWithinDistInMap(player, 30))
                 {
                     if(!fleeing)
@@ -640,7 +645,7 @@ struct TRINITY_DLL_DECL mob_sparrowhawkAI : public ScriptedAI
     {
         if (caster->GetTypeId() == TYPEID_PLAYER)
         {
-            if(spell->Id == SPELL_SPARROWHAWK_NET && ((Player*)caster)->GetQuestStatus(10987) == QUEST_STATUS_INCOMPLETE)
+            if(spell->Id == SPELL_SPARROWHAWK_NET && CAST_PLR(caster)->GetQuestStatus(10987) == QUEST_STATUS_INCOMPLETE)
             {
                 m_creature->CastSpell(caster, SPELL_ITEM_CAPTIVE_SPARROWHAWK, true);
                 m_creature->DealDamage(m_creature, m_creature->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);

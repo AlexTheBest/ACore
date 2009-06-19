@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -89,60 +89,64 @@ bool GossipSelect_npc_sputtervalve(Player *player, Creature *_Creature, uint32 s
 ## npc_taskmaster_fizzule
 ######*/
 
-//#define FACTION_HOSTILE_F     430
-#define FACTION_HOSTILE_F       16
-#define FACTION_FRIENDLY_F      35
-
-#define SPELL_FLARE             10113
-#define SPELL_FOLLY             10137
+enum
+{
+    FACTION_FRIENDLY_F  = 35,
+    SPELL_FLARE         = 10113,
+    SPELL_FOLLY         = 10137,
+};
 
 struct TRINITY_DLL_DECL npc_taskmaster_fizzuleAI : public ScriptedAI
 {
-    npc_taskmaster_fizzuleAI(Creature* c) : ScriptedAI(c) {}
+    npc_taskmaster_fizzuleAI(Creature* c) : ScriptedAI(c)
+    {
+        factionNorm = c->getFaction();
+    }
 
+    uint32 factionNorm;
     bool IsFriend;
     uint32 Reset_Timer;
-    uint32 FlareCount;
+    uint8 FlareCount;
 
     void Reset()
     {
         IsFriend = false;
         Reset_Timer = 120000;
         FlareCount = 0;
-        m_creature->setFaction(FACTION_HOSTILE_F);
-        m_creature->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
+        m_creature->setFaction(factionNorm);
     }
 
-    //This is a hack. Spellcast will make creature aggro but that is not
-    //supposed to happen (Trinity not implemented/not found way to detect this spell kind)
-    void DoUglyHack()
+    void DoFriend()
     {
         m_creature->RemoveAllAuras();
         m_creature->DeleteThreatList();
-        m_creature->CombatStop();
+        m_creature->CombatStop(true);
+
+        m_creature->StopMoving();
+        m_creature->GetMotionMaster()->MoveIdle();
+
+        m_creature->setFaction(FACTION_FRIENDLY_F);
+        m_creature->HandleEmoteCommand(EMOTE_ONESHOT_SALUTE);
     }
 
     void SpellHit(Unit *caster, const SpellEntry *spell)
     {
-        if( spell->Id == SPELL_FLARE || spell->Id == SPELL_FOLLY )
+        if (spell->Id == SPELL_FLARE || spell->Id == SPELL_FOLLY)
         {
-            DoUglyHack();
             ++FlareCount;
-            if( FlareCount >= 2 )
-            {
-                m_creature->setFaction(FACTION_FRIENDLY_F);
+
+            if (FlareCount >= 2)
                 IsFriend = true;
-            }
         }
     }
 
-    void Aggro(Unit* who) { }
+    void EnterCombat(Unit* who) { }
 
     void UpdateAI(const uint32 diff)
     {
-        if( IsFriend )
+        if (IsFriend)
         {
-            if( Reset_Timer < diff )
+            if (Reset_Timer < diff)
             {
                 EnterEvadeMode();
                 return;
@@ -154,24 +158,27 @@ struct TRINITY_DLL_DECL npc_taskmaster_fizzuleAI : public ScriptedAI
 
         DoMeleeAttackIfReady();
     }
-};
-CreatureAI* GetAI_npc_taskmaster_fizzule(Creature *_Creature)
-{
-    return new npc_taskmaster_fizzuleAI (_Creature);
-}
 
-bool ReciveEmote_npc_taskmaster_fizzule(Player *player, Creature *_Creature, uint32 emote)
-{
-    if( emote == TEXTEMOTE_SALUTE )
+    void ReciveEmote(Player* pPlayer, uint32 emote)
     {
-        if( ((npc_taskmaster_fizzuleAI*)_Creature->AI())->FlareCount >= 2 )
+        if (emote == TEXTEMOTE_SALUTE)
         {
-            _Creature->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_QUESTGIVER);
-            _Creature->HandleEmoteCommand(EMOTE_ONESHOT_SALUTE);
+            if (FlareCount >= 2)
+            {
+                if (m_creature->getFaction() == FACTION_FRIENDLY_F)
+                    return;
+
+                DoFriend();
+            }
         }
     }
-    return true;
+};
+
+CreatureAI* GetAI_npc_taskmaster_fizzule(Creature* pCreature)
+{
+    return new npc_taskmaster_fizzuleAI(pCreature);
 }
+
 /*#####
 ## npc_twiggy_flathead
 #####*/
@@ -227,13 +234,13 @@ struct TRINITY_DLL_DECL npc_twiggy_flatheadAI : public ScriptedAI
         BigWill = 0;
     }
 
-    void Aggro(Unit *who) { }
+    void EnterCombat(Unit *who) { }
 
     void MoveInLineOfSight(Unit *who)
     {
         if(!who || (!who->isAlive())) return;
 
-        if (m_creature->IsWithinDistInMap(who, 10.0f) && (who->GetTypeId() == TYPEID_PLAYER) && ((Player*)who)->GetQuestStatus(1719) == QUEST_STATUS_INCOMPLETE && !EventInProgress)
+        if (m_creature->IsWithinDistInMap(who, 10.0f) && (who->GetTypeId() == TYPEID_PLAYER) && CAST_PLR(who)->GetQuestStatus(1719) == QUEST_STATUS_INCOMPLETE && !EventInProgress)
         {
             PlayerGUID = who->GetGUID();
             EventInProgress = true;
@@ -346,7 +353,7 @@ struct TRINITY_DLL_DECL npc_twiggy_flatheadAI : public ScriptedAI
                             pCreature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
                             pCreature->HandleEmoteCommand(EMOTE_ONESHOT_ROAR);
                             pCreature->setFaction(14);
-                            ((CreatureAI*)pCreature->AI())->AttackStart(pWarrior);
+                            (pCreature->AI())->AttackStart(pWarrior);
                             ++Wave;
                             Wave_Timer = 20000;
                         }
@@ -358,7 +365,6 @@ struct TRINITY_DLL_DECL npc_twiggy_flatheadAI : public ScriptedAI
                             //pCreature->GetMotionMaster()->MovePoint(0, -1693, -4343, 4.32);
                             //pCreature->GetMotionMaster()->MovePoint(1, -1684, -4333, 2.78);
                             pCreature->GetMotionMaster()->MovePoint(2, -1682, -4329, 2.79);
-                            //pCreature->HandleEmoteCommand(EMOTE_ONESHOT_ROAR);
                             pCreature->HandleEmoteCommand(EMOTE_STATE_READYUNARMED);
                             EventBigWill = true;
                             Wave_Timer = 1000;
@@ -392,24 +398,33 @@ CreatureAI* GetAI_npc_twiggy_flathead(Creature *_Creature)
 ## npc_wizzlecrank_shredder
 #####*/
 
-#define SAY_PROGRESS_1  -1000272
-#define SAY_PROGRESS_2  -1000273
-#define SAY_PROGRESS_3  -1000274
+enum
+{
+    SAY_PROGRESS_1      = -1000272,
+    SAY_PROGRESS_2      = -1000273,
+    SAY_PROGRESS_3      = -1000274,
 
-#define SAY_MERCENARY_4 -1000275
+    SAY_MERCENARY_4     = -1000275,
 
-#define SAY_PROGRESS_5  -1000276
-#define SAY_PROGRESS_6  -1000277
-#define SAY_PROGRESS_7  -1000278
-#define SAY_PROGRESS_8  -1000279
+    SAY_PROGRESS_5      = -1000276,
+    SAY_PROGRESS_6      = -1000277,
+    SAY_PROGRESS_7      = -1000278,
+    SAY_PROGRESS_8      = -1000279,
 
-#define QUEST_ESCAPE    863
-#define NPC_PILOT       3451
-#define MOB_MERCENARY   3282
+    QUEST_ESCAPE        = 863,
+    FACTION_RATCHET     = 637,
+    NPC_PILOT           = 3451,
+    MOB_MERCENARY       = 3282,
+};
 
 struct TRINITY_DLL_DECL npc_wizzlecrank_shredderAI : public npc_escortAI
 {
-    npc_wizzlecrank_shredderAI(Creature* c) : npc_escortAI(c) {}
+    npc_wizzlecrank_shredderAI(Creature* c) : npc_escortAI(c)
+    {
+        uiNormFaction = c->getFaction();
+    }
+
+    uint32 uiNormFaction;
 
     bool Completed;
 
@@ -428,11 +443,11 @@ struct TRINITY_DLL_DECL npc_wizzlecrank_shredderAI : public npc_escortAI
         case 10: DoScriptText(SAY_PROGRESS_3, m_creature, player);
             m_creature->AddUnitMovementFlag(MOVEMENTFLAG_WALK_MODE); break;
         case 20:{
-            Unit* Mercenary = FindCreature(MOB_MERCENARY, 99, m_creature);
+            Unit* Mercenary = m_creature->FindNearestCreature(MOB_MERCENARY, 99);
             if(Mercenary)
             {
                 DoScriptText(SAY_MERCENARY_4, Mercenary);
-                ((Creature*)Mercenary)->AI()->AttackStart(m_creature);
+                CAST_CRE(Mercenary)->AI()->AttackStart(m_creature);
                 AttackStart(Mercenary);
             }
                 }break;
@@ -444,8 +459,7 @@ struct TRINITY_DLL_DECL npc_wizzlecrank_shredderAI : public npc_escortAI
         case 31: m_creature->SummonCreature(NPC_PILOT, 1088.77, -2985.39, 91.84, 0.0f, TEMPSUMMON_TIMED_DESPAWN, 300000);
             m_creature->setDeathState(JUST_DIED);
             Completed = true;
-            if (player && player->GetTypeId() == TYPEID_PLAYER)
-                    ((Player*)player)->GroupEventHappens(QUEST_ESCAPE, m_creature);
+            player->GroupEventHappens(QUEST_ESCAPE, m_creature);
             break;
         }
     }
@@ -454,10 +468,15 @@ struct TRINITY_DLL_DECL npc_wizzlecrank_shredderAI : public npc_escortAI
     {
         m_creature->setDeathState(ALIVE);
         Completed = false;
-        m_creature->setFaction(69);
+        if(!IsBeingEscorted)
+        {
+            m_creature->setFaction(uiNormFaction);
+            if (m_creature->getStandState() == UNIT_STAND_STATE_DEAD)
+                 m_creature->SetStandState(UNIT_STAND_STATE_STAND);
+        }
     }
 
-    void Aggro(Unit* who){}
+    void EnterCombat(Unit* who){}
 
     void JustDied(Unit* killer)
     {
@@ -465,7 +484,7 @@ struct TRINITY_DLL_DECL npc_wizzlecrank_shredderAI : public npc_escortAI
         {
             Player* player = Unit::GetPlayer(PlayerGUID);
             if (player)
-                ((Player*)player)->FailQuest(QUEST_ESCAPE);
+                player->FailQuest(QUEST_ESCAPE);
         }
     }
 
@@ -479,8 +498,8 @@ bool QuestAccept_npc_wizzlecrank_shredder(Player* player, Creature* creature, Qu
 {
     if (quest->GetQuestId() == QUEST_ESCAPE)
     {
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
-        creature->setFaction(113);
+         creature->setFaction(FACTION_RATCHET);
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
     }
     return true;
 }
@@ -522,7 +541,7 @@ CreatureAI* GetAI_npc_wizzlecrank_shredderAI(Creature *_Creature)
     thisAI->AddWaypoint(30, 1091.28, -2985.82, 91.74, 7000);
     thisAI->AddWaypoint(31, 1091.28, -2985.82, 91.74, 3000);
 
-    return (CreatureAI*)thisAI;
+    return thisAI;
 }
 
 void AddSC_the_barrens()
@@ -544,7 +563,6 @@ void AddSC_the_barrens()
     newscript = new Script;
     newscript->Name="npc_taskmaster_fizzule";
     newscript->GetAI = &GetAI_npc_taskmaster_fizzule;
-    newscript->pReceiveEmote = &ReciveEmote_npc_taskmaster_fizzule;
     newscript->RegisterSelf();
 
     newscript = new Script;

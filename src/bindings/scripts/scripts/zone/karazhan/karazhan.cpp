@@ -1,4 +1,4 @@
- /* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ /* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -45,6 +45,10 @@ EndContentData */
 
 #define SAY_RAJ_INTRO1      "The romantic plays are really tough, but you'll do better this time. You have TALENT. Ready?"
 #define RAJ_GOSSIP1         "I've never been more ready."
+
+#define OZ_GM_GOSSIP1       "[GM] Change event to EVENT_OZ"
+#define OZ_GM_GOSSIP2       "[GM] Change event to EVENT_HOOD"
+#define OZ_GM_GOSSIP3       "[GM] Change event to EVENT_RAJ"
 
 struct Dialogue
 {
@@ -111,7 +115,7 @@ struct TRINITY_DLL_DECL npc_barnesAI : public npc_escortAI
     npc_barnesAI(Creature* c) : npc_escortAI(c)
     {
         RaidWiped = false;
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance* pInstance;
@@ -144,15 +148,15 @@ struct TRINITY_DLL_DECL npc_barnesAI : public npc_escortAI
 
             Event = pInstance->GetData(DATA_OPERA_PERFORMANCE);
 
-             if (GameObject* Door = GameObject::GetGameObject((*m_creature), pInstance->GetData64(DATA_GAMEOBJECT_STAGEDOORLEFT)))
-                Door->SetGoState(1);
+             if (GameObject* Door = pInstance->instance->GetGameObject(pInstance->GetData64(DATA_GAMEOBJECT_STAGEDOORLEFT)))
+                Door->SetGoState(GO_STATE_READY);
 
-             if (GameObject* Curtain = GameObject::GetGameObject((*m_creature), pInstance->GetData64(DATA_GAMEOBJECT_CURTAINS)))
-                Curtain->SetGoState(1);
+             if (GameObject* Curtain = pInstance->instance->GetGameObject(pInstance->GetData64(DATA_GAMEOBJECT_CURTAINS)))
+                Curtain->SetGoState(GO_STATE_READY);
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void WaypointReached(uint32 i)
     {
@@ -176,11 +180,12 @@ struct TRINITY_DLL_DECL npc_barnesAI : public npc_escortAI
             case 5:
                 if(pInstance)
                 {
-                    if (GameObject* Door = GameObject::GetGameObject((*m_creature), pInstance->GetData64(DATA_GAMEOBJECT_STAGEDOORLEFT)))
-                        Door->SetGoState(1);
+                    if (GameObject* Door = pInstance->instance->GetGameObject(pInstance->GetData64(DATA_GAMEOBJECT_STAGEDOORLEFT)))
+                        Door->SetGoState(GO_STATE_READY);
                 }
                 IsBeingEscorted = false;
                 PerformanceReady = true;
+                m_creature->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
                 break;
         }
     }
@@ -256,8 +261,8 @@ struct TRINITY_DLL_DECL npc_barnesAI : public npc_escortAI
                 if(!pInstance)
                     return;
 
-                if (GameObject* Curtain = GameObject::GetGameObject((*m_creature), pInstance->GetData64(DATA_GAMEOBJECT_CURTAINS)))
-                    Curtain->SetGoState(0);
+                if (GameObject* Curtain = pInstance->instance->GetGameObject(pInstance->GetData64(DATA_GAMEOBJECT_CURTAINS)))
+                    Curtain->SetGoState(GO_STATE_ACTIVE);
 
                 CurtainTimer = 0;
             }else CurtainTimer -= diff;
@@ -310,8 +315,8 @@ struct TRINITY_DLL_DECL npc_barnesAI : public npc_escortAI
 
         pInstance->SetData(DATA_OPERA_EVENT, IN_PROGRESS);
 
-        if (GameObject* Door = GameObject::GetGameObject((*m_creature), pInstance->GetData64(DATA_GAMEOBJECT_STAGEDOORLEFT)))
-            Door->SetGoState(0);
+        if (GameObject* Door = pInstance->instance->GetGameObject(pInstance->GetData64(DATA_GAMEOBJECT_STAGEDOORLEFT)))
+            Door->SetGoState(GO_STATE_ACTIVE);
 
         m_creature->CastSpell(m_creature, SPELL_TUXEDO, true);
         m_creature->RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
@@ -367,18 +372,25 @@ CreatureAI* GetAI_npc_barnesAI(Creature* _Creature)
     for(uint8 i = 0; i < 6; ++i)
         Barnes_AI->AddWaypoint(i, StageLocations[i][0], StageLocations[i][1], 90.465);
 
-    return ((CreatureAI*)Barnes_AI);
+    return (Barnes_AI);
 }
 
 bool GossipHello_npc_barnes(Player* player, Creature* _Creature)
 {
     // Check for death of Moroes.
-    ScriptedInstance* pInstance = ((ScriptedInstance*)_Creature->GetInstanceData());
+    ScriptedInstance* pInstance = (_Creature->GetInstanceData());
     if(pInstance && (pInstance->GetData(DATA_MOROES_EVENT) >= DONE))
     {
         player->ADD_GOSSIP_ITEM(0, OZ_GOSSIP1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
 
-        if(!((npc_barnesAI*)_Creature->AI())->RaidWiped)
+        if (player->isGameMaster())
+        {
+            player->ADD_GOSSIP_ITEM(5, OZ_GM_GOSSIP1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
+            player->ADD_GOSSIP_ITEM(5, OZ_GM_GOSSIP2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 4);
+            player->ADD_GOSSIP_ITEM(5, OZ_GM_GOSSIP3, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 5);
+        }
+
+        if(!CAST_AI(npc_barnesAI, _Creature->AI())->RaidWiped)
             player->SEND_GOSSIP_MENU(8970, _Creature->GetGUID());
         else
             player->SEND_GOSSIP_MENU(8975, _Creature->GetGUID());
@@ -395,10 +407,24 @@ bool GossipSelect_npc_barnes(Player *player, Creature *_Creature, uint32 sender,
             player->ADD_GOSSIP_ITEM(0, OZ_GOSSIP2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
             player->SEND_GOSSIP_MENU(8971, _Creature->GetGUID());
             break;
-
         case GOSSIP_ACTION_INFO_DEF+2:
             player->CLOSE_GOSSIP_MENU();
-            ((npc_barnesAI*)_Creature->AI())->StartEvent();
+            CAST_AI(npc_barnesAI, _Creature->AI())->StartEvent();
+            break;
+        case GOSSIP_ACTION_INFO_DEF+3:
+            player->CLOSE_GOSSIP_MENU();
+            CAST_AI(npc_barnesAI, _Creature->AI())->Event = EVENT_OZ;
+            outstring_log("TSCR: player (GUID %i) manually set Opera event to EVENT_OZ",player->GetGUID());
+            break;
+        case GOSSIP_ACTION_INFO_DEF+4:
+            player->CLOSE_GOSSIP_MENU();
+            CAST_AI(npc_barnesAI, _Creature->AI())->Event = EVENT_HOOD;
+            outstring_log("TSCR: player (GUID %i) manually set Opera event to EVENT_HOOD",player->GetGUID());
+            break;
+        case GOSSIP_ACTION_INFO_DEF+5:
+            player->CLOSE_GOSSIP_MENU();
+            CAST_AI(npc_barnesAI, _Creature->AI())->Event = EVENT_RAJ;
+            outstring_log("TSCR: player (GUID %i) manually set Opera event to EVENT_RAJ",player->GetGUID());
             break;
     }
 
@@ -415,7 +441,7 @@ bool GossipSelect_npc_barnes(Player *player, Creature *_Creature, uint32 sender,
 
 bool GossipHello_npc_berthold(Player* player, Creature* _Creature)
 {
-    ScriptedInstance* pInstance = ((ScriptedInstance*)_Creature->GetInstanceData());
+    ScriptedInstance* pInstance = (_Creature->GetInstanceData());
                                                             // Check if Shade of Aran is dead or not
     if(pInstance && (pInstance->GetData(DATA_SHADEOFARAN_EVENT) >= DONE))
         player->ADD_GOSSIP_ITEM(0, GOSSIP_ITEM_TELEPORT, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
@@ -460,7 +486,7 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
 {
     npc_image_of_medivhAI(Creature* c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance *pInstance;
@@ -489,7 +515,7 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
             m_creature->RemoveCorpse();
         }
     }
-    void Aggro(Unit* who){}
+    void EnterCombat(Unit* who){}
 
     void MovementInform(uint32 type, uint32 id)
     {
@@ -511,7 +537,7 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
         if(!Arcanagos)
             return;
         ArcanagosGUID = Arcanagos->GetGUID();
-        Arcanagos->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT + MOVEMENTFLAG_LEVITATING);
+        Arcanagos->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
         (*Arcanagos).GetMotionMaster()->MovePoint(0,ArcanagosPos[0],ArcanagosPos[1],ArcanagosPos[2]);
         Arcanagos->SetOrientation(ArcanagosPos[3]);
         m_creature->SetOrientation(MedivPos[3]);
@@ -527,25 +553,25 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
         {
         case 0: return 9999999;
         case 1:
-            m_creature->Yell(SAY_DIALOG_MEDIVH_1,LANG_UNIVERSAL,NULL);
+            m_creature->MonsterYell(SAY_DIALOG_MEDIVH_1,LANG_UNIVERSAL,NULL);
             return 10000;
         case 2:
             if(arca)
-                ((Creature*)arca)->Yell(SAY_DIALOG_ARCANAGOS_2,LANG_UNIVERSAL,NULL);
+                CAST_CRE(arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_2,LANG_UNIVERSAL,NULL);
             return 20000;
         case 3:
-            m_creature->Yell(SAY_DIALOG_MEDIVH_3,LANG_UNIVERSAL,NULL);
+            m_creature->MonsterYell(SAY_DIALOG_MEDIVH_3,LANG_UNIVERSAL,NULL);
             return 10000;
         case 4:
             if(arca)
-                ((Creature*)arca)->Yell(SAY_DIALOG_ARCANAGOS_4, LANG_UNIVERSAL, NULL);
+                CAST_CRE(arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_4, LANG_UNIVERSAL, NULL);
             return 20000;
         case 5:
-            m_creature->Yell(SAY_DIALOG_MEDIVH_5, LANG_UNIVERSAL, NULL);
+            m_creature->MonsterYell(SAY_DIALOG_MEDIVH_5, LANG_UNIVERSAL, NULL);
             return 20000;
         case 6:
             if(arca)
-                ((Creature*)arca)->Yell(SAY_DIALOG_ARCANAGOS_6, LANG_UNIVERSAL, NULL);
+                CAST_CRE(arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_6, LANG_UNIVERSAL, NULL);
             return 10000;
         case 7:
             FireArcanagosTimer = 500;
@@ -555,7 +581,7 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
             DoCast(m_creature, SPELL_MANA_SHIELD);
             return 10000;
         case 9:
-            m_creature->TextEmote(EMOTE_DIALOG_MEDIVH_7, 0, false);
+            m_creature->MonsterTextEmote(EMOTE_DIALOG_MEDIVH_7, 0, false);
             return 10000;
         case 10:
             if(arca)
@@ -563,7 +589,7 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
             return 1000;
         case 11:
             if(arca)
-                ((Creature*)arca)->Yell(SAY_DIALOG_ARCANAGOS_8, LANG_UNIVERSAL, NULL);
+                CAST_CRE(arca)->MonsterYell(SAY_DIALOG_ARCANAGOS_8, LANG_UNIVERSAL, NULL);
             return 5000;
         case 12:
             arca->GetMotionMaster()->MovePoint(0, -11010.82,-1761.18, 156.47);
@@ -572,7 +598,7 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
             arca->SetSpeed(MOVE_FLIGHT, 2.0f);
             return 10000;
         case 13:
-            m_creature->Yell(SAY_DIALOG_MEDIVH_9, LANG_UNIVERSAL, NULL);
+            m_creature->MonsterYell(SAY_DIALOG_MEDIVH_9, LANG_UNIVERSAL, NULL);
             return 10000;
         case 14:
             m_creature->SetVisibility(VISIBILITY_OFF);
@@ -580,7 +606,7 @@ struct TRINITY_DLL_DECL npc_image_of_medivhAI : public ScriptedAI
 
             if(map->IsDungeon())
             {
-                InstanceMap::PlayerList const &PlayerList = ((InstanceMap*)map)->GetPlayers();
+                InstanceMap::PlayerList const &PlayerList = map->GetPlayers();
                 for (InstanceMap::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
                 {
                     if(i->getSource()->isAlive())
