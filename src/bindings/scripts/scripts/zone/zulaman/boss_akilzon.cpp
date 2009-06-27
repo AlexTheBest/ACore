@@ -61,10 +61,10 @@ struct TRINITY_DLL_DECL boss_akilzonAI : public ScriptedAI
 {
     boss_akilzonAI(Creature *c) : ScriptedAI(c)
     {
-        SpellEntry *TempSpell = (SpellEntry*)GetSpellStore()->LookupEntry(SPELL_ELECTRICAL_DAMAGE);
+        SpellEntry *TempSpell = GET_SPELL(SPELL_ELECTRICAL_DAMAGE);
         if(TempSpell)
             TempSpell->EffectBasePoints[1] = 49;//disable bugged lightning until fixed in core
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
     ScriptedInstance *pInstance;
 
@@ -112,7 +112,7 @@ struct TRINITY_DLL_DECL boss_akilzonAI : public ScriptedAI
         SetWeather(WEATHER_STATE_FINE, 0.0f);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoYell(SAY_ONAGGRO, LANG_UNIVERSAL, NULL);
         DoPlaySoundToSet(m_creature, SOUND_ONAGGRO);
@@ -187,7 +187,7 @@ struct TRINITY_DLL_DECL boss_akilzonAI : public ScriptedAI
 
             {
                 Trinity::AnyAoETargetUnitInObjectRangeCheck u_check(m_creature, m_creature, 999);
-                Trinity::UnitListSearcher<Trinity::AnyAoETargetUnitInObjectRangeCheck> searcher(tempUnitMap, u_check);
+                Trinity::UnitListSearcher<Trinity::AnyAoETargetUnitInObjectRangeCheck> searcher(m_creature, tempUnitMap, u_check);
 
                 TypeContainerVisitor<Trinity::UnitListSearcher<Trinity::AnyAoETargetUnitInObjectRangeCheck>, WorldTypeMapContainer > world_unit_searcher(searcher);
                 TypeContainerVisitor<Trinity::UnitListSearcher<Trinity::AnyAoETargetUnitInObjectRangeCheck>, GridTypeMapContainer >  grid_unit_searcher(searcher);
@@ -199,7 +199,7 @@ struct TRINITY_DLL_DECL boss_akilzonAI : public ScriptedAI
             //dealdamege
             for(std::list<Unit*>::iterator i = tempUnitMap.begin(); i != tempUnitMap.end(); ++i)
             {
-                if(Cloud->GetDistance2d(*i)>= 6)
+                if(!Cloud->IsWithinDist(*i, 6, false))
                 {
                     Cloud->CastCustomSpell(*i, 43137, &bp0, NULL, NULL, true, 0, 0, m_creature->GetGUID());
                 }
@@ -274,8 +274,7 @@ struct TRINITY_DLL_DECL boss_akilzonAI : public ScriptedAI
             m_creature->SetInFront(m_creature->getVictim());
             StaticDisruption_Timer = (10+rand()%8)*1000; // < 20s
 
-            /*float dist = m_creature->GetDistance(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ());
-            if (dist < 5.0f) dist = 5.0f;
+            /*if(float dist = m_creature->IsWithinDist3d(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 5.0f) dist = 5.0f;
             SDisruptAOEVisual_Timer = 1000 + floor(dist / 30 * 1000.0f);*/
         }else StaticDisruption_Timer -= diff;
 
@@ -297,7 +296,7 @@ struct TRINITY_DLL_DECL boss_akilzonAI : public ScriptedAI
         }
 
         if (ElectricalStorm_Timer < diff) {
-            Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 0, 50, true);
+            Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 50, true);
             if(!target)
             {
                 EnterEvadeMode();
@@ -381,18 +380,9 @@ struct TRINITY_DLL_DECL mob_soaring_eagleAI : public ScriptedAI
         m_creature->SetUnitMovementFlags(MOVEMENTFLAG_LEVITATING);
     }
 
-    void Aggro(Unit *who) {DoZoneInCombat();}
+    void EnterCombat(Unit *who) {DoZoneInCombat();}
 
-    void AttackStart(Unit *who)
-    {
-        if (!InCombat)
-        {
-            Aggro(who);
-            InCombat = true;
-        }
-    }
-
-    void MoveInLineOfSight(Unit *) {}
+    void MoveInLineOfSight(Unit* who) {}
 
     void MovementInform(uint32, uint32)
     {
@@ -431,9 +421,7 @@ struct TRINITY_DLL_DECL mob_soaring_eagleAI : public ScriptedAI
                     m_creature->SetSpeed(MOVE_RUN, 5.0f);
                     TargetGUID = target->GetGUID();
                 }
-                m_creature->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
                 m_creature->GetMotionMaster()->MovePoint(0, x, y, z);
-                m_creature->RemoveUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
                 arrived = false;
             }
         }

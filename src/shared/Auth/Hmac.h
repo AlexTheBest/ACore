@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,17 +32,16 @@ class BigNumber;
 class HmacHash
 {
     public:
-        HmacHash();
+        HmacHash(uint32 len, uint8 *seed);
         ~HmacHash();
         void UpdateBigNumber(BigNumber *bn);
         void UpdateData(const uint8 *data, int length);
-        void Initialize();
         void Finalize();
-        uint8 *GetDigest() { return m_digest; };
-        int GetLength() { return SHA_DIGEST_LENGTH; };
+        uint8 *ComputeHash(BigNumber *bn);
+        uint8 *GetDigest() { return (uint8*)m_digest; }
+        int GetLength() { return SHA_DIGEST_LENGTH; }
     private:
         HMAC_CTX m_ctx;
-        uint8 m_key[SEED_KEY_SIZE];
         uint8 m_digest[SHA_DIGEST_LENGTH];
 };
 #endif

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -53,7 +53,7 @@ struct TRINITY_DLL_DECL boss_broodlordAI : public ScriptedAI
         m_creature->ApplySpellImmune(1, IMMUNITY_EFFECT,SPELL_EFFECT_ATTACK_ME, true);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoScriptText(SAY_AGGRO, m_creature);
         DoZoneInCombat();
@@ -69,8 +69,7 @@ struct TRINITY_DLL_DECL boss_broodlordAI : public ScriptedAI
         {
             float rx,ry,rz;
             m_creature->GetRespawnCoord(rx, ry, rz);
-            float spawndist = m_creature->GetDistance(rx,ry,rz);
-            if ( spawndist > 250 )
+            if(!m_creature->IsWithinDist3d(rx,ry,rz,250.0f))
             {
                 DoScriptText(SAY_LEASH, m_creature);
                 EnterEvadeMode();

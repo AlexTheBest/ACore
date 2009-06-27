@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -39,7 +39,7 @@ struct TRINITY_DLL_DECL boss_kriAI : public ScriptedAI
 {
     boss_kriAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance *pInstance;
@@ -61,7 +61,7 @@ struct TRINITY_DLL_DECL boss_kriAI : public ScriptedAI
         Death = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -124,7 +124,7 @@ struct TRINITY_DLL_DECL boss_vemAI : public ScriptedAI
 {
     boss_vemAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance *pInstance;
@@ -156,7 +156,7 @@ struct TRINITY_DLL_DECL boss_vemAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -205,7 +205,7 @@ struct TRINITY_DLL_DECL boss_yaujAI : public ScriptedAI
 {
     boss_yaujAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance *pInstance;
@@ -235,16 +235,16 @@ struct TRINITY_DLL_DECL boss_yaujAI : public ScriptedAI
             pInstance->SetData(DATA_BUG_TRIO_DEATH, 1);
         }
 
-        for(int i = 0; i < 10;i++)
+        for(uint8 i = 0; i < 10;i++)
         {
             Unit* target = SelectUnit(SELECT_TARGET_RANDOM,0);
             Creature* Summoned = m_creature->SummonCreature(15621,m_creature->GetPositionX(), m_creature->GetPositionY(), m_creature->GetPositionZ(),0,TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN,90000);
             if(Summoned && target)
-                ((CreatureAI*)Summoned->AI())->AttackStart(target);
+                (Summoned->AI())->AttackStart(target);
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software licensed under GPL version 2
  * Please see the included DOCS/LICENSE.TXT for more information */
 
@@ -119,23 +119,9 @@ struct TRINITY_DLL_DECL instance_sunwell_plateau : public ScriptedInstance
         return NULL;
     }
 
-    void HandleGameObject(uint64 guid, uint32 state)
+    void OnCreatureCreate(Creature *creature, bool add)
     {
-        Player *player = GetPlayerInMap();
-
-        if (!player || !guid)
-        {
-            debug_log("TSCR: Sunwell Plateau: HandleGameObject fail");
-            return;
-        }
-
-        if (GameObject *go = GameObject::GetGameObject(*player,guid))
-            go->SetGoState(state);
-    }
-
-    void OnCreatureCreate(Creature* creature, uint32 entry)
-    {
-        switch(entry)
+        switch(creature->GetEntry())
         {
             case 24850: Kalecgos_Dragon     = creature->GetGUID(); break;
             case 24891: Kalecgos_Human      = creature->GetGUID(); break;
@@ -153,17 +139,17 @@ struct TRINITY_DLL_DECL instance_sunwell_plateau : public ScriptedInstance
         }
     }
 
-    void OnObjectCreate(GameObject* gobj)
+    void OnGameObjectCreate(GameObject *go, bool add)
     {
-        switch(gobj->GetEntry())
+        switch(go->GetEntry())
         {
-            case 188421: ForceField     = gobj->GetGUID(); break;
-            case 188075: FireBarrier    = gobj->GetGUID(); break;
-            case 187979: Gate[0]        = gobj->GetGUID(); break;
-            case 187770: Gate[1]        = gobj->GetGUID(); break;
-            case 187896: Gate[2]        = gobj->GetGUID(); break;
-            case 187990: Gate[3]        = gobj->GetGUID(); break;
-            case 188118: Gate[4]        = gobj->GetGUID(); break;
+            case 188421: ForceField     = go->GetGUID(); break;
+            case 188075: FireBarrier    = go->GetGUID(); break;
+            case 187979: Gate[0]        = go->GetGUID(); break;
+            case 187770: Gate[1]        = go->GetGUID(); break;
+            case 187896: Gate[2]        = go->GetGUID(); break;
+            case 187990: Gate[3]        = go->GetGUID(); break;
+            case 188118: Gate[4]        = go->GetGUID(); break;
         }
     }
 
@@ -250,7 +236,7 @@ struct TRINITY_DLL_DECL instance_sunwell_plateau : public ScriptedInstance
     {
     }
 
-    const char* Save()
+    std::string GetSaveData()
     {
         OUT_SAVE_INST_DATA;
         std::ostringstream stream;

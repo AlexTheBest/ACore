@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,27 +21,26 @@
 #include "Common.h"
 #include "WorldPacket.h"
 #include "WorldSession.h"
-#include "World.h"
 #include "Opcodes.h"
 #include "Log.h"
 
-void WorldSession::HandleVoiceSettingsOpcode( WorldPacket & recv_data )
+void WorldSession::HandleVoiceSessionEnableOpcode( WorldPacket & recv_data )
 {
-    sLog.outDebug("WORLD: CMSG_VOICE_SETTINGS");
+    sLog.outDebug("WORLD: CMSG_VOICE_SESSION_ENABLE");
     // uint8 isVoiceEnabled, uint8 isMicrophoneEnabled
     recv_data.hexlike();
 }
 
-void WorldSession::HandleChannelEnableVoiceOpcode( WorldPacket & recv_data )
+void WorldSession::HandleChannelVoiceOnOpcode( WorldPacket & recv_data )
 {
-    sLog.outDebug("WORLD: CMSG_CHANNEL_ENABLE_VOICE");
+    sLog.outDebug("WORLD: CMSG_CHANNEL_VOICE_ON");
     // Enable Voice button in channel context menu
     recv_data.hexlike();
 }
 
-void WorldSession::HandleChannelVoiceChatQuery( WorldPacket & recv_data )
+void WorldSession::HandleSetActiveVoiceChannel( WorldPacket & recv_data )
 {
-    sLog.outDebug("WORLD: CMSG_CHANNEL_VOICE_CHAT_QUERY");
+    sLog.outDebug("WORLD: CMSG_SET_ACTIVE_VOICE_CHANNEL");
     // uint32, string
     recv_data.hexlike();
 }

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -38,7 +38,7 @@ EndScriptData */
 
 bool GOHello_go_main_chambers_access_panel(Player *player, GameObject* _GO)
 {
-    ScriptedInstance* pInstance = (ScriptedInstance*)_GO->GetInstanceData();
+    ScriptedInstance* pInstance = _GO->GetInstanceData();
 
     if (!pInstance)
         return false;
@@ -88,24 +88,7 @@ struct TRINITY_DLL_DECL instance_steam_vault : public ScriptedInstance
         return false;
     }
 
-    Player* GetPlayerInMap()
-    {
-        Map::PlayerList const& players = instance->GetPlayers();
-
-        if (!players.isEmpty())
-        {
-            for(Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
-            {
-                if (Player* plr = itr->getSource())
-                    return plr;
-            }
-        }
-
-        debug_log("TSCR: Instance Steamvault: GetPlayerInMap, but PlayerList is empty!");
-        return NULL;
-    }
-
-    void OnCreatureCreate(Creature *creature, uint32 creature_entry)
+    void OnCreatureCreate(Creature *creature, bool add)
     {
           switch(creature->GetEntry())
         {
@@ -115,7 +98,7 @@ struct TRINITY_DLL_DECL instance_steam_vault : public ScriptedInstance
         }
     }
 
-    void OnObjectCreate(GameObject *go)
+    void OnGameObjectCreate(GameObject *go, bool add)
     {
         switch(go->GetEntry())
         {
@@ -127,27 +110,16 @@ struct TRINITY_DLL_DECL instance_steam_vault : public ScriptedInstance
 
     void SetData(uint32 type, uint32 data)
     {
-        Player *player = GetPlayerInMap();
-
-        if (!player)
-        {
-            debug_log("TSCR: Instance Steamvault: SetData (Type: %u Data %u) cannot find any player.", type, data);
-            return;
-        }
-
         switch(type)
         {
             case TYPE_HYDROMANCER_THESPIA:
                 if (data == SPECIAL)
                 {
-                    if (GameObject *_go = GameObject::GetGameObject(*player,AccessPanelHydro))
-                        _go->SetGoState(0);
+                    HandleGameObject(AccessPanelHydro, true);
 
                     if (GetData(TYPE_MEKGINEER_STEAMRIGGER) == SPECIAL)
-                    {
-                        if (GameObject *_go = GameObject::GetGameObject(*player,MainChambersDoor))
-                            _go->SetGoState(0);
-                    }
+                        HandleGameObject(MainChambersDoor, true);
+
                     debug_log("TSCR: Instance Steamvault: Access panel used.");
                 }
                 Encounter[0] = data;
@@ -155,14 +127,11 @@ struct TRINITY_DLL_DECL instance_steam_vault : public ScriptedInstance
             case TYPE_MEKGINEER_STEAMRIGGER:
                 if (data == SPECIAL)
                 {
-                    if (GameObject *_go = GameObject::GetGameObject(*player,AccessPanelMek))
-                        _go->SetGoState(0);
+                    HandleGameObject(AccessPanelMek, true);
 
                     if (GetData(TYPE_HYDROMANCER_THESPIA) == SPECIAL)
-                    {
-                     if (GameObject *_go = GameObject::GetGameObject(*player,MainChambersDoor))
-                      _go->SetGoState(0);
-                    }
+                        HandleGameObject(MainChambersDoor, true);
+                        
                     debug_log("TSCR: Instance Steamvault: Access panel used.");
                 }
                 Encounter[1] = data;
@@ -209,7 +178,7 @@ struct TRINITY_DLL_DECL instance_steam_vault : public ScriptedInstance
         return 0;
     }
 
-    const char* Save()
+    std::string GetSaveData()
     {
         OUT_SAVE_INST_DATA;
         std::ostringstream stream;

@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -224,14 +224,14 @@ bool EquippedOk(Player* player, uint32 spellId)
     if( !spell )
         return false;
 
-    for(int i=0; i<3; i++)
+    for(uint8 i=0; i<3; i++)
     {
         uint32 reqSpell = spell->EffectTriggerSpell[i];
         if( !reqSpell )
             continue;
 
         Item* pItem;
-        for(int j = EQUIPMENT_SLOT_START; j < EQUIPMENT_SLOT_END; j++)
+        for(uint8 j = EQUIPMENT_SLOT_START; j < EQUIPMENT_SLOT_END; j++)
         {
             pItem = player->GetItemByPos( INVENTORY_SLOT_BAG_0, j );
             if( pItem )
@@ -355,9 +355,9 @@ bool GossipHello_npc_prof_alchemy(Player *player, Creature *_Creature)
     if (_Creature->isQuestGiver())
         player->PrepareQuestMenu( _Creature->GetGUID() );
     if (_Creature->isVendor())
-        player->ADD_GOSSIP_ITEM(1, GOSSIP_TEXT_BROWSE_GOODS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_VENDOR, GOSSIP_TEXT_BROWSE_GOODS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
     if(_Creature->isTrainer())
-        player->ADD_GOSSIP_ITEM(2, GOSSIP_TEXT_TRAIN, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRAIN);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, GOSSIP_TEXT_TRAIN, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRAIN);
 
     uint32 eCreature = _Creature->GetEntry();
 
@@ -369,21 +369,21 @@ bool GossipHello_npc_prof_alchemy(Player *player, Creature *_Creature)
             {
                 case 22427:                                 //Zarevhi
                     if (!HasAlchemySpell(player))
-                        player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_TRANSMUTE,    GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 1);
+                        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_TRANSMUTE,    GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 1);
                     if (player->HasSpell(S_TRANSMUTE))
-                        player->ADD_GOSSIP_ITEM( 0, GOSSIP_UNLEARN_TRANSMUTE,  GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 4);
+                        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_UNLEARN_TRANSMUTE,  GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 4);
                     break;
                 case 19052:                                 //Lorokeem
                     if (!HasAlchemySpell(player))
-                        player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_ELIXIR,       GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 2);
+                        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_ELIXIR,       GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 2);
                     if (player->HasSpell(S_ELIXIR))
-                        player->ADD_GOSSIP_ITEM( 0, GOSSIP_UNLEARN_ELIXIR,     GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 5);
+                        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_UNLEARN_ELIXIR,     GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 5);
                     break;
                 case 17909:                                 //Lauranna Thar'well
                     if (!HasAlchemySpell(player))
-                        player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_POTION,       GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 3);
+                        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_POTION,       GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 3);
                     if (player->HasSpell(S_POTION))
-                        player->ADD_GOSSIP_ITEM( 0, GOSSIP_UNLEARN_POTION,     GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 6);
+                        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_UNLEARN_POTION,     GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 6);
                     break;
             }
         }
@@ -470,17 +470,17 @@ void SendConfirmLearn_npc_prof_alchemy(Player *player, Creature *_Creature, uint
         switch(eCreature)
         {
             case 22427:
-                player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_TRANSMUTE, GOSSIP_SENDER_CHECK, action);
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_TRANSMUTE, GOSSIP_SENDER_CHECK, action);
                                                             //unknown textID ()
                 player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
                 break;
             case 19052:
-                player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_ELIXIR,    GOSSIP_SENDER_CHECK, action);
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_ELIXIR,    GOSSIP_SENDER_CHECK, action);
                                                             //unknown textID ()
                 player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
                 break;
             case 17909:
-                player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_POTION,    GOSSIP_SENDER_CHECK, action);
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_POTION,    GOSSIP_SENDER_CHECK, action);
                                                             //unknown textID ()
                 player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
                 break;
@@ -542,9 +542,9 @@ bool GossipHello_npc_prof_blacksmith(Player *player, Creature *_Creature)
     if (_Creature->isQuestGiver())
         player->PrepareQuestMenu( _Creature->GetGUID() );
     if (_Creature->isVendor())
-        player->ADD_GOSSIP_ITEM(1, GOSSIP_TEXT_BROWSE_GOODS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_VENDOR, GOSSIP_TEXT_BROWSE_GOODS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
     if(_Creature->isTrainer())
-        player->ADD_GOSSIP_ITEM(2, GOSSIP_TEXT_TRAIN, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRAIN);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, GOSSIP_TEXT_TRAIN, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRAIN);
 
     uint32 eCreature = _Creature->GetEntry();
     //WEAPONSMITH & ARMORSMITH
@@ -555,19 +555,19 @@ bool GossipHello_npc_prof_blacksmith(Player *player, Creature *_Creature)
             case 11145:                                     //Myolor Sunderfury
             case 11176:                                     //Krathok Moltenfist
                 if(!player->HasSpell(S_ARMOR) && !player->HasSpell(S_WEAPON) && player->GetReputationRank(REP_ARMOR) >=  REP_FRIENDLY)
-                    player->ADD_GOSSIP_ITEM( 0, GOSSIP_ARMOR_LEARN,   GOSSIP_SENDER_MAIN,          GOSSIP_ACTION_INFO_DEF + 1);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ARMOR_LEARN,   GOSSIP_SENDER_MAIN,          GOSSIP_ACTION_INFO_DEF + 1);
                 if(!player->HasSpell(S_WEAPON) && !player->HasSpell(S_ARMOR) && player->GetReputationRank(REP_WEAPON) >= REP_FRIENDLY)
-                    player->ADD_GOSSIP_ITEM( 0, GOSSIP_WEAPON_LEARN,  GOSSIP_SENDER_MAIN,          GOSSIP_ACTION_INFO_DEF + 2);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_WEAPON_LEARN,  GOSSIP_SENDER_MAIN,          GOSSIP_ACTION_INFO_DEF + 2);
                 break;
             case 11146:                                     //Ironus Coldsteel
             case 11178:                                     //Borgosh Corebender
                 if(player->HasSpell(S_WEAPON))
-                    player->ADD_GOSSIP_ITEM( 0, GOSSIP_WEAPON_UNLEARN,    GOSSIP_SENDER_UNLEARN,   GOSSIP_ACTION_INFO_DEF + 3);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_WEAPON_UNLEARN,    GOSSIP_SENDER_UNLEARN,   GOSSIP_ACTION_INFO_DEF + 3);
                 break;
             case 5164:                                      //Grumnus Steelshaper
             case 11177:                                     //Okothos Ironrager
                 if(player->HasSpell(S_ARMOR))
-                    player->ADD_GOSSIP_ITEM( 0, GOSSIP_ARMOR_UNLEARN,     GOSSIP_SENDER_UNLEARN,   GOSSIP_ACTION_INFO_DEF + 4);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ARMOR_UNLEARN,     GOSSIP_SENDER_UNLEARN,   GOSSIP_ACTION_INFO_DEF + 4);
                 break;
         }
     }
@@ -578,21 +578,21 @@ bool GossipHello_npc_prof_blacksmith(Player *player, Creature *_Creature)
         {
             case 11191:                                     //Lilith the Lithe
                 if(!HasWeaponSub(player))
-                    player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_HAMMER,       GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 5);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_HAMMER,       GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 5);
                 if(player->HasSpell(S_HAMMER))
-                    player->ADD_GOSSIP_ITEM( 0, GOSSIP_UNLEARN_HAMMER,     GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 8);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_UNLEARN_HAMMER,     GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 8);
                 break;
             case 11192:                                     //Kilram
                 if(!HasWeaponSub(player))
-                    player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_AXE,          GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 6);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_AXE,          GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 6);
                 if(player->HasSpell(S_AXE))
-                    player->ADD_GOSSIP_ITEM( 0, GOSSIP_UNLEARN_AXE,        GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 9);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_UNLEARN_AXE,        GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 9);
                 break;
             case 11193:                                     //Seril Scourgebane
                 if(!HasWeaponSub(player))
-                    player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_SWORD,        GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 7);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_SWORD,        GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 7);
                 if(player->HasSpell(S_SWORD))
-                    player->ADD_GOSSIP_ITEM( 0, GOSSIP_UNLEARN_SWORD,      GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 10);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_UNLEARN_SWORD,      GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 10);
                 break;
         }
     }
@@ -634,8 +634,6 @@ void SendActionMenu_npc_prof_blacksmith(Player *player, Creature *_Creature, uin
             {
                                                             //unknown textID (TALK_MUST_UNLEARN_WEAPON)
                 player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
-                                                            //Temporary, not offilike
-                _Creature->MonsterSay(TALK_MUST_UNLEARN_WEAPON,0,player->GetGUID());
             }
             else if( EquippedOk(player,S_UNLEARN_WEAPON) )
             {
@@ -737,17 +735,17 @@ void SendConfirmLearn_npc_prof_blacksmith(Player *player, Creature *_Creature, u
         switch(eCreature)
         {
             case 11191:
-                player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_HAMMER, GOSSIP_SENDER_CHECK, action);
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_HAMMER, GOSSIP_SENDER_CHECK, action);
                                                             //unknown textID (TALK_HAMMER_LEARN)
                 player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
                 break;
             case 11192:
-                player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_AXE,    GOSSIP_SENDER_CHECK, action);
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_AXE,    GOSSIP_SENDER_CHECK, action);
                                                             //unknown textID (TALK_AXE_LEARN)
                 player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
                 break;
             case 11193:
-                player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_SWORD,  GOSSIP_SENDER_CHECK, action);
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_SWORD,  GOSSIP_SENDER_CHECK, action);
                                                             //unknown textID (TALK_SWORD_LEARN)
                 player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
                 break;
@@ -814,6 +812,138 @@ bool GossipSelect_npc_prof_blacksmith(Player *player, Creature *_Creature, uint3
 }*/
 
 /*###
+# engineering trinkets
+###*/
+
+enum
+{
+    NPC_ZAP                     = 14742,
+    NPC_JHORDY                  = 14743,
+    NPC_KABLAM                  = 21493,
+    NPC_SMILES                  = 21494,
+
+    SPELL_LEARN_TO_EVERLOOK     = 23490,
+    SPELL_LEARN_TO_GADGET       = 23491,
+    SPELL_LEARN_TO_AREA52       = 36956,
+    SPELL_LEARN_TO_TOSHLEY      = 36957,
+
+    SPELL_TO_EVERLOOK           = 23486,
+    SPELL_TO_GADGET             = 23489,
+    SPELL_TO_AREA52             = 36954,
+    SPELL_TO_TOSHLEY            = 36955,
+
+    ITEM_GNOMISH_CARD           = 10790,
+    ITEM_GOBLIN_CARD            = 10791
+};
+
+#define GOSSIP_ITEM_ZAP         "[PH] Unknown"
+#define GOSSIP_ITEM_JHORDY      "I must build a beacon for this marvelous device!"
+#define GOSSIP_ITEM_KABLAM      "[PH] Unknown"
+#define GOSSIP_ITEM_SMILES      "[PH] Unknown"
+
+bool GossipHello_npc_engineering_tele_trinket(Player* pPlayer, Creature* pCreature)
+{
+    uint32 NpcTextId = 0;
+    std::string GossipItem;
+    bool CanLearn = false;
+
+    if(pPlayer->HasSkill(SKILL_ENGINERING))
+    {
+        switch(pCreature->GetEntry())
+        {
+            case NPC_ZAP:
+                NpcTextId = 7249;
+                if(pPlayer->GetBaseSkillValue(SKILL_ENGINERING) >= 260 && pPlayer->HasSpell(S_GOBLIN))
+                {
+                    if(!pPlayer->HasSpell(SPELL_TO_EVERLOOK))
+                    {
+                        CanLearn = true;
+                        GossipItem = GOSSIP_ITEM_ZAP;
+                    }
+                    else if(pPlayer->HasSpell(SPELL_TO_EVERLOOK))
+                        NpcTextId = 0;
+                }
+                break;
+            case NPC_JHORDY:
+                NpcTextId = 7251;
+                if(pPlayer->GetBaseSkillValue(SKILL_ENGINERING) >= 260 && pPlayer->HasSpell(S_GNOMISH))
+                {
+                    if(!pPlayer->HasSpell(SPELL_TO_GADGET))
+                    {
+                        CanLearn = true;
+                        GossipItem = GOSSIP_ITEM_JHORDY;
+                    }
+                    else if(pPlayer->HasSpell(SPELL_TO_GADGET))
+                        NpcTextId = 7252;
+                }
+                break;
+            case NPC_KABLAM:
+                NpcTextId = 10365;
+                if(pPlayer->GetBaseSkillValue(SKILL_ENGINERING) >= 350 && pPlayer->HasSpell(S_GOBLIN))
+                {
+                    if(!pPlayer->HasSpell(SPELL_TO_AREA52))
+                    {
+                        CanLearn = true;
+                        GossipItem = GOSSIP_ITEM_KABLAM;
+                    }
+                    else if(pPlayer->HasSpell(SPELL_TO_AREA52))
+                        NpcTextId = 0;
+                }
+                break;
+            case NPC_SMILES:
+                NpcTextId = 10363;
+                if(pPlayer->GetBaseSkillValue(SKILL_ENGINERING) >= 350 && pPlayer->HasSpell(S_GNOMISH))
+                {
+                    if(!pPlayer->HasSpell(SPELL_TO_TOSHLEY))
+                    {
+                        CanLearn = true;
+                        GossipItem = GOSSIP_ITEM_SMILES;
+                    }
+                    else if(pPlayer->HasSpell(SPELL_TO_TOSHLEY))
+                        NpcTextId = 0;
+                }
+                break;
+        }
+    }
+
+    if(CanLearn)
+    {
+        if(pPlayer->HasItemCount(ITEM_GOBLIN_CARD,1) || pPlayer->HasItemCount(ITEM_GNOMISH_CARD,1))
+            pPlayer->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GossipItem, pCreature->GetEntry(), GOSSIP_ACTION_INFO_DEF+1);
+    }
+
+    pPlayer->SEND_GOSSIP_MENU(NpcTextId ? NpcTextId : pCreature->GetNpcTextId(), pCreature->GetGUID());
+    return true;
+}
+
+bool GossipSelect_npc_engineering_tele_trinket(Player* pPlayer, Creature* pCreature, uint32 Sender, uint32 Action)
+{
+    if(Action == GOSSIP_ACTION_INFO_DEF+1)
+        pPlayer->CLOSE_GOSSIP_MENU();
+
+    if(Sender != pCreature->GetEntry())
+        return true;
+
+    switch(Sender)
+    {
+        case NPC_ZAP:
+            pPlayer->CastSpell(pPlayer, SPELL_LEARN_TO_EVERLOOK, false);
+            break;
+        case NPC_JHORDY:
+            pPlayer->CastSpell(pPlayer, SPELL_LEARN_TO_GADGET, false);
+            break;
+        case NPC_KABLAM:
+            pPlayer->CastSpell(pPlayer, SPELL_LEARN_TO_AREA52, false);
+            break;
+        case NPC_SMILES:
+            pPlayer->CastSpell(pPlayer, SPELL_LEARN_TO_TOSHLEY, false);
+            break;
+    }
+
+    return true;
+}
+
+/*###
 # start menues leatherworking
 ###*/
 
@@ -822,9 +952,9 @@ bool GossipHello_npc_prof_leather(Player *player, Creature *_Creature)
     if (_Creature->isQuestGiver())
         player->PrepareQuestMenu( _Creature->GetGUID() );
     if (_Creature->isVendor())
-        player->ADD_GOSSIP_ITEM(1, GOSSIP_TEXT_BROWSE_GOODS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_VENDOR, GOSSIP_TEXT_BROWSE_GOODS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
     if(_Creature->isTrainer())
-        player->ADD_GOSSIP_ITEM(2, GOSSIP_TEXT_TRAIN, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRAIN);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, GOSSIP_TEXT_TRAIN, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRAIN);
 
     uint32 eCreature = _Creature->GetEntry();
 
@@ -835,17 +965,17 @@ bool GossipHello_npc_prof_leather(Player *player, Creature *_Creature)
             case 7866:                                      //Peter Galen
             case 7867:                                      //Thorkaf Dragoneye
                 if(player->HasSpell(S_DRAGON))
-                    player->ADD_GOSSIP_ITEM( 0, GOSSIP_UNLEARN_DRAGON,      GOSSIP_SENDER_UNLEARN, GOSSIP_ACTION_INFO_DEF + 1);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_UNLEARN_DRAGON,      GOSSIP_SENDER_UNLEARN, GOSSIP_ACTION_INFO_DEF + 1);
                 break;
             case 7868:                                      //Sarah Tanner
             case 7869:                                      //Brumn Winterhoof
                 if(player->HasSpell(S_ELEMENTAL))
-                    player->ADD_GOSSIP_ITEM( 0, GOSSIP_UNLEARN_ELEMENTAL,   GOSSIP_SENDER_UNLEARN, GOSSIP_ACTION_INFO_DEF + 2);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_UNLEARN_ELEMENTAL,   GOSSIP_SENDER_UNLEARN, GOSSIP_ACTION_INFO_DEF + 2);
                 break;
             case 7870:                                      //Caryssia Moonhunter
             case 7871:                                      //Se'Jib
                 if(player->HasSpell(S_TRIBAL))
-                    player->ADD_GOSSIP_ITEM( 0, GOSSIP_UNLEARN_TRIBAL,      GOSSIP_SENDER_UNLEARN, GOSSIP_ACTION_INFO_DEF + 3);
+                    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_UNLEARN_TRIBAL,      GOSSIP_SENDER_UNLEARN, GOSSIP_ACTION_INFO_DEF + 3);
                 break;
         }
     }
@@ -966,9 +1096,9 @@ bool GossipHello_npc_prof_tailor(Player *player, Creature *_Creature)
     if (_Creature->isQuestGiver())
         player->PrepareQuestMenu( _Creature->GetGUID() );
     if (_Creature->isVendor())
-        player->ADD_GOSSIP_ITEM(1, GOSSIP_TEXT_BROWSE_GOODS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_VENDOR, GOSSIP_TEXT_BROWSE_GOODS, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRADE);
     if (_Creature->isTrainer())
-        player->ADD_GOSSIP_ITEM(2, GOSSIP_TEXT_TRAIN, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRAIN);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_TRAINER, GOSSIP_TEXT_TRAIN, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_TRAIN);
 
     uint32 eCreature = _Creature->GetEntry();
                                                             //TAILORING SPEC
@@ -980,21 +1110,21 @@ bool GossipHello_npc_prof_tailor(Player *player, Creature *_Creature)
             {
                 case 22213:                                 //Gidge Spellweaver
                     if (!HasTailorSpell(player))
-                        player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_SPELLFIRE,    GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 1);
+                        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_SPELLFIRE,    GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 1);
                     if (player->HasSpell(S_SPELLFIRE))
-                        player->ADD_GOSSIP_ITEM( 0, GOSSIP_UNLEARN_SPELLFIRE,  GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 4);
+                        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_UNLEARN_SPELLFIRE,  GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 4);
                     break;
                 case 22208:                                 //Nasmara Moonsong
                     if (!HasTailorSpell(player))
-                        player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_MOONCLOTH,    GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 2);
+                        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_MOONCLOTH,    GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 2);
                     if (player->HasSpell(S_MOONCLOTH))
-                        player->ADD_GOSSIP_ITEM( 0, GOSSIP_UNLEARN_MOONCLOTH,  GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 5);
+                        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_UNLEARN_MOONCLOTH,  GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 5);
                     break;
                 case 22212:                                 //Andrion Darkspinner
                     if (!HasTailorSpell(player))
-                        player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_SHADOWEAVE,   GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 3);
+                        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_SHADOWEAVE,   GOSSIP_SENDER_LEARN,    GOSSIP_ACTION_INFO_DEF + 3);
                     if (player->HasSpell(S_SHADOWEAVE))
-                        player->ADD_GOSSIP_ITEM( 0, GOSSIP_UNLEARN_SHADOWEAVE, GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 6);
+                        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_UNLEARN_SHADOWEAVE, GOSSIP_SENDER_UNLEARN,  GOSSIP_ACTION_INFO_DEF + 6);
                     break;
             }
         }
@@ -1096,17 +1226,17 @@ void SendConfirmLearn_npc_prof_tailor(Player *player, Creature *_Creature, uint3
         switch(eCreature)
         {
             case 22213:
-                player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_SPELLFIRE, GOSSIP_SENDER_CHECK, action);
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_SPELLFIRE, GOSSIP_SENDER_CHECK, action);
                                                             //unknown textID ()
                 player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
                 break;
             case 22208:
-                player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_MOONCLOTH,    GOSSIP_SENDER_CHECK, action);
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_MOONCLOTH,    GOSSIP_SENDER_CHECK, action);
                                                             //unknown textID ()
                 player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
                 break;
             case 22212:
-                player->ADD_GOSSIP_ITEM( 0, GOSSIP_LEARN_SHADOWEAVE,  GOSSIP_SENDER_CHECK, action);
+                player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_LEARN_SHADOWEAVE,  GOSSIP_SENDER_CHECK, action);
                                                             //unknown textID ()
                 player->SEND_GOSSIP_MENU(_Creature->GetNpcTextId(), _Creature->GetGUID());
                 break;
@@ -1183,6 +1313,12 @@ void AddSC_npc_professions()
     newscript->Name="npc_prof_blacksmith";
     newscript->pGossipHello =  &GossipHello_npc_prof_blacksmith;
     newscript->pGossipSelect = &GossipSelect_npc_prof_blacksmith;
+    newscript->RegisterSelf();
+
+    newscript = new Script;
+    newscript->Name = "npc_engineering_tele_trinket";
+    newscript->pGossipHello =  &GossipHello_npc_engineering_tele_trinket;
+    newscript->pGossipSelect = &GossipSelect_npc_engineering_tele_trinket;
     newscript->RegisterSelf();
 
     newscript = new Script;

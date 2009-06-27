@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -49,7 +49,7 @@ struct TRINITY_DLL_DECL boss_noxxionAI : public ScriptedAI
         Invisible = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -71,7 +71,7 @@ struct TRINITY_DLL_DECL boss_noxxionAI : public ScriptedAI
         Rand = 0;
         Summoned = DoSpawnCreature(13456, RandX, RandY, 0, 0, TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN, 90000);
         if(Summoned)
-            ((CreatureAI*)Summoned->AI())->AttackStart(victim);
+            (Summoned->AI())->AttackStart(victim);
     }
 
     void UpdateAI(const uint32 diff)
@@ -82,7 +82,7 @@ struct TRINITY_DLL_DECL boss_noxxionAI : public ScriptedAI
             m_creature->setFaction(14);
             m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
             //Noxxion model
-            m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID,11172);
+            m_creature->SetDisplayId(11172);
             Invisible = false;
             //m_creature->m_canMove = true;
         } else if (Invisible)
@@ -119,7 +119,7 @@ struct TRINITY_DLL_DECL boss_noxxionAI : public ScriptedAI
             m_creature->setFaction(35);
             m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
             // Invisible Model
-            m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID,11686);
+            m_creature->SetDisplayId(11686);
             SummonAdds(m_creature->getVictim());
             SummonAdds(m_creature->getVictim());
             SummonAdds(m_creature->getVictim());

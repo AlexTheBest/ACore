@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -43,7 +43,7 @@ struct TRINITY_DLL_DECL boss_hazzarahAI : public ScriptedAI
         Illusions_Timer = 10000 + rand()%8000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -72,7 +72,7 @@ struct TRINITY_DLL_DECL boss_hazzarahAI : public ScriptedAI
             //We will summon 3 illusions that will spawn on a random gamer and attack this gamer
             //We will just use one model for the beginning
             Unit* target = NULL;
-            for(int i = 0; i < 3;i++)
+            for(uint8 i = 0; i < 3;i++)
             {
                 target = SelectUnit(SELECT_TARGET_RANDOM,0);
                 if(!target)
@@ -80,7 +80,7 @@ struct TRINITY_DLL_DECL boss_hazzarahAI : public ScriptedAI
 
                 Illusion = m_creature->SummonCreature(15163,target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(),0,TEMPSUMMON_TIMED_OR_CORPSE_DESPAWN,30000);
                 if(Illusion)
-                    ((CreatureAI*)Illusion->AI())->AttackStart(target);
+                    (Illusion->AI())->AttackStart(target);
             }
 
             Illusions_Timer = 15000 + rand()%10000;

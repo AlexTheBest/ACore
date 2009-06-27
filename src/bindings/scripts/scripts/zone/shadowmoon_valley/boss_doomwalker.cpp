@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -39,6 +39,7 @@ EndScriptData */
 #define SPELL_OVERRUN               32636
 #define SPELL_ENRAGE                33653
 #define SPELL_MARK_DEATH            37128
+#define SPELL_AURA_DEATH            37131
 
 struct TRINITY_DLL_DECL boss_doomwalkerAI : public ScriptedAI
 {
@@ -65,6 +66,8 @@ struct TRINITY_DLL_DECL boss_doomwalkerAI : public ScriptedAI
 
     void KilledUnit(Unit* Victim)
     {
+        Victim->CastSpell(Victim,SPELL_MARK_DEATH,0);
+
         if(rand()%5)
             return;
 
@@ -74,8 +77,6 @@ struct TRINITY_DLL_DECL boss_doomwalkerAI : public ScriptedAI
             case 1: DoScriptText(SAY_SLAY_2, m_creature); break;
             case 2: DoScriptText(SAY_SLAY_3, m_creature); break;
         }
-
-        DoCast(m_creature->getVictim(), SPELL_MARK_DEATH);
     }
 
     void JustDied(Unit* Killer)
@@ -83,9 +84,20 @@ struct TRINITY_DLL_DECL boss_doomwalkerAI : public ScriptedAI
         DoScriptText(SAY_DEATH, m_creature);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoScriptText(SAY_AGGRO, m_creature);
+    }
+
+    void MoveInLineOfSight(Unit *who)
+    {
+        if (who && who->GetTypeId() == TYPEID_PLAYER && m_creature->IsHostileTo(who))
+        {
+            if (who->HasAura(SPELL_MARK_DEATH,0))
+            {
+                who->CastSpell(who,SPELL_AURA_DEATH,1);
+            }
+        }
     }
 
     void UpdateAI(const uint32 diff)
@@ -131,7 +143,7 @@ struct TRINITY_DLL_DECL boss_doomwalkerAI : public ScriptedAI
 
             //remove enrage before casting earthquake because enrage + earthquake = 16000dmg over 8sec and all dead
             if (InEnrage)
-                m_creature->RemoveAura(SPELL_ENRAGE, 0);
+                m_creature->RemoveAura(SPELL_ENRAGE);
 
             DoCast(m_creature,SPELL_EARTHQUAKE);
             Quake_Timer = 30000 + rand()%25000;
@@ -149,7 +161,7 @@ struct TRINITY_DLL_DECL boss_doomwalkerAI : public ScriptedAI
             if (target)
                 DoCast(target,SPELL_CHAIN_LIGHTNING);
 
-            Chain_Timer = 10000 + rand()%25000;
+            Chain_Timer = 7000 + rand()%20000;
         }else Chain_Timer -= diff;
 
         //Spell Sunder Armor

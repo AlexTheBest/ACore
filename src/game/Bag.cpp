@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,13 +19,12 @@
  */
 
 #include "Common.h"
-#include "Bag.h"
 #include "ObjectMgr.h"
 #include "Database/DatabaseEnv.h"
+
+#include "Bag.h"
 #include "Log.h"
-#include "WorldPacket.h"
 #include "UpdateData.h"
-#include "WorldSession.h"
 
 Bag::Bag( ): Item()
 {
@@ -34,14 +33,23 @@ Bag::Bag( ): Item()
 
     m_valuesCount = CONTAINER_END;
 
-    memset(m_bagslot, 0, sizeof(Item *) * MAX_BAG_SIZE);    // Maximum 20 Slots
+    memset(m_bagslot, 0, sizeof(Item *) * MAX_BAG_SIZE);
 }
 
 Bag::~Bag()
 {
-    for(int i = 0; i < MAX_BAG_SIZE; ++i)
-        if (m_bagslot[i])
+    for(uint8 i = 0; i < MAX_BAG_SIZE; ++i)
+        if (Item *item = m_bagslot[i])
+        {
+            if(item->IsInWorld())
+            {
+                sLog.outCrash("Item %u (slot %u, bag slot %u) in bag %u (slot %u, bag slot %u, m_bagslot %u) is to be deleted but is still in world.",
+                    item->GetEntry(), (uint32)item->GetSlot(), (uint32)item->GetBagSlot(),
+                    GetEntry(), (uint32)GetSlot(), (uint32)GetBagSlot(), (uint32)i);
+                item->RemoveFromWorld();
+            }
             delete m_bagslot[i];
+        }
 }
 
 void Bag::AddToWorld()
@@ -86,7 +94,7 @@ bool Bag::Create(uint32 guidlow, uint32 itemid, Player const* owner)
     SetUInt32Value(CONTAINER_FIELD_NUM_SLOTS, itemProto->ContainerSlots);
 
     // Cleaning 20 slots
-    for (uint8 i = 0; i < MAX_BAG_SIZE; i++)
+    for (uint8 i = 0; i < MAX_BAG_SIZE; ++i)
     {
         SetUInt64Value(CONTAINER_FIELD_SLOT_1 + (i*2), 0);
         m_bagslot[i] = NULL;
@@ -106,7 +114,7 @@ bool Bag::LoadFromDB(uint32 guid, uint64 owner_guid, QueryResult *result)
         return false;
 
     // cleanup bag content related item value fields (its will be filled correctly from `character_inventory`)
-    for (int i = 0; i < MAX_BAG_SIZE; ++i)
+    for (uint8 i = 0; i < MAX_BAG_SIZE; ++i)
     {
         SetUInt64Value(CONTAINER_FIELD_SLOT_1 + (i*2), 0);
         if (m_bagslot[i])
@@ -121,7 +129,7 @@ bool Bag::LoadFromDB(uint32 guid, uint64 owner_guid, QueryResult *result)
 
 void Bag::DeleteFromDB()
 {
-    for (int i = 0; i < MAX_BAG_SIZE; i++)
+    for (uint8 i = 0; i < MAX_BAG_SIZE; ++i)
         if (m_bagslot[i])
             m_bagslot[i]->DeleteFromDB();
 
@@ -131,7 +139,7 @@ void Bag::DeleteFromDB()
 uint32 Bag::GetFreeSlots() const
 {
     uint32 slots = 0;
-    for (uint32 i=0; i < GetBagSize(); i++)
+    for (uint32 i=0; i < GetBagSize(); ++i)
         if (!m_bagslot[i])
             ++slots;
 

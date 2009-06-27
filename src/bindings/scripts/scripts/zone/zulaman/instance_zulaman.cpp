@@ -1,4 +1,4 @@
- /* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ /* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -104,9 +104,9 @@ struct TRINITY_DLL_DECL instance_zulaman : public ScriptedInstance
         return false;
     }
 
-    void OnCreatureCreate(Creature *creature, uint32 creature_entry)
+    void OnCreatureCreate(Creature *creature, bool add)
     {
-        switch(creature_entry)
+        switch(creature->GetEntry())
         {
         case 23578://janalai
         case 23863://zuljin
@@ -117,7 +117,7 @@ struct TRINITY_DLL_DECL instance_zulaman : public ScriptedInstance
         }
     }
 
-    void OnObjectCreate(GameObject *go)
+    void OnGameObjectCreate(GameObject *go, bool add)
     {
         switch(go->GetEntry())
         {
@@ -135,12 +135,6 @@ struct TRINITY_DLL_DECL instance_zulaman : public ScriptedInstance
 
         }
         CheckInstanceStatus();
-    }
-
-    void OpenDoor(uint64 DoorGUID, bool open)
-    {
-        if(GameObject *Door = instance->GetGameObjectInMap(DoorGUID))
-            Door->SetUInt32Value(GAMEOBJECT_STATE, open ? 0 : 1);
     }
 
     void SummonHostage(uint8 num)
@@ -166,10 +160,10 @@ struct TRINITY_DLL_DECL instance_zulaman : public ScriptedInstance
     void CheckInstanceStatus()
     {
         if(BossKilled >= 4)
-            OpenDoor(HexLordGateGUID, true);
+            HandleGameObject(HexLordGateGUID, true);
 
         if(BossKilled >= 5)
-            OpenDoor(ZulJinGateGUID, true);
+            HandleGameObject(ZulJinGateGUID, true);
     }
 
     void UpdateWorldState(uint32 field, uint32 value)
@@ -179,7 +173,7 @@ struct TRINITY_DLL_DECL instance_zulaman : public ScriptedInstance
         instance->SendToPlayers(&data);
     }
 
-    const char* Save()
+    std::string GetSaveData()
     {
         std::ostringstream ss;
         ss << "S " << BossKilled << " " << ChestLooted << " " << QuestMinute;
@@ -224,7 +218,7 @@ struct TRINITY_DLL_DECL instance_zulaman : public ScriptedInstance
             break;
         case DATA_AKILZONEVENT:
             Encounters[1] = data;
-            OpenDoor(AkilzonDoorGUID, data != IN_PROGRESS);
+            HandleGameObject(AkilzonDoorGUID, data != IN_PROGRESS);
             if(data == DONE)
             {
                 if(QuestMinute)
@@ -241,19 +235,19 @@ struct TRINITY_DLL_DECL instance_zulaman : public ScriptedInstance
             break;
         case DATA_HALAZZIEVENT:
             Encounters[3] = data;
-            OpenDoor(HalazziDoorGUID, data != IN_PROGRESS);
+            HandleGameObject(HalazziDoorGUID, data != IN_PROGRESS);
             if(data == DONE) SummonHostage(3);
             break;
         case DATA_HEXLORDEVENT:
             Encounters[4] = data;
             if(data == IN_PROGRESS)
-                OpenDoor(HexLordGateGUID, false);
+                HandleGameObject(HexLordGateGUID, false);
             else if(data == NOT_STARTED)
                 CheckInstanceStatus();
             break;
         case DATA_ZULJINEVENT:
             Encounters[5] = data;
-            OpenDoor(ZulJinDoorGUID, data != IN_PROGRESS);
+            HandleGameObject(ZulJinDoorGUID, data != IN_PROGRESS);
             break;
         case DATA_CHESTLOOTED:
             ChestLooted++;

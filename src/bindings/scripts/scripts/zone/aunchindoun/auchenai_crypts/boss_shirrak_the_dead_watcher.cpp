@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -59,7 +59,7 @@ struct TRINITY_DLL_DECL boss_shirrak_the_dead_watcherAI : public ScriptedAI
         focusedTarget = NULL;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     { }
 
     void JustSummoned(Creature *summoned)
@@ -86,7 +86,7 @@ struct TRINITY_DLL_DECL boss_shirrak_the_dead_watcherAI : public ScriptedAI
             Map::PlayerList const &PlayerList = map->GetPlayers();
             for(Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
                 if (Player* i_pl = i->getSource())
-                    if (i_pl->isAlive() && (dist = i_pl->GetDistance(m_creature)) < 45)
+                    if (i_pl->isAlive() && (dist = i_pl->IsWithinDist(m_creature, 45)))
                     {
                         i_pl->RemoveAurasDueToSpell(SPELL_INHIBITMAGIC);
                         m_creature->AddAura(SPELL_INHIBITMAGIC, i_pl);
@@ -165,7 +165,7 @@ struct TRINITY_DLL_DECL mob_focus_fireAI : public ScriptedAI
         fiery1 = fiery2 = true;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     { }
 
     void UpdateAI(const uint32 diff)

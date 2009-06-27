@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -84,12 +84,12 @@ EndScriptData */
 #define CREATURE_ENSLAVED_SOUL          23469
 #define NUMBER_ENSLAVED_SOUL            8
 
-struct Position
+struct Position2d
 {
     float x,y;
 };
 
-static Position Coords[]=
+static Position2d Coords[]=
 {
     {450.4, 212.3},
     {542.1, 212.3},
@@ -107,7 +107,7 @@ struct TRINITY_DLL_DECL npc_enslaved_soulAI : public ScriptedAI
 
     void Reset() {ReliquaryGUID = 0;}
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         m_creature->CastSpell(m_creature, ENSLAVED_SOUL_PASSIVE, true);
         DoZoneInCombat();
@@ -120,7 +120,7 @@ struct TRINITY_DLL_DECL boss_reliquary_of_soulsAI : public ScriptedAI
 {
     boss_reliquary_of_soulsAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         EssenceGUID = 0;
     }
 
@@ -157,7 +157,7 @@ struct TRINITY_DLL_DECL boss_reliquary_of_soulsAI : public ScriptedAI
         m_creature->RemoveAurasDueToSpell(SPELL_SUBMERGE);
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         m_creature->AddThreat(who, 10000.0f);
         DoZoneInCombat();
@@ -169,15 +169,6 @@ struct TRINITY_DLL_DECL boss_reliquary_of_soulsAI : public ScriptedAI
         Timer = 0;
     }
 
-    void AttackStart(Unit* who)
-    {
-        if (!InCombat)
-        {
-            Aggro(who);
-            InCombat = true;
-        }
-    }
-
     bool SummonSoul()
     {
         uint32 random = rand()%6;
@@ -187,7 +178,7 @@ struct TRINITY_DLL_DECL boss_reliquary_of_soulsAI : public ScriptedAI
         if(!Soul) return false;
         if(Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 0))
         {
-            ((npc_enslaved_soulAI*)Soul->AI())->ReliquaryGUID = m_creature->GetGUID();
+            CAST_AI(npc_enslaved_soulAI, Soul->AI())->ReliquaryGUID = m_creature->GetGUID();
             Soul->AI()->AttackStart(target);
         }else EnterEvadeMode();
         return true;
@@ -197,8 +188,6 @@ struct TRINITY_DLL_DECL boss_reliquary_of_soulsAI : public ScriptedAI
     {
         if(pInstance)
             pInstance->SetData(DATA_RELIQUARYOFSOULSEVENT, DONE);
-
-        InCombat = false;
     }
 
     void UpdateAI(const uint32 diff)
@@ -323,7 +312,7 @@ struct TargetDistanceOrder : public std::binary_function<const Unit, const Unit,
     // functor for operator "<"
     bool operator()(const Unit* _Left, const Unit* _Right) const
     {
-        return (MainTarget->GetDistance(_Left) < MainTarget->GetDistance(_Right));
+        return MainTarget->GetDistanceOrder(_Left, _Right);
     }
 };
 
@@ -361,7 +350,7 @@ struct TRINITY_DLL_DECL boss_essence_of_sufferingAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoScriptText(SUFF_SAY_FREED, m_creature);
         DoZoneInCombat();
@@ -406,7 +395,7 @@ struct TRINITY_DLL_DECL boss_essence_of_sufferingAI : public ScriptedAI
 
     void UpdateAI(const uint32 diff)
     {
-        if(InCombat)
+        if(m_creature->isInCombat())
         {
             //Supposed to be cast on nearest target
             if(FixateTimer < diff)
@@ -485,7 +474,7 @@ struct TRINITY_DLL_DECL boss_essence_of_desireAI : public ScriptedAI
                         m_creature->InterruptSpell(CURRENT_GENERIC_SPELL, false);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoScriptText(DESI_SAY_FREED, m_creature);
         DoZoneInCombat();
@@ -564,7 +553,7 @@ struct TRINITY_DLL_DECL boss_essence_of_angerAI : public ScriptedAI
         CheckedAggro = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         switch(rand()%2)
         {
@@ -640,7 +629,7 @@ void npc_enslaved_soulAI::JustDied(Unit *killer)
     {
         Creature* Reliquary = (Unit::GetCreature((*m_creature), ReliquaryGUID));
         if(Reliquary)
-            ((boss_reliquary_of_soulsAI*)Reliquary->AI())->SoulDeathCount++;
+            CAST_AI(boss_reliquary_of_soulsAI, Reliquary->AI())->SoulDeathCount++;
     }
     DoCast(m_creature, SPELL_SOUL_RELEASE, true);
 }

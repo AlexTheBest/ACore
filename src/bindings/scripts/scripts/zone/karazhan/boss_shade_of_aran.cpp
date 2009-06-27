@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -83,7 +83,7 @@ struct TRINITY_DLL_DECL boss_aranAI : public ScriptedAI
 {
     boss_aranAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance* pInstance;
@@ -141,9 +141,7 @@ struct TRINITY_DLL_DECL boss_aranAI : public ScriptedAI
         {
             // Not in progress
             pInstance->SetData(DATA_SHADEOFARAN_EVENT, NOT_STARTED);
-
-            if(GameObject* Door = GameObject::GetGameObject(*m_creature, pInstance->GetData64(DATA_GAMEOBJECT_LIBRARY_DOOR)))
-                Door->SetGoState(0);
+            pInstance->HandleGameObject(pInstance->GetData64(DATA_GAMEOBJECT_LIBRARY_DOOR), true); 
         }
     }
 
@@ -163,13 +161,11 @@ struct TRINITY_DLL_DECL boss_aranAI : public ScriptedAI
         if(pInstance)
         {
             pInstance->SetData(DATA_SHADEOFARAN_EVENT, DONE);
-
-            if(GameObject* Door = GameObject::GetGameObject(*m_creature, pInstance->GetData64(DATA_GAMEOBJECT_LIBRARY_DOOR)))
-                Door->SetGoState(0);
+            pInstance->HandleGameObject(pInstance->GetData64(DATA_GAMEOBJECT_LIBRARY_DOOR), true);
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         switch(rand()%3)
         {
@@ -181,8 +177,7 @@ struct TRINITY_DLL_DECL boss_aranAI : public ScriptedAI
         if(pInstance)
         {
             pInstance->SetData(DATA_SHADEOFARAN_EVENT, IN_PROGRESS);
-            if(GameObject* Door = GameObject::GetGameObject(*m_creature, pInstance->GetData64(DATA_GAMEOBJECT_LIBRARY_DOOR)))
-                Door->SetGoState(1);
+            pInstance->HandleGameObject(pInstance->GetData64(DATA_GAMEOBJECT_LIBRARY_DOOR), false);
         }
     }
 
@@ -232,8 +227,7 @@ struct TRINITY_DLL_DECL boss_aranAI : public ScriptedAI
             {
                 if(pInstance)
                 {
-                    if(GameObject* Door = GameObject::GetGameObject(*m_creature, pInstance->GetData64(DATA_GAMEOBJECT_LIBRARY_DOOR)))
-                        Door->SetGoState(1);
+                    pInstance->HandleGameObject(pInstance->GetData64(DATA_GAMEOBJECT_LIBRARY_DOOR), false);
                     CloseDoorTimer = 0;
                 }
             }else CloseDoorTimer -= diff;
@@ -273,8 +267,7 @@ struct TRINITY_DLL_DECL boss_aranAI : public ScriptedAI
                 m_creature->CastSpell(m_creature, SPELL_MASS_POLY, true);
                 m_creature->CastSpell(m_creature, SPELL_CONJURE, false);
                 m_creature->CastSpell(m_creature, SPELL_DRINK, false);
-                                                            //Sitting down
-                m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, 1);
+                m_creature->SetStandState(UNIT_STAND_STATE_SIT);
                 DrinkInturruptTimer = 10000;
             }
         }
@@ -284,7 +277,7 @@ struct TRINITY_DLL_DECL boss_aranAI : public ScriptedAI
         {
             Drinking = false;
             m_creature->RemoveAurasDueToSpell(SPELL_DRINK);
-            m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, 0);
+            m_creature->SetStandState(UNIT_STAND_STATE_STAND);
             m_creature->SetPower(POWER_MANA, m_creature->GetMaxPower(POWER_MANA)-32000);
             m_creature->CastSpell(m_creature, SPELL_POTION, false);
         }
@@ -295,7 +288,7 @@ struct TRINITY_DLL_DECL boss_aranAI : public ScriptedAI
                 DrinkInturruptTimer -= diff;
         else
         {
-            m_creature->SetUInt32Value(UNIT_FIELD_BYTES_1, 0);
+            m_creature->SetStandState(UNIT_STAND_STATE_STAND);
             m_creature->CastSpell(m_creature, SPELL_POTION, true);
             m_creature->CastSpell(m_creature, SPELL_AOE_PYROBLAST, false);
             DrinkInturrupted = true;
@@ -484,7 +477,7 @@ struct TRINITY_DLL_DECL boss_aranAI : public ScriptedAI
                         continue;
 
                     Unit* pUnit = Unit::GetUnit(*m_creature, FlameWreathTarget[i]);
-                    if (pUnit && pUnit->GetDistance2d(FWTargPosX[i], FWTargPosY[i]) > 3)
+                    if (pUnit && !pUnit->IsWithinDist2d(FWTargPosX[i], FWTargPosY[i], 3))
                     {
                         pUnit->CastSpell(pUnit, 20476, true, 0, 0, m_creature->GetGUID());
                         pUnit->CastSpell(pUnit, 11027, true);
@@ -539,7 +532,7 @@ struct TRINITY_DLL_DECL water_elementalAI : public ScriptedAI
         CastTimer = 2000 + (rand()%3000);
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {

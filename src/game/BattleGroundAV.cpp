@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,24 +18,27 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
-#include "Player.h"
+#include "ObjectMgr.h"
+#include "WorldPacket.h"
+
 #include "BattleGround.h"
 #include "BattleGroundAV.h"
-#include "Creature.h"
-#include "Chat.h"
-#include "Object.h"
-#include "ObjectMgr.h"
-#include "ObjectAccessor.h"
-#include "MapManager.h"
-#include "Language.h"
-#include "SpellAuras.h"
 #include "Formulas.h"
+#include "GameObject.h"
+#include "Language.h"
+#include "Player.h"
+#include "SpellAuras.h"
 
 BattleGroundAV::BattleGroundAV()
 {
-
     m_BgObjects.resize(BG_AV_OBJECT_MAX);
     m_BgCreatures.resize(AV_CPLACE_MAX+AV_STATICCPLACE_MAX);
+
+    //TODO FIX ME!
+    m_StartMessageIds[BG_STARTING_EVENT_FIRST]  = LANG_BG_EY_START_TWO_MINUTES;
+    m_StartMessageIds[BG_STARTING_EVENT_SECOND] = LANG_BG_EY_START_ONE_MINUTE;
+    m_StartMessageIds[BG_STARTING_EVENT_THIRD]  = LANG_BG_EY_START_HALF_MINUTE;
+    m_StartMessageIds[BG_STARTING_EVENT_FOURTH] = LANG_BG_EY_HAS_BEGUN;
 }
 
 BattleGroundAV::~BattleGroundAV()
@@ -229,8 +232,6 @@ void BattleGroundAV::UpdateScore(uint16 team, int16 points )
     uint8 teamindex = GetTeamIndexByTeamId(team); //0=ally 1=horde
     m_Team_Scores[teamindex] += points;
 
-    m_score[teamindex] = m_Team_Scores[teamindex];
-
     UpdateWorldState(((teamindex==BG_TEAM_HORDE)?AV_Horde_Score:AV_Alliance_Score), m_Team_Scores[teamindex]);
     if( points < 0)
     {
@@ -241,7 +242,7 @@ void BattleGroundAV::UpdateScore(uint16 team, int16 points )
         }
         else if(!m_IsInformedNearVictory[teamindex] && m_Team_Scores[teamindex] < SEND_MSG_NEAR_LOSE)
         {
-            SendMessageToAll(GetTrinityString((teamindex==BG_TEAM_HORDE)?LANG_BG_AV_H_NEAR_LOSE:LANG_BG_AV_A_NEAR_LOSE));
+            SendMessageToAll(teamindex==BG_TEAM_HORDE?LANG_BG_AV_H_NEAR_LOSE:LANG_BG_AV_A_NEAR_LOSE, teamindex==BG_TEAM_HORDE ? CHAT_MSG_BG_SYSTEM_HORDE : CHAT_MSG_BG_SYSTEM_ALLIANCE);
             PlaySoundToAll(AV_SOUND_NEAR_VICTORY);
             m_IsInformedNearVictory[teamindex] = true;
         }
@@ -296,7 +297,7 @@ Creature* BattleGroundAV::AddAVCreature(uint16 cinfoid, uint16 type )
     return creature;
 }
 
-void BattleGroundAV::Update(time_t diff)
+void BattleGroundAV::Update(uint32 diff)
 {
     BattleGround::Update(diff);
     if (GetStatus() == STATUS_WAIT_JOIN && GetPlayersSize())
@@ -368,19 +369,19 @@ void BattleGroundAV::Update(time_t diff)
             DoorClose(BG_AV_OBJECT_DOOR_A);
             DoorClose(BG_AV_OBJECT_DOOR_H);
 
-            SetStartDelayTime(START_DELAY0);
+            SetStartDelayTime(BG_START_DELAY_2M);
         }
         // After 1 minute, warning is signalled
-        else if (GetStartDelayTime() <= START_DELAY1 && !(m_Events & 0x04))
+        else if (GetStartDelayTime() <= BG_START_DELAY_1M && !(m_Events & 0x04))
         {
             m_Events |= 0x04;
-            SendMessageToAll(GetTrinityString(LANG_BG_AV_ONEMINTOSTART));
+            SendMessageToAll(LANG_BG_AV_ONEMINTOSTART, CHAT_MSG_BG_SYSTEM_NEUTRAL);
         }
         // After 1,5 minute, warning is signalled
-        else if (GetStartDelayTime() <= START_DELAY2 && !(m_Events & 0x08))
+        else if (GetStartDelayTime() <= BG_START_DELAY_1M + BG_START_DELAY_30S && !(m_Events & 0x08))
         {
             m_Events |= 0x08;
-            SendMessageToAll(GetTrinityString(LANG_BG_AV_HALFMINTOSTART));
+            SendMessageToAll(LANG_BG_AV_HALFMINTOSTART, CHAT_MSG_BG_SYSTEM_NEUTRAL);
         }
         // After 2 minutes, gates OPEN ! x)
         else if (GetStartDelayTime() <= 0 && !(m_Events & 0x10))
@@ -389,7 +390,7 @@ void BattleGroundAV::Update(time_t diff)
             UpdateWorldState(AV_SHOW_A_SCORE, 1);
             m_Events |= 0x10;
 
-            SendMessageToAll(GetTrinityString(LANG_BG_AV_STARTED));
+            SendMessageToAll(LANG_BG_AV_STARTED, CHAT_MSG_BG_SYSTEM_NEUTRAL);
             PlaySoundToAll(SOUND_BG_START);
             SetStatus(STATUS_IN_PROGRESS);
 
@@ -467,6 +468,14 @@ void BattleGroundAV::Update(time_t diff)
     }
 }
 
+void BattleGroundAV::StartingEventCloseDoors()
+{
+}
+
+void BattleGroundAV::StartingEventOpenDoors()
+{
+}
+
 void BattleGroundAV::AddPlayer(Player *plr)
 {
     BattleGround::AddPlayer(plr);
@@ -535,7 +544,7 @@ void BattleGroundAV::RemovePlayer(Player* plr,uint64 /*guid*/)
 void BattleGroundAV::HandleAreaTrigger(Player *Source, uint32 Trigger)
 {
     // this is wrong way to implement these things. On official it done by gameobject spell cast.
-    if(GetStatus() != STATUS_IN_PROGRESS)
+    if (GetStatus() != STATUS_IN_PROGRESS)
         return;
 
     uint32 SpellId = 0;
@@ -568,7 +577,7 @@ void BattleGroundAV::HandleAreaTrigger(Player *Source, uint32 Trigger)
             break;
     }
 
-    if(SpellId)
+    if (SpellId)
         Source->CastSpell(Source, SpellId, true);
 }
 
@@ -1369,10 +1378,26 @@ const char* BattleGroundAV::GetNodeName(BG_AV_Nodes node)
 
 void BattleGroundAV::AssaultNode(BG_AV_Nodes node, uint16 team)
 {
-    assert(m_Nodes[node].TotalOwner != team);
-    assert(m_Nodes[node].Owner != team);
-    assert(m_Nodes[node].State != POINT_DESTROYED);
-    assert(m_Nodes[node].State != POINT_ASSAULTED || !m_Nodes[node].TotalOwner ); //only assault an assaulted node if no totalowner exists
+    if (m_Nodes[node].TotalOwner == team)
+    {
+        sLog.outCrash("Assaulting team is TotalOwner of node");
+        assert (false);
+    }
+    if (m_Nodes[node].Owner == team)
+    {
+        sLog.outCrash("Assaulting team is owner of node");
+        assert (false);
+    }
+    if (m_Nodes[node].State == POINT_DESTROYED)
+    {
+        sLog.outCrash("Destroyed node is being assaulted");
+        assert (false);
+    }
+    if (m_Nodes[node].State == POINT_ASSAULTED && m_Nodes[node].TotalOwner) //only assault an assaulted node if no totalowner exists
+    {
+        sLog.outCrash("Assault on an not assaulted node with total owner");
+        assert (false);
+    }
     //the timer gets another time, if the previous owner was 0==Neutral
     m_Nodes[node].Timer      = (m_Nodes[node].PrevOwner)? BG_AV_CAPTIME : BG_AV_SNOWFALL_FIRSTCAP;
     m_Nodes[node].PrevOwner  = m_Nodes[node].Owner;

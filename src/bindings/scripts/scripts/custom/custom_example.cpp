@@ -156,7 +156,7 @@ struct TRINITY_DLL_DECL custom_exampleAI : public ScriptedAI
             //Cast spell one on our current target.
             if (rand()%50 > 10)
                 DoCast(m_creature->getVictim(),SPELL_ONE_ALT);
-            else if (m_creature->GetDistance(m_creature->getVictim()) < 25)
+            else if (m_creature->IsWithinDist(m_creature->getVictim(), 25))
                 DoCast(m_creature->getVictim(),SPELL_ONE);
 
             Spell_1_Timer = 5000;
@@ -239,7 +239,7 @@ bool GossipSelect_custom_example(Player *player, Creature *_Creature, uint32 sen
 //This function is called when the player opens the gossip menu
 bool GossipHello_custom_example(Player *player, Creature *_Creature)
 {
-    player->ADD_GOSSIP_ITEM( 0, GOSSIP_ITEM        , GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM        , GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
     player->PlayerTalkClass->SendGossipMenu(907,_Creature->GetGUID());
 
     return true;

@@ -1,7 +1,7 @@
 ##########################################
 # Trinity Core worldd configuration file #
 ##########################################
-ConfVersion=2009010301
+ConfVersion=2009032201
 
 ###################################################################################################################
 # CONNECTIONS AND DIRECTORIES
@@ -25,11 +25,15 @@ ConfVersion=2009010301
 #    WorldDatabaseInfo
 #    CharacterDatabaseInfo
 #        Database connection settings for the world server.
-#        Default: hostname;port;username;password;database
-#                 .;somenumber;username;password;database - use named pipes at Windows
-#                    Named pipes: mySQL required adding "enable-named-pipe" to [mysqld] section my.ini
-#                .;/path/to/unix_socket;username;password;database - use Unix sockets at Unix/Linux
-#                    Unix sockets: experimental, not tested
+#        Default:
+#                ---MYSQL---
+#                    hostname;port;username;password;database
+#                    .;somenumber;username;password;database - use named pipes at Windows
+#                        Named pipes: mySQL required adding "enable-named-pipe" to [mysqld] section my.ini
+#                    .;/path/to/unix_socket;username;password;database - use Unix sockets at Unix/Linux
+#                ---PGSQL---
+#                    hostname;port;username;password;database
+#                    .;/path/to/unix_socket/DIRECTORY or . for default path;username;password;database - use Unix sockets at Unix/Linux
 #
 #    MaxPingTime
 #        Settings for maximum database-ping interval (minutes between pings)
@@ -109,7 +113,7 @@ EAIErrorLevel = 2
 #
 #    SocketSelectTime
 #        Socket select time (in milliseconds)
-#        Default: 10000
+#        Default: 10000 (10 secs)
 #
 #    GridCleanUpDelay
 #        Grid clean up delay (in milliseconds)
@@ -127,15 +131,11 @@ EAIErrorLevel = 2
 #        Player save interval (in milliseconds)
 #        Default: 900000 (15 min)
 #
-#    DisconnectToleranceInterval
-#        Tolerance for disconnected players before putting in the queue. (in seconds)
-#        Default: 0 (disabled)
-#
 #    vmap.enableLOS
 #    vmap.enableHeight
 #        Enable/Disable VMmap support for line of sight and height calculation
-#        Default: 1 (true)
-#                 0 (false)
+#        Default: 0 (disable)
+#                 1 (enable)
 #
 #    vmap.ignoreMapIds
 #        Map id that will be ignored by VMaps
@@ -168,6 +168,15 @@ EAIErrorLevel = 2
 #        Update realm uptime period in minutes (for save data in 'uptime' table). Must be > 0
 #        Default: 10 (minutes)
 #
+#    LogDB.Opt.ClearInterval
+#        Time for the WUPDATE_CLEANDB timer that clears the `logs` table of old entries. Must be > 0.
+#        Default: 10 (minutes)
+#
+#    LogDB.Opt.ClearTime
+#        The maximum time in seconds of old `logs` table entries to keep.
+#        Default: 1209600 (14 days)
+#                 0 - don't clear
+#
 #    MaxCoreStuckTime
 #        Periodically check if the process got freezed, if this is the case force crash after the specified
 #        amount of seconds. Must be > 0. Recommended > 10 secs if you use this.
@@ -197,7 +206,6 @@ GridCleanUpDelay = 300000
 MapUpdateInterval = 100
 ChangeWeatherInterval = 600000
 PlayerSaveInterval = 900000
-DisconnectToleranceInterval = 0
 vmap.enableLOS = 0
 vmap.enableHeight = 0
 vmap.ignoreMapIds = "369"
@@ -206,6 +214,8 @@ vmap.petLOS = 0
 DetectPosCollision = 1
 TargetPosRecalculateRange = 1.5
 UpdateUptimeInterval = 10
+LogDB.Opt.ClearInterval = 10
+LogDB.Opt.ClearTime = 1209600
 MaxCoreStuckTime = 0
 AddonChannel = 1
 MapUpdate.Threads = 1
@@ -227,18 +237,18 @@ MapUpdate.Threads = 1
 #
 #    LogLevel
 #        Server console level of logging
-#        0 = Minimum; 1 = Basic&Error; 2 = Detail; 3 = Full/Debug
+#        0 = Minimum; 1 = Basic; 2 = Detail; 3 = Full/Debug
 #        Default: 3
-#
-#    LogTime
-#        Include time in server console output [hh:mm:ss]
-#        Default: 0 (no time)
-#                 1 (print time)
 #
 #    LogFile
 #        Logfile name
 #        Default: "Server.log"
 #                 "" - Empty name disable creating log file
+#
+#    ChatLogFile
+#        Log file for chat logs
+#        Default: "chat.log"
+#                 "" - Empty name for disable
 #
 #    LogTimestamp
 #        Logfile with timestamp of server start in name
@@ -247,11 +257,12 @@ MapUpdate.Threads = 1
 #
 #    LogFileLevel
 #        Server file level of logging
-#        0 = Minimum; 1 = Error; 2 = Detail; 3 = Full/Debug
+#        0 = Minimum; 1 = Basic; 2 = Detail; 3 = Full/Debug
 #        Default: 0
 #
-#    LogFilter_TransportMoves
+#    LogFilter_AchievementUpdates
 #    LogFilter_CreatureMoves
+#    LogFilter_TransportMoves
 #    LogFilter_VisibilityChanges
 #        Log filters
 #        Default: 1 - not include with any log level
@@ -309,23 +320,104 @@ MapUpdate.Threads = 1
 #        Default: "" - do not create arena log file
 #
 #    LogColors
-#        Color for messages (format "normal_color details_color debug_color error_color")
+#        Color for messages (format "normal basic detail debug")
 #        Colors: 0 - BLACK, 1 - RED, 2 - GREEN,  3 - BROWN, 4 - BLUE, 5 - MAGENTA, 6 -  CYAN, 7 - GREY,
 #                8 - YELLOW, 9 - LRED, 10 - LGREEN, 11 - LBLUE, 12 - LMAGENTA, 13 - LCYAN, 14 - WHITE
 #        Default: "" - none colors
-#        Example: "13 7 11 9"
+#        Example: "13 11 9 5"
+#
+#    EnableLogDB
+#        Enable/disable logging to database (LogDatabaseInfo).
+#        Default: 0 - disabled
+#                 1 - enabled
+#
+#    DBLogLevel
+#        Log level of DB logging.
+#        0 = Minimum; 1 = Basic; 2 = Detail; 3 = Full/Debug
+#        Default: 3
+#
+#    LogDB.Char
+#        Enable/disable logging character outputs to DB.
+#        Default: 0 - off
+#                 1 - on
+#
+#    LogDB.GM
+#        Enable/disable logging GM commands to DB.
+#        Default: 0 - off
+#                 1 - on
+#
+#    LogDB.RA
+#        Enable/disable logging remote access events to DB.
+#        Default: 0 - off
+#                 1 - on
+#
+#    LogDB.World
+#        Enable/disable logging world packets to DB.
+#        Default: 0 - off
+#                 1 - on (very heavy)
+#
+#    LogDB.Chat
+#        Enable/disable logging chat messages to the database.
+#        Default: 0 - off
+#                 1 - on
+#
+#    ChatLogs.Channel
+#        Enable logging chatting in custom channels.
+#        Default: 0 - off
+#                 1 - on
+#
+#    ChatLogs.Whisper
+#        Enable logging whispers between players.
+#        Default: 0 - off
+#                 1 - on
+#
+#    ChatLogs.Party
+#        Enable logging party messages.
+#        Default: 0 - off
+#                 1 - on
+#
+#    ChatLogs.Raid
+#        Enable logging raid messages.
+#        Default: 0 - off
+#                 1 - on
+#
+#    ChatLogs.Guild
+#        Enable logging guild messages.
+#        Default: 0 - off
+#                 1 - on
+#
+#    ChatLogs.Public
+#        Enable logging public chat events (say/yell/emote).
+#        Default: 0 - off
+#                 1 - on
+#
+#    ChatLogs.Addon
+#        Enable logging addon messages.
+#        Default: 0 - off
+#                 1 - on
+#
+#    ChatLogs.BattleGround
+#        Enable logging battleground chats.
+#        Default: 0 - off
+#                 1 - on
+#
+#    ChatLogTimestamp
+#        Chat Logfile with timestamp of server start in name
+#        Default: 0 - no timestamp in name
+#                 1 - add timestamp in name in form Logname_YYYY-MM-DD_HH-MM-SS.Ext for Logname.Ext
 #
 ###################################################################################################################
 
 LogSQL = 1
 PidFile = ""
 LogLevel = 1
-LogTime = 0
 LogFile = "Server.log"
+ChatLogFile = "chat.log"
 LogTimestamp = 0
 LogFileLevel = 0
-LogFilter_TransportMoves = 1
+LogFilter_AchievementUpdates = 1
 LogFilter_CreatureMoves = 1
+LogFilter_TransportMoves = 1
 LogFilter_VisibilityChanges = 1
 WorldLogFile = ""
 DBErrorLogFile = "db_errors.log"
@@ -338,6 +430,23 @@ GmLogPerAccount = 0
 RaLogFile = "ra_commands.log"
 ArenaLogFile = ""
 LogColors = ""
+EnableLogDB = 0
+DBLogLevel = 1
+LogDB.Char   = 0
+LogDB.GM     = 0
+LogDB.RA     = 0
+LogDB.World  = 0
+LogDB.Chat   = 0
+ChatLogs.Channel      = 0
+ChatLogs.SysChan      = 0
+ChatLogs.Whisper      = 0
+ChatLogs.Party        = 0
+ChatLogs.Raid         = 0
+ChatLogs.Guild        = 0
+ChatLogs.Public       = 0
+ChatLogs.Addon        = 0
+ChatLogs.BattleGround = 0
+ChatLogTimestamp = 0
 
 ###################################################################################################################
 # SERVER SETTINGS
@@ -383,9 +492,9 @@ LogColors = ""
 #
 #    Expansion
 #        Allow server use content from expansion
-#                 2 - check expansion 2 maps existence, and if client support expansion 2 and account have
+#        Default: 2 - check expansion 2 maps existence, and if client support expansion 2 and account have
 #                     expansion 2 setting then allow visit expansion 2 maps, allow create new class character)
-#        Default: 1 - check expansion 1 maps existence, and if client support expansion 1 and account have
+#                 1 - check expansion 1 maps existence, and if client support expansion 1 and account have
 #                     expansion 1 setting then allow visit expansion 1 maps, allow create new races character)
 #                 0 - not check expansion maps existence, not allow wisit its, not allow create new race or new class
 #                     characters, ignore account expansion setting)
@@ -449,6 +558,18 @@ LogColors = ""
 #        Default: 10 (client limitation)
 #                The number must be between 1 and 10
 #
+#    HeroicCharactersPerRealm
+#        Limit numbers of heroic class characters for account at realm
+#        Default: 1
+#                The number must be between 0 (not allowed) and 10
+#
+#    MinLevelForHeroicCharacterCreating
+#        Limit creating heroic characters only for account with another character of specific level (ignored for GM accounts)
+#                 0  - not require any existed chaarcter
+#                 1  - require at least any character existed
+#        Default: 55 - default requirement
+#
+#
 #    SkipCinematics
 #        Disable in-game script movie at first character's login(allows to prevent buggy intro in case of custom start location coordinates)
 #        Default: 0 - show intro for each new characrer
@@ -456,13 +577,17 @@ LogColors = ""
 #                 2 - disable intro show in all cases
 #
 #    MaxPlayerLevel
-#        Max level that can be reached by player for experience (in range from 1 to 255).
+#        Max level that can be reached by player for experience (in range from 1 to 100).
 #        Change not recommended
-#        Default: 70
+#        Default: 80
 #
 #    StartPlayerLevel
 #        Staring level that have character at creating (in range 1 to MaxPlayerLevel)
 #        Default: 1
+#
+#    StartHeroicPlayerLevel
+#        Staring level that have character of heroic class at creating (in range 1 to MaxPlayerLevel)
+#        Default: 55
 #
 #    StartPlayerMoney
 #        Amount of money that new players will start with.
@@ -500,33 +625,13 @@ LogColors = ""
 #
 #    AlwaysMaxSkillForLevel
 #        Players will automatically gain max level dependent (weapon/defense) skill when logging in, leveling up etc.
-#        Default: 0 (true)
-#                 1 (false)
+#        Default: 0 (false)
+#                 1 (true)
 #
 #    ActivateWeather
 #        Activate weather system
 #        Default: 1 (true)
 #                 0 (false)
-#
-#    Battleground.CastDeserter
-#        Cast or not Deserter spell at player who leave battleground in progress
-#        Default: 1 (true)
-#                 0 (false)
-#
-#    Battleground.QueueAnnouncer.Enable
-#        Enable queue announcer posting to chat
-#        Default: 1 (true)
-#                 0 (false)
-#
-#    Battleground.QueueAnnouncer.PlayerOnly
-#        Enable queue announcer posting to chat
-#        Default: 0 (false)
-#                 1 (true)
-#
-#   Battleground.PrematureReward
-#	 Reward players in case of prematurely finished BG
-#	 Default: 1 (true)
-#	 	  0 (false)
 #
 #    CastUnstuck
 #        Allow cast or not Unstuck spell at .start or client Help option use
@@ -549,7 +654,7 @@ LogColors = ""
 #
 #    Instance.UnloadDelay
 #        Unload the instance map from memory after some time if no players are inside.
-#        Default: 1800000 (miliseconds, i.e 30 minutes)
+#        Default: 1800000 (miliseconds 30 minutes)
 #                 0 (instance maps are kept in memory until they are reset)
 #
 #    Quests.LowLevelHideDiff
@@ -582,9 +687,19 @@ LogColors = ""
 #        Default: 3600 sec (1 hour)
 #
 #    SkillChance.Prospecting
-#        For prospecting skillup not possible by default, but can be allowed as custom setting
+#        For prospecting skillup impossible by default, but can be allowed as custom setting
 #        Default: 0 - no skilups
 #                 1 - skilups possible
+#
+#    SkillChance.Milling
+#        For milling skillup impossible by default, but can be allowed as custom setting
+#        Default: 0 - no skilups
+#                 1 - skilups possible
+#
+#    OffhandCheckAtTalentsReset
+#        Talent reset can change offhand weapon restrictions for equip slots.
+#        Default: 0 - recheck offhand slot weapon only at zone update
+#                 1 - recheck offhand slot weapon at talent reset also
 #
 #    Event.Announce
 #        Default: 0 (false)
@@ -607,7 +722,7 @@ LogColors = ""
 
 GameType = 1
 RealmZone = 1
-Expansion = 1
+Expansion = 2
 DBC.Locale = 255
 DeclinedNames = 0
 StrictPlayerNames = 0
@@ -617,9 +732,12 @@ MaxWhoListReturns = 49
 CharactersCreatingDisabled = 0
 CharactersPerAccount = 50
 CharactersPerRealm = 10
+HeroicCharactersPerRealm = 1
+MinLevelForHeroicCharacterCreating = 55
 SkipCinematics = 0
-MaxPlayerLevel = 70
+MaxPlayerLevel = 80
 StartPlayerLevel = 1
+StartHeroicPlayerLevel = 55
 StartPlayerMoney = 0
 MaxHonorPoints = 75000
 StartHonorPoints = 0
@@ -630,10 +748,6 @@ DisableWaterBreath = 4
 AllFlightPaths = 0
 AlwaysMaxSkillForLevel = 0
 ActivateWeather = 1
-Battleground.CastDeserter = 1
-Battleground.QueueAnnouncer.Enable = 1
-Battleground.QueueAnnouncer.PlayerOnly = 0
-Battleground.PrematureReward = 1
 CastUnstuck = 1
 Instance.IgnoreLevel = 0
 Instance.IgnoreRaid = 0
@@ -646,6 +760,8 @@ MinPetitionSigns = 9
 MaxGroupXPDistance = 74
 MailDeliveryDelay = 3600
 SkillChance.Prospecting = 0
+SkillChance.Milling = 0
+OffhandCheckAtTalentsReset = 0
 Event.Announce = 0
 BeepAtStart = 1
 Motd = "Welcome to a Trinity Core server."
@@ -719,14 +835,23 @@ TalentsInspecting = 1
 #                 1.5 - 150%
 #                 0   - off (0%)
 #
+#    CreatureFamilyFleeAssistanceRadius
+#        Radius which creature will use to seek for a near creature for assistance. Creature will flee to this creature.
+#        Default: 30
+#                 0   - off
+#
 #    CreatureFamilyAssistanceRadius
-#        Creature family assistance radius
+#        Radius which creature will use to call assistance without moving
 #        Default: 10
 #                 0   - off
 #
 #    CreatureFamilyAssistanceDelay
 #        Reaction time for creature assistance call
 #        Default: 1500 (1.5s)
+#
+#    CreatureFamilyFleeDelay
+#        Time during which creature can flee when no assistant found
+#        Default: 7000 (7s)
 #
 #    WorldBossLevelDiff
 #        Difference for boss dynamic level with target
@@ -784,8 +909,10 @@ TalentsInspecting = 1
 
 ThreatRadius = 60
 Rate.Creature.Aggro = 1
+CreatureFamilyFleeAssistanceRadius = 30
 CreatureFamilyAssistanceRadius = 10
 CreatureFamilyAssistanceDelay = 1500
+CreatureFamilyFleeDelay = 7000
 WorldBossLevelDiff = 3
 Corpse.Decay.NORMAL = 60
 Corpse.Decay.RARE = 300
@@ -869,6 +996,12 @@ Channel.SilentlyGMJoin = 0
 #                 0 (invisible)
 #                 1 (visible)
 #
+#    GM.AcceptTickets
+#        Is GM accepting tickets from player by default or not.
+#        Default: 2 (last save state)
+#                 0 (disable)
+#                 1 (enable)
+#
 #    GM.Chat
 #        GM chat mode at login
 #        Default: 2 (last save state)
@@ -882,7 +1015,7 @@ Channel.SilentlyGMJoin = 0
 #                 1 (enable)
 #
 #    GM.InGMList
-#        Is GM showed in GM list (if visible) in non-GM state (.gmoff)
+#        Is GM showed in GM list (if visible) in non-GM state (.gm off)
 #        Default: 0 (false)
 #                 1 (true)
 #
@@ -897,7 +1030,7 @@ Channel.SilentlyGMJoin = 0
 #                 0 (not include)
 #
 #    GM.StartLevel
-#        GM starting level (1-255)
+#        GM starting level (1-100)
 #        Default: 1
 #
 #    GM.AllowInvite
@@ -909,18 +1042,32 @@ Channel.SilentlyGMJoin = 0
 #        Are players allowed to add GMs to their friend list
 #        Default: 0 (false)
 #                 1 (true)
+#
+#    GM.LowerSecurity
+#        Disallow a lower security member to interact with a higher one using commands
+#        Default: 0 (disable)
+#                 1 (enable)
+#
+#    GM.AllowAchievementGain
+#        If enabled it allows gaining achievements for GM characters
+#        Default: 1 (enable)
+#                 0 (disable)
+#
 ###################################################################################################################
 
-GM.LoginState     = 2
-GM.Visible        = 2
-GM.Chat           = 2
-GM.WhisperingTo   = 2
-GM.InGMList       = 0
-GM.InWhoList      = 0
-GM.LogTrade       = 1
-GM.StartLevel     = 70
-GM.AllowInvite    = 0
-GM.AllowFriend    = 0
+GM.LoginState            = 2
+GM.Visible               = 2
+GM.AcceptTickets         = 2
+GM.Chat                  = 2
+GM.WhisperingTo          = 2
+GM.InGMList              = 0
+GM.InWhoList             = 0
+GM.LogTrade              = 1
+GM.StartLevel            = 80
+GM.AllowInvite           = 0
+GM.AllowFriend           = 0
+GM.LowerSecurity         = 0
+GM.AllowAchievementGain  = 1
 
 ###################################################################################################################
 # VISIBILITY AND RADIUSES
@@ -934,9 +1081,9 @@ GM.AllowFriend    = 0
 #    Visibility.Distance.Creature
 #    Visibility.Distance.Player
 #        Visibility distance for different in game object
-#        Max limited by active player zone: ~ 333
+#        Max limited by active player zone: ~ 166
 #        Min limit dependent from objects
-#        Default: 132 (cell size)
+#        Default: 66 (cell size)
 #        Min limit is max aggro radius (45) * Rate.Creature.Aggro
 #
 #    Visibility.Distance.Object
@@ -962,10 +1109,10 @@ GM.AllowFriend    = 0
 ###################################################################################################################
 
 Visibility.GroupMode = 0
-Visibility.Distance.Creature      = 132
-Visibility.Distance.Player        = 132
-Visibility.Distance.Object        = 132
-Visibility.Distance.InFlight      = 132
+Visibility.Distance.Creature      = 999
+Visibility.Distance.Player        = 66
+Visibility.Distance.Object        = 999
+Visibility.Distance.InFlight      = 66
 Visibility.Distance.Grey.Unit   = 1
 Visibility.Distance.Grey.Object = 10
 
@@ -976,6 +1123,8 @@ Visibility.Distance.Grey.Object = 10
 #    Rate.Mana
 #    Rate.Rage.Income
 #    Rate.Rage.Loss
+#    Rate.RunicPower.Income
+#    Rate.RunicPower.Loss
 #    Rate.Focus
 #    Rate.Loyalty
 #        Health and power regeneration and rage income from damage.
@@ -1040,6 +1189,14 @@ Visibility.Distance.Grey.Object = 10
 #         Reputation Gain rate
 #         Default: 1
 #
+#    Rate.Reputation.LowLevel.Kill
+#         Reputation Gain form low level kill (grey creture)
+#         Default: 1
+#
+#    Rate.Reputation.LowLevel.Quest
+#         Reputation Gain rate
+#         Default: 1
+#
 #    Rate.InstanceResetTime
 #        Multiplier for the number of days in between global raid/heroic instance resets.
 #        Default: 1
@@ -1094,7 +1251,7 @@ Visibility.Distance.Grey.Object = 10
 #
 #    Death.Bones.World
 #    Death.Bones.BattlegroundOrArena
-#         Enabled/disabled creating bones instead corpse at resurrection (in normal zones/instacnes, or battleground/arenas)
+#         Enable/disable creating bones instead corpse at resurrection (in normal zones/instacnes, or battleground/arenas)
 #         Default: 1 (enabled)
 #                  0 (disabled)
 #
@@ -1104,6 +1261,8 @@ Rate.Health = 1
 Rate.Mana = 1
 Rate.Rage.Income = 1
 Rate.Rage.Loss = 1
+Rate.RunicPower.Income = 1
+Rate.RunicPower.Loss = 1
 Rate.Focus = 1
 Rate.Loyalty = 1
 Rate.Skill.Discovery = 1
@@ -1132,6 +1291,8 @@ Rate.Mining.Amount = 1
 Rate.Mining.Next   = 1
 Rate.Talent = 1
 Rate.Reputation.Gain = 1
+Rate.Reputation.LowLevel.Kill    = 1
+Rate.Reputation.LowLevel.Quest   = 1
 Rate.InstanceResetTime = 1
 SkillGain.Crafting = 1
 SkillGain.Defense = 1
@@ -1153,50 +1314,102 @@ Death.CorpseReclaimDelay.PvE = 0
 Death.Bones.World = 1
 Death.Bones.BattlegroundOrArena = 1
 
+
 ###################################################################################################################
+# BATTLEGROUND CONFIG
 #
-# Rated arena matches config
+#    Battleground.CastDeserter
+#        Cast Deserter spell at player who leave battleground in progress
+#        Default: 1 (enable)
+#                 0 (disable)
 #
-# MaxRatingDifference: the maximum rating difference between two groups in rated matches
-#             Default: 0 (disable, rating difference is discarded)
+#    Battleground.QueueAnnouncer.Enable
+#        Enable queue announcer posting to chat
+#        Default: 0 (disable)
+#                 1 (enable)
 #
-# RatingDiscardTimer: after the specified milliseconds has passed,
-#                     rating information will be discarded when selecting teams for matches
-#                     also initiates an update by this timer
-#             Default: 60000
+#    Battleground.QueueAnnouncer.PlayerOnly
+#        Enable queue announcer posting to chat
+#        Default: 0 (disable)
+#                 1 (enable)
 #
-# AutoDistributePoints: set if arena points should be distributed automatically, or by GM command
-#             Default: 0 (disable) (recommended): use gm command or sql query to distribute the points
-#                      1 (enable): arena points are distributed automatically
+#    Battleground.InvitationType
+#        Set Battleground invitation type
+#        Default: 0 (normal - invite as much players to bg as possible, don't bother with ballance)
+#                 1 (Experimental - don't allow to invite much more players of one faction)
 #
-# AutoDistributeInterval: how often should the distribution take place
-#                         if automatic distribution is enabled
-#                         in days
-#             Default: 7 (weekly)
+#    Battleground.PrematureFinishTimer
+#        The time to end the bg if there are less than MinPlayersPerTeam on one side in milliseconds
+#        Default: 300000 (5 minutes)
+#                 0 - disable (not recommended)
+#
+#    BattleGround.PremadeGroupWaitForMatch
+#        The time in which premade group of 1 faction waits in BG Queue for premade group of other faction
+#        Default: 1800000 (30 minutes)
+#                 0 - disable (not recommended)
 #
 ###################################################################################################################
 
-Arena.MaxRatingDifference = 0
-Arena.RatingDiscardTimer = 60000
+Battleground.CastDeserter = 1
+Battleground.QueueAnnouncer.Enable = 0
+Battleground.QueueAnnouncer.PlayerOnly = 0
+Battleground.InvitationType = 0
+BattleGround.PrematureFinishTimer = 300000
+BattleGround.PremadeGroupWaitForMatch = 1800000
+
+
+###################################################################################################################
+# ARENA CONFIG
+#
+#    Arena.MaxRatingDifference
+#        The maximum rating difference between two groups in rated matches
+#        Default: 150 (enable, recommended)
+#                 0 (disable, rating difference is discarded)
+#
+#    Arena.RatingDiscardTimer
+#        After the specified milliseconds has passed,
+#        rating information will be discarded when selecting teams for matches
+#        also initiates an update by this timer
+#        Default: 600000 (10 minutes, recommended)
+#                 0 (disable)
+#
+#    Arena.AutoDistributePoints
+#        Set if arena points should be distributed automatically, or by GM command
+#        Default: 0 (disable) (recommended): use gm command or sql query to distribute the points
+#                 1 (enable)  arena points are distributed automatically
+#
+#    Arena.AutoDistributeInterval
+#        How often should the distribution take place
+#        If automatic distribution is enabled in days
+#        Default: 7 (weekly)
+#
+#    Arena.QueueAnnouncer.Enable
+#        Enable bg queue announcer posting to chat
+#        Default: 0 (disable)
+#                 1 (enable)
+#
+#    Arena.ArenaSeason.ID
+#        Current area season id show in client
+#        Default: 1
+#
+#    Arena.ArenaSeason.InProgress
+#        Current area season state
+#        Default: 1 (active)
+#                 0 (finished)
+#
+###################################################################################################################
+
+Arena.MaxRatingDifference = 150
+Arena.RatingDiscardTimer = 600000
 Arena.AutoDistributePoints = 0
 Arena.AutoDistributeInterval = 7
-
-###################################################################################################################
-#
-# Battleground config
-#
-# PrematureFinishTimer: the time to end the bg if there are less than minplayersperteam on one side
-#                       in milliseconds
-#              Default: 300000
-#                       0 - disable
-#
-###################################################################################################################
-
-BattleGround.PrematureFinishTimer = 300000
+Arena.QueueAnnouncer.Enable = 0
+Arena.QueueAnnouncer.PlayerOnly = 0
+Arena.ArenaSeason.ID = 1
+Arena.ArenaSeason.InProgress = 1
 
 
 ###################################################################################################################
-#
 # NETWORK CONFIG
 #
 #    Network.Threads
@@ -1225,7 +1438,7 @@ Network.TcpNodelay = 1
 
 ###################################################################################################################
 # AUCTION HOUSE BOT SETTINGS
-# 
+#
 #    AuctionHouseBot.EnableSeller
 #        Enable/Disable the part of AHBot that puts items up for auction
 #    Default 0 (disabled)
@@ -1236,7 +1449,7 @@ Network.TcpNodelay = 1
 #
 #    Auction House Bot character data
 #        AuctionHouseBot.Account is the account number (in realmd->account table) of the player you want to run as the auction bot.
-#         AuctionHouseBot.GUID is the GUID (in characters->characters table) of the player you want to run as the auction bot. 
+#         AuctionHouseBot.GUID is the GUID (in characters->characters table) of the player you want to run as the auction bot.
 #    Default: 0 (Auction House Bot disabled)
 #
 #    AuctionHouseBot.VendorItems
@@ -1263,7 +1476,7 @@ Network.TcpNodelay = 1
 #             Default 1
 #            Bind_Quest_Item
 #             Default 0
-#              
+#
 #    AuctionHouseBot.ItemsPerCycle
 #        Number of Items to Add/Remove from the AH during mass operations
 #    Default 200
@@ -1376,6 +1589,14 @@ Ra.Secure = 1
 #	NoResetTalentsCost
 #		Enable or disable no cost when reseting talents
 #
+#
+#   OutdoorPvP.Wintergrasp.StartTime = 30
+#       The start time of the first battle after server starts (default: 30 minutes)
+#   OutdoorPvP.Wintergrasp.BattleTime = 30
+#       Time limit of a battle
+#   OutdoorPvP.Wintergrasp.Interval
+#       Interval between battles (default: 150 minutes)
+#
 #   ForbiddenMaps
 #       map ids that users below SEC_GAMEMASTER cannot enter, with delimiter ','
 #       Default: ""
@@ -1405,6 +1626,11 @@ Ra.Secure = 1
 #       to a newly created character.
 #       Default: "" - send no text
 #
+#   CheckDB
+#       Check if your DB is outdated. Disabling this option means that you decide to use a DB which is
+#       not compatible with TrinityCore and are ready for all kinds of bugs. 
+#       Default: 1 = enable
+#
 ###################################################################################################################
 
 PlayerStart.AllReputation = 0
@@ -1417,8 +1643,12 @@ PvPToken.Enable = 0
 PvPToken.MapAllowType = 4
 PvPToken.ItemID = 29434
 PvPToken.ItemCount = 1
+OutdoorPvP.Wintergrasp.StartTime = 30
+OutdoorPvP.Wintergrasp.BattleTime = 30
+OutdoorPvP.Wintergrasp.Interval = 150
 NoResetTalentsCost = 0
 ShowKickInWorld = 0
 RecordUpdateTimeDiffInterval = 60000
 MinRecordUpdateTimeDiff = 10
 PlayerStart.String = ""
+CheckDB = 1

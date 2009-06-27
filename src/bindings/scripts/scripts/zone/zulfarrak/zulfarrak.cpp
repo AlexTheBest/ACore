@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -44,7 +44,7 @@ struct TRINITY_DLL_DECL npc_sergeant_blyAI : public ScriptedAI
 {
     npc_sergeant_blyAI(Creature *c) : ScriptedAI(c)
     {
-        //pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        //pInstance = c->GetInstanceData();
     }
 
     //ScriptedInstance* pInstance;
@@ -63,7 +63,7 @@ struct TRINITY_DLL_DECL npc_sergeant_blyAI : public ScriptedAI
             pInstance->SetData(0, NOT_STARTED);*/
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         /*if( pInstance )
             pInstance->SetData(0, IN_PROGRESS);*/
@@ -104,7 +104,7 @@ bool GossipHello_npc_sergeant_bly(Player *player, Creature *_Creature )
 {
     /*if( pInstance->GetData(0) == DONE )
     {*/
-    player->ADD_GOSSIP_ITEM(1, GOSSIP_BLY, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
+    player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_BLY, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
     player->SEND_GOSSIP_MENU(1517, _Creature->GetGUID());
     /*}
     else if( pInstance->GetData(0) == IN_PROGRESS )
@@ -121,7 +121,7 @@ bool GossipSelect_npc_sergeant_bly(Player *player, Creature *_Creature, uint32 s
     {
         player->CLOSE_GOSSIP_MENU();
         _Creature->setFaction(FACTION_HOSTILE);
-        ((npc_sergeant_blyAI*)_Creature->AI())->AttackStart(player);
+        CAST_AI(npc_sergeant_blyAI, _Creature->AI())->AttackStart(player);
     }
     return true;
 }
@@ -141,7 +141,7 @@ struct TRINITY_DLL_DECL npc_weegli_blastfuseAI : public ScriptedAI
 {
     npc_weegli_blastfuseAI(Creature *c) : ScriptedAI(c)
     {
-        //pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        //pInstance = c->GetInstanceData();
     }
 
     //ScriptedInstance* pInstance;
@@ -152,7 +152,7 @@ struct TRINITY_DLL_DECL npc_weegli_blastfuseAI : public ScriptedAI
             pInstance->SetData(0, NOT_STARTED);*/
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         /*if( pInstance )
             pInstance->SetData(0, IN_PROGRESS);*/
@@ -182,7 +182,7 @@ bool GossipHello_npc_weegli_blastfuse(Player *player, Creature *_Creature )
     //event not implemented yet, this is only placeholder for future developement
     /*if( pInstance->GetData(0) == DONE )
     {
-        player->ADD_GOSSIP_ITEM(1, GOSSIP_WEEGLI, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_WEEGLI, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
         player->SEND_GOSSIP_MENU(1514, _Creature->GetGUID());//if event can proceed to end
     }
     else if( pInstance->GetData(0) == IN_PROGRESS )

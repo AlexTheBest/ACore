@@ -1,4 +1,4 @@
- /* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+ /* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
 * This program is free software; you can redistribute it and/or modify
 * it under the terms of the GNU General Public License as published by
 * the Free Software Foundation; either version 2 of the License, or
@@ -95,7 +95,7 @@ struct TRINITY_DLL_DECL boss_nalorakkAI : public ScriptedAI
     {
         MoveEvent = true;
         MovePhase = 0;
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance *pInstance;
@@ -142,7 +142,7 @@ struct TRINITY_DLL_DECL boss_nalorakkAI : public ScriptedAI
         Berserk_Timer = 600000;
 
         inBearForm = false;
-        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY + 1, 5122);
+        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 1, 5122);
     }
 
     void SendAttacker(Unit* target)
@@ -158,7 +158,7 @@ struct TRINITY_DLL_DECL boss_nalorakkAI : public ScriptedAI
             cell.SetNoCreate();
 
             Trinity::AllFriendlyCreaturesInGrid check(m_creature);
-            Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid> searcher(templist, check);
+            Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid> searcher(m_creature, templist, check);
 
             TypeContainerVisitor<Trinity::CreatureListSearcher<Trinity::AllFriendlyCreaturesInGrid>, GridTypeMapContainer> cSearcher(searcher);
 
@@ -258,7 +258,7 @@ struct TRINITY_DLL_DECL boss_nalorakkAI : public ScriptedAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(pInstance)
             pInstance->SetData(DATA_NALORAKKEVENT, IN_PROGRESS);
@@ -360,7 +360,7 @@ struct TRINITY_DLL_DECL boss_nalorakkAI : public ScriptedAI
         {
             if(inBearForm)
             {
-                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY + 1, 5122);
+                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 1, 5122);
                 DoYell(YELL_SHIFTEDTOTROLL, LANG_UNIVERSAL, NULL);
                 DoPlaySoundToSet(m_creature, SOUND_YELL_TOTROLL);
                 m_creature->RemoveAurasDueToSpell(SPELL_BEARFORM);
@@ -372,7 +372,7 @@ struct TRINITY_DLL_DECL boss_nalorakkAI : public ScriptedAI
             }
             else
             {
-                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY + 1, 0);
+                m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID + 1, 0);
                 DoYell(YELL_SHIFTEDTOBEAR, LANG_UNIVERSAL, NULL);
                 DoPlaySoundToSet(m_creature, SOUND_YELL_TOBEAR);
                 DoCast(m_creature, SPELL_BEARFORM, true);
@@ -394,7 +394,7 @@ struct TRINITY_DLL_DECL boss_nalorakkAI : public ScriptedAI
 
             if(Mangle_Timer < diff)
             {
-                if(m_creature->getVictim() && !m_creature->getVictim()->HasAura(SPELL_MANGLEEFFECT, 0))
+                if(m_creature->getVictim() && !m_creature->getVictim()->HasAura(SPELL_MANGLEEFFECT))
                 {
                     DoCast(m_creature->getVictim(), SPELL_MANGLE);
                     Mangle_Timer = 1000;
@@ -406,7 +406,7 @@ struct TRINITY_DLL_DECL boss_nalorakkAI : public ScriptedAI
             {
                 DoYell(YELL_SURGE, LANG_UNIVERSAL, NULL);
                 DoPlaySoundToSet(m_creature, SOUND_YELL_SURGE);
-                Unit *target = SelectUnit(SELECT_TARGET_RANDOM, 1, GetSpellMaxRange(SPELL_SURGE), true);
+                Unit *target = SelectTarget(SELECT_TARGET_RANDOM, 1, 45, true);
                 if(target)
                     DoCast(target, SPELL_SURGE);
                 Surge_Timer = 15000 + rand()%5000;

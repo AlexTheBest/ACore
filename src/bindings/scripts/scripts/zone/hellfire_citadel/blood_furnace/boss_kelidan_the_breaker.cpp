@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -29,29 +29,32 @@ EndContentData */
 #include "precompiled.h"
 #include "def_blood_furnace.h"
 
-#define SAY_WAKE                    -1542000
+enum
+{
+    SAY_WAKE                    = -1542000,
+    SAY_ADD_AGGRO_1             = -1542001,
+    SAY_ADD_AGGRO_2             = -1542002,
+    SAY_ADD_AGGRO_3             = -1542003,
+    SAY_KILL_1                  = -1542004,
+    SAY_KILL_2                  = -1542005,
+    SAY_NOVA                    = -1542006,
+    SAY_DIE                     = -1542007,
 
-#define SAY_ADD_AGGRO_1             -1542001
-#define SAY_ADD_AGGRO_2             -1542002
-#define SAY_ADD_AGGRO_3             -1542003
+    SPELL_CORRUPTION            = 30938,
+    SPELL_EVOCATION             = 30935,
+ 
+    SPELL_FIRE_NOVA             = 33132,
+    H_SPELL_FIRE_NOVA           = 37371,
+ 
+    SPELL_SHADOW_BOLT_VOLLEY    = 28599,
+    H_SPELL_SHADOW_BOLT_VOLLEY  = 40070,
+ 
+    SPELL_BURNING_NOVA          = 30940,
+    SPELL_VORTEX                = 37370,
 
-#define SAY_KILL_1                  -1542004
-#define SAY_KILL_2                  -1542005
-#define SAY_NOVA                    -1542006
-#define SAY_DIE                     -1542007
-
-#define SPELL_CORRUPTION            30938
-#define SPELL_EVOCATION             30935
-#define SPELL_BURNING_NOVA          30940
-
-#define SPELL_FIRE_NOVA             33132
-#define H_SPELL_FIRE_NOVA           37371
-
-#define SPELL_SHADOW_BOLT_VOLLEY    28599
-#define H_SPELL_SHADOW_BOLT_VOLLEY  40070
-
-#define ENTRY_KELIDAN               17377
-#define ENTRY_CHANNELER             17653
+    ENTRY_KELIDAN               = 17377,
+    ENTRY_CHANNELER             = 17653
+};
 
 const float ShadowmoonChannelers[5][4]=
 {
@@ -62,19 +65,14 @@ const float ShadowmoonChannelers[5][4]=
     {316,-109,-24.6,1.257}
 };
 
-class TRINITY_DLL_DECL BurningNovaAura : public Aura
-{
-    public:
-        BurningNovaAura(SpellEntry *spell, uint32 eff, Unit *target, Unit *caster) : Aura(spell, eff, NULL, target, caster, NULL){}
-};
-
 struct TRINITY_DLL_DECL boss_kelidan_the_breakerAI : public ScriptedAI
 {
     boss_kelidan_the_breakerAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
-        HeroicMode = m_creature->GetMap()->IsHeroic();
-        for(int i=0; i<5; ++i) Channelers[i] = 0;
+        pInstance = c->GetInstanceData();
+        HeroicMode = c->GetMap()->IsHeroic();
+        for(uint8 i=0; i<5; ++i)
+            Channelers[i] = 0;
     }
 
     ScriptedInstance* pInstance;
@@ -98,14 +96,18 @@ struct TRINITY_DLL_DECL boss_kelidan_the_breakerAI : public ScriptedAI
         Firenova = false;
         addYell = false;
         SummonChannelers();
+        if(pInstance)
+            pInstance->SetData(TYPE_KELIDAN_THE_BREAKER_EVENT, NOT_STARTED);
     }
-
-    void Aggro(Unit *who)
+   
+    void EnterCombat(Unit *who)
     {
         DoScriptText(SAY_WAKE, m_creature);
         if (m_creature->IsNonMeleeSpellCasted(false))
             m_creature->InterruptNonMeleeSpells(true);
         DoStartMovement(who);
+        if(pInstance)
+            pInstance->SetData(TYPE_KELIDAN_THE_BREAKER_EVENT, IN_PROGRESS);
     }
 
     void KilledUnit(Unit* victim)
@@ -132,7 +134,7 @@ struct TRINITY_DLL_DECL boss_kelidan_the_breakerAI : public ScriptedAI
                 default: DoScriptText(SAY_ADD_AGGRO_3, m_creature); break;
             }
         }
-        for(int i=0; i<5; ++i)
+        for(uint8 i=0; i<5; ++i)
         {
             Creature *channeler = Unit::GetCreature(*m_creature, Channelers[i]);
             if(who && channeler && !channeler->isInCombat())
@@ -142,7 +144,7 @@ struct TRINITY_DLL_DECL boss_kelidan_the_breakerAI : public ScriptedAI
 
     void ChannelerDied(Unit* killer)
     {
-        for(int i=0; i<5; ++i)
+        for(uint8 i=0; i<5; ++i)
         {
             Creature *channeler = Unit::GetCreature(*m_creature, Channelers[i]);
             if(channeler && channeler->isAlive())
@@ -157,11 +159,11 @@ struct TRINITY_DLL_DECL boss_kelidan_the_breakerAI : public ScriptedAI
     {
         SummonChannelers();
         if(!channeler1) return NULL;
-        int i;
+        uint8 i;
         for(i=0; i<5; ++i)
         {
             Creature *channeler = Unit::GetCreature(*m_creature, Channelers[i]);
-            if(channeler && channeler->GetGUID()==channeler1->GetGUID())
+            if(channeler && channeler->GetGUID() == channeler1->GetGUID())
                 break;
         }
         return Channelers[(i+2)%5];
@@ -169,7 +171,7 @@ struct TRINITY_DLL_DECL boss_kelidan_the_breakerAI : public ScriptedAI
 
     void SummonChannelers()
     {
-        for(int i=0; i<5; ++i)
+        for(uint8 i=0; i<5; ++i)
         {
             Creature *channeler = Unit::GetCreature(*m_creature, Channelers[i]);
             if(!channeler || channeler->isDead())
@@ -184,8 +186,13 @@ struct TRINITY_DLL_DECL boss_kelidan_the_breakerAI : public ScriptedAI
     void JustDied(Unit* Killer)
     {
         DoScriptText(SAY_DIE, m_creature);
-       if(pInstance)
-           pInstance->SetData(DATA_KELIDANEVENT, DONE);
+
+        if(!pInstance)
+            return;
+            
+        pInstance->SetData(TYPE_KELIDAN_THE_BREAKER_EVENT, DONE);
+        pInstance->HandleGameObject(pInstance->GetData64(DATA_DOOR1), true);
+        pInstance->HandleGameObject(pInstance->GetData64(DATA_DOOR6), true);
     }
 
     void UpdateAI(const uint32 diff)
@@ -232,14 +239,16 @@ struct TRINITY_DLL_DECL boss_kelidan_the_breakerAI : public ScriptedAI
 
             DoScriptText(SAY_NOVA, m_creature);
 
-            if(SpellEntry *nova = (SpellEntry*)GetSpellStore()->LookupEntry(SPELL_BURNING_NOVA))
+            if(SpellEntry *nova = GET_SPELL(SPELL_BURNING_NOVA))
             {
-                for(uint32 i = 0; i < 3; ++i)
-                    if(nova->Effect[i] == SPELL_EFFECT_APPLY_AURA)
-                    {
-                        Aura *Aur = new BurningNovaAura(nova, i, m_creature, m_creature);
-                        m_creature->AddAura(Aur);
-                    }
+                uint8 eff_mask=0;
+                for (int i=0; i<3; i++)
+                {
+                    if (!nova->Effect[i])
+                        continue;
+                    eff_mask|=1<<i;
+                }
+                m_creature->AddAura(new Aura(nova, eff_mask, NULL, m_creature, m_creature));
             }
 
             if (HeroicMode)
@@ -252,6 +261,7 @@ struct TRINITY_DLL_DECL boss_kelidan_the_breakerAI : public ScriptedAI
 
         DoMeleeAttackIfReady();
     }
+    
 };
 
 CreatureAI* GetAI_boss_kelidan_the_breaker(Creature *_Creature)
@@ -263,18 +273,21 @@ CreatureAI* GetAI_boss_kelidan_the_breaker(Creature *_Creature)
 ## mob_shadowmoon_channeler
 ######*/
 
-#define SPELL_SHADOW_BOLT       12739
-#define H_SPELL_SHADOW_BOLT     15472
-
-#define SPELL_MARK_OF_SHADOW    30937
-#define SPELL_CHANNELING        39123
+enum
+{
+    SPELL_SHADOW_BOLT       = 12739,
+    H_SPELL_SHADOW_BOLT     = 15472,
+ 
+    SPELL_MARK_OF_SHADOW    = 30937,
+    SPELL_CHANNELING        = 39123
+};
 
 struct TRINITY_DLL_DECL mob_shadowmoon_channelerAI : public ScriptedAI
 {
     mob_shadowmoon_channelerAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
-        HeroicMode = m_creature->GetMap()->IsHeroic();
+        pInstance = c->GetInstanceData();
+        HeroicMode = c->GetMap()->IsHeroic();
     }
 
     ScriptedInstance* pInstance;
@@ -293,10 +306,10 @@ struct TRINITY_DLL_DECL mob_shadowmoon_channelerAI : public ScriptedAI
             m_creature->InterruptNonMeleeSpells(true);
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
-        if(Creature *Kelidan = (Creature *)FindCreature(ENTRY_KELIDAN, 100, m_creature))
-            ((boss_kelidan_the_breakerAI*)Kelidan->AI())->ChannelerEngaged(who);
+        if(Creature *Kelidan = me->FindNearestCreature(ENTRY_KELIDAN, 100))
+            CAST_AI(boss_kelidan_the_breakerAI, Kelidan->AI())->ChannelerEngaged(who);
         if (m_creature->IsNonMeleeSpellCasted(false))
             m_creature->InterruptNonMeleeSpells(true);
         DoStartMovement(who);
@@ -304,8 +317,8 @@ struct TRINITY_DLL_DECL mob_shadowmoon_channelerAI : public ScriptedAI
 
     void JustDied(Unit* Killer)
     {
-       if(Creature *Kelidan = (Creature *)FindCreature(ENTRY_KELIDAN, 100, m_creature))
-           ((boss_kelidan_the_breakerAI*)Kelidan->AI())->ChannelerDied(Killer);
+       if(Creature *Kelidan = me->FindNearestCreature(ENTRY_KELIDAN, 100))
+           CAST_AI(boss_kelidan_the_breakerAI, Kelidan->AI())->ChannelerDied(Killer);
     }
 
     void UpdateAI(const uint32 diff)
@@ -315,9 +328,9 @@ struct TRINITY_DLL_DECL mob_shadowmoon_channelerAI : public ScriptedAI
             if(check_Timer < diff)
             {
                 if (!m_creature->IsNonMeleeSpellCasted(false))
-                    if(Creature *Kelidan = (Creature *)FindCreature(ENTRY_KELIDAN, 100, m_creature))
+                    if(Creature *Kelidan = me->FindNearestCreature(ENTRY_KELIDAN, 100))
                     {
-                        uint64 channeler = ((boss_kelidan_the_breakerAI*)Kelidan->AI())->GetChanneled(m_creature);
+                        uint64 channeler = CAST_AI(boss_kelidan_the_breakerAI, Kelidan->AI())->GetChanneled(m_creature);
                         if(Unit *channeled = Unit::GetUnit(*m_creature, channeler))
                             DoCast(channeled,SPELL_CHANNELING);
                     }

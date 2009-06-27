@@ -139,11 +139,9 @@ float HordeOverrunWP[21][3]=//waypoints in the horde base used in the end in the
     {5429.91,-2718.44,1493.42}//20 end 2
 };
 
-void hyjal_trashAI::Reset(){}
-
 hyjal_trashAI::hyjal_trashAI(Creature *c) : npc_escortAI(c)
 {
-    pInstance = ((ScriptedInstance*)c->GetInstanceData());
+    pInstance = c->GetInstanceData();
     IsEvent = false;
     Delay = 0;
     LastOverronPos = 0;
@@ -158,15 +156,13 @@ hyjal_trashAI::hyjal_trashAI(Creature *c) : npc_escortAI(c)
 
 void hyjal_trashAI::DamageTaken(Unit *done_by, uint32 &damage)
 {
-    if(done_by->GetTypeId() == TYPEID_PLAYER || (done_by->GetTypeId() == TYPEID_UNIT && ((Creature*)done_by)->isPet()))
+    if(done_by->GetTypeId() == TYPEID_PLAYER || (done_by->GetTypeId() == TYPEID_UNIT && CAST_CRE(done_by)->isPet()))
     {
         damageTaken += damage;
         if(pInstance)
             pInstance->SetData(DATA_RAIDDAMAGE,damage);//store raid's damage
     }
 }
-
-void hyjal_trashAI::Aggro(Unit *who){}
 
 void hyjal_trashAI::UpdateAI(const uint32 diff)
 {
@@ -379,13 +375,13 @@ struct mob_giant_infernalAI : public hyjal_trashAI
 {
     mob_giant_infernalAI(Creature* c) : hyjal_trashAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         meteor = false;//call once!
         CanMove = false;
         Delay = rand()%30000;
         m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
         m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-        m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, MODEL_INVIS);
+        m_creature->SetDisplayId(MODEL_INVIS);
         go = false;
         pos = 0;
         Reset();
@@ -407,7 +403,7 @@ struct mob_giant_infernalAI : public hyjal_trashAI
         imol = false;
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void WaypointReached(uint32 i)
     {
@@ -441,7 +437,7 @@ struct mob_giant_infernalAI : public hyjal_trashAI
             {
                 trigger->SetVisibility(VISIBILITY_OFF);
                 trigger->setFaction(m_creature->getFaction());
-                trigger->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT + MOVEMENTFLAG_LEVITATING);
+                trigger->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
                 trigger->CastSpell(m_creature,SPELL_METEOR,true);
             }
             m_creature->GetMotionMaster()->Clear();
@@ -451,7 +447,7 @@ struct mob_giant_infernalAI : public hyjal_trashAI
             {
                 m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
                 m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
-                m_creature->SetUInt32Value(UNIT_FIELD_DISPLAYID, m_creature->GetUInt32Value(UNIT_FIELD_NATIVEDISPLAYID));
+                m_creature->SetDisplayId(m_creature->GetUInt32Value(UNIT_FIELD_NATIVEDISPLAYID));
                 CanMove = true;
                 if (pInstance)
                 {
@@ -477,9 +473,9 @@ struct mob_giant_infernalAI : public hyjal_trashAI
                 go = true;
                 if(pInstance)
                 {
-                    ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(0, HordeWPs[7][0]+irand(-3,3),    HordeWPs[7][1]+irand(-3,3),    HordeWPs[7][2]);//HordeWPs[7] infront of thrall
-                    ((npc_escortAI*)(m_creature->AI()))->Start(true, true, true);
-                    ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                    AddWaypoint(0, HordeWPs[7][0]+irand(-3,3),    HordeWPs[7][1]+irand(-3,3),    HordeWPs[7][2]);//HordeWPs[7] infront of thrall
+                    Start(true, true, true);
+                    SetDespawnAtEnd(false);
                 }
             }
         }
@@ -513,7 +509,7 @@ struct mob_abominationAI : public hyjal_trashAI
 {
     mob_abominationAI(Creature* c) : hyjal_trashAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         go = false;
         pos = 0;
         Reset();
@@ -553,7 +549,7 @@ struct mob_abominationAI : public hyjal_trashAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -570,20 +566,20 @@ struct mob_abominationAI : public hyjal_trashAI
                     if (pInstance->GetData(DATA_ALLIANCE_RETREAT))//2.alliance boss down, use horde WPs
                     {
                         for (uint8 i = 0; i < 8; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, HordeWPs[i][0]+irand(-3,3),    HordeWPs[i][1]+irand(-3,3),    HordeWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, HordeWPs[i][0]+irand(-3,3),    HordeWPs[i][1]+irand(-3,3),    HordeWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }else//use alliance WPs
                     {
                         for (uint8 i = 0; i < 8; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, AllianceWPs[i][0]+irand(-3,3),    AllianceWPs[i][1]+irand(-3,3),    AllianceWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, AllianceWPs[i][0]+irand(-3,3),    AllianceWPs[i][1]+irand(-3,3),    AllianceWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }
                 }
             }
         }
-        if(!m_creature->HasAura(SPELL_DISEASE_CLOUD,0))
+        if(!m_creature->HasAura(SPELL_DISEASE_CLOUD))
             DoCast(m_creature,SPELL_DISEASE_CLOUD);
         if (!UpdateVictim())
             return;
@@ -608,7 +604,7 @@ struct mob_ghoulAI : public hyjal_trashAI
 {
     mob_ghoulAI(Creature* c) : hyjal_trashAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         go = false;
         pos = 0;
         Reset();
@@ -654,7 +650,7 @@ struct mob_ghoulAI : public hyjal_trashAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -671,15 +667,15 @@ struct mob_ghoulAI : public hyjal_trashAI
                     if (pInstance->GetData(DATA_ALLIANCE_RETREAT))//2.alliance boss down, use horde WPs
                     {
                         for (uint8 i = 0; i < 8; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, HordeWPs[i][0]+irand(-3,3),    HordeWPs[i][1]+irand(-3,3),    HordeWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, HordeWPs[i][0]+irand(-3,3),    HordeWPs[i][1]+irand(-3,3),    HordeWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }else//use alliance WPs
                     {
                         for (uint8 i = 0; i < 8; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, AllianceWPs[i][0]+irand(-3,3),    AllianceWPs[i][1]+irand(-3,3),    AllianceWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, AllianceWPs[i][0]+irand(-3,3),    AllianceWPs[i][1]+irand(-3,3),    AllianceWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }
                 }
             }
@@ -711,7 +707,7 @@ struct mob_necromancerAI : public hyjal_trashAI
 {
     mob_necromancerAI(Creature* c) : hyjal_trashAI(c), summons(m_creature)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         go = false;
         pos = 0;
         Reset();
@@ -728,7 +724,7 @@ struct mob_necromancerAI : public hyjal_trashAI
 
     void JustSummoned(Creature* summon)
     {
-        Unit* target = SelectUnit(SELECT_TARGET_RANDOM,0,30,true);
+        Unit* target = SelectTarget(SELECT_TARGET_RANDOM,0,30,true);
         if(target && summon)
             summon->Attack(target,false);
         summons.Summon(summon);
@@ -773,7 +769,7 @@ struct mob_necromancerAI : public hyjal_trashAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -790,15 +786,15 @@ struct mob_necromancerAI : public hyjal_trashAI
                     if (pInstance->GetData(DATA_ALLIANCE_RETREAT))//2.alliance boss down, use horde WPs
                     {
                         for (uint8 i = 0; i < 8; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, HordeWPs[i][0]+irand(-3,3),    HordeWPs[i][1]+irand(-3,3),    HordeWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(true, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, HordeWPs[i][0]+irand(-3,3),    HordeWPs[i][1]+irand(-3,3),    HordeWPs[i][2]);
+                        Start(true, true, true);
+                        SetDespawnAtEnd(false);
                     }else//use alliance WPs
                     {
                         for (uint8 i = 0; i < 8; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, AllianceWPs[i][0]+irand(-3,3),    AllianceWPs[i][1]+irand(-3,3),    AllianceWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(true, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, AllianceWPs[i][0]+irand(-3,3),    AllianceWPs[i][1]+irand(-3,3),    AllianceWPs[i][2]);
+                        Start(true, true, true);
+                        SetDespawnAtEnd(false);
                     }
                 }
             }
@@ -829,7 +825,7 @@ struct mob_bansheeAI : public hyjal_trashAI
 {
     mob_bansheeAI(Creature* c) : hyjal_trashAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         go = false;
         pos = 0;
         Reset();
@@ -865,7 +861,7 @@ struct mob_bansheeAI : public hyjal_trashAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -882,15 +878,15 @@ struct mob_bansheeAI : public hyjal_trashAI
                     if (pInstance->GetData(DATA_ALLIANCE_RETREAT))//2.alliance boss down, use horde WPs
                     {
                         for (uint8 i = 0; i < 8; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, HordeWPs[i][0]+irand(-3,3),    HordeWPs[i][1]+irand(-3,3),    HordeWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, HordeWPs[i][0]+irand(-3,3),    HordeWPs[i][1]+irand(-3,3),    HordeWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }else//use alliance WPs
                     {
                         for (uint8 i = 0; i < 8; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, AllianceWPs[i][0]+irand(-3,3),    AllianceWPs[i][1]+irand(-3,3),    AllianceWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, AllianceWPs[i][0]+irand(-3,3),    AllianceWPs[i][1]+irand(-3,3),    AllianceWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }
                 }
             }
@@ -928,7 +924,7 @@ struct mob_crypt_fiendAI : public hyjal_trashAI
 {
     mob_crypt_fiendAI(Creature* c) : hyjal_trashAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         go = false;
         pos = 0;
         Reset();
@@ -960,7 +956,7 @@ struct mob_crypt_fiendAI : public hyjal_trashAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -977,15 +973,15 @@ struct mob_crypt_fiendAI : public hyjal_trashAI
                     if (pInstance->GetData(DATA_ALLIANCE_RETREAT))//2.alliance boss down, use horde WPs
                     {
                         for (uint8 i = 0; i < 8; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, HordeWPs[i][0]+irand(-3,3),    HordeWPs[i][1]+irand(-3,3),    HordeWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, HordeWPs[i][0]+irand(-3,3),    HordeWPs[i][1]+irand(-3,3),    HordeWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }else//use alliance WPs
                     {
                         for (uint8 i = 0; i < 8; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, AllianceWPs[i][0]+irand(-3,3),    AllianceWPs[i][1]+irand(-3,3),    AllianceWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, AllianceWPs[i][0]+irand(-3,3),    AllianceWPs[i][1]+irand(-3,3),    AllianceWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }
 
                 }
@@ -1014,7 +1010,7 @@ struct mob_fel_stalkerAI : public hyjal_trashAI
 {
     mob_fel_stalkerAI(Creature* c) : hyjal_trashAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         go = false;
         pos = 0;
         Reset();
@@ -1046,7 +1042,7 @@ struct mob_fel_stalkerAI : public hyjal_trashAI
         }
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -1063,15 +1059,15 @@ struct mob_fel_stalkerAI : public hyjal_trashAI
                     if (pInstance->GetData(DATA_ALLIANCE_RETREAT))//2.alliance boss down, use horde WPs
                     {
                         for (uint8 i = 0; i < 8; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, HordeWPs[i][0]+irand(-3,3),    HordeWPs[i][1]+irand(-3,3),    HordeWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, HordeWPs[i][0]+irand(-3,3),    HordeWPs[i][1]+irand(-3,3),    HordeWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }else//use alliance WPs
                     {
                         for (uint8 i = 0; i < 8; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, AllianceWPs[i][0]+irand(-3,3),    AllianceWPs[i][1]+irand(-3,3),    AllianceWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, AllianceWPs[i][0]+irand(-3,3),    AllianceWPs[i][1]+irand(-3,3),    AllianceWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }
 
                 }
@@ -1100,7 +1096,7 @@ struct mob_frost_wyrmAI : public hyjal_trashAI
 {
     mob_frost_wyrmAI(Creature* c) : hyjal_trashAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         go = false;
         pos = 0;
         Reset();
@@ -1115,7 +1111,7 @@ struct mob_frost_wyrmAI : public hyjal_trashAI
     {
         FrostBreathTimer = 5000;
         MoveTimer = 0;
-        m_creature->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT + MOVEMENTFLAG_LEVITATING);
+        m_creature->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
     }
 
     void WaypointReached(uint32 i)
@@ -1144,14 +1140,14 @@ struct mob_frost_wyrmAI : public hyjal_trashAI
         m_creature->Relocate(x,y,z,0);
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 
     void UpdateAI(const uint32 diff)
     {
         hyjal_trashAI::UpdateAI(diff);
         if(IsEvent || IsOverrun)
         {
-            ((hyjal_trashAI*)m_creature->AI())->SetCanMelee(false);
+            CAST_AI(hyjal_trashAI, m_creature->AI())->SetCanMelee(false);
             npc_escortAI::UpdateAI(diff);
         }
         if (IsEvent)
@@ -1164,21 +1160,21 @@ struct mob_frost_wyrmAI : public hyjal_trashAI
                     if(!useFlyPath)
                     {
                         for (uint8 i = 0; i < 3; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, FrostWyrmWPs[i][0],    FrostWyrmWPs[i][1],    FrostWyrmWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, FrostWyrmWPs[i][0],    FrostWyrmWPs[i][1],    FrostWyrmWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }else{//fly path FlyPathWPs
                         for (uint8 i = 0; i < 3; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, FlyPathWPs[i][0]+irand(-10,10),    FlyPathWPs[i][1]+irand(-10,10),    FlyPathWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, FlyPathWPs[i][0]+irand(-10,10),    FlyPathWPs[i][1]+irand(-10,10),    FlyPathWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }
                 }
             }
         }
         if (!UpdateVictim())
             return;
-        if(m_creature->GetDistance(m_creature->getVictim()) >= 25){
+        if(!m_creature->IsWithinDist(m_creature->getVictim(), 25)){
             if(MoveTimer<diff)
             {
                 m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim());
@@ -1188,7 +1184,7 @@ struct mob_frost_wyrmAI : public hyjal_trashAI
 
         if(FrostBreathTimer<diff)
         {
-            if(m_creature->GetDistance(m_creature->getVictim()) < 25)
+            if(!m_creature->IsWithinDist(m_creature->getVictim(), 25))
             {
                 DoCast(m_creature->getVictim(),SPELL_FROST_BREATH);
                 m_creature->StopMoving();
@@ -1211,7 +1207,7 @@ struct mob_gargoyleAI : public hyjal_trashAI
 {
     mob_gargoyleAI(Creature* c) : hyjal_trashAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         go = false;
         pos = 0;
         DummyTarget[0] = 0;DummyTarget[1] = 0;DummyTarget[2] = 0;
@@ -1231,7 +1227,7 @@ struct mob_gargoyleAI : public hyjal_trashAI
         Zpos = 10.0;
         StrikeTimer = 2000+rand()%5000;
         MoveTimer = 0;
-        m_creature->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT + MOVEMENTFLAG_LEVITATING);
+        m_creature->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
     }
 
     void WaypointReached(uint32 i)
@@ -1263,7 +1259,7 @@ struct mob_gargoyleAI : public hyjal_trashAI
         hyjal_trashAI::UpdateAI(diff);
         if(IsEvent || IsOverrun)
         {
-            ((hyjal_trashAI*)m_creature->AI())->SetCanMelee(false);
+            CAST_AI(hyjal_trashAI, m_creature->AI())->SetCanMelee(false);
             npc_escortAI::UpdateAI(diff);
         }
         if (IsEvent)
@@ -1276,14 +1272,14 @@ struct mob_gargoyleAI : public hyjal_trashAI
                     if(!useFlyPath)
                     {
                         for (uint8 i = 0; i < 3; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, GargoyleWPs[i][0]+irand(-10,10), GargoyleWPs[i][1]+irand(-10,10), GargoyleWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, GargoyleWPs[i][0]+irand(-10,10), GargoyleWPs[i][1]+irand(-10,10), GargoyleWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }else{//fly path FlyPathWPs
                         for (uint8 i = 0; i < 3; ++i)
-                            ((npc_escortAI*)(m_creature->AI()))->AddWaypoint(i, FlyPathWPs[i][0]+irand(-10,10),    FlyPathWPs[i][1]+irand(-10,10),    FlyPathWPs[i][2]);
-                        ((npc_escortAI*)(m_creature->AI()))->Start(false, true, true);
-                        ((npc_escortAI*)(m_creature->AI()))->SetDespawnAtEnd(false);
+                            AddWaypoint(i, FlyPathWPs[i][0]+irand(-10,10),    FlyPathWPs[i][1]+irand(-10,10),    FlyPathWPs[i][2]);
+                        Start(false, true, true);
+                        SetDespawnAtEnd(false);
                     }
                 }
             }
@@ -1301,7 +1297,7 @@ struct mob_gargoyleAI : public hyjal_trashAI
         }
         if (!UpdateVictim())
             return;
-        if(m_creature->GetDistance(m_creature->getVictim()) >= 20 || forcemove)
+        if(!m_creature->IsWithinDist(m_creature->getVictim(), 20) || forcemove)
         {
             forcemove = false;
             if(forcemove)
@@ -1322,7 +1318,7 @@ struct mob_gargoyleAI : public hyjal_trashAI
         }
         if(StrikeTimer<diff)
         {
-            if(m_creature->GetDistance(m_creature->getVictim()) < 20)
+            if(m_creature->IsWithinDist(m_creature->getVictim(), 20))
             {
                 DoCast(m_creature->getVictim(),SPELL_GARGOYLE_STRIKE);
                 m_creature->StopMoving();
@@ -1350,7 +1346,7 @@ struct TRINITY_DLL_DECL alliance_riflemanAI : public Scripted_NoMovementAI
 
     uint32 ExplodeTimer;
 
-    void JustDied(Unit*)
+    void JustDied(Unit* who)
     {
     }
 
@@ -1374,7 +1370,7 @@ struct TRINITY_DLL_DECL alliance_riflemanAI : public Scripted_NoMovementAI
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 

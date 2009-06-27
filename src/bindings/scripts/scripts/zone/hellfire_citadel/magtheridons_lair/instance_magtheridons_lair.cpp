@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -71,7 +71,7 @@ struct TRINITY_DLL_DECL instance_magtheridons_lair : public ScriptedInstance
         return false;
     }
 
-    void OnCreatureCreate(Creature *creature, uint32 creature_entry)
+    void OnCreatureCreate(Creature *creature, bool add)
     {
         switch(creature->GetEntry())
         {
@@ -84,7 +84,7 @@ struct TRINITY_DLL_DECL instance_magtheridons_lair : public ScriptedInstance
         }
     }
 
-    void OnObjectCreate(GameObject *go)
+    void OnGameObjectCreate(GameObject *go, bool add)
     {
         switch(go->GetEntry())
         {
@@ -125,10 +125,7 @@ struct TRINITY_DLL_DECL instance_magtheridons_lair : public ScriptedInstance
             if(data == NOT_STARTED)
                 RespawnTimer = 10000;
             if(data != IN_PROGRESS)
-            {
-                if(GameObject *Door = instance->GetGameObjectInMap(DoorGUID))
-                    Door->SetGoState(0);
-            }
+               HandleGameObject(DoorGUID, true);
             break;
         case DATA_CHANNELER_EVENT:
             switch(data)
@@ -139,7 +136,7 @@ struct TRINITY_DLL_DECL instance_magtheridons_lair : public ScriptedInstance
                     Encounters[1] = NOT_STARTED;
                     for(std::set<uint64>::iterator i = ChannelerGUID.begin(); i != ChannelerGUID.end(); ++i)
                     {
-                        if(Creature *Channeler = instance->GetCreatureInMap(*i))
+                        if(Creature *Channeler = instance->GetCreature(*i))
                         {
                             if(Channeler->isAlive())
                                 Channeler->AI()->EnterEvadeMode();
@@ -148,8 +145,7 @@ struct TRINITY_DLL_DECL instance_magtheridons_lair : public ScriptedInstance
                         }
                     }
                     CageTimer = 0;
-                    if(GameObject *Door = instance->GetGameObjectInMap(DoorGUID))
-                        Door->SetGoState(0);
+                    HandleGameObject(DoorGUID, true);
                 }break;
             case IN_PROGRESS: // Event start.
                 if(Encounters[1] != IN_PROGRESS)
@@ -158,24 +154,23 @@ struct TRINITY_DLL_DECL instance_magtheridons_lair : public ScriptedInstance
                     // Let all five channelers aggro.
                     for(std::set<uint64>::iterator i = ChannelerGUID.begin(); i != ChannelerGUID.end(); ++i)
                     {
-                        Creature *Channeler = instance->GetCreatureInMap(*i);
+                        Creature *Channeler = instance->GetCreature(*i);
                         if(Channeler && Channeler->isAlive())
                             Channeler->AI()->AttackStart(Channeler->SelectNearestTarget(999));
                     }
                     // Release Magtheridon after two minutes.
-                    Creature *Magtheridon = instance->GetCreatureInMap(MagtheridonGUID);
+                    Creature *Magtheridon = instance->GetCreature(MagtheridonGUID);
                     if(Magtheridon && Magtheridon->isAlive())
                     {
-                        Magtheridon->TextEmote("'s bonds begin to weaken!", 0);
+                        Magtheridon->MonsterTextEmote("'s bonds begin to weaken!", 0);
                         CageTimer = 120000;
                     }
-                    if(GameObject *Door = instance->GetGameObjectInMap(DoorGUID))
-                        Door->SetGoState(1);
+                    HandleGameObject(DoorGUID, false);
                 }break;
             case DONE: // Add buff and check if all channelers are dead.
                 for(std::set<uint64>::iterator i = ChannelerGUID.begin(); i != ChannelerGUID.end(); ++i)
                 {
-                    Creature *Channeler = instance->GetCreatureInMap(*i);
+                    Creature *Channeler = instance->GetCreature(*i);
                     if(Channeler && Channeler->isAlive())
                     {
                         //Channeler->CastSpell(Channeler, SPELL_SOUL_TRANSFER, true);
@@ -189,10 +184,7 @@ struct TRINITY_DLL_DECL instance_magtheridons_lair : public ScriptedInstance
         case DATA_COLLAPSE:
             // true - collapse / false - reset
             for(std::set<uint64>::iterator i = ColumnGUID.begin(); i != ColumnGUID.end(); ++i)
-            {
-                if(GameObject *Column = instance->GetGameObjectInMap(*i))
-                    Column->SetGoState(!data);
-            }
+                DoUseDoorOrButton(*i);
             break;
         default:
             break;
@@ -212,7 +204,7 @@ struct TRINITY_DLL_DECL instance_magtheridons_lair : public ScriptedInstance
         {
             if(CageTimer <= diff)
             {
-                Creature *Magtheridon = instance->GetCreatureInMap(MagtheridonGUID);
+                Creature *Magtheridon = instance->GetCreature(MagtheridonGUID);
                 if(Magtheridon && Magtheridon->isAlive())
                 {
                     Magtheridon->clearUnitState(UNIT_STAT_STUNNED);
@@ -228,7 +220,7 @@ struct TRINITY_DLL_DECL instance_magtheridons_lair : public ScriptedInstance
             {
                 for(std::set<uint64>::iterator i = ChannelerGUID.begin(); i != ChannelerGUID.end(); ++i)
                 {
-                    if(Creature *Channeler = instance->GetCreatureInMap(*i))
+                    if(Creature *Channeler = instance->GetCreature(*i))
                     {
                         if(Channeler->isAlive())
                             Channeler->AI()->EnterEvadeMode();

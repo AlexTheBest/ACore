@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -36,8 +36,16 @@ EndContentData */
 ## npc_bunthen_plainswind
 ######*/
 
-#define GOSSIP_BP1 "Do you know where I can find Half Pendant of Aquatic Endurance?"
-#define GOSSIP_BP2 "I'd like to fly to Thunder Bluff."
+enum
+{
+    QUEST_SEA_LION_HORDE        = 30,
+    QUEST_SEA_LION_ALLY         = 272,
+    TAXI_PATH_ID_ALLY           = 315,
+    TAXI_PATH_ID_HORDE          = 316
+};
+
+#define GOSSIP_ITEM_THUNDER     "I'd like to fly to Thunder Bluff."
+#define GOSSIP_ITEM_AQ_END      "Do you know where I can find Half Pendant of Aquatic Endurance?"
 
 bool GossipHello_npc_bunthen_plainswind(Player *player, Creature *_Creature)
 {
@@ -45,17 +53,17 @@ bool GossipHello_npc_bunthen_plainswind(Player *player, Creature *_Creature)
         player->SEND_GOSSIP_MENU(4916,_Creature->GetGUID());
     else if(player->GetTeam() != HORDE)
     {
-        if(player->GetQuestStatus(272) == QUEST_STATUS_INCOMPLETE)
-            player->ADD_GOSSIP_ITEM( 0, GOSSIP_BP1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2);
+        if(player->GetQuestStatus(QUEST_SEA_LION_ALLY) == QUEST_STATUS_INCOMPLETE)
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM_AQ_END, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2);
 
         player->SEND_GOSSIP_MENU(4917,_Creature->GetGUID());
     }
     else if(player->getClass() == CLASS_DRUID && player->GetTeam() == HORDE)
     {
-        player->ADD_GOSSIP_ITEM( 0, GOSSIP_BP2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM_THUNDER, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
 
-        if(player->GetQuestStatus(30) == QUEST_STATUS_INCOMPLETE)
-            player->ADD_GOSSIP_ITEM( 0, GOSSIP_BP1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
+        if(player->GetQuestStatus(QUEST_SEA_LION_HORDE) == QUEST_STATUS_INCOMPLETE)
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM_AQ_END, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
 
         player->SEND_GOSSIP_MENU(4918,_Creature->GetGUID());
     }
@@ -67,19 +75,10 @@ bool GossipSelect_npc_bunthen_plainswind(Player *player, Creature *_Creature, ui
     switch(action)
     {
         case GOSSIP_ACTION_INFO_DEF + 1:
-        {
             player->CLOSE_GOSSIP_MENU();
             if (player->getClass() == CLASS_DRUID && player->GetTeam() == HORDE)
-            {
-                std::vector<uint32> nodes;
-
-                nodes.resize(2);
-                nodes[0] = 63;                              // Nighthaven, Moonglade
-                nodes[1] = 22;                              // Thunder Bluff, Mulgore
-                player->ActivateTaxiPathTo(nodes);
-            }
+                player->ActivateTaxiPathTo(TAXI_PATH_ID_HORDE);
             break;
-        }
         case GOSSIP_ACTION_INFO_DEF + 2:
             player->SEND_GOSSIP_MENU(5373,_Creature->GetGUID());
             break;
@@ -104,7 +103,7 @@ bool GossipHello_npc_great_bear_spirit(Player *player, Creature *_Creature)
     //ally or horde quest
     if (player->GetQuestStatus(5929) == QUEST_STATUS_INCOMPLETE || player->GetQuestStatus(5930) == QUEST_STATUS_INCOMPLETE)
     {
-        player->ADD_GOSSIP_ITEM( 0, GOSSIP_BEAR1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_BEAR1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF);
         player->SEND_GOSSIP_MENU(4719, _Creature->GetGUID());
     }
     else
@@ -118,15 +117,15 @@ bool GossipSelect_npc_great_bear_spirit(Player *player, Creature *_Creature, uin
     switch (action)
     {
         case GOSSIP_ACTION_INFO_DEF:
-            player->ADD_GOSSIP_ITEM( 0, GOSSIP_BEAR2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_BEAR2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
             player->SEND_GOSSIP_MENU(4721, _Creature->GetGUID());
             break;
         case GOSSIP_ACTION_INFO_DEF + 1:
-            player->ADD_GOSSIP_ITEM( 0, GOSSIP_BEAR3, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2);
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_BEAR3, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2);
             player->SEND_GOSSIP_MENU(4733, _Creature->GetGUID());
             break;
         case GOSSIP_ACTION_INFO_DEF + 2:
-            player->ADD_GOSSIP_ITEM( 0, GOSSIP_BEAR4, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_BEAR4, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
             player->SEND_GOSSIP_MENU(4734, _Creature->GetGUID());
             break;
         case GOSSIP_ACTION_INFO_DEF + 3:
@@ -144,25 +143,26 @@ bool GossipSelect_npc_great_bear_spirit(Player *player, Creature *_Creature, uin
 ## npc_silva_filnaveth
 ######*/
 
-#define GOSSIP_SF1 "Do you know where I can find Half Pendant of Aquatic Agility?"
-#define GOSSIP_SF2 "I'd like to fly to Rut'theran Village."
+#define GOSSIP_ITEM_RUTHERAN    "I'd like to fly to Rut'theran Village."
+#define GOSSIP_ITEM_AQ_AGI      "Do you know where I can find Half Pendant of Aquatic Agility?"
+
 bool GossipHello_npc_silva_filnaveth(Player *player, Creature *_Creature)
 {
     if(player->getClass() != CLASS_DRUID)
         player->SEND_GOSSIP_MENU(4913,_Creature->GetGUID());
     else if(player->GetTeam() != ALLIANCE)
     {
-        if(player->GetQuestStatus(30) == QUEST_STATUS_INCOMPLETE)
-            player->ADD_GOSSIP_ITEM( 0, GOSSIP_SF1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2);
+        if(player->GetQuestStatus(QUEST_SEA_LION_HORDE) == QUEST_STATUS_INCOMPLETE)
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM_AQ_AGI, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 2);
 
         player->SEND_GOSSIP_MENU(4915,_Creature->GetGUID());
     }
     else if(player->getClass() == CLASS_DRUID && player->GetTeam() == ALLIANCE)
     {
-        player->ADD_GOSSIP_ITEM( 0, GOSSIP_SF2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM_RUTHERAN, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 1);
 
-        if(player->GetQuestStatus(272) == QUEST_STATUS_INCOMPLETE)
-            player->ADD_GOSSIP_ITEM( 0, GOSSIP_SF1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
+        if(player->GetQuestStatus(QUEST_SEA_LION_ALLY) == QUEST_STATUS_INCOMPLETE)
+            player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_ITEM_AQ_AGI, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF + 3);
 
         player->SEND_GOSSIP_MENU(4914,_Creature->GetGUID());
     }
@@ -174,19 +174,10 @@ bool GossipSelect_npc_silva_filnaveth(Player *player, Creature *_Creature, uint3
     switch(action)
     {
         case GOSSIP_ACTION_INFO_DEF + 1:
-        {
             player->CLOSE_GOSSIP_MENU();
             if (player->getClass() == CLASS_DRUID && player->GetTeam() == ALLIANCE)
-            {
-                std::vector<uint32> nodes;
-
-                nodes.resize(2);
-                nodes[0] = 62;                              // Nighthaven, Moonglade
-                nodes[1] = 27;                              // Rut'theran Village, Teldrassil
-                player->ActivateTaxiPathTo(nodes);
-            }
+                player->ActivateTaxiPathTo(TAXI_PATH_ID_ALLY);
             break;
-        }
         case GOSSIP_ACTION_INFO_DEF + 2:
             player->SEND_GOSSIP_MENU(5374,_Creature->GetGUID());
             break;
@@ -297,7 +288,7 @@ public:
         if(!PlayerGUID)
             return;
 
-        Player *player = (Player *)Unit::GetUnit((*m_creature), PlayerGUID);
+        Player *player = Unit::GetPlayer(PlayerGUID);
         if(player && player->GetQuestStatus(10965) == QUEST_STATUS_INCOMPLETE)
         {
             player->FailQuest(10965);
@@ -308,7 +299,7 @@ public:
 
     void EnterEvadeMode()
     {
-        Player *player = (Player *)Unit::GetUnit((*m_creature), PlayerGUID);
+        Player *player = Unit::GetPlayer(PlayerGUID);
         if(player && player->isInCombat() && player->getAttackerForHelper())
         {
             AttackStart(player->getAttackerForHelper());
@@ -317,7 +308,7 @@ public:
         npc_escortAI::EnterEvadeMode();
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         uint32 rnd = rand()%2;
         switch(rnd)
@@ -353,18 +344,21 @@ public:
             return;
         }
 
-        if(!InCombat && !Event_onWait && checkPlayer_Timer < diff)
+        if(!m_creature->isInCombat() && !Event_onWait)
         {
-            Player *player = (Player *)Unit::GetUnit((*m_creature), PlayerGUID);
-            if(player && player->isInCombat() && player->getAttackerForHelper())
-                AttackStart(player->getAttackerForHelper());
-            checkPlayer_Timer = 1000;
-        } else if(!InCombat && !Event_onWait) checkPlayer_Timer -= diff;
+            if(checkPlayer_Timer < diff)
+            {
+                Player *player = Unit::GetPlayer(PlayerGUID);
+                if(player && player->isInCombat() && player->getAttackerForHelper())
+                    AttackStart(player->getAttackerForHelper());
+                checkPlayer_Timer = 1000;
+            }else checkPlayer_Timer -= diff;
+        }
 
         if(Event_onWait && Event_Timer < diff)
         {
 
-            Player *player = (Player *)Unit::GetUnit((*m_creature), PlayerGUID);
+            Player *player = Unit::GetPlayer(PlayerGUID);
             if(!player || (player && player->GetQuestStatus(10965) == QUEST_STATUS_NONE))
             {
                 m_creature->setDeathState(JUST_DIED);
@@ -532,7 +526,7 @@ bool QuestAccept_npc_clintar_dreamwalker(Player *player, Creature *creature, Que
     {
         Creature *clintar_spirit = creature->SummonCreature(CLINTAR_SPIRIT, CLINTAR_SPIRIT_SUMMON_X, CLINTAR_SPIRIT_SUMMON_Y, CLINTAR_SPIRIT_SUMMON_Z, CLINTAR_SPIRIT_SUMMON_O, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 100000);
         if(clintar_spirit)
-            ((npc_clintar_spiritAI*)clintar_spirit->AI())->StartEvent(player);
+            CAST_AI(npc_clintar_spiritAI, clintar_spirit->AI())->StartEvent(player);
     }
     return true;
 }

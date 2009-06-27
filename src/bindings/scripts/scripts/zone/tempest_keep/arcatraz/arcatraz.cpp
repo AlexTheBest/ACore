@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -63,7 +63,7 @@ struct TRINITY_DLL_DECL npc_millhouse_manastormAI : public ScriptedAI
 {
     npc_millhouse_manastormAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance* pInstance;
@@ -102,20 +102,12 @@ struct TRINITY_DLL_DECL npc_millhouse_manastormAI : public ScriptedAI
     {
         if (m_creature->Attack(who, true))
         {
-            m_creature->AddThreat(who, 0.0f);
-
-            if (!InCombat)
-            {
-                InCombat = true;
-                Aggro(who);
-            }
-
             //TODO: Make it so he moves when target out of range
             DoStartNoMovement(who);
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -259,7 +251,7 @@ struct TRINITY_DLL_DECL npc_warden_mellicharAI : public ScriptedAI
 {
     npc_warden_mellicharAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance* pInstance;
@@ -301,11 +293,11 @@ struct TRINITY_DLL_DECL npc_warden_mellicharAI : public ScriptedAI
 
             float attackRadius = m_creature->GetAttackDistance(who)/10;
             if( m_creature->IsWithinDistInMap(who, attackRadius) && m_creature->IsWithinLOSInMap(who) )
-                Aggro(who);
+                EnterCombat(who);
         }
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoScriptText(YELL_INTRO1, m_creature);
         DoCast(m_creature,SPELL_BUBBLE_VISUAL);
@@ -313,8 +305,7 @@ struct TRINITY_DLL_DECL npc_warden_mellicharAI : public ScriptedAI
         if( pInstance )
         {
             pInstance->SetData(TYPE_HARBINGERSKYRISS,IN_PROGRESS);
-            if (GameObject* Sphere = GameObject::GetGameObject(*m_creature,pInstance->GetData64(DATA_SPHERE_SHIELD)))
-                Sphere->SetGoState(1);
+            pInstance->HandleGameObject(pInstance->GetData64(DATA_SPHERE_SHIELD), false);
             IsRunning = true;
         }
     }
@@ -347,15 +338,14 @@ struct TRINITY_DLL_DECL npc_warden_mellicharAI : public ScriptedAI
         if( pInstance )
         {
             m_creature->InterruptNonMeleeSpells(true);
-            m_creature->RemoveSpellsCausingAura(SPELL_AURA_DUMMY);
+            m_creature->RemoveAurasByType(SPELL_AURA_DUMMY);
 
             switch( Phase )
             {
                 case 2:
                     DoCast(m_creature,SPELL_TARGET_ALPHA);
                     pInstance->SetData(TYPE_WARDEN_1,IN_PROGRESS);
-                    if (GameObject *Sphere = GameObject::GetGameObject(*m_creature,pInstance->GetData64(DATA_SPHERE_SHIELD)))
-                        Sphere->SetGoState(1);
+                    pInstance->HandleGameObject(pInstance->GetData64(DATA_SPHERE_SHIELD), false);
                     break;
                 case 3:
                     DoCast(m_creature,SPELL_TARGET_BETA);
@@ -499,7 +489,7 @@ struct TRINITY_DLL_DECL mob_zerekethvoidzoneAI : public ScriptedAI
         DoCast(m_creature,SPELL_VOID_ZONE_DAMAGE);
     }
 
-    void Aggro(Unit* who) {}
+    void EnterCombat(Unit* who) {}
 };
 CreatureAI* GetAI_mob_zerekethvoidzoneAI(Creature *_Creature)
 {

@@ -58,26 +58,12 @@ struct TRINITY_DLL_DECL instance_razorfen_kraul : public ScriptedInstance
         return NULL;
     }
 
-    void OnObjectCreate(GameObject *go)
+    void OnGameObjectCreate(GameObject *go, bool apply)
     {
         switch(go->GetEntry())
         {
         case 21099: DoorWardGUID = go->GetGUID(); break;
         }
-    }
-
-    void HandleGameObject(uint64 guid, uint32 state)
-    {
-        Player *player = GetPlayerInMap();
-
-        if (!player || !guid)
-        {
-            debug_log("SD2: Instance Razorfen Kraul: HandleGameObject fail");
-            return;
-        }
-
-        if (GameObject *go = GameObject::GetGameObject(*player,guid))
-            go->SetGoState(state);
     }
 
     void Update(uint32 diff)

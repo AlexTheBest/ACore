@@ -179,12 +179,12 @@ struct TRINITY_DLL_DECL boss_hexlord_addAI : public ScriptedAI
 
     boss_hexlord_addAI(Creature* c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     void Reset() {}
 
-    void Aggro(Unit* who) {DoZoneInCombat();}
+    void EnterCombat(Unit* who) {DoZoneInCombat();}
 
     void UpdateAI(const uint32 diff)
     {
@@ -202,7 +202,7 @@ struct TRINITY_DLL_DECL boss_hex_lord_malacrassAI : public ScriptedAI
 {
     boss_hex_lord_malacrassAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         SelectAddEntry();
         for(uint8 i = 0; i < 4; ++i)
             AddGUID[i] = 0;
@@ -240,12 +240,11 @@ struct TRINITY_DLL_DECL boss_hex_lord_malacrassAI : public ScriptedAI
 
         SpawnAdds();
 
-        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_DISPLAY, 46916);
-        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_INFO, 50268674);
+        m_creature->SetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID, 46916);
         m_creature->SetByteValue(UNIT_FIELD_BYTES_2, 0, SHEATH_STATE_MELEE );
     }
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         if(pInstance)
             pInstance->SetData(DATA_HEXLORDEVENT, IN_PROGRESS);
@@ -258,7 +257,7 @@ struct TRINITY_DLL_DECL boss_hex_lord_malacrassAI : public ScriptedAI
         {
             Unit* Temp = Unit::GetUnit((*m_creature),AddGUID[i]);
             if(Temp && Temp->isAlive())
-                ((Creature*)Temp)->AI()->AttackStart(m_creature->getVictim());
+                CAST_CRE(Temp)->AI()->AttackStart(m_creature->getVictim());
             else
             {
                 EnterEvadeMode();
@@ -340,7 +339,7 @@ struct TRINITY_DLL_DECL boss_hex_lord_malacrassAI : public ScriptedAI
 
         if(ResetTimer < diff)
         {
-            if(m_creature->GetDistance(119.223,1035.45,29.4481) <= 10)
+            if(m_creature->IsWithinDist3d(119.223,1035.45,29.4481, 10))
             {
                 EnterEvadeMode();
                 return;
@@ -354,7 +353,7 @@ struct TRINITY_DLL_DECL boss_hex_lord_malacrassAI : public ScriptedAI
             {
                 Unit* Temp = Unit::GetUnit((*m_creature),AddGUID[i]);
                 if(Temp && Temp->isAlive() && !Temp->getVictim())
-                    ((Creature*)Temp)->AI()->AttackStart(m_creature->getVictim());
+                    CAST_CRE(Temp)->AI()->AttackStart(m_creature->getVictim());
             }
             CheckAddState_Timer = 5000;
         }else CheckAddState_Timer -= diff;
@@ -384,7 +383,7 @@ struct TRINITY_DLL_DECL boss_hex_lord_malacrassAI : public ScriptedAI
 
         if(SiphonSoul_Timer < diff)
         {
-            Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 0, 70, true);
+            Unit* target = SelectTarget(SELECT_TARGET_RANDOM, 0, 70, true);
             Unit *trigger = DoSpawnCreature(MOB_TEMP_TRIGGER, 0, 0, 0, 0, TEMPSUMMON_TIMED_DESPAWN, 30000);
             if(!target || !trigger)
             {
@@ -393,7 +392,7 @@ struct TRINITY_DLL_DECL boss_hex_lord_malacrassAI : public ScriptedAI
             }
             else
             {
-                trigger->SetUInt32Value(UNIT_FIELD_DISPLAYID, 11686);
+                trigger->SetDisplayId(11686);
                 trigger->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                 trigger->CastSpell(target, SPELL_SIPHON_SOUL, true);
                 trigger->GetMotionMaster()->MoveChase(m_creature);
@@ -533,12 +532,6 @@ struct TRINITY_DLL_DECL boss_alyson_antilleAI : public boss_hexlord_addAI
                 m_creature->GetMotionMaster()->MoveChase(who, 20);
                 m_creature->AddThreat(who, 0.0f);
             }
-
-            if (!InCombat)
-            {
-                Aggro(who);
-                InCombat = true;
-            }
         }
     }
 
@@ -565,10 +558,10 @@ struct TRINITY_DLL_DECL boss_alyson_antilleAI : public boss_hexlord_addAI
             {
                 if(rand()%2)
                 {
-                    if(Unit* target = DoSelectLowestHpFriendly(50, 0))
+                    if(target = DoSelectLowestHpFriendly(50, 0))
                         m_creature->CastSpell(target, SPELL_DISPEL_MAGIC, false);
                 }
-                else if(Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 0))
+                else if(target = SelectUnit(SELECT_TARGET_RANDOM, 0))
                     m_creature->CastSpell(target, SPELL_DISPEL_MAGIC, false);
             }
             flashheal_timer = 2500;
@@ -617,12 +610,6 @@ struct TRINITY_DLL_DECL boss_gazakrothAI : public boss_hexlord_addAI
             {
                 m_creature->GetMotionMaster()->MoveChase(who, 20);
                 m_creature->AddThreat(who, 0.0f);
-            }
-
-            if (!InCombat)
-            {
-                Aggro(who);
-                InCombat = true;
             }
         }
     }
@@ -737,12 +724,6 @@ struct TRINITY_DLL_DECL boss_slitherAI : public boss_hexlord_addAI
             {
                 m_creature->GetMotionMaster()->MoveChase(who, 20);
                 m_creature->AddThreat(who, 0.0f);
-            }
-
-            if (!InCombat)
-            {
-                Aggro(who);
-                InCombat = true;
             }
         }
     }

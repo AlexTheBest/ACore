@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 #define _AUTHCRYPT_H
 
 #include <Common.h>
-#include <vector>
+#include "SARC4.h"
 
 class BigNumber;
 
@@ -32,23 +32,15 @@ class AuthCrypt
         AuthCrypt();
         ~AuthCrypt();
 
-        const static size_t CRYPTED_SEND_LEN = 4;
-        const static size_t CRYPTED_RECV_LEN = 6;
-
-        void Init();
-
-        void SetKey(BigNumber *);
-
+        void Init(BigNumber *K);
         void DecryptRecv(uint8 *, size_t);
         void EncryptSend(uint8 *, size_t);
 
         bool IsInitialized() { return _initialized; }
 
-        static void GenerateKey(uint8 *, BigNumber *);
-
     private:
-        std::vector<uint8> _key;
-        uint8 _send_i, _send_j, _recv_i, _recv_j;
+        SARC4 _clientDecrypt;
+        SARC4 _serverEncrypt;
         bool _initialized;
 };
 #endif

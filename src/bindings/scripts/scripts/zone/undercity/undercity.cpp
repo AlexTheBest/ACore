@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -78,7 +78,7 @@ struct TRINITY_DLL_DECL npc_lady_sylvanas_windrunnerAI : public ScriptedAI
         targetGUID = 0;
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void JustSummoned(Creature *summoned)
     {
@@ -91,7 +91,7 @@ struct TRINITY_DLL_DECL npc_lady_sylvanas_windrunnerAI : public ScriptedAI
                 summoned->CastSpell(target, SPELL_RIBBON_OF_SOULS, false);
             }
 
-            summoned->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
+            summoned->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
             targetGUID = summoned->GetGUID();
         }
     }
@@ -110,7 +110,7 @@ struct TRINITY_DLL_DECL npc_lady_sylvanas_windrunnerAI : public ScriptedAI
                 m_creature->SummonCreature(ENTRY_HIGHBORNE_BUNNY, raX, raY, myZ, 0, TEMPSUMMON_TIMED_DESPAWN, 3000);
 
                 LamentEvent_Timer = 2000;
-                if( !m_creature->HasAura(SPELL_SYLVANAS_CAST, 0))
+                if( !m_creature->HasAura(SPELL_SYLVANAS_CAST))
                 {
                     DoScriptText(SAY_LAMENT_END, m_creature);
                     DoScriptText(EMOTE_LAMENT_END, m_creature);
@@ -134,8 +134,8 @@ bool ChooseReward_npc_lady_sylvanas_windrunner(Player *player, Creature *_Creatu
 {
     if( _Quest->GetQuestId() == 9180 )
     {
-        ((npc_lady_sylvanas_windrunnerAI*)_Creature->AI())->LamentEvent = true;
-        ((npc_lady_sylvanas_windrunnerAI*)_Creature->AI())->DoPlaySoundToSet(_Creature,SOUND_CREDIT);
+        CAST_AI(npc_lady_sylvanas_windrunnerAI, _Creature->AI())->LamentEvent = true;
+        CAST_AI(npc_lady_sylvanas_windrunnerAI, _Creature->AI())->DoPlaySoundToSet(_Creature,SOUND_CREDIT);
         _Creature->CastSpell(_Creature,SPELL_SYLVANAS_CAST,false);
 
         for( uint8 i = 0; i < 4; ++i)
@@ -166,7 +166,7 @@ struct TRINITY_DLL_DECL npc_highborne_lamenterAI : public ScriptedAI
         EventCast = true;
     }
 
-    void Aggro(Unit *who) {}
+    void EnterCombat(Unit *who) {}
 
     void UpdateAI(const uint32 diff)
     {
@@ -174,8 +174,8 @@ struct TRINITY_DLL_DECL npc_highborne_lamenterAI : public ScriptedAI
         {
             if( EventMove_Timer < diff )
             {
-                m_creature->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT | MOVEMENTFLAG_LEVITATING);
-                m_creature->SendMonsterMoveWithSpeed(m_creature->GetPositionX(),m_creature->GetPositionY(),HIGHBORNE_LOC_Y_NEW,MOVEMENTFLAG_ONTRANSPORT,5000);
+                m_creature->AddUnitMovementFlag(MOVEMENTFLAG_LEVITATING);
+                m_creature->SendMonsterMoveWithSpeed(m_creature->GetPositionX(),m_creature->GetPositionY(),HIGHBORNE_LOC_Y_NEW,5000);
                 m_creature->GetMap()->CreatureRelocation(m_creature,m_creature->GetPositionX(),m_creature->GetPositionY(),HIGHBORNE_LOC_Y_NEW,m_creature->GetOrientation());
                 EventMove = false;
             }else EventMove_Timer -= diff;
@@ -210,11 +210,11 @@ bool GossipHello_npc_parqual_fintallas(Player *player, Creature *_Creature)
     if (_Creature->isQuestGiver())
         player->PrepareQuestMenu( _Creature->GetGUID() );
 
-    if (player->GetQuestStatus(6628) == QUEST_STATUS_INCOMPLETE && !player->HasAura(SPELL_MARK_OF_SHAME,0) )
+    if (player->GetQuestStatus(6628) == QUEST_STATUS_INCOMPLETE && !player->HasAura(SPELL_MARK_OF_SHAME) )
     {
-        player->ADD_GOSSIP_ITEM( 0, GOSSIP_HPF1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
-        player->ADD_GOSSIP_ITEM( 0, GOSSIP_HPF2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
-        player->ADD_GOSSIP_ITEM( 0, GOSSIP_HPF3, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_HPF1, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_HPF2, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+1);
+        player->ADD_GOSSIP_ITEM(GOSSIP_ICON_CHAT, GOSSIP_HPF3, GOSSIP_SENDER_MAIN, GOSSIP_ACTION_INFO_DEF+2);
         player->SEND_GOSSIP_MENU(5822, _Creature->GetGUID());
     }
     else

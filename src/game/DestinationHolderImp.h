@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,6 @@
 #ifndef TRINITY_DESTINATIONHOLDERIMP_H
 #define TRINITY_DESTINATIONHOLDERIMP_H
 
-#include "Creature.h"
 #include "MapManager.h"
 #include "DestinationHolder.h"
 
@@ -85,24 +84,7 @@ DestinationHolder<TRAVELLER>::StartTravel(TRAVELLER &traveller, bool sendMove)
     i_fromY = traveller.GetPositionY();
     i_fromZ = traveller.GetPositionZ();
 
-    float dx = i_destX - i_fromX;
-    float dy = i_destY - i_fromY;
-    float dz = i_destZ - i_fromZ;
-
-    float dist;
-    //Should be for Creature Flying and Swimming.
-    if(traveller.GetTraveller().hasUnitState(UNIT_STAT_IN_FLIGHT))
-        dist = sqrt((dx*dx) + (dy*dy) + (dz*dz));
-    else                                                    //Walking on the ground
-        dist = sqrt((dx*dx) + (dy*dy));
-
-    float speed;
-    if(traveller.GetTraveller().hasUnitState(UNIT_STAT_CHARGING))
-        speed = SPEED_CHARGE * 0.001f;
-    else
-        speed = traveller.Speed() * 0.001f;     // speed is in seconds so convert from second to millisecond
-    i_totalTravelTime = static_cast<uint32>(dist/speed);
-
+    i_totalTravelTime = traveller.GetTotalTrevelTimeTo(i_destX,i_destY,i_destZ);
     i_timeElapsed = 0;
     if(sendMove)
         traveller.MoveTo(i_destX, i_destY, i_destZ, i_totalTravelTime);
@@ -138,9 +120,9 @@ DestinationHolder<TRAVELLER>::UpdateTraveller(TRAVELLER &traveller, uint32 diff,
             return true;
 
         if(traveller.GetTraveller().hasUnitState(UNIT_STAT_IN_FLIGHT))
-            GetLocationNow(traveller.GetTraveller().GetMapId() ,x, y, z, true);                  // Should repositione Object with right Coord, so I can bypass some Grid Relocation
+            GetLocationNow(traveller.GetTraveller().GetBaseMap() ,x, y, z, true);                  // Should reposition Object with right Coord, so I can bypass some Grid Relocation
         else
-            GetLocationNow(traveller.GetTraveller().GetMapId(), x, y, z, false);
+            GetLocationNow(traveller.GetTraveller().GetBaseMap(), x, y, z, false);
 
         if( x == -431602080 )
             return false;
@@ -171,7 +153,7 @@ DestinationHolder<TRAVELLER>::UpdateTraveller(TRAVELLER &traveller, uint32 diff,
 
 template<typename TRAVELLER>
 void
-DestinationHolder<TRAVELLER>::GetLocationNow(uint32 mapid, float &x, float &y, float &z, bool is3D) const
+DestinationHolder<TRAVELLER>::GetLocationNow(const Map * map, float &x, float &y, float &z, bool is3D) const
 {
     if( HasArrived() )
     {
@@ -193,8 +175,8 @@ DestinationHolder<TRAVELLER>::GetLocationNow(uint32 mapid, float &x, float &y, f
             z = z2;
         else
         {
-            //That part is good for mob Walking on the floor. But the floor is not allways what we thought.
-            z = MapManager::Instance().GetBaseMap(mapid)->GetHeight(x,y,i_fromZ,false); // Disable cave check
+            //That part is good for mob Walking on the floor. But the floor is not always what we thought.
+            z = map->GetHeight(x,y,i_fromZ,false); // Disable cave check
             const float groundDist = sqrt(distanceX*distanceX + distanceY*distanceY);
             const float zDist = fabs(i_fromZ - z) + 0.000001f;
             const float slope = groundDist / zDist;

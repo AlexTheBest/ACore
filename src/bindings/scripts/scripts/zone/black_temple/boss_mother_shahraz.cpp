@@ -80,7 +80,7 @@ struct TRINITY_DLL_DECL boss_shahrazAI : public ScriptedAI
 {
     boss_shahrazAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
     }
 
     ScriptedInstance* pInstance;
@@ -123,7 +123,7 @@ struct TRINITY_DLL_DECL boss_shahrazAI : public ScriptedAI
         Enraged = false;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         if(pInstance)
             pInstance->SetData(DATA_MOTHERSHAHRAZEVENT, IN_PROGRESS);
@@ -276,7 +276,7 @@ struct TRINITY_DLL_DECL boss_shahrazAI : public ScriptedAI
         }else SaberTimer -= diff;
 
         //Enrage
-        if(!m_creature->HasAura(SPELL_BERSERK, 0))
+        if(!m_creature->HasAura(SPELL_BERSERK))
             if(EnrageTimer < diff)
         {
             DoCast(m_creature, SPELL_BERSERK);

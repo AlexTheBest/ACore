@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -123,7 +123,7 @@ struct TRINITY_DLL_DECL flesh_tentacleAI : public Scripted_NoMovementAI
         CheckTimer = 1000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
     }
 
@@ -136,7 +136,7 @@ struct TRINITY_DLL_DECL eye_of_cthunAI : public Scripted_NoMovementAI
 {
     eye_of_cthunAI(Creature *c) : Scripted_NoMovementAI(c)
     {
-        pInst = (ScriptedInstance*)c->GetInstanceData();
+        pInst = c->GetInstanceData();
         if (!pInst)
             error_log("TSCR: No Instance eye_of_cthunAI");
     }
@@ -182,7 +182,7 @@ struct TRINITY_DLL_DECL eye_of_cthunAI : public Scripted_NoMovementAI
             pInst->SetData(DATA_CTHUN_PHASE, 0);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoZoneInCombat();
     }
@@ -190,7 +190,7 @@ struct TRINITY_DLL_DECL eye_of_cthunAI : public Scripted_NoMovementAI
     void SpawnEyeTentacle(float x, float y)
     {
         Creature* Spawned;
-        Spawned = (Creature*)m_creature->SummonCreature(MOB_EYE_TENTACLE,m_creature->GetPositionX()+x,m_creature->GetPositionY()+y,m_creature->GetPositionZ(),0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,500);
+        Spawned = me->SummonCreature(MOB_EYE_TENTACLE,m_creature->GetPositionX()+x,m_creature->GetPositionY()+y,m_creature->GetPositionZ(),0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,500);
         if (Spawned)
         {
             Unit* target;
@@ -244,7 +244,7 @@ struct TRINITY_DLL_DECL eye_of_cthunAI : public Scripted_NoMovementAI
                         Creature* Spawned = NULL;
 
                         //Spawn claw tentacle on the random target
-                        Spawned = (Creature*)m_creature->SummonCreature(MOB_CLAW_TENTACLE,target->GetPositionX(),target->GetPositionY(),target->GetPositionZ(),0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,500);
+                        Spawned = me->SummonCreature(MOB_CLAW_TENTACLE,target->GetPositionX(),target->GetPositionY(),target->GetPositionZ(),0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,500);
 
                         if (Spawned)
                             Spawned->AI()->AttackStart(target);
@@ -301,7 +301,6 @@ struct TRINITY_DLL_DECL eye_of_cthunAI : public Scripted_NoMovementAI
                     DoCast(m_creature,SPELL_RED_COLORATION);
 
                     //Freeze animation
-                    m_creature->setEmoteState(53);
 
                     //Darkbeam for 35 seconds
                     PhaseTimer = 35000;
@@ -351,7 +350,6 @@ struct TRINITY_DLL_DECL eye_of_cthunAI : public Scripted_NoMovementAI
                     m_creature->RemoveAurasDueToSpell(SPELL_RED_COLORATION);
 
                     //Freeze animation
-                    m_creature->setEmoteState(0);
                     m_creature->SetUInt32Value(UNIT_FIELD_FLAGS, 0);
 
                     //Eye Beam for 50 seconds
@@ -397,7 +395,6 @@ struct TRINITY_DLL_DECL eye_of_cthunAI : public Scripted_NoMovementAI
                 m_creature->RemoveAurasDueToSpell(SPELL_RED_COLORATION);
 
                 //Reset to normal emote state and prevent select and attack
-                m_creature->setEmoteState(0);
                 m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE | UNIT_FLAG_NON_ATTACKABLE);
 
                 //Remove Target field
@@ -435,7 +432,7 @@ struct TRINITY_DLL_DECL cthunAI : public Scripted_NoMovementAI
 {
     cthunAI(Creature *c) : Scripted_NoMovementAI(c)
     {
-        pInst = (ScriptedInstance*)c->GetInstanceData();
+        pInst = c->GetInstanceData();
         if (!pInst)
             error_log("TSCR: No Instance eye_of_cthunAI");
     }
@@ -498,7 +495,7 @@ struct TRINITY_DLL_DECL cthunAI : public Scripted_NoMovementAI
             pInst->SetData(DATA_CTHUN_PHASE, 0);
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoZoneInCombat();
     }
@@ -506,7 +503,7 @@ struct TRINITY_DLL_DECL cthunAI : public Scripted_NoMovementAI
     void SpawnEyeTentacle(float x, float y)
     {
         Creature* Spawned;
-        Spawned = (Creature*)m_creature->SummonCreature(MOB_EYE_TENTACLE,m_creature->GetPositionX()+x,m_creature->GetPositionY()+y,m_creature->GetPositionZ(),0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,500);
+        Spawned = me->SummonCreature(MOB_EYE_TENTACLE,m_creature->GetPositionX()+x,m_creature->GetPositionY()+y,m_creature->GetPositionZ(),0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,500);
         if (Spawned)
         {
             Unit* target;
@@ -566,13 +563,15 @@ struct TRINITY_DLL_DECL cthunAI : public Scripted_NoMovementAI
                 Map *map = m_creature->GetMap();
                 if(!map->IsDungeon()) return;
 
+                //Play random sound to the zone
                 Map::PlayerList const &PlayerList = map->GetPlayers();
-                for (Map::PlayerList::const_iterator i = PlayerList.begin(); i != PlayerList.end(); ++i)
+
+                if (!PlayerList.isEmpty())
                 {
-                    if (Player* i_pl = i->getSource())
+                    for(Map::PlayerList::const_iterator itr = PlayerList.begin(); itr != PlayerList.end(); ++itr)
                     {
-                        //Play random sound to the zone
-                        i_pl->SendPlaySound(RANDOM_SOUND_WHISPER, true);
+                        if (Player* pPlr = itr->getSource())
+                            pPlr->PlayDirectSound(RANDOM_SOUND_WHISPER,pPlr);
                     }
                 }
 
@@ -627,20 +626,20 @@ struct TRINITY_DLL_DECL cthunAI : public Scripted_NoMovementAI
                     Creature* Spawned;
 
                     //Spawn flesh tentacle
-                    Spawned = (Creature*)m_creature->SummonCreature(MOB_FLESH_TENTACLE, TENTACLE_POS1_X, TENTACLE_POS1_Y, TENTACLE_POS1_Z, TENTACLE_POS1_O, TEMPSUMMON_CORPSE_DESPAWN, 0);
+                    Spawned = me->SummonCreature(MOB_FLESH_TENTACLE, TENTACLE_POS1_X, TENTACLE_POS1_Y, TENTACLE_POS1_Z, TENTACLE_POS1_O, TEMPSUMMON_CORPSE_DESPAWN, 0);
 
                     if (!Spawned)
                         FleshTentaclesKilled++;
                     else
-                        ((flesh_tentacleAI*)(Spawned->AI()))->SpawnedByCthun(m_creature->GetGUID());
+                        CAST_AI(flesh_tentacleAI, (Spawned->AI()))->SpawnedByCthun(m_creature->GetGUID());
 
                     //Spawn flesh tentacle
-                    Spawned = (Creature*)m_creature->SummonCreature(MOB_FLESH_TENTACLE, TENTACLE_POS2_X, TENTACLE_POS2_Y, TENTACLE_POS2_Z, TENTACLE_POS2_O, TEMPSUMMON_CORPSE_DESPAWN, 0);
+                    Spawned = me->SummonCreature(MOB_FLESH_TENTACLE, TENTACLE_POS2_X, TENTACLE_POS2_Y, TENTACLE_POS2_Z, TENTACLE_POS2_O, TEMPSUMMON_CORPSE_DESPAWN, 0);
 
                     if (!Spawned)
                         FleshTentaclesKilled++;
                     else
-                        ((flesh_tentacleAI*)(Spawned->AI()))->SpawnedByCthun(m_creature->GetGUID());
+                        CAST_AI(flesh_tentacleAI, (Spawned->AI()))->SpawnedByCthun(m_creature->GetGUID());
 
                     PhaseTimer = 0;
                 }else PhaseTimer -= diff;
@@ -709,7 +708,7 @@ struct TRINITY_DLL_DECL cthunAI : public Scripted_NoMovementAI
                             DoCast(pUnit, SPELL_DIGESTIVE_ACID, true);
 
                             //Check if player should be kicked from stomach
-                            if (pUnit->GetDistance(KICK_X, KICK_Y, KICK_Z) < 15)
+                            if (pUnit->IsWithinDist3d(KICK_X, KICK_Y, KICK_Z, 15.0f))
                             {
                                 //Teleport each player out
                                 DoTeleportPlayer(pUnit, m_creature->GetPositionX(), m_creature->GetPositionY(), m_creature->GetPositionZ()+10, rand()%6);
@@ -773,7 +772,7 @@ struct TRINITY_DLL_DECL cthunAI : public Scripted_NoMovementAI
                         Creature* Spawned = NULL;
 
                         //Spawn claw tentacle on the random target
-                        Spawned = (Creature*)m_creature->SummonCreature(MOB_GIANT_CLAW_TENTACLE,target->GetPositionX(),target->GetPositionY(),target->GetPositionZ(),0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,500);
+                        Spawned = me->SummonCreature(MOB_GIANT_CLAW_TENTACLE,target->GetPositionX(),target->GetPositionY(),target->GetPositionZ(),0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,500);
 
                         if (Spawned)
                             Spawned->AI()->AttackStart(target);
@@ -794,7 +793,7 @@ struct TRINITY_DLL_DECL cthunAI : public Scripted_NoMovementAI
                         Creature* Spawned = NULL;
 
                         //Spawn claw tentacle on the random target
-                        Spawned = (Creature*)m_creature->SummonCreature(MOB_GIANT_EYE_TENTACLE,target->GetPositionX(),target->GetPositionY(),target->GetPositionZ(),0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,500);
+                        Spawned = me->SummonCreature(MOB_GIANT_EYE_TENTACLE,target->GetPositionX(),target->GetPositionY(),target->GetPositionZ(),0,TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT,500);
 
                         if (Spawned)
                             Spawned->AI()->AttackStart(target);
@@ -842,20 +841,20 @@ struct TRINITY_DLL_DECL cthunAI : public Scripted_NoMovementAI
                     Creature* Spawned;
 
                     //Spawn flesh tentacle
-                    Spawned = (Creature*)m_creature->SummonCreature(MOB_FLESH_TENTACLE, TENTACLE_POS1_X, TENTACLE_POS1_Y, TENTACLE_POS1_Z, TENTACLE_POS1_O, TEMPSUMMON_CORPSE_DESPAWN, 0);
+                    Spawned = me->SummonCreature(MOB_FLESH_TENTACLE, TENTACLE_POS1_X, TENTACLE_POS1_Y, TENTACLE_POS1_Z, TENTACLE_POS1_O, TEMPSUMMON_CORPSE_DESPAWN, 0);
 
                     if (!Spawned)
                         FleshTentaclesKilled++;
                     else
-                        ((flesh_tentacleAI*)(Spawned->AI()))->SpawnedByCthun(m_creature->GetGUID());
+                        CAST_AI(flesh_tentacleAI, (Spawned->AI()))->SpawnedByCthun(m_creature->GetGUID());
 
                     //Spawn flesh tentacle
-                    Spawned = (Creature*)m_creature->SummonCreature(MOB_FLESH_TENTACLE, TENTACLE_POS2_X, TENTACLE_POS2_Y, TENTACLE_POS2_Z, TENTACLE_POS2_O, TEMPSUMMON_CORPSE_DESPAWN, 0);
+                    Spawned = me->SummonCreature(MOB_FLESH_TENTACLE, TENTACLE_POS2_X, TENTACLE_POS2_Y, TENTACLE_POS2_Z, TENTACLE_POS2_O, TEMPSUMMON_CORPSE_DESPAWN, 0);
 
                     if (!Spawned)
                         FleshTentaclesKilled++;
                     else
-                        ((flesh_tentacleAI*)(Spawned->AI()))->SpawnedByCthun(m_creature->GetGUID());
+                        CAST_AI(flesh_tentacleAI, (Spawned->AI()))->SpawnedByCthun(m_creature->GetGUID());
 
                     PhaseTimer = 0;
                 }else PhaseTimer -= diff;
@@ -914,8 +913,7 @@ struct TRINITY_DLL_DECL eye_tentacleAI : public Scripted_NoMovementAI
 {
     eye_tentacleAI(Creature *c) : Scripted_NoMovementAI(c)
     {
-        Unit* p = DoSpawnCreature(MOB_SMALL_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0);
-        if (p)
+        if (Unit* p = DoSpawnCreature(MOB_SMALL_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0))
             Portal = p->GetGUID();
     }
 
@@ -923,10 +921,9 @@ struct TRINITY_DLL_DECL eye_tentacleAI : public Scripted_NoMovementAI
     uint32 KillSelfTimer;
     uint64 Portal;
 
-    void JustDied(Unit*)
+    void JustDied(Unit* who)
     {
-        Unit* p = Unit::GetUnit(*m_creature, Portal);
-        if (p)
+        if (Unit* p = Unit::GetUnit(*m_creature, Portal))
             p->DealDamage(p, p->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NONE, NULL, false);
     }
 
@@ -939,7 +936,7 @@ struct TRINITY_DLL_DECL eye_tentacleAI : public Scripted_NoMovementAI
         KillSelfTimer = 35000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoZoneInCombat();
     }
@@ -961,9 +958,8 @@ struct TRINITY_DLL_DECL eye_tentacleAI : public Scripted_NoMovementAI
         //MindflayTimer
         if (MindflayTimer < diff)
         {
-            Unit* target = NULL;
-            target = SelectUnit(SELECT_TARGET_RANDOM,0);
-            if (target && !target->HasAura(SPELL_DIGESTIVE_ACID, 0))
+            Unit* target = SelectUnit(SELECT_TARGET_RANDOM,0);
+            if (target && !target->HasAura(SPELL_DIGESTIVE_ACID))
                 DoCast(target,SPELL_MIND_FLAY);
 
             //Mindflay every 10 seconds
@@ -976,8 +972,7 @@ struct TRINITY_DLL_DECL claw_tentacleAI : public Scripted_NoMovementAI
 {
     claw_tentacleAI(Creature *c) : Scripted_NoMovementAI(c)
     {
-        Unit* p = DoSpawnCreature(MOB_SMALL_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0);
-        if (p)
+        if (Unit* p = DoSpawnCreature(MOB_SMALL_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0))
             Portal = p->GetGUID();
     }
 
@@ -986,10 +981,9 @@ struct TRINITY_DLL_DECL claw_tentacleAI : public Scripted_NoMovementAI
     uint32 EvadeTimer;
     uint64 Portal;
 
-    void JustDied(Unit*)
+    void JustDied(Unit* who)
     {
-        Unit* p = Unit::GetUnit(*m_creature, Portal);
-        if (p)
+        if (Unit* p = Unit::GetUnit(*m_creature, Portal))
             p->DealDamage(p, p->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NONE, NULL, false);
     }
 
@@ -1001,7 +995,7 @@ struct TRINITY_DLL_DECL claw_tentacleAI : public Scripted_NoMovementAI
         EvadeTimer = 5000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoZoneInCombat();
     }
@@ -1016,26 +1010,23 @@ struct TRINITY_DLL_DECL claw_tentacleAI : public Scripted_NoMovementAI
         if (!m_creature->IsWithinMeleeRange(m_creature->getVictim()))
             if (EvadeTimer < diff)
         {
-            Unit* p = Unit::GetUnit(*m_creature, Portal);
-            if (p)
+            if (Unit* p = Unit::GetUnit(*m_creature, Portal))
                 p->DealDamage(p, m_creature->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NONE, NULL, false);
 
             //Dissapear and reappear at new position
             m_creature->SetVisibility(VISIBILITY_OFF);
 
-            Unit* target = NULL;
-            target = SelectUnit(SELECT_TARGET_RANDOM,0);
+            Unit* target = SelectUnit(SELECT_TARGET_RANDOM,0);
             if (!target)
             {
                 m_creature->DealDamage(m_creature, m_creature->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NONE, NULL, false);
                 return;
             }
 
-            if (!target->HasAura(SPELL_DIGESTIVE_ACID, 0))
+            if (!target->HasAura(SPELL_DIGESTIVE_ACID))
             {
                 m_creature->GetMap()->CreatureRelocation(m_creature, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0);
-                Unit* p = DoSpawnCreature(MOB_SMALL_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0);
-                if (p)
+                if (Unit* p = DoSpawnCreature(MOB_SMALL_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0))
                     Portal = p->GetGUID();
 
                 GroundRuptureTimer = 500;
@@ -1070,8 +1061,7 @@ struct TRINITY_DLL_DECL giant_claw_tentacleAI : public Scripted_NoMovementAI
 {
     giant_claw_tentacleAI(Creature *c) : Scripted_NoMovementAI(c)
     {
-        Unit* p = DoSpawnCreature(MOB_GIANT_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0);
-        if (p)
+        if (Unit* p = DoSpawnCreature(MOB_GIANT_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0))
             Portal = p->GetGUID();
     }
 
@@ -1081,10 +1071,9 @@ struct TRINITY_DLL_DECL giant_claw_tentacleAI : public Scripted_NoMovementAI
     uint32 EvadeTimer;
     uint64 Portal;
 
-    void JustDied(Unit*)
+    void JustDied(Unit* who)
     {
-        Unit* p = Unit::GetUnit(*m_creature, Portal);
-        if (p)
+        if (Unit* p = Unit::GetUnit(*m_creature, Portal))
             p->DealDamage(p, p->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NONE, NULL, false);
     }
 
@@ -1097,7 +1086,7 @@ struct TRINITY_DLL_DECL giant_claw_tentacleAI : public Scripted_NoMovementAI
         EvadeTimer = 5000;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoZoneInCombat();
     }
@@ -1112,26 +1101,23 @@ struct TRINITY_DLL_DECL giant_claw_tentacleAI : public Scripted_NoMovementAI
         if (!m_creature->IsWithinMeleeRange(m_creature->getVictim()))
             if (EvadeTimer < diff)
         {
-            Unit* p = Unit::GetUnit(*m_creature, Portal);
-            if (p)
+            if (Unit* p = Unit::GetUnit(*m_creature, Portal))
                 p->DealDamage(p, m_creature->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NONE, NULL, false);
 
             //Dissapear and reappear at new position
             m_creature->SetVisibility(VISIBILITY_OFF);
 
-            Unit* target = NULL;
-            target = SelectUnit(SELECT_TARGET_RANDOM, 0);
+            Unit* target = SelectUnit(SELECT_TARGET_RANDOM, 0);
             if (!target)
             {
                 m_creature->DealDamage(m_creature, m_creature->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NONE, NULL, false);
                 return;
             }
 
-            if (!target->HasAura(SPELL_DIGESTIVE_ACID, 0))
+            if (!target->HasAura(SPELL_DIGESTIVE_ACID))
             {
                 m_creature->GetMap()->CreatureRelocation(m_creature, target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), 0);
-                Unit* p = DoSpawnCreature(MOB_GIANT_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0);
-                if (p)
+                if (Unit* p = DoSpawnCreature(MOB_GIANT_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0))
                     Portal = p->GetGUID();
 
                 GroundRuptureTimer = 500;
@@ -1174,18 +1160,16 @@ struct TRINITY_DLL_DECL giant_eye_tentacleAI : public Scripted_NoMovementAI
 {
     giant_eye_tentacleAI(Creature *c) : Scripted_NoMovementAI(c)
     {
-        Unit* p = DoSpawnCreature(MOB_GIANT_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0);
-        if (p)
+        if (Unit* p = DoSpawnCreature(MOB_GIANT_PORTAL,0,0,0,0,TEMPSUMMON_CORPSE_DESPAWN, 0))
             Portal = p->GetGUID();
     }
 
     uint32 BeamTimer;
     uint64 Portal;
 
-    void JustDied(Unit*)
+    void JustDied(Unit* who)
     {
-        Unit* p = Unit::GetUnit(*m_creature, Portal);
-        if (p)
+        if (Unit* p = Unit::GetUnit(*m_creature, Portal))
             p->DealDamage(p, p->GetMaxHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NONE, NULL, false);
     }
 
@@ -1195,7 +1179,7 @@ struct TRINITY_DLL_DECL giant_eye_tentacleAI : public Scripted_NoMovementAI
         BeamTimer = 500;
     }
 
-    void Aggro(Unit *who)
+    void EnterCombat(Unit *who)
     {
         DoZoneInCombat();
     }
@@ -1209,9 +1193,8 @@ struct TRINITY_DLL_DECL giant_eye_tentacleAI : public Scripted_NoMovementAI
         //BeamTimer
         if (BeamTimer < diff)
         {
-            Unit* target = NULL;
-            target = SelectUnit(SELECT_TARGET_RANDOM,0);
-            if (target && !target->HasAura(SPELL_DIGESTIVE_ACID, 0))
+            Unit* target = SelectUnit(SELECT_TARGET_RANDOM,0);
+            if (target && !target->HasAura(SPELL_DIGESTIVE_ACID))
                 DoCast(target,SPELL_GREEN_BEAM);
 
             //Beam every 2 seconds
@@ -1249,15 +1232,15 @@ void flesh_tentacleAI::JustDied(Unit* killer)
 {
     if (!Parent)
     {
-        DoYell("Error: No Parent variable", LANG_UNIVERSAL, NULL);
+        error_log("TSCR: flesh_tentacle: No Parent variable");
         return;
     }
 
     Creature* Cthun = Unit::GetCreature(*m_creature, Parent);
 
     if (Cthun)
-        ((cthunAI*)(Cthun->AI()))->FleshTentcleKilled();
-    else DoYell("Error: No Cthun", LANG_UNIVERSAL, NULL);
+        CAST_AI(cthunAI, (Cthun->AI()))->FleshTentcleKilled();
+    else error_log("TSCR: flesh_tentacle: No Cthun");
 }
 
 //GetAIs

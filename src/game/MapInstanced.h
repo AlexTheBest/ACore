@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2005-2008 MaNGOS <http://www.mangosproject.org/>
+ * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008 Trinity <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2009 Trinity <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,12 +37,13 @@ class TRINITY_DLL_DECL MapInstanced : public Map
         void Update(const uint32&);
         void MoveAllCreaturesInMoveList();
         void RemoveAllObjectsInRemoveList();
+        void RelocationNotify();
         bool RemoveBones(uint64 guid, float x, float y);
         void UnloadAll();
         bool CanEnter(Player* player);
 
         Map* GetInstance(const WorldObject* obj);
-        Map* FindMap(uint32 InstanceId) { return _FindMap(InstanceId); }
+        Map* FindMap(uint32 InstanceId) const { return _FindMap(InstanceId); }
         void DestroyInstance(uint32 InstanceId);
         void DestroyInstance(InstancedMaps::iterator &itr);
 
@@ -52,7 +53,7 @@ class TRINITY_DLL_DECL MapInstanced : public Map
             SetUnloadReferenceLock(GridPair(63-p.x_coord, 63-p.y_coord), true);
         }
 
-        void RemoveGridMapReference(const GridPair &p)
+        void RemoveGridMapReference(GridPair const& p)
         {
             --GridMapReference[p.x_coord][p.y_coord];
             if (!GridMapReference[p.x_coord][p.y_coord])
@@ -68,10 +69,9 @@ class TRINITY_DLL_DECL MapInstanced : public Map
 
         InstancedMaps m_InstancedMaps;
 
-        Map* _FindMap(uint32 InstanceId)
+        Map* _FindMap(uint32 InstanceId) const
         {
-            InstancedMaps::iterator i = m_InstancedMaps.find(InstanceId);
-
+            InstancedMaps::const_iterator i = m_InstancedMaps.find(InstanceId);
             return(i == m_InstancedMaps.end() ? NULL : i->second);
         }
 

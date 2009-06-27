@@ -1,4 +1,4 @@
-/* Copyright (C) 2006 - 2008 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
+/* Copyright (C) 2006 - 2009 ScriptDev2 <https://scriptdev2.svn.sourceforge.net/>
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 2 of the License, or
@@ -92,7 +92,7 @@ struct TRINITY_DLL_DECL npc_willixAI : public npc_escortAI
         case 45:
             DoScriptText(SAY_WIN, m_creature, player);
             if (player && player->GetTypeId() == TYPEID_PLAYER)
-                ((Player*)player)->GroupEventHappens(QUEST_WILLIX_THE_IMPORTER,m_creature);
+                CAST_PLR(player)->GroupEventHappens(QUEST_WILLIX_THE_IMPORTER,m_creature);
             break;
         case 46:
             DoScriptText(SAY_END, m_creature, player);
@@ -102,7 +102,7 @@ struct TRINITY_DLL_DECL npc_willixAI : public npc_escortAI
 
     void Reset() {}
 
-    void Aggro(Unit* who)
+    void EnterCombat(Unit* who)
     {
         DoScriptText(SAY_AGGRO1, m_creature, NULL);
     }
@@ -117,7 +117,7 @@ struct TRINITY_DLL_DECL npc_willixAI : public npc_escortAI
         if (PlayerGUID)
         {
             if (Player* player = Unit::GetPlayer(PlayerGUID))
-                ((Player*)player)->FailQuest(QUEST_WILLIX_THE_IMPORTER);
+                CAST_PLR(player)->FailQuest(QUEST_WILLIX_THE_IMPORTER);
         }
     }
 
@@ -131,7 +131,7 @@ bool QuestAccept_npc_willix(Player* player, Creature* creature, Quest const* que
 {
     if (quest->GetQuestId() == QUEST_WILLIX_THE_IMPORTER)
     {
-        ((npc_escortAI*)(creature->AI()))->Start(true, true, false, player->GetGUID());
+        CAST_AI(npc_escortAI, (creature->AI()))->Start(true, true, false, player->GetGUID());
         DoScriptText(SAY_READY, creature, player);
         creature->setFaction(113);
     }
@@ -143,7 +143,7 @@ struct TRINITY_DLL_DECL npc_deaths_head_ward_keeperAI : public ScriptedAI
 {
     npc_deaths_head_ward_keeperAI(Creature *c) : ScriptedAI(c)
     {
-        pInstance = ((ScriptedInstance*)c->GetInstanceData());
+        pInstance = c->GetInstanceData();
         Reset();
     }
 
@@ -153,10 +153,6 @@ struct TRINITY_DLL_DECL npc_deaths_head_ward_keeperAI : public ScriptedAI
     void Reset()
     {
         QuillboarChanneling_Timer = 1500;
-    }
-
-    void Aggro(Unit *who)
-    {
     }
 
     void UpdateAI(const uint32 diff)
@@ -235,7 +231,7 @@ CreatureAI* GetAI_npc_willix(Creature *_Creature)
     thisAI->AddWaypoint(45, 1948.35, 1571.35, 80.96, 30000);
     thisAI->AddWaypoint(46, 1947.02, 1566.42, 81.80, 30000);
 
-    return (CreatureAI*)thisAI;
+    return thisAI;
 }
 
 void AddSC_razorfen_kraul()

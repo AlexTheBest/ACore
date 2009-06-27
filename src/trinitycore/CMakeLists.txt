@@ -2,14 +2,14 @@
 ########### next target ###############
 
 SET(trinity-core_SRCS
-CliRunnable.cpp 
-CliRunnable.h 
-Main.cpp 
-Master.cpp 
-Master.h 
-RASocket.cpp 
-RASocket.h 
-WorldRunnable.cpp 
+CliRunnable.cpp
+CliRunnable.h
+Main.cpp
+Master.cpp
+Master.h
+RASocket.cpp
+RASocket.h
+WorldRunnable.cpp
 WorldRunnable.h
 )
 
@@ -43,7 +43,6 @@ trinityauth
 trinityconfig
 vmaps
 ZThread
-termcap
 g3dlite
 readline
 gomp
@@ -55,6 +54,13 @@ ${ACE_LIBRARY}
 ${ZLIB}
 ${OSX_LIBS}
 )
+
+IF (CENTOS)
+    target_link_libraries(
+        trinity-core
+        termcap
+    )
+ENDIF (CENTOS)
 
 install(TARGETS trinity-core DESTINATION bin)
 
