@@ -23,7 +23,7 @@ DROP TABLE IF EXISTS `db_version`;
 CREATE TABLE `db_version` (
   `version` varchar(120) default NULL,
   `creature_ai_version` varchar(120) default NULL,
-  `required_8053_01_mangos_command` bit(1) default NULL
+  `required_8071_01_mangos_command` bit(1) default NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Used DB version notes';
 
 --
@@ -413,6 +413,7 @@ INSERT INTO `command` VALUES
 ('modify standstate',2,'Syntax: .modify standstate #emoteid\r\n\r\nChange the emote of your character while standing to #emoteid.'),
 ('modify swim',1,'Syntax: .modify swim #rate\r\n\r\nModify the swim speed of the selected player to \"normal swim speed\"*rate. If no player is selected, modify your speed.\r\n\r\n #rate may range from 0.1 to 10.'),
 ('modify titles',1,'Syntax: .modify titles #mask\r\n\r\nAllows user to use all titles from #mask.\r\n\r\n #mask=0 disables the title-choose-field'),
+('modify tp',1,'Syntax: .modify tp #amount\r\n\r\nSet free talent pointes for selected character or character\'s pet. It will be reset to default expected at next levelup/login/quest reward.'),
 ('movegens',3,'Syntax: .movegens\r\n  Show movement generators stack for selected creature or player.'),
 ('mute',1,'Syntax: .mute [$playerName] $timeInMinutes\r\n\r\nDisible chat messaging for any character from account of character $playerName (or currently selected) at $timeInMinutes minutes. Player can be offline.'),
 ('namego',1,'Syntax: .namego [$charactername]\r\n\r\nTeleport the given character to you. Character can be offline.'),
@@ -16151,6 +16152,10 @@ INSERT INTO spell_chain VALUES
 (27681,0,27681,1,14752),
 (32999,27681,27681,2,0),
 (48074,32999,27681,3,0),
+/*Rapture*/
+(47535,0,47535,1,0),
+(47536,47535,47535,2,0),
+(47537,47536,47535,3,0),
 /*ShackleUndead*/
 (9484,0,9484,1,0),
 (9485,9484,9484,2,0),
@@ -17349,9 +17354,6 @@ INSERT INTO `spell_proc_event` VALUES
 (47515, 0x00000000,  0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002, 0.000000, 0.000000,  0),
 (47516, 0x00000000,  6, 0x00001800, 0x00010000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
 (47517, 0x00000000,  6, 0x00001800, 0x00010000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
-(47535, 0x00000000,  6, 0x00001800, 0x00800000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
-(47536, 0x00000000,  6, 0x00001800, 0x00800000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
-(47537, 0x00000000,  6, 0x00001800, 0x00800000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
 (47580, 0x00000000,  6, 0x00000000, 0x00000000, 0x00000040, 0x00000000, 0x00010000, 0.000000, 0.000000,  0),
 (47581, 0x00000000,  6, 0x00000000, 0x00000000, 0x00000040, 0x00000000, 0x00010000, 0.000000, 0.000000,  0),
 (47582, 0x00000000,  6, 0x00000000, 0x00000000, 0x00000040, 0x00000000, 0x00010000, 0.000000, 0.000000,  0),
@@ -17550,7 +17552,6 @@ INSERT INTO `spell_proc_event` VALUES
 (58364, 0x00000000,  4, 0x00000400, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
 (58372, 0x00000000,  4, 0x00000002, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
 (58386, 0x00000000,  0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000020, 0.000000, 0.000000,  0),
-(58435, 0x00000000,  5, 0x00000002, 0x00000100, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
 (58616, 0x00000000, 15, 0x00040000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
 (58620, 0x00000000, 15, 0x00000000, 0x00004000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
 (58626, 0x00000000, 15, 0x02000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0.000000, 0.000000,  0),
