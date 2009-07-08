@@ -809,26 +809,20 @@ void Spell::prepareDataForTriggerSystem(AuraEffect * triggeredByAura)
             m_canTrigger=false;
         }
 
-        if (m_IsTriggeredSpell && 
-            (m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_TRIGGERED_CAN_TRIGGER ||
-            m_spellInfo->AttributesEx3 & SPELL_ATTR_EX3_TRIGGERED_CAN_TRIGGER_2))
-            m_procEx |= PROC_EX_INTERNAL_CANT_PROC;
-        else if (m_IsTriggeredSpell)
-            m_procEx |= PROC_EX_INTERNAL_TRIGGERED;
-
+        // Ranged autorepeat attack is set as triggered spell - ignore it
+        if (!(m_procAttacker & PROC_FLAG_SUCCESSFUL_RANGED_HIT))
+        {
+            if (m_IsTriggeredSpell && 
+                (m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_TRIGGERED_CAN_TRIGGER ||
+                m_spellInfo->AttributesEx3 & SPELL_ATTR_EX3_TRIGGERED_CAN_TRIGGER_2))
+                m_procEx |= PROC_EX_INTERNAL_CANT_PROC;
+            else if (m_IsTriggeredSpell)
+                m_procEx |= PROC_EX_INTERNAL_TRIGGERED;
+        }
         // Totem casts require spellfamilymask defined in spell_proc_event to proc
         if (m_originalCaster && m_caster != m_originalCaster && m_caster->GetTypeId()==TYPEID_UNIT && ((Creature*)m_caster)->isTotem() && m_caster->IsControlledByPlayer())
         {
             m_procEx |= PROC_EX_INTERNAL_REQ_FAMILY;
-        }
-        // Check done for judgements to make them not trigger seal effects
-        else if (m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_UNK1)
-        {
-            // Rogue poisons
-            if (m_spellInfo->SpellFamilyName && m_spellInfo->SpellFamilyFlags)
-                m_procEx |= PROC_EX_INTERNAL_REQ_FAMILY;
-            else
-                m_canTrigger=false;
         }
     }
 }
@@ -1359,7 +1353,7 @@ SpellMissInfo Spell::DoSpellHitOnUnit(Unit *unit, const uint32 effectMask, bool 
             // Now Reduce spell duration using data received at spell hit
             int32 duration = Aur->GetAuraMaxDuration();
             int32 limitduration = GetDiminishingReturnsLimitDuration(m_diminishGroup,aurSpellInfo);
-            unitTarget->ApplyDiminishingToDuration(m_diminishGroup, duration, m_caster, m_diminishLevel,limitduration);
+            unitTarget->ApplyDiminishingToDuration(m_diminishGroup, duration, caster, m_diminishLevel,limitduration);
             Aur->setDiminishGroup(m_diminishGroup);
 
             duration = caster->ModSpellDuration(aurSpellInfo, unit, duration, Aur->IsPositive());
@@ -2831,8 +2825,6 @@ void Spell::cast(bool skipCheck)
         {
             if (m_spellInfo->Mechanic == MECHANIC_BANDAGE) // Bandages
                 m_preCastSpell = 11196;                                // Recently Bandaged
-            else if(m_spellInfo->SpellIconID == 1662 && m_spellInfo->AttributesEx & 0x20)
-                m_preCastSpell = 23230;                                // Blood Fury - Healing Reduction
             break;
         }
         case SPELLFAMILY_DRUID:

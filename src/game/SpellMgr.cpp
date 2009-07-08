@@ -2586,6 +2586,16 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
     // Explicit Diminishing Groups
     switch(spellproto->SpellFamilyName)
     {
+        case SPELLFAMILY_MAGE:
+        {
+            // Frostbite 0x80000000
+            if (spellproto->SpellFamilyFlags[1] & 0x80000000)
+                return DIMINISHING_TRIGGER_ROOT;
+            // Frost Nova / Freeze (Water Elemental)
+            else if (spellproto->SpellIconID == 193)
+                return DIMINISHING_CONTROL_ROOT;
+            break;
+        }
         case SPELLFAMILY_ROGUE:
         {
             // Sap 0x80 Gouge 0x8
@@ -2597,6 +2607,9 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
             // Cheap Shot
             else if (spellproto->SpellFamilyFlags[0] & 0x400)
                 return DIMINISHING_CHEAPSHOT_POUNCE;
+            // Crippling poison - Limit to 10 seconds in PvP (No SpellFamilyFlags)
+            else if (spellproto->SpellIconID == 163)
+                return DIMINISHING_LIMITONLY;
             break;
         }
         case SPELLFAMILY_WARLOCK:
@@ -2610,9 +2623,6 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
             // Howl of Terror
             else if (spellproto->SpellFamilyFlags[1] & 0x8)
                 return DIMINISHING_FEAR_BLIND;
-            // Seduction
-            else if (spellproto->SpellFamilyFlags[1] & 0x40000000)
-                return DIMINISHING_CHARM;
             break;
         }
         case SPELLFAMILY_DRUID:
@@ -2626,13 +2636,9 @@ DiminishingGroup GetDiminishingReturnsGroupForSpell(SpellEntry const* spellproto
             //Entangling Roots: to force natures grasp proc to be control root
             else if (spellproto->SpellFamilyFlags[0] & 0x00000200)
                 return DIMINISHING_CONTROL_ROOT;
-            break;
-        }
-        case SPELLFAMILY_MAGE:
-        {
-            // Frostbite
-            if (spellproto->SpellFamilyFlags[1] & 0x80000000)
-                return DIMINISHING_TRIGGER_ROOT;
+            // Faerie Fire
+            else if (spellproto->SpellFamilyFlags[0] & 0x400)
+                return DIMINISHING_LIMITONLY;
             break;
         }
         case SPELLFAMILY_WARRIOR:
@@ -2715,6 +2721,13 @@ int32 GetDiminishingReturnsLimitDuration(DiminishingGroup group, SpellEntry cons
                 return 6000;
             break;
         }
+        case SPELLFAMILY_DRUID:
+        {
+            // Faerie Fire - limit to 40 seconds in PvP (3.1)
+            if (spellproto->SpellFamilyFlags[0] & 0x400)
+                return 40000;
+            break;
+        }
         default:
             break;
     }
@@ -2754,9 +2767,9 @@ DiminishingReturnsType GetDiminishingReturnsGroupType(DiminishingGroup group)
         case DIMINISHING_CONTROL_STUN:
         case DIMINISHING_TRIGGER_STUN:
         case DIMINISHING_CHEAPSHOT_POUNCE:
-        case DIMINISHING_FEAR_BLIND:
         case DIMINISHING_CYCLONE:
             return DRTYPE_ALL;
+        case DIMINISHING_FEAR_BLIND:
         case DIMINISHING_CONTROL_ROOT:
         case DIMINISHING_TRIGGER_ROOT:
         case DIMINISHING_CHARM:
@@ -2842,7 +2855,7 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2, bool
     SpellSpecific spellId_spec_2 = GetSpellSpecific(spellId_2);
     if (spellId_spec_1 && spellId_spec_2)
         if (IsSingleFromSpellSpecificPerTarget(spellId_spec_1, spellId_spec_2)
-            ||(IsSingleFromSpellSpecificPerCaster(spellId_spec_1, spellId_spec_2) && sameCaster))
+            ||(sameCaster && IsSingleFromSpellSpecificPerCaster(spellId_spec_1, spellId_spec_2)))
             return true;
 
     if(spellInfo_1->SpellFamilyName != spellInfo_2->SpellFamilyName)
@@ -2883,7 +2896,7 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2, bool
     spellId_1 = GetLastSpellInChain(spellId_1);
 
     // Hack for Incanter's Absorption
-    if (spellId_1 == spellId_2 && spellId_1 == 44413)
+    if (spellId_1 == spellId_2 && (spellId_1 == 44413 || (!sameCaster && spellInfo_1->AttributesEx3 & SPELL_ATTR_EX3_STACKS_FOR_DIFFERENT_CASTERS)))
         return false;
 
     if (spellId_1 == spellId_2)
@@ -2917,7 +2930,7 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2, bool
             || spellInfo_1->EffectMiscValue[i] != spellInfo_2->EffectMiscValue[i]) // paladin resist aura
             return false; // need itemtype check? need an example to add that check
 
-    return true;
+    return (!(!sameCaster && spellInfo_1->AttributesEx3 & SPELL_ATTR_EX3_STACKS_FOR_DIFFERENT_CASTERS));
 }
 
 bool IsDispelableBySpell(SpellEntry const * dispelSpell, uint32 spellId, bool def)
