@@ -40,8 +40,6 @@ class Player;
 class Spell;
 struct SpellModifier;
 
-extern SQLStorage sSpellThreatStore;
-
 // only used in code
 enum SpellCategories
 {
@@ -224,7 +222,9 @@ inline bool IsElementalShield(SpellEntry const *spellInfo)
 
 inline bool IsExplicitDiscoverySpell(SpellEntry const *spellInfo)
 {
-    return spellInfo->Effect[0]==SPELL_EFFECT_CREATE_RANDOM_ITEM && spellInfo->Effect[1]==SPELL_EFFECT_SCRIPT_EFFECT;
+    return spellInfo->Effect[0] == SPELL_EFFECT_CREATE_RANDOM_ITEM
+        && spellInfo->Effect[1] == SPELL_EFFECT_SCRIPT_EFFECT
+        || spellInfo->Id == 64323;                          // Book of Glyph Mastery (Effect0==SPELL_EFFECT_SCRIPT_EFFECT without any other data)
 }
 
 inline bool IsLootCraftingSpell(SpellEntry const *spellInfo)
@@ -524,6 +524,7 @@ typedef UNORDERED_MAP<uint32, SpellBonusEntry>     SpellBonusMap;
 #define ELIXIR_SHATTRATH_MASK 0x8
 
 typedef std::map<uint32, uint8> SpellElixirMap;
+typedef std::map<uint32, uint16> SpellThreatMap;
 
 // Spell script target related declarations (accessed using SpellMgr functions)
 enum SpellScriptTargetType
@@ -759,6 +760,15 @@ class SpellMgr
                 return SPELL_GUARDIAN_ELIXIR;
             else
                 return SPELL_NORMAL;
+        }
+
+        uint16 GetSpellThreat(uint32 spellid) const
+        {
+            SpellThreatMap::const_iterator itr = mSpellThreatMap.find(spellid);
+            if(itr==mSpellThreatMap.end())
+                return 0;
+
+            return itr->second;
         }
 
         // Spell proc events
@@ -1078,6 +1088,7 @@ class SpellMgr
         SpellLearnSpellMap mSpellLearnSpells;
         SpellTargetPositionMap mSpellTargetPositions;
         SpellElixirMap     mSpellElixirs;
+        SpellThreatMap     mSpellThreatMap;
         SpellProcEventMap  mSpellProcEventMap;
         SpellBonusMap      mSpellBonusMap;
         SkillLineAbilityMap mSkillLineAbilityMap;

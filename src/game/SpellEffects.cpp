@@ -196,7 +196,7 @@ pEffect SpellEffects[TOTAL_SPELL_EFFECTS]=
     &Spell::EffectApplyAreaAura,                            //129 SPELL_EFFECT_APPLY_AREA_AURA_ENEMY
     &Spell::EffectRedirectThreat,                           //130 SPELL_EFFECT_REDIRECT_THREAT
     &Spell::EffectUnused,                                   //131 SPELL_EFFECT_131                      used in some test spells
-    &Spell::EffectNULL,                                     //132 SPELL_EFFECT_PLAY_MUSIC               sound id in misc value (SoundEntries.dbc)
+    &Spell::EffectPlayMusic,                                //132 SPELL_EFFECT_PLAY_MUSIC               sound id in misc value (SoundEntries.dbc)
     &Spell::EffectUnlearnSpecialization,                    //133 SPELL_EFFECT_UNLEARN_SPECIALIZATION   unlearn profession specialization
     &Spell::EffectKillCredit,                               //134 SPELL_EFFECT_KILL_CREDIT              misc value is creature entry
     &Spell::EffectNULL,                                     //135 SPELL_EFFECT_CALL_PET
@@ -932,7 +932,7 @@ void Spell::EffectDummy(uint32 i)
                 case 23448:                                 // Transporter Arrival - Ultrasafe Transporter: Gadgetzan - backfires
                 {
                     int32 r = irand(0, 119);
-                    if ( r < 20 )                           // Transporter Malfunction - 1/6 polymorph 
+                    if ( r < 20 )                           // Transporter Malfunction - 1/6 polymorph
                         m_caster->CastSpell(m_caster, 23444, true);
                     else if ( r < 100 )                     // Evil Twin               - 4/6 evil twin
                         m_caster->CastSpell(m_caster, 23445, true);
@@ -1155,13 +1155,13 @@ void Spell::EffectDummy(uint32 i)
                     m_caster->CastSpell(m_caster, 45088, true);
                     return;
                 }
-                case 55004:                                 // Nitro Boosts 
-                    if(!m_CastItem) return; 
-                    if(roll_chance_i(95))                   // Nitro Boosts - success 
-                        m_caster->CastSpell(m_caster, 54861, true, m_CastItem); 
-                    else                                    // Knocked Up   - backfire 5% 
-                        m_caster->CastSpell(m_caster, 46014, true, m_CastItem); 
-                    return; 
+                case 55004:                                 // Nitro Boosts
+                    if(!m_CastItem) return;
+                    if(roll_chance_i(95))                   // Nitro Boosts - success
+                        m_caster->CastSpell(m_caster, 54861, true, m_CastItem);
+                    else                                    // Knocked Up   - backfire 5%
+                        m_caster->CastSpell(m_caster, 46014, true, m_CastItem);
+                    return;
                 case 50243:                                 // Teach Language
                 {
                     if(m_caster->GetTypeId() != TYPEID_PLAYER)
@@ -5089,6 +5089,7 @@ void Spell::EffectScriptEffect(uint32 effIndex)
                 case 61177:                                 // Northrend Inscription Research
                 case 61288:                                 // Minor Inscription Research
                 case 61756:                                 // Northrend Inscription Research (FAST QA VERSION)
+                case 64323:                                 // Book of Glyph Mastery
                 {
                     if(m_caster->GetTypeId() != TYPEID_PLAYER)
                         return;
@@ -6495,16 +6496,14 @@ void Spell::EffectTransmitted(uint32 effIndex)
         case GAMEOBJECT_TYPE_FISHINGHOLE:
         case GAMEOBJECT_TYPE_CHEST:
         default:
-        {
             break;
-        }
     }
 
     pGameObj->SetRespawnTime(duration > 0 ? duration/IN_MILISECONDS : 0);
 
-    pGameObj->SetOwnerGUID(m_caster->GetGUID() );
+    pGameObj->SetOwnerGUID(m_caster->GetGUID());
 
-    //pGameObj->SetUInt32Value(GAMEOBJECT_LEVEL, m_caster->getLevel() );
+    //pGameObj->SetUInt32Value(GAMEOBJECT_LEVEL, m_caster->getLevel());
     pGameObj->SetSpellId(m_spellInfo->Id);
 
     DEBUG_LOG("AddObject at SpellEfects.cpp EffectTransmitted");
@@ -6524,9 +6523,9 @@ void Spell::EffectTransmitted(uint32 effIndex)
             m_caster->GetPhaseMask(), fx, fy, fz, m_caster->GetOrientation(), 0.0f, 0.0f, 0.0f, 0.0f, 100, GO_STATE_READY))
         {
             linkedGO->SetRespawnTime(duration > 0 ? duration/IN_MILISECONDS : 0);
-            //linkedGO->SetUInt32Value(GAMEOBJECT_LEVEL, m_caster->getLevel() );
+            //linkedGO->SetUInt32Value(GAMEOBJECT_LEVEL, m_caster->getLevel());
             linkedGO->SetSpellId(m_spellInfo->Id);
-            linkedGO->SetOwnerGUID(m_caster->GetGUID() );
+            linkedGO->SetOwnerGUID(m_caster->GetGUID());
 
             linkedGO->GetMap()->Add(linkedGO);
         }
@@ -6878,3 +6877,22 @@ void Spell::EffectRenamePet(uint32 /*eff_idx*/)
 
     unitTarget->SetByteValue(UNIT_FIELD_BYTES_2, 2, UNIT_RENAME_ALLOWED);
 }
+
+void Spell::EffectPlayMusic(uint32 i)
+{
+    if(!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+        return;
+
+    uint32 soundid = m_spellInfo->EffectMiscValue[i];
+
+    if (!sSoundEntriesStore.LookupEntry(soundid))
+    {
+        sLog.outError("EffectPlayMusic: Sound (Id: %u) not exist in spell %u.",soundid,m_spellInfo->Id);
+        return;
+    }
+
+    WorldPacket data(SMSG_PLAY_MUSIC, 4);
+    data << uint32(soundid);
+    ((Player*)unitTarget)->GetSession()->SendPacket(&data);
+}
+

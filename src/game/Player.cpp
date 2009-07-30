@@ -1329,8 +1329,8 @@ void Player::Update( uint32 p_time )
     {
         if (p_time >= m_DetectInvTimer)
         {
-            m_DetectInvTimer = 3000;
             HandleStealthedUnitsDetection();
+            m_DetectInvTimer = 3000;
         }
         else
             m_DetectInvTimer -= p_time;
@@ -3865,9 +3865,9 @@ void Player::BuildCreateUpdateBlockForPlayer( UpdateData *data, Player *target )
     Unit::BuildCreateUpdateBlockForPlayer( data, target );
 }
 
-void Player::DestroyForPlayer( Player *target ) const
+void Player::DestroyForPlayer( Player *target, bool anim ) const
 {
-    Unit::DestroyForPlayer( target );
+    Unit::DestroyForPlayer( target, anim );
 
     for(uint8 i = 0; i < INVENTORY_SLOT_BAG_END; i++)
     {
@@ -10710,7 +10710,6 @@ Item* Player::EquipNewItem( uint16 pos, uint32 item, bool update )
 
 Item* Player::EquipItem( uint16 pos, Item *pItem, bool update )
 {
-
     AddEnchantmentDurations(pItem);
     AddItemDurations(pItem);
 
@@ -16717,10 +16716,10 @@ void Player::SendAttackSwingBadFacingAttack()
     GetSession()->SendPacket( &data );
 }
 
-void Player::SendAutoRepeatCancel()
+void Player::SendAutoRepeatCancel(Unit *target)
 {
-    WorldPacket data(SMSG_CANCEL_AUTO_REPEAT, GetPackGUID().size());
-    data.append(GetPackGUID());                             // may be it's target guid
+    WorldPacket data(SMSG_CANCEL_AUTO_REPEAT, target->GetPackGUID().size());
+    data.append(target->GetPackGUID());                     // may be it's target guid
     GetSession()->SendPacket( &data );
 }
 
@@ -17553,19 +17552,38 @@ void Player::HandleStealthedUnitsDetection()
     Trinity::UnitListSearcher<Trinity::AnyStealthedCheck > searcher(this, stealthedUnits, u_check);
     VisitNearbyObject(World::GetMaxVisibleDistance(), searcher);
 
-    for (std::list<Unit*>::iterator i = stealthedUnits.begin(); i != stealthedUnits.end(); ++i)
+    for (std::list<Unit*>::const_iterator i = stealthedUnits.begin(); i != stealthedUnits.end(); ++i)
     {
-        if (!HaveAtClient(*i) && canSeeOrDetect(*i, true))
+        if((*i)==this)
+            continue;
+
+        bool hasAtClient = HaveAtClient((*i));
+        bool hasDetected = canSeeOrDetect(*i, true);
+
+        if (hasDetected)
         {
-            (*i)->SendUpdateToPlayer(this);
-            m_clientGUIDs.insert((*i)->GetGUID());
+            if(!hasAtClient)
+            {
+                (*i)->SendUpdateToPlayer(this);
+                m_clientGUIDs.insert((*i)->GetGUID());
 
-            #ifdef TRINITY_DEBUG
-            if((sLog.getLogFilter() & LOG_FILTER_VISIBILITY_CHANGES)==0)
-                sLog.outDebug("Object %u (Type: %u) is detected in stealth by player %u. Distance = %f",(*i)->GetGUIDLow(),(*i)->GetTypeId(),GetGUIDLow(),GetDistance(*i));
-            #endif
+                #ifdef MANGOS_DEBUG
+                if((sLog.getLogFilter() & LOG_FILTER_VISIBILITY_CHANGES)==0)
+                    sLog.outDebug("Object %u (Type: %u) is detected in stealth by player %u. Distance = %f",(*i)->GetGUIDLow(),(*i)->GetTypeId(),GetGUIDLow(),GetDistance(*i));
+                #endif
 
-            SendInitialVisiblePackets(*i);
+                // target aura duration for caster show only if target exist at caster client
+                // send data at target visibility change (adding to client)
+                SendInitialVisiblePackets(*i);
+            }
+        }
+        else
+        {
+            if(hasAtClient)
+            {
+                (*i)->DestroyForPlayer(this);
+                m_clientGUIDs.erase((*i)->GetGUID());
+            }
         }
     }
 }
@@ -18773,7 +18791,7 @@ void Player::UpdateVisibilityOf(WorldObject* target)
 {
     if(HaveAtClient(target))
     {
-        if(!target->isVisibleForInState(this,true))
+        if(!target->isVisibleForInState(this, true))
         {
             target->DestroyForPlayer(this);
             m_clientGUIDs.erase(target->GetGUID());
@@ -20360,11 +20378,30 @@ bool Player::HasTitle(uint32 bitIndex)
     return HasFlag(PLAYER__FIELD_KNOWN_TITLES + fieldIndexOffset, flag);
 }
 
-void Player::SetTitle(CharTitlesEntry const* title)
+void Player::SetTitle(CharTitlesEntry const* title, bool lost)
 {
     uint32 fieldIndexOffset = title->bit_index / 32;
     uint32 flag = 1 << (title->bit_index % 32);
-    SetFlag(PLAYER__FIELD_KNOWN_TITLES + fieldIndexOffset, flag);
+
+    if(lost)
+    {
+        if(!HasFlag(PLAYER__FIELD_KNOWN_TITLES + fieldIndexOffset, flag))
+            return;
+
+        RemoveFlag(PLAYER__FIELD_KNOWN_TITLES + fieldIndexOffset, flag);
+    }
+    else
+    {
+        if(HasFlag(PLAYER__FIELD_KNOWN_TITLES + fieldIndexOffset, flag))
+            return;
+
+        SetFlag(PLAYER__FIELD_KNOWN_TITLES + fieldIndexOffset, flag);
+    }
+
+    WorldPacket data(SMSG_TITLE_EARNED, 4 + 4);
+    data << uint32(title->bit_index);
+    data << uint32(lost ? 0 : 1);                           // 1 - earned, 0 - lost
+    GetSession()->SendPacket(&data);
 }
 
 /*-----------------------TRINITY--------------------------*/

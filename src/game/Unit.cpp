@@ -3477,8 +3477,8 @@ void Unit::InterruptSpell(uint32 spellType, bool withDelayed, bool withInstant)
         // send autorepeat cancel message for autorepeat spells
         if (spellType == CURRENT_AUTOREPEAT_SPELL)
         {
-            if(GetTypeId()==TYPEID_PLAYER)
-                ((Player*)this)->SendAutoRepeatCancel();
+            if(GetTypeId() == TYPEID_PLAYER)
+                ((Player*)this)->SendAutoRepeatCancel(this);
         }
 
         if (spell->getState() != SPELL_STATE_FINISHED)
@@ -9241,7 +9241,8 @@ uint32 Unit::SpellDamageBonus(Unit *pVictim, SpellEntry const *spellProto, uint3
                 }
                 else // Tundra Stalker
                 {
-                    if (pVictim->GetAura(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DEATHKNIGHT,0, 0x4000000,0))
+                    // Frost Fever (target debuff)
+                    if (pVictim->GetAura(SPELL_AURA_MOD_HASTE, SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_DEATHKNIGHT, 0, 0, 0x2))
                         DoneTotalMod *= ((*i)->GetAmount()+100.0f)/100.0f;
                     break;
                 }
@@ -10875,6 +10876,7 @@ bool Unit::canDetectStealthOf(Unit const* target, float distance) const
     //-Stealth Mod(positive like Master of Deception) and Stealth Detection(negative like paranoia)
     //based on wowwiki every 5 mod we have 1 more level diff in calculation
     visibleDistance += (float)(GetTotalAuraModifier(SPELL_AURA_MOD_DETECT) - target->GetTotalAuraModifier(SPELL_AURA_MOD_STEALTH_LEVEL)) / 5.0f;
+    visibleDistance = visibleDistance > MAX_PLAYER_STEALTH_DETECT_RANGE ? MAX_PLAYER_STEALTH_DETECT_RANGE : visibleDistance;
 
     return distance < visibleDistance;
 }
