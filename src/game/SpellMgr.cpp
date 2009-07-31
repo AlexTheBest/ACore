@@ -1206,13 +1206,6 @@ bool SpellMgr::IsAffectedByMod(SpellEntry const *spellInfo, SpellModifier *mod) 
     return false;
 }
 
-struct DoSpellProcEvent
-{
-    DoSpellProcEvent(SpellProcEventEntry const& _spe) : spe(_spe) {}
-    void operator() (uint32 spell_id) { spellmgr.mSpellProcEventMap[spell_id] = spe; }
-    SpellProcEventEntry const& spe;
-};
-
 void SpellMgr::LoadSpellProcEvents()
 {
     mSpellProcEventMap.clear();                             // need for reload case
@@ -1247,15 +1240,6 @@ void SpellMgr::LoadSpellProcEvents()
             continue;
         }
 
-        uint32 first_id = GetFirstSpellInChain(entry);
-
-        if ( first_id != entry )
-        {
-            sLog.outErrorDb("Spell %u listed in `spell_proc_event` is not first rank (%u) in chain", entry, first_id);
-            // prevent loading since it won't have an effect anyway
-            continue;
-        }
-
         SpellProcEventEntry spe;
 
         spe.schoolMask      = fields[1].GetUInt32();
@@ -1270,10 +1254,6 @@ void SpellMgr::LoadSpellProcEvents()
         spe.cooldown        = fields[10].GetUInt32();
 
         mSpellProcEventMap[entry] = spe;
-
-        // also add to high ranks
-        DoSpellProcEvent worker(spe);
-        doForHighRanks(entry,worker);
 
         if (spell->procFlags==0)
         {
@@ -1295,74 +1275,6 @@ void SpellMgr::LoadSpellProcEvents()
     else
         sLog.outString( ">> Loaded %u extra spell proc event conditions", count );
 }
-
-struct DoSpellProcItemEnchant
-{
-    DoSpellProcItemEnchant(SpellEnchantProcEntry const &_spe) : spe(_spe) {}
-    void operator() (uint32 spell_id) { spellmgr.mSpellEnchantProcEventMap[spell_id] = spe; }
-    SpellEnchantProcEntry const &spe;
-};
-
-void SpellMgr::LoadSpellEnchantProcData()
-{
-    mSpellEnchantProcEventMap.clear();                             // need for reload case
-
-    uint32 count = 0;
-
-    //                                                0      1             2          3
-    QueryResult *result = WorldDatabase.Query("SELECT entry, customChance, PPMChance, procEx FROM spell_enchant_proc_data");
-    if( !result )
-    {
-
-        barGoLink bar( 1 );
-
-        bar.step();
-
-        sLog.outString();
-        sLog.outString( ">> Loaded %u spell enchant proc event conditions", count );
-        return;
-    }
-
-    barGoLink bar( result->GetRowCount() );
-    do
-    {
-        Field *fields = result->Fetch();
-
-        bar.step();
-
-        uint32 entry = fields[0].GetUInt32();
-
-        SpellItemEnchantmentEntry const *ench = sSpellItemEnchantmentStore.LookupEntry(entry);
-        if (!ench)
-        {
-            sLog.outErrorDb("Enchancment %u listed in `spell_enchant_proc_data` does not exist", entry);
-            continue;
-        }
-
-        SpellEnchantProcEntry spe;
-
-        spe.customChance = fields[1].GetUInt32();
-        spe.PPMChance = fields[2].GetFloat();
-        spe.procEx = fields[3].GetUInt32();
-
-        // also add to high ranks
-        DoSpellProcItemEnchant worker(spe);
-        doForThisAndHighRanks(entry,worker);
-
-        ++count;
-    } while( result->NextRow() );
-
-    delete result;
-
-    sLog.outString( ">> Loaded %u enchant proc data definitions", count);
-}
-
-struct DoSpellBonusess
-{
-    DoSpellBonusess(SpellBonusEntry const& _spellBonus) : spellBonus(_spellBonus) {}
-    void operator() (uint32 spell_id) { spellmgr.mSpellBonusMap[spell_id] = spellBonus; }
-    SpellBonusEntry const& spellBonus;
-};
 
 void SpellMgr::LoadSpellBonusess()
 {
@@ -1386,19 +1298,10 @@ void SpellMgr::LoadSpellBonusess()
         bar.step();
         uint32 entry = fields[0].GetUInt32();
 
-        SpellEntry const* spell = sSpellStore.LookupEntry(entry);
+        const SpellEntry *spell = sSpellStore.LookupEntry(entry);
         if (!spell)
         {
             sLog.outErrorDb("Spell %u listed in `spell_bonus_data` does not exist", entry);
-            continue;
-        }
-
-        uint32 first_id = GetFirstSpellInChain(entry);
-
-        if ( first_id != entry )
-        {
-            sLog.outErrorDb("Spell %u listed in `spell_bonus_data` is not first rank (%u) in chain", entry, first_id);
-            // prevent loading since it won't have an effect anyway
             continue;
         }
 
@@ -1411,11 +1314,6 @@ void SpellMgr::LoadSpellBonusess()
 
         mSpellBonusMap[entry] = sbe;
         ++count;
-
-        // also add to high ranks
-        DoSpellBonusess worker(sbe);
-        doForHighRanks(entry,worker);
-
     } while( result->NextRow() );
 
     delete result;
@@ -3423,6 +3321,58 @@ bool IsDispelableBySpell(SpellEntry const * dispelSpell, uint32 spellId, bool de
         return true;
 
     return def;
+}
+
+void SpellMgr::LoadSpellEnchantProcData()
+{
+    mSpellEnchantProcEventMap.clear();                             // need for reload case
+
+    uint32 count = 0;
+
+    //                                                0      1             2          3
+    QueryResult *result = WorldDatabase.Query("SELECT entry, customChance, PPMChance, procEx FROM spell_enchant_proc_data");
+    if( !result )
+    {
+
+        barGoLink bar( 1 );
+
+        bar.step();
+
+        sLog.outString();
+        sLog.outString( ">> Loaded %u spell enchant proc event conditions", count );
+        return;
+    }
+
+    barGoLink bar( result->GetRowCount() );
+    do
+    {
+        Field *fields = result->Fetch();
+
+        bar.step();
+
+        uint32 enchantId = fields[0].GetUInt32();
+
+        SpellItemEnchantmentEntry const *ench = sSpellItemEnchantmentStore.LookupEntry(enchantId);
+        if (!ench)
+        {
+            sLog.outErrorDb("Enchancment %u listed in `spell_enchant_proc_data` does not exist", enchantId);
+            continue;
+        }
+
+        SpellEnchantProcEntry spe;
+
+        spe.customChance = fields[1].GetUInt32();
+        spe.PPMChance = fields[2].GetFloat();
+        spe.procEx = fields[3].GetUInt32();
+
+        mSpellEnchantProcEventMap[enchantId] = spe;
+
+        ++count;
+    } while( result->NextRow() );
+
+    delete result;
+
+    sLog.outString( ">> Loaded %u enchant proc data definitions", count);
 }
 
 void SpellMgr::LoadSpellRequired()
