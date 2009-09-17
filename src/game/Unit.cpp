@@ -7917,8 +7917,7 @@ void Unit::setPowerType(Powers new_powertype)
             break;
         case POWER_ENERGY:
             SetMaxPower(POWER_ENERGY,GetCreatePowers(POWER_ENERGY));
-            if(getClass() != CLASS_DRUID)
-                SetPower(   POWER_ENERGY,0);
+            SetPower(   POWER_ENERGY,0);
             break;
         case POWER_HAPPINESS:
             SetMaxPower(POWER_HAPPINESS,GetCreatePowers(POWER_HAPPINESS));
@@ -10529,9 +10528,9 @@ void Unit::SetInCombatState(bool PvP, Unit* enemy)
     if(GetTypeId() != TYPEID_PLAYER)
     {
         // Set home position at place of engaging combat for escorted creatures
-        if(((Creature*)this)->IsAIEnabled)
-            if (((Creature *)this)->AI()->IsEscorted())
-                ((Creature*)this)->SetHomePosition(GetPositionX(), GetPositionY(), GetPositionZ(), GetOrientation());
+        if((((Creature*)this)->IsAIEnabled && ((Creature*)this)->AI()->IsEscorted()) || ((Creature*)this)->GetMotionMaster()->GetCurrentMovementGeneratorType() == WAYPOINT_MOTION_TYPE)
+            ((Creature*)this)->SetHomePosition(GetPositionX(), GetPositionY(), GetPositionZ(), GetOrientation());
+
         if(enemy)
         {
             if(((Creature*)this)->IsAIEnabled)
@@ -12593,8 +12592,8 @@ void Unit::ProcDamageAndSpellFor( bool isVictim, Unit * pTarget, uint32 procFlag
                     ((Player*)this)->UpdateCombatSkills(pTarget, attType, isVictim);
             }
             // Update defence if player is victim and parry/dodge/block
-            if (isVictim && procExtra&(PROC_EX_DODGE|PROC_EX_PARRY|PROC_EX_BLOCK))
-                ((Player*)this)->UpdateDefense();
+            else if (isVictim && procExtra&(PROC_EX_DODGE|PROC_EX_PARRY|PROC_EX_BLOCK))
+                    ((Player*)this)->UpdateCombatSkills(pTarget, attType, MELEE_HIT_DODGE);
         }
         // If exist crit/parry/dodge/block need update aura state (for victim and attacker)
         if (procExtra & (PROC_EX_CRITICAL_HIT|PROC_EX_PARRY|PROC_EX_DODGE|PROC_EX_BLOCK))

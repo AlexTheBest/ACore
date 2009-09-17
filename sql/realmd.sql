@@ -194,7 +194,7 @@ CREATE TABLE `realmlist` (
 LOCK TABLES `realmlist` WRITE;
 /*!40000 ALTER TABLE `realmlist` DISABLE KEYS */;
 INSERT INTO `realmlist` VALUES
-(1,'Trinity','127.0.0.1',8085,1,0,1,0,0);
+(1,'Trinity','127.0.0.1',8085,1,0,1,0,0, 9947);
 /*!40000 ALTER TABLE `realmlist` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -209,6 +209,7 @@ CREATE TABLE `uptime` (
   `startstring` varchar(64) NOT NULL default '',
   `uptime` bigint(20) unsigned NOT NULL default '0',
   `maxplayers` smallint(5) unsigned NOT NULL default '0',
+  `revision` VARCHAR(255) NOT NULL DEFAULT 'Trinitycore',
   PRIMARY KEY  (`realmid`,`starttime`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Uptime system';
 

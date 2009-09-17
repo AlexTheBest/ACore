@@ -585,8 +585,11 @@ bool Player::Create( uint32 guidlow, const std::string& name, uint8 race, uint8 
 
     SetUInt32Value(UNIT_FIELD_BYTES_0, ( RaceClassGender | ( powertype << 24 ) ) );
     InitDisplayIds();
-    SetByteFlag(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_PVP );
-    SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE );
+    if(sWorld.getConfig(CONFIG_GAME_TYPE) == REALM_TYPE_PVP || sWorld.getConfig(CONFIG_GAME_TYPE) == REALM_TYPE_RPPVP)
+    {
+        SetByteFlag(UNIT_FIELD_BYTES_2, 1, UNIT_BYTE2_FLAG_PVP );
+        SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE );
+    }
     SetFlag(UNIT_FIELD_FLAGS_2, UNIT_FLAG2_REGENERATE_POWER);
     SetFloatValue(UNIT_MOD_CAST_SPEED, 1.0f);               // fix cast time showed in spell tooltip on client
     SetFloatValue(UNIT_FIELD_HOVERHEIGHT, 1.0f);            // default for players in 3.0.3
@@ -5291,7 +5294,7 @@ bool Player::UpdateSkill(uint32 skill_id, uint32 step)
     if ((!max) || (!value) || (value >= max))
         return false;
 
-    if (value*512 < max*urand(0,512))
+    if (value < max)
     {
         uint32 new_value = value+step;
         if(new_value > max)
@@ -5510,7 +5513,7 @@ void Player::UpdateCombatSkills(Unit *pVictim, WeaponAttackType attType, bool de
     if(!defence)
     {
         if(getClass() == CLASS_WARRIOR || getClass() == CLASS_ROGUE)
-            chance *= 0.1f * GetStat(STAT_INTELLECT);
+            chance += chance * 0.02f * GetStat(STAT_INTELLECT);
     }
 
     chance = chance < 1.0f ? 1.0f : chance;                 //minimum chance to increase skill is 1%
@@ -18465,9 +18468,9 @@ void Player::UpdatePvPState(bool onlyFFA)
     }
 }
 
-void Player::UpdatePvP(bool state, bool ovrride)
+void Player::UpdatePvP(bool state, bool override)
 {
-    if(!state || ovrride)
+    if(!state || override)
     {
         SetPvP(state);
         pvpInfo.endTimer = 0;
