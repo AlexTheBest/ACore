@@ -2319,6 +2319,8 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst (const Unit *pVictim, WeaponAttack
         // Reduce dodge chance by attacker expertise rating
         if (GetTypeId() == TYPEID_PLAYER)
             dodge_chance -= int32(((Player*)this)->GetExpertiseDodgeOrParryReduction(attType)*100);
+        else
+            dodge_chance -= GetTotalAuraModifier(SPELL_AURA_MOD_EXPERTISE)*25;
 
         // Modify dodge chance by attacker SPELL_AURA_MOD_COMBAT_RESULT_CHANCE
         dodge_chance+= GetTotalAuraModifierByMiscValue(SPELL_AURA_MOD_COMBAT_RESULT_CHANCE, VICTIMSTATE_DODGE)*100;
@@ -2345,7 +2347,9 @@ MeleeHitOutcome Unit::RollMeleeOutcomeAgainst (const Unit *pVictim, WeaponAttack
     {
         // Reduce parry chance by attacker expertise rating
         if (GetTypeId() == TYPEID_PLAYER)
-            parry_chance-= int32(((Player*)this)->GetExpertiseDodgeOrParryReduction(attType)*100);
+            parry_chance -= int32(((Player*)this)->GetExpertiseDodgeOrParryReduction(attType)*100);
+        else
+            parry_chance -= GetTotalAuraModifier(SPELL_AURA_MOD_EXPERTISE)*25;
 
         if(pVictim->GetTypeId() == TYPEID_PLAYER || !(((Creature*)pVictim)->GetCreatureInfo()->flags_extra & CREATURE_FLAG_EXTRA_NO_PARRY) )
         {
@@ -2738,7 +2742,9 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit *pVictim, SpellEntry const *spell)
         dodgeChance = int32 (float (dodgeChance) * GetTotalAuraMultiplier(SPELL_AURA_MOD_ENEMY_DODGE));
         // Reduce dodge chance by attacker expertise rating
         if (GetTypeId() == TYPEID_PLAYER)
-            dodgeChance-=int32(((Player*)this)->GetExpertiseDodgeOrParryReduction(attType) * 100.0f);
+            dodgeChance -= int32(((Player*)this)->GetExpertiseDodgeOrParryReduction(attType) * 100.0f);
+        else
+            dodgeChance -= GetTotalAuraModifier(SPELL_AURA_MOD_EXPERTISE)*25;
         if (dodgeChance < 0)
             dodgeChance = 0;
 
@@ -2753,7 +2759,9 @@ SpellMissInfo Unit::MeleeSpellHitResult(Unit *pVictim, SpellEntry const *spell)
         int32 parryChance = int32(pVictim->GetUnitParryChance()*100.0f)  - skillDiff * 4;
         // Reduce parry chance by attacker expertise rating
         if (GetTypeId() == TYPEID_PLAYER)
-            parryChance-=int32(((Player*)this)->GetExpertiseDodgeOrParryReduction(attType) * 100.0f);
+            parryChance -= int32(((Player*)this)->GetExpertiseDodgeOrParryReduction(attType) * 100.0f);
+        else
+            parryChance -= GetTotalAuraModifier(SPELL_AURA_MOD_EXPERTISE)*25;
         if (parryChance < 0)
             parryChance = 0;
 
@@ -4859,7 +4867,7 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
         {
             switch (dummySpell->Id)
             {
-                // BloodWorms Health Leech
+                // Bloodworms Health Leech
                 case 50453:
                 {
                     if (Unit *owner = this->GetOwner())
@@ -4920,6 +4928,12 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                         return false;
 
                     triggered_spell_id = 26654;
+                    break;
+                }
+                // Glyph of Blocking
+                case 58375:
+                {
+                    triggered_spell_id = 58374;
                     break;
                 }
                 // Unstable Power
@@ -5541,14 +5555,23 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                 triggered_spell_id = 54181;
                 break;
             }
-            switch(dummySpell->Id)
+            switch (dummySpell->Id)
             {
                 // Siphon Life
                 case 63108:
                 {
+                    // Glyph of Siphon Life
+                    if (HasAura(56216))
+                        triggerAmount += triggerAmount * 25 / 100;
                     triggered_spell_id = 63106;
                     target = this;
                     basepoints0 = int32(damage*triggerAmount/100);
+                    break;
+                }
+                // Glyph of Life Tap
+                case 63320:
+                {
+                    triggered_spell_id = 63321;
                     break;
                 }
                 // Nightfall
@@ -5686,6 +5709,15 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                     int32 self = triggerAmount*damage/100 - team;
                     pVictim->CastCustomSpell(pVictim,15290,&team,&self,NULL,true,castItem,triggeredByAura);
                     return true;                                // no hidden cooldown
+                }
+                // Shadow Affinity (Ranks 1-3)
+                case 15318:
+                case 15272:
+                case 15320:
+                {
+                    basepoints0 = triggerAmount * target->GetCreateMana() / 100;
+                    triggered_spell_id = 64103;
+                    break;
                 }
                 // Priest Tier 6 Trinket (Ashtongue Talisman of Acumen)
                 case 40438:
@@ -9257,7 +9289,13 @@ uint32 Unit::SpellDamageBonus(Unit *pVictim, SpellEntry const *spellProto, uint3
             if (spellProto->SpellIconID == 186)
             {
                 if (pVictim->HasAuraState(AURA_STATE_FROZEN, spellProto, this))
-                    DoneTotalMod *= 3.0f;
+                {
+                    // Glyph of Ice Lance
+                    if (owner->HasAura(56377) && pVictim->getLevel() > owner->getLevel())
+                        DoneTotalMod *= 4.0f;
+                    else
+                        DoneTotalMod *= 3.0f;
+                }
             }
 
             // Torment the weak
