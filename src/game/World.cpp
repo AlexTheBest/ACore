@@ -250,7 +250,7 @@ World::AddSession_ (WorldSession* s)
     packet << uint32 (0);                                   // BillingTimeRemaining
     packet << uint8 (0);                                    // BillingPlanFlags
     packet << uint32 (0);                                   // BillingTimeRested
-    packet << uint8 (s->Expansion());                       // 0 - normal, 1 - TBC, must be set in database manually for each account
+    packet << uint8 (s->Expansion());                       // 0 - normal, 1 - TBC, 2 - WOTLK, must be set in database manually for each account
     s->SendPacket (&packet);
 
     s->SendAddonsInfo();
@@ -317,7 +317,7 @@ void World::AddQueuedPlayer(WorldSession* sess)
     packet << uint32 (0);                                   // BillingTimeRemaining
     packet << uint8 (0);                                    // BillingPlanFlags
     packet << uint32 (0);                                   // BillingTimeRested
-    packet << uint8 (sess->Expansion () ? 1 : 0);                    // 0 - normal, 1 - TBC, must be set in database manually for each account
+    packet << uint8 (sess->Expansion());                    // 0 - normal, 1 - TBC, 2 - WOTLK, must be set in database manually for each account
     packet << uint32(GetQueuePos (sess));
     sess->SendPacket (&packet);
 
@@ -359,6 +359,14 @@ bool World::RemoveQueuedPlayer(WorldSession* sess)
         WorldSession* pop_sess = m_QueuedPlayer.front();
         pop_sess->SetInQueue(false);
         pop_sess->SendAuthWaitQue(0);
+        pop_sess->SendAddonsInfo();
+
+        WorldPacket pkt(SMSG_CLIENTCACHE_VERSION, 4);
+        pkt << uint32(sWorld.getConfig(CONFIG_CLIENTCACHE_VERSION));
+        pop_sess->SendPacket(&pkt);
+
+        pop_sess->SendTutorialsData();
+
         m_QueuedPlayer.pop_front();
 
         // update iter to point first queued socket or end() if queue is empty now
