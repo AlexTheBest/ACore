@@ -77,7 +77,8 @@ enum SpellCastFlags
     CAST_FLAG_UNKNOWN10          = 0x00040000,
     CAST_FLAG_UNKNOWN5           = 0x00080000,              // wotlk
     CAST_FLAG_UNKNOWN20          = 0x00100000,
-    CAST_FLAG_UNKNOWN7           = 0x00200000               // wotlk, rune cooldown list
+    CAST_FLAG_UNKNOWN7           = 0x00200000,              // wotlk, rune cooldown list
+    CAST_FLAG_UNKNOWN21          = 0x04000000
 };
 
 enum SpellRangeFlag
@@ -362,6 +363,7 @@ class Spell
         void EffectPlayMusic(uint32 i);
         void EffectSpecCount(uint32 i);
         void EffectActivateSpec(uint32 i);
+        void EffectCastButtons(uint32 i);
 
         typedef std::set<Aura *> UsedSpellMods;
 
@@ -732,11 +734,11 @@ namespace Trinity
                             i_data->push_back(target);
                         break;
                     case PUSH_IN_FRONT:
-                        if(i_source->isInFrontInMap(target, i_radius, M_PI/3))
+                        if(i_source->isInFront(target, i_radius, M_PI/3))
                             i_data->push_back(target);
                         break;
                     case PUSH_IN_BACK:
-                        if(i_source->isInBackInMap(target, i_radius, M_PI/3))
+                        if(i_source->isInBack(target, i_radius, M_PI/3))
                             i_data->push_back(target);
                         break;
                     case PUSH_IN_LINE:
@@ -780,4 +782,3 @@ class SpellEvent : public BasicEvent
         Spell* m_Spell;
 };
 #endif
-

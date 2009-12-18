@@ -491,9 +491,11 @@ SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 CREATE TABLE `creature_template` (
   `entry` mediumint(8) unsigned NOT NULL default '0',
-  `heroic_entry` mediumint(8) unsigned NOT NULL default '0',
-  `unk1` int(11) unsigned NOT NULL default '0',
-  `unk2` int(11) unsigned NOT NULL default '0',
+  `difficulty_entry_1` mediumint(8) unsigned NOT NULL default '0',
+  `difficulty_entry_2` mediumint(8) unsigned NOT NULL default '0',
+  `difficulty_entry_3` mediumint(8) unsigned NOT NULL default '0',
+  `KillCredit1` int(11) unsigned NOT NULL default '0',
+  `KillCredit2` int(11) unsigned NOT NULL default '0',
   `modelid1` mediumint(8) unsigned NOT NULL default '0',
   `modelid2` mediumint(8) unsigned NOT NULL default '0',
   `modelid3` mediumint(8) unsigned NOT NULL default '0',
@@ -1178,10 +1180,8 @@ SET character_set_client = utf8;
 CREATE TABLE `instance_template` (
   `map` smallint(5) unsigned NOT NULL,
   `parent` int(10) unsigned NOT NULL,
-  `maxPlayers` tinyint(3) unsigned NOT NULL default '0',
-  `maxPlayersHeroic` tinyint(3) unsigned NOT NULL default '0',
-  `reset_delay` int(10) unsigned NOT NULL default '0',
-  `access_id` bigint(20) unsigned NOT NULL default '0',
+  `levelMin` tinyint(3) unsigned NOT NULL default '0',
+  `levelMax` tinyint(3) unsigned NOT NULL default '0',
   `startLocX` float default NULL,
   `startLocY` float default NULL,
   `startLocZ` float default NULL,
@@ -1258,13 +1258,14 @@ CREATE TABLE `item_template` (
   `displayid` mediumint(8) unsigned NOT NULL default '0',
   `Quality` tinyint(3) unsigned NOT NULL default '0',
   `Flags` int(10) unsigned NOT NULL default '0',
+  `Faction` int(11) UNSIGNED NOT NULL default '0',
   `BuyCount` tinyint(3) unsigned NOT NULL default '1',
   `BuyPrice` int(10) unsigned NOT NULL default '0',
   `SellPrice` int(10) unsigned NOT NULL default '0',
   `InventoryType` tinyint(3) unsigned NOT NULL default '0',
   `AllowableClass` int signed NOT NULL default '-1',
   `AllowableRace` int signed NOT NULL default '-1',
-  `ItemLevel` tinyint(3) unsigned NOT NULL default '0',
+  `ItemLevel` smallint(5) unsigned NOT NULL default '0',
   `RequiredLevel` tinyint(3) unsigned NOT NULL default '0',
   `RequiredSkill` smallint(5) unsigned NOT NULL default '0',
   `RequiredSkillRank` smallint(5) unsigned NOT NULL default '0',
@@ -2485,10 +2486,14 @@ CREATE TABLE `quest_template` (
   `ReqItemId2` mediumint(8) unsigned NOT NULL default '0',
   `ReqItemId3` mediumint(8) unsigned NOT NULL default '0',
   `ReqItemId4` mediumint(8) unsigned NOT NULL default '0',
+  `ReqItemId5` mediumint(8) unsigned NOT NULL default '0',
+  `ReqItemId6` mediumint(8) unsigned NOT NULL default '0',
   `ReqItemCount1` smallint(5) unsigned NOT NULL default '0',
   `ReqItemCount2` smallint(5) unsigned NOT NULL default '0',
   `ReqItemCount3` smallint(5) unsigned NOT NULL default '0',
   `ReqItemCount4` smallint(5) unsigned NOT NULL default '0',
+  `ReqItemCount5` smallint(5) unsigned NOT NULL default '0',
+  `ReqItemCount6` smallint(5) unsigned NOT NULL default '0',
   `ReqSourceId1` mediumint(8) unsigned NOT NULL default '0',
   `ReqSourceId2` mediumint(8) unsigned NOT NULL default '0',
   `ReqSourceId3` mediumint(8) unsigned NOT NULL default '0',
@@ -2750,7 +2755,7 @@ SET character_set_client = @saved_cs_client;
 
 DROP TABLE IF EXISTS `spell_bonus_data`;
 CREATE TABLE `spell_bonus_data` (
-  `entry` smallint(5) unsigned NOT NULL,
+  `entry` mediumint(8) unsigned NOT NULL,
   `direct_bonus` float NOT NULL default '0',
   `dot_bonus` float NOT NULL default '0',
   `ap_bonus` float NOT NULL default '0',
@@ -2982,7 +2987,7 @@ DROP TABLE IF EXISTS `spell_proc_event`;
 SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = utf8;
 CREATE TABLE `spell_proc_event` (
-  `entry` smallint(5) unsigned NOT NULL default '0',
+  `entry` mediumint(8) unsigned NOT NULL default '0',
   `SchoolMask` tinyint(4) NOT NULL default '0',
   `SpellFamilyName` smallint(5) unsigned NOT NULL default '0',
   `SpellFamilyMask0` int(10) unsigned NOT NULL default '0',

@@ -126,6 +126,7 @@ class TRINITY_DLL_SPEC WorldSession
         void SendAddonsInfo();
 
         void ReadMovementInfo(WorldPacket &data, MovementInfo *mi);
+        void WriteMovementInfo(WorldPacket *data, MovementInfo *mi);
 
         void SendPacket(WorldPacket const* packet);
         void SendNotification(const char *format,...) ATTR_PRINTF(2,3);
@@ -203,7 +204,7 @@ class TRINITY_DLL_SPEC WorldSession
         // Account Data
         AccountData *GetAccountData(AccountDataType type) { return &m_accountData[type]; }
         void SetAccountData(AccountDataType type, time_t time_, std::string data);
-        void SendAccountDataTimes();
+        void SendAccountDataTimes(uint32 mask);
         void LoadGlobalAccountData();
         void LoadAccountData(QueryResult* result, uint32 mask);
         void LoadTutorialsData();
@@ -222,9 +223,8 @@ class TRINITY_DLL_SPEC WorldSession
                 m_TutorialsChanged = true;
             }
         }
-                                                             //used with item_page table
+        //used with item_page table
         bool SendItemInfo( uint32 itemid, WorldPacket data );
-
         //auction
         void SendAuctionHello( uint64 guid, Creature * unit );
         void SendAuctionCommandResult( uint32 auctionId, uint32 Action, uint32 ErrorCode, uint32 bidError = 0);
@@ -573,6 +573,7 @@ class TRINITY_DLL_SPEC WorldSession
 
         void HandleReclaimCorpseOpcode( WorldPacket& recvPacket );
         void HandleCorpseQueryOpcode( WorldPacket& recvPacket );
+        void HandleCorpseMapPositionQuery( WorldPacket& recvPacket );
         void HandleResurrectResponseOpcode(WorldPacket& recvPacket);
         void HandleSummonResponseOpcode(WorldPacket& recv_data);
 
@@ -647,6 +648,7 @@ class TRINITY_DLL_SPEC WorldSession
         void HandleFarSightOpcode(WorldPacket& recv_data);
         void HandleSetLfgOpcode(WorldPacket& recv_data);
         void HandleSetDungeonDifficultyOpcode(WorldPacket& recv_data);
+        void HandleSetRaidDifficultyOpcode(WorldPacket& recv_data);
         void HandleMoveSetCanFlyAckOpcode(WorldPacket& recv_data);
         void HandleLfgSetAutoJoinOpcode(WorldPacket& recv_data);
         void HandleLfgClearAutoJoinOpcode(WorldPacket& recv_data);
@@ -686,6 +688,9 @@ class TRINITY_DLL_SPEC WorldSession
         void HandleSocketOpcode(WorldPacket& recv_data);
 
         void HandleCancelTempEnchantmentOpcode(WorldPacket& recv_data);
+
+        void HandleItemRefundInfoRequest(WorldPacket& recv_data);
+        void HandleItemRefund(WorldPacket& recv_data);
 
         void HandleChannelVoiceOnOpcode(WorldPacket & recv_data);
         void HandleVoiceSessionEnableOpcode(WorldPacket& recv_data);
@@ -733,6 +738,7 @@ class TRINITY_DLL_SPEC WorldSession
         void HandleEquipmentSetSave(WorldPacket& recv_data);
         void HandleEquipmentSetDelete(WorldPacket& recv_data);
         void HandleEquipmentSetUse(WorldPacket& recv_data);
+        void HandleWorldStateUITimerUpdate(WorldPacket& recv_data);
         void HandleOnPVPKill(Player *killed);
         bool HandleOnPlayerChat(const char *text);
         uint32 HandleOnGetXP(uint32 amount);
@@ -776,4 +782,3 @@ class TRINITY_DLL_SPEC WorldSession
 };
 #endif
 /// @}
-

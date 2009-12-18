@@ -54,6 +54,7 @@
 #include "InstanceData.h"
 #include "AuctionHouseBot.h"
 #include "CreatureEventAIMgr.h"
+#include "DBCEnums.h"
 
 bool ChatHandler::HandleAHBotOptionsCommand(const char *args)
 {
@@ -3108,9 +3109,7 @@ bool ChatHandler::HandleGameObjectStateCommand(const char *args)
             gobj->SendObjectDeSpawnAnim(gobj->GetGUID());
         else if(type == -2)
         {
-            WorldPacket data(SMSG_GAMEOBJECT_SPAWN_ANIM_OBSOLETE, 8);
-            data << gobj->GetGUID();
-            gobj->SendMessageToSet(&data,true);
+            return false;
         }
         return true;
     }
@@ -3933,7 +3932,7 @@ bool ChatHandler::HandleLookupMapCommand(const char *args)
     if(!*args)
         return false;
 
-    std::string namepart = args;
+    /*std::string namepart = args;
     std::wstring wnamepart;
 
     // converting string that we try to find to lower case
@@ -4000,6 +3999,7 @@ bool ChatHandler::HandleLookupMapCommand(const char *args)
                     ss << GetTrinityString(LANG_HEROIC);
 
                 uint32 ResetTimeRaid = MapInfo->resetTimeRaid;
+
                 std::string ResetTimeRaidStr;
                 if(ResetTimeRaid)
                     ResetTimeRaidStr = secsToTimeString(ResetTimeRaid, true, false);
@@ -4029,7 +4029,7 @@ bool ChatHandler::HandleLookupMapCommand(const char *args)
 
     if(!found)
         SendSysMessage(LANG_COMMAND_NOMAPFOUND);
-
+    */
     return true;
 }
 
@@ -5410,6 +5410,14 @@ bool ChatHandler::HandleServerShutDownCommand(const char *args)
     char* time_str = strtok ((char*) args, " ");
     char* exitcode_str = strtok (NULL, "");
 
+	char* tailStr = *args!='"' ? strtok(NULL, "") : (char*)args;
+    if(!tailStr)
+        return false;
+
+    char* reason = extractQuotedArg(tailStr);
+    if(!reason)
+        return false;
+
     int32 time = atoi (time_str);
 
     ///- Prevent interpret wrong arg value as 0 secs shutdown time
@@ -5675,7 +5683,7 @@ bool ChatHandler::HandleQuestComplete(const char *args)
     }
 
     // Add quest items for quests that require items
-    for (uint8 x = 0; x < QUEST_OBJECTIVES_COUNT; ++x)
+    for (uint8 x = 0; x < QUEST_ITEM_OBJECTIVES_COUNT; ++x)
     {
         uint32 id = pQuest->ReqItemId[x];
         uint32 count = pQuest->ReqItemCount[x];
@@ -6800,14 +6808,14 @@ bool ChatHandler::HandleInstanceListBindsCommand(const char* /*args*/)
     Player* player = getSelectedPlayer();
     if (!player) player = m_session->GetPlayer();
     uint32 counter = 0;
-    for (uint8 i = 0; i < TOTAL_DIFFICULTIES; ++i)
+    for (uint8 i = 0; i < MAX_DIFFICULTY; ++i)
     {
-        Player::BoundInstancesMap &binds = player->GetBoundInstances(i);
+        Player::BoundInstancesMap &binds = player->GetBoundInstances(Difficulty(i));
         for (Player::BoundInstancesMap::const_iterator itr = binds.begin(); itr != binds.end(); ++itr)
         {
             InstanceSave *save = itr->second.save;
             std::string timeleft = GetTimeString(save->GetResetTime() - time(NULL));
-            PSendSysMessage("map: %d inst: %d perm: %s diff: %s canReset: %s TTR: %s", itr->first, save->GetInstanceId(), itr->second.perm ? "yes" : "no",  save->GetDifficulty() == DIFFICULTY_NORMAL ? "normal" : "heroic", save->CanReset() ? "yes" : "no", timeleft.c_str());
+            PSendSysMessage("map: %d inst: %d perm: %s diff: %d canReset: %s TTR: %s", itr->first, save->GetInstanceId(), itr->second.perm ? "yes" : "no",  save->GetDifficulty(), save->CanReset() ? "yes" : "no", timeleft.c_str());
             counter++;
         }
     }
@@ -6816,15 +6824,14 @@ bool ChatHandler::HandleInstanceListBindsCommand(const char* /*args*/)
     Group *group = player->GetGroup();
     if(group)
     {
-        for (uint8 i = 0; i < TOTAL_DIFFICULTIES; ++i)
+        for (uint8 i = 0; i < MAX_DIFFICULTY; ++i)
         {
-            Group::BoundInstancesMap &binds = group->GetBoundInstances(i);
+            Group::BoundInstancesMap &binds = group->GetBoundInstances(Difficulty(i));
             for (Group::BoundInstancesMap::const_iterator itr = binds.begin(); itr != binds.end(); ++itr)
             {
                 InstanceSave *save = itr->second.save;
                 std::string timeleft = GetTimeString(save->GetResetTime() - time(NULL));
-                PSendSysMessage("map: %d inst: %d perm: %s diff: %s canReset: %s TTR: %s", itr->first, save->GetInstanceId(), itr->second.perm ? "yes" : "no",  save->GetDifficulty() == DIFFICULTY_NORMAL ? "normal" : "heroic", save->CanReset() ? "yes" : "no", timeleft.c_str());
-                counter++;
+                PSendSysMessage("map: %d inst: %d perm: %s diff: %d canReset: %s TTR: %s", itr->first, save->GetInstanceId(), itr->second.perm ? "yes" : "no",  save->GetDifficulty(), save->CanReset() ? "yes" : "no", timeleft.c_str());                counter++;
             }
         }
     }
@@ -6844,17 +6851,17 @@ bool ChatHandler::HandleInstanceUnbindCommand(const char *args)
         Player* player = getSelectedPlayer();
         if (!player) player = m_session->GetPlayer();
         uint32 counter = 0;
-        for (uint8 i = 0; i < TOTAL_DIFFICULTIES; ++i)
+        for (uint8 i = 0; i < MAX_DIFFICULTY; ++i)
         {
-            Player::BoundInstancesMap &binds = player->GetBoundInstances(i);
+            Player::BoundInstancesMap &binds = player->GetBoundInstances(Difficulty(i));
             for (Player::BoundInstancesMap::iterator itr = binds.begin(); itr != binds.end();)
             {
                 if(itr->first != player->GetMapId())
                 {
                     InstanceSave *save = itr->second.save;
                     std::string timeleft = GetTimeString(save->GetResetTime() - time(NULL));
-                    PSendSysMessage("unbinding map: %d inst: %d perm: %s diff: %s canReset: %s TTR: %s", itr->first, save->GetInstanceId(), itr->second.perm ? "yes" : "no",  save->GetDifficulty() == DIFFICULTY_NORMAL ? "normal" : "heroic", save->CanReset() ? "yes" : "no", timeleft.c_str());
-                    player->UnbindInstance(itr, i);
+                    PSendSysMessage("unbinding map: %d inst: %d perm: %s diff: %d canReset: %s TTR: %s", itr->first, save->GetInstanceId(), itr->second.perm ? "yes" : "no",  save->GetDifficulty(), save->CanReset() ? "yes" : "no", timeleft.c_str());
+                    player->UnbindInstance(itr, Difficulty(i));
                     counter++;
                 }
                 else
@@ -7537,4 +7544,3 @@ bool ChatHandler::HandleUnbindSightCommand(const char *args)
     m_session->GetPlayer()->StopCastingBindSight();
     return true;
 }
-

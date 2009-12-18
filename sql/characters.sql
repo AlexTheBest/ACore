@@ -1089,6 +1089,7 @@ CREATE TABLE `groups` (
   `icon8` int(11) unsigned NOT NULL,
   `isRaid` tinyint(1) unsigned NOT NULL,
   `difficulty` tinyint(3) unsigned NOT NULL default '0',
+  `raiddifficulty` int(11) UNSIGNED NOT NULL default '0',
   PRIMARY KEY  (`leaderGuid`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Groups';
 
@@ -1394,8 +1395,9 @@ UNLOCK TABLES;
 DROP TABLE IF EXISTS `instance_reset`;
 CREATE TABLE `instance_reset` (
   `mapid` int(11) unsigned NOT NULL default '0',
+  `difficulty` tinyint(1) unsigned NOT NULL default '0',
   `resettime` bigint(40) NOT NULL default '0',
-  PRIMARY KEY  (`mapid`)
+  PRIMARY KEY  (`mapid`,`difficulty`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 --

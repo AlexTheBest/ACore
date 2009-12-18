@@ -4361,6 +4361,7 @@ bool ChatHandler::HandleWintergraspTimerCommand(const char* args)
     time *= MINUTE * IN_MILISECONDS;
 
     pvpWG->setTimer((uint32)time);
+
     PSendSysMessage(LANG_BG_WG_CHANGE_TIMER, secsToTimeString(pvpWG->GetTimer(), true).c_str());
     return true;
 }

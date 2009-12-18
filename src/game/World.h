@@ -45,6 +45,7 @@ struct ScriptInfo;
 class SqlResultQueue;
 class QueryResult;
 class WorldSocket;
+class SystemMgr;
 
 // ServerMessages.dbc
 enum ServerMessageType
@@ -81,7 +82,8 @@ enum WorldTimers
     WUPDATE_EVENTS      = 6,
     WUPDATE_CLEANDB     = 7,
     WUPDATE_AUTOBROADCAST = 8,
-    WUPDATE_COUNT       = 9
+    WUPDATE_MAILBOXQUEUE = 9,
+    WUPDATE_COUNT       = 10
 };
 
 // States than may change after server started
@@ -261,6 +263,7 @@ enum WorldConfigs
     CONFIG_MIN_LOG_UPDATE,
     CONFIG_CHECK_DB,
     CONFIG_ENABLE_SINFO_LOGIN,
+    CONFIG_PLAYER_ALLOW_COMMANDS,
     CONFIG_PET_LOS,
     CONFIG_NUMTHREADS,
     CONFIG_OFFHAND_CHECK_AT_SPELL_UNLEARN,
@@ -610,6 +613,19 @@ class World
         static float GetVisibleUnitGreyDistance()           { return m_VisibleUnitGreyDistance;        }
         static float GetVisibleObjectGreyDistance()         { return m_VisibleObjectGreyDistance;      }
 
+
+		void SetWintergrapsTimer(uint32 timer, uint32 state)
+		{
+			m_WintergrapsTimer = timer;
+			m_WintergrapsState = state;
+		}
+
+		uint32 GetWintergrapsTimer()	{ return m_WintergrapsTimer; }
+		uint32 GetWintergrapsState()	{ return m_WintergrapsState; }
+
+		uint32 m_WintergrapsTimer;
+		uint32 m_WintergrapsState;
+
         void ProcessCliCommands();
         void QueueCliCommand( CliCommandHolder::Print* zprintf, char const* input ) { cliCmdQueue.add(new CliCommandHolder(input, zprintf)); }
 
@@ -638,6 +654,12 @@ class World
         void LoadAutobroadcasts();
 
         void UpdateAreaDependentAuras();
+
+	 void ProcessStartEvent();
+	 void ProcessStopEvent();
+	 bool GetEventKill() { return isEventKillStart; }
+
+	 bool isEventKillStart;
     protected:
         void _UpdateGameTime();
         // callback for UpdateRealmCharacters
@@ -728,4 +750,3 @@ extern uint32 realmID;
 #define sWorld Trinity::Singleton<World>::Instance()
 #endif
 /// @}
-

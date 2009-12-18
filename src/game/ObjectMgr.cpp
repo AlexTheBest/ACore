@@ -204,10 +204,6 @@ ObjectMgr::~ObjectMgr()
 
     for (GuildMap::iterator itr = mGuildMap.begin(); itr != mGuildMap.end(); ++itr)
         delete itr->second;
-    mGuildMap.clear();
-
-    for (CachePlayerInfoMap::iterator itr = m_mPlayerInfoMap.begin(); itr != m_mPlayerInfoMap.end(); ++itr)
-        delete itr->second;
 
     for (ArenaTeamMap::iterator itr = mArenaTeamMap.begin(); itr != mArenaTeamMap.end(); ++itr)
         delete itr->second;
@@ -217,61 +213,6 @@ ObjectMgr::~ObjectMgr()
 
     for (CacheTrainerSpellMap::iterator itr = m_mCacheTrainerSpellMap.begin(); itr != m_mCacheTrainerSpellMap.end(); ++itr)
         itr->second.Clear();
-}
-
-void ObjectMgr::LoadPlayerInfoInCache()
-{
-    QueryResult *result = CharacterDatabase.PQuery("SELECT guid, name, data, class FROM characters");
-    if(!result)
-    {
-        sLog.outError( "Loading Player Cache failed.");
-        return;
-    }
-
-    PCachePlayerInfo pPPlayerInfo = NULL;
-    Field *fields = NULL;
-    Tokens tdata;
-    barGoLink bar( result->GetRowCount() );
-    do
-    {
-        bar.step();
-        fields = result->Fetch();
-        pPPlayerInfo = new CachePlayerInfo();
-
-        pPPlayerInfo->sPlayerName = fields[1].GetString();
-
-        tdata.clear();
-        tdata = StrSplit(fields[2].GetCppString(), " ");
-
-        pPPlayerInfo->unLevel = Player::GetUInt32ValueFromArray(tdata,UNIT_FIELD_LEVEL);
-        pPPlayerInfo->unfield = Player::GetUInt32ValueFromArray(tdata,UNIT_FIELD_BYTES_0);
-
-        pPPlayerInfo->unArenaInfoId0 = Player::GetUInt32ValueFromArray(tdata,PLAYER_FIELD_ARENA_TEAM_INFO_1_1 + 0 * 6);
-        pPPlayerInfo->unArenaInfoId1 = Player::GetUInt32ValueFromArray(tdata,PLAYER_FIELD_ARENA_TEAM_INFO_1_1 + 1 * 6);
-        pPPlayerInfo->unArenaInfoId2 = Player::GetUInt32ValueFromArray(tdata,PLAYER_FIELD_ARENA_TEAM_INFO_1_1 + 2 * 6);
-
-        pPPlayerInfo->unArenaInfoSlot0 = Player::GetUInt32ValueFromArray(tdata,PLAYER_FIELD_ARENA_TEAM_INFO_1_1 + 0 * 6 + 5);
-        pPPlayerInfo->unArenaInfoSlot1 = Player::GetUInt32ValueFromArray(tdata,PLAYER_FIELD_ARENA_TEAM_INFO_1_1 + 1 * 6 + 5);
-        pPPlayerInfo->unArenaInfoSlot2 = Player::GetUInt32ValueFromArray(tdata,PLAYER_FIELD_ARENA_TEAM_INFO_1_1 + 2 * 6 + 5);
-
-        pPPlayerInfo->unClass = (uint32)fields[3].GetUInt32();
-        m_mPlayerInfoMap[fields[0].GetUInt32()] = pPPlayerInfo;
-    }
-    while (result->NextRow());
-    delete result;
-
-    sLog.outString();
-    sLog.outString( ">> Loaded info about %d players", m_mPlayerInfoMap.size());
-}
-
-PCachePlayerInfo ObjectMgr::GetPlayerInfoFromCache(uint32 unPlayerGuid) const
-{
-    //Now m_mPlayerInfoMap is using only for search, but when dinamic inserting/removing
-    //will be implemented we should lock it to prevent simultaneous access.
-    //Inserting - when new created player is saving
-    //Removing - when player has been deleted
-    CachePlayerInfoMap::const_iterator ipos = m_mPlayerInfoMap.find(unPlayerGuid);
-    return ipos == m_mPlayerInfoMap.end() ? NULL : ipos->second;
 }
 
 Group * ObjectMgr::GetGroupByLeader(const uint64 &guid) const
@@ -570,8 +511,8 @@ void ObjectMgr::LoadCreatureTemplates()
     sLog.outString( ">> Loaded %u creature definitions", sCreatureStorage.RecordCount );
     sLog.outString();
 
-    std::set<uint32> heroicEntries;                         // already loaded heroic value in creatures
-    std::set<uint32> hasHeroicEntries;                      // already loaded creatures with heroic entry values
+    std::set<uint32> difficultyEntries[MAX_DIFFICULTY - 1]; // already loaded difficulty 1 value in creatures
+    std::set<uint32> hasDifficultyEntries[MAX_DIFFICULTY - 1]; // already loaded creatures with difficulty 1  values
 
     // check data correctness
     for (uint32 i = 1; i < sCreatureStorage.MaxEntry; ++i)
@@ -580,84 +521,105 @@ void ObjectMgr::LoadCreatureTemplates()
         if (!cInfo)
             continue;
 
-        if (cInfo->HeroicEntry)
+        bool ok = true;                                     // bool to allow continue outside this loop
+        for (uint32 diff = 0; diff < MAX_DIFFICULTY - 1 && ok; ++diff)
         {
-            CreatureInfo const* heroicInfo = GetCreatureTemplate(cInfo->HeroicEntry);
-            if (!heroicInfo)
+            if (!cInfo->DifficultyEntry[diff])
+                continue;
+            ok = false;                                     // will be set to true at the end of this loop again
+
+            CreatureInfo const* difficultyInfo = GetCreatureTemplate(cInfo->DifficultyEntry[diff]);
+            if (!difficultyInfo)
             {
-                sLog.outErrorDb("Creature (Entry: %u) have `heroic_entry`=%u but creature entry %u not exist.", i, cInfo->HeroicEntry, cInfo->HeroicEntry);
+                sLog.outErrorDb("Creature (Entry: %u) have `difficulty_entry_%u`=%u but creature entry %u not exist.",
+                    i, diff + 1, cInfo->DifficultyEntry[diff], cInfo->DifficultyEntry[diff]);
                 continue;
             }
 
-            if (heroicEntries.find(i)!=heroicEntries.end())
+            if (difficultyEntries[diff].find(i) != difficultyEntries[diff].end())
             {
-                sLog.outErrorDb("Creature (Entry: %u) listed as heroic but have value in `heroic_entry`.",i);
+                sLog.outErrorDb("Creature (Entry: %u) listed as difficulty %u but have value in `difficulty_entry_1`.", i, diff + 1);
                 continue;
             }
 
-            if (heroicEntries.find(cInfo->HeroicEntry)!=heroicEntries.end())
+            bool ok2 = true;
+            for (uint32 diff2 = 0; diff2 < MAX_DIFFICULTY - 1 && ok2; ++diff2)
             {
-                sLog.outErrorDb("Creature (Entry: %u) already listed as heroic for another entry.",cInfo->HeroicEntry);
+                ok2 = false;
+                if (difficultyEntries[diff2].find(cInfo->DifficultyEntry[diff]) != difficultyEntries[diff2].end())
+                {
+                    sLog.outErrorDb("Creature (Entry: %u) already listed as difficulty %u for another entry.", cInfo->DifficultyEntry[diff], diff2 + 1);
+                    continue;
+                }
+
+                if (hasDifficultyEntries[diff2].find(cInfo->DifficultyEntry[diff]) != hasDifficultyEntries[diff2].end())
+                {
+                    sLog.outErrorDb("Creature (Entry: %u) have `difficulty_entry_%u`=%u but creature entry %u have difficulty %u entry also.",
+                        i, diff + 1, cInfo->DifficultyEntry[diff], cInfo->DifficultyEntry[diff], diff2 + 1);
+                    continue;
+                }
+                ok2 = true;
+            }
+            if (!ok2)
+                continue;
+
+            if (cInfo->unit_class != difficultyInfo->unit_class)
+            {
+                sLog.outErrorDb("Creature (Entry: %u, class %u) has different `unit_class` in difficulty %u mode (Entry: %u, class %u).",
+                    i, cInfo->unit_class, diff + 1, cInfo->DifficultyEntry[diff], difficultyInfo->unit_class);
                 continue;
             }
 
-            if (hasHeroicEntries.find(cInfo->HeroicEntry)!=hasHeroicEntries.end())
+            if (cInfo->npcflag != difficultyInfo->npcflag)
             {
-                sLog.outErrorDb("Creature (Entry: %u) have `heroic_entry`=%u but creature entry %u have heroic entry also.",i,cInfo->HeroicEntry,cInfo->HeroicEntry);
+                sLog.outErrorDb("Creature (Entry: %u) has different `npcflag` in difficulty %u mode (Entry: %u).", i, diff + 1, cInfo->DifficultyEntry[diff]);
                 continue;
             }
 
-            if (cInfo->unit_class != heroicInfo->unit_class)
+            if (cInfo->trainer_class != difficultyInfo->trainer_class)
             {
-                sLog.outErrorDb("Creature (Entry: %u, class %u) has different `unit_class` in heroic mode (Entry: %u, class %u).",i, cInfo->unit_class, cInfo->HeroicEntry, heroicInfo->unit_class);
+                sLog.outErrorDb("Creature (Entry: %u) has different `trainer_class` in difficulty %u mode (Entry: %u).", i, diff + 1, cInfo->DifficultyEntry[diff]);
                 continue;
             }
 
-            if (cInfo->npcflag != heroicInfo->npcflag)
+            if (cInfo->trainer_race != difficultyInfo->trainer_race)
             {
-                sLog.outErrorDb("Creature (Entry: %u) listed in `creature_template_substitution` has different `npcflag` in heroic mode.",i);
+                sLog.outErrorDb("Creature (Entry: %u) has different `trainer_race` in difficulty %u mode (Entry: %u).", i, diff + 1, cInfo->DifficultyEntry[diff]);
                 continue;
             }
 
-            if (cInfo->trainer_class != heroicInfo->trainer_class)
+            if (cInfo->trainer_type != difficultyInfo->trainer_type)
             {
-                sLog.outErrorDb("Creature (Entry: %u) has different `trainer_class` in heroic mode (Entry: %u).",i,cInfo->HeroicEntry);
+                sLog.outErrorDb("Creature (Entry: %u) has different `trainer_type` in difficulty %u mode (Entry: %u).", i, diff + 1, cInfo->DifficultyEntry[diff]);
                 continue;
             }
 
-            if (cInfo->trainer_race != heroicInfo->trainer_race)
+            if (cInfo->trainer_spell != difficultyInfo->trainer_spell)
             {
-                sLog.outErrorDb("Creature (Entry: %u) has different `trainer_race` in heroic mode (Entry: %u).",i,cInfo->HeroicEntry);
+                sLog.outErrorDb("Creature (Entry: %u) has different `trainer_spell` in difficulty %u mode (Entry: %u).", i, diff + 1, cInfo->DifficultyEntry[diff]);
                 continue;
             }
 
-            if (cInfo->trainer_type != heroicInfo->trainer_type)
+            if (difficultyInfo->AIName && *difficultyInfo->AIName)
             {
-                sLog.outErrorDb("Creature (Entry: %u) listed in `creature_template_substitution` has different `trainer_type` in heroic mode.",i);
+                sLog.outErrorDb("Difficulty %u mode creature (Entry: %u) has `AIName`, but in any case will used difficulty 0 mode creature (Entry: %u) AIName.",
+                    diff, cInfo->DifficultyEntry[diff], i);
                 continue;
             }
 
-            if (cInfo->trainer_spell != heroicInfo->trainer_spell)
+            if (difficultyInfo->ScriptID)
             {
-                sLog.outErrorDb("Creature (Entry: %u) listed in `creature_template_substitution` has different `trainer_spell` in heroic mode.",i);
+                sLog.outErrorDb("Difficulty %u mode creature (Entry: %u) has `ScriptName`, but in any case will used difficulty 0 mode creature (Entry: %u) ScriptName.",
+                    diff, cInfo->DifficultyEntry[diff], i);
                 continue;
             }
 
-            if (heroicInfo->AIName && *heroicInfo->AIName)
-            {
-                sLog.outErrorDb("Heroic mode creature (Entry: %u) has `AIName`, but in any case will used normal mode creature (Entry: %u) AIName.",cInfo->HeroicEntry,i);
-                continue;
-            }
-
-            if (heroicInfo->ScriptID)
-            {
-                sLog.outErrorDb("Heroic mode creature (Entry: %u) has `ScriptName`, but in any case will used normal mode creature (Entry: %u) ScriptName.",cInfo->HeroicEntry,i);
-                continue;
-            }
-
-            hasHeroicEntries.insert(i);
-            heroicEntries.insert(cInfo->HeroicEntry);
+            hasDifficultyEntries[diff].insert(i);
+            difficultyEntries[diff].insert(cInfo->DifficultyEntry[diff]);
+            ok = true;
         }
+        if (!ok)
+            continue;
 
         FactionTemplateEntry const* factionTemplate = sFactionTemplateStore.LookupEntry(cInfo->faction_A);
         if (!factionTemplate)
@@ -1232,11 +1194,20 @@ void ObjectMgr::LoadCreatures()
     }
 
     // build single time for check creature data
-    std::set<uint32> heroicCreatures;
+    std::set<uint32> difficultyCreatures[MAX_DIFFICULTY - 1];
     for (uint32 i = 0; i < sCreatureStorage.MaxEntry; ++i)
-        if(CreatureInfo const* cInfo = sCreatureStorage.LookupEntry<CreatureInfo>(i))
-            if(cInfo->HeroicEntry)
-                heroicCreatures.insert(cInfo->HeroicEntry);
+        if (CreatureInfo const* cInfo = sCreatureStorage.LookupEntry<CreatureInfo>(i))
+            for (uint32 diff = 0; diff < MAX_DIFFICULTY - 1; ++diff)
+                if (cInfo->DifficultyEntry[diff])
+                    difficultyCreatures[diff].insert(cInfo->DifficultyEntry[diff]);
+
+    // build single time for check spawnmask
+    std::map<uint32,uint32> spawnMasks;
+    for(uint32 i = 0; i < sMapStore.GetNumRows(); ++i)
+        if(sMapStore.LookupEntry(i))
+            for(int k = 0; k < MAX_DIFFICULTY; ++k)
+                if (GetMapDifficultyData(i,Difficulty(k)))
+                    spawnMasks[i] |= (1 << k);
 
     //TODO: remove this
     //gameeventmgr.mGameEventCreatureGuids.resize(52*2-1);
@@ -1280,11 +1251,28 @@ void ObjectMgr::LoadCreatures()
         int16 gameEvent     = fields[18].GetInt16();
         int16 PoolId        = fields[19].GetInt16();
 
-        if(heroicCreatures.find(data.id)!=heroicCreatures.end())
+        MapEntry const* mapEntry = sMapStore.LookupEntry(data.mapid);
+        if(!mapEntry)
         {
-            sLog.outErrorDb("Table `creature` have creature (GUID: %u) that listed as heroic template (entry: %u) in `creature_template_substitution`, skipped.",guid,data.id );
+            sLog.outErrorDb("Table `creature` have creature (GUID: %u) that spawned at not existed map (Id: %u), skipped.",guid, data.mapid );
             continue;
         }
+
+        if (data.spawnMask & ~spawnMasks[data.mapid])
+            sLog.outErrorDb("Table `creature` have creature (GUID: %u) that have wrong spawn mask %u including not supported difficulty modes for map (Id: %u).",guid, data.spawnMask, data.mapid );
+
+        bool ok = true;
+        for (uint32 diff = 0; diff < MAX_DIFFICULTY - 1 && ok; ++diff)
+        {
+            if (difficultyCreatures[diff].find(data.id) != difficultyCreatures[diff].end())
+            {
+                sLog.outErrorDb("Table `creature` have creature (GUID: %u) that listed as difficulty %u template (entry: %u) in `creature_template`, skipped.",
+                    guid, diff + 1, data.id );
+                ok = false;
+            }
+        }
+        if (!ok)
+            continue;
 
         // I do not know why but in db most display id are not zero
         /*if(data.displayid == 11686 || data.displayid == 24719)
@@ -1313,8 +1301,7 @@ void ObjectMgr::LoadCreatures()
 
         if(cInfo->flags_extra & CREATURE_FLAG_EXTRA_INSTANCE_BIND)
         {
-            MapEntry const* map = sMapStore.LookupEntry(data.mapid);
-            if(!map || !map->IsDungeon())
+            if(!mapEntry || !mapEntry->IsDungeon())
                 sLog.outErrorDb("Table `creature` have creature (GUID: %u Entry: %u) with `creature_template`.`flags_extra` including CREATURE_FLAG_EXTRA_INSTANCE_BIND but creature are not in instance.",guid,data.id);
         }
 
@@ -1569,6 +1556,14 @@ void ObjectMgr::LoadGameobjects()
         return;
     }
 
+    // build single time for check spawnmask
+    std::map<uint32,uint32> spawnMasks;
+    for(uint32 i = 0; i < sMapStore.GetNumRows(); ++i)
+        if(sMapStore.LookupEntry(i))
+            for(int k = 0; k < MAX_DIFFICULTY; ++k)
+                if (GetMapDifficultyData(i,Difficulty(k)))
+                    spawnMasks[i] |= (1 << k);
+
     barGoLink bar(result->GetRowCount());
 
     do
@@ -1580,9 +1575,15 @@ void ObjectMgr::LoadGameobjects()
         uint32 entry        = fields[ 1].GetUInt32();
 
         GameObjectInfo const* gInfo = GetGameObjectInfo(entry);
-        if (!gInfo)
+        if(!gInfo)
         {
             sLog.outErrorDb("Table `gameobject` has gameobject (GUID: %u) with non existing gameobject entry %u, skipped.", guid, entry);
+            continue;
+        }
+
+        if(!gInfo->displayId)
+        {
+            sLog.outErrorDb("Gameobject (GUID: %u Entry %u GoType: %u) doesn't have displayId (%u), not loaded.", guid, entry, gInfo->type, gInfo->displayId);
             continue;
         }
 
@@ -1606,6 +1607,13 @@ void ObjectMgr::LoadGameobjects()
         data.rotation3      = fields[10].GetFloat();
         data.spawntimesecs  = fields[11].GetInt32();
 
+        MapEntry const* mapEntry = sMapStore.LookupEntry(data.mapid);
+        if(!mapEntry)
+        {
+            sLog.outErrorDb("Table `gameobject` have gameobject (GUID: %u Entry: %u) that spawned at not existed map (Id: %u), skip", guid, data.id, data.mapid);
+            continue;
+        }
+
         if (data.spawntimesecs==0 && gInfo->IsDespawnAtAction())
         {
             sLog.outErrorDb("Table `gameobject` have gameobject (GUID: %u Entry: %u) with `spawntimesecs` (0) value, but gameobejct marked as despawnable at action.",guid,data.id);
@@ -1623,6 +1631,10 @@ void ObjectMgr::LoadGameobjects()
         data.go_state       = GOState(go_state);
 
         data.spawnMask      = fields[14].GetUInt8();
+
+        if (data.spawnMask & ~spawnMasks[data.mapid])
+            sLog.outErrorDb("Table `gameobject` have gameobject (GUID: %u Entry: %u) that have wrong spawn mask %u including not supported difficulty modes for map (Id: %u), skip", guid, data.id, data.spawnMask, data.mapid);
+
         data.phaseMask      = fields[15].GetUInt16();
         int16 gameEvent     = fields[16].GetInt16();
         int16 PoolId        = fields[17].GetInt16();
@@ -1804,13 +1816,6 @@ bool ObjectMgr::GetPlayerNameByGUID(const uint64 &guid, std::string &name) const
         return true;
     }
 
-    PCachePlayerInfo pInfo = GetPlayerInfoFromCache(GUID_LOPART(guid));
-    if(pInfo)
-    {
-        name = pInfo->sPlayerName.c_str();
-        return true;
-    }
-
     QueryResult *result = CharacterDatabase.PQuery("SELECT name FROM characters WHERE guid = '%u'", GUID_LOPART(guid));
 
     if(result)
@@ -1825,6 +1830,12 @@ bool ObjectMgr::GetPlayerNameByGUID(const uint64 &guid, std::string &name) const
 
 uint32 ObjectMgr::GetPlayerTeamByGUID(const uint64 &guid) const
 {
+    // prevent DB access for online player
+    if(Player* player = GetPlayer(guid))
+    {
+        return Player::TeamForRace(player->getRace());
+    }
+
     QueryResult *result = CharacterDatabase.PQuery("SELECT race FROM characters WHERE guid = '%u'", GUID_LOPART(guid));
 
     if(result)
@@ -1839,6 +1850,12 @@ uint32 ObjectMgr::GetPlayerTeamByGUID(const uint64 &guid) const
 
 uint32 ObjectMgr::GetPlayerAccountIdByGUID(const uint64 &guid) const
 {
+    // prevent DB access for online player
+    if(Player* player = GetPlayer(guid))
+    {
+        return player->GetSession()->GetAccountId();
+    }
+
     QueryResult *result = CharacterDatabase.PQuery("SELECT account FROM characters WHERE guid = '%u'", GUID_LOPART(guid));
     if(result)
     {
@@ -3319,9 +3336,9 @@ void ObjectMgr::LoadGroups()
     Group *group = NULL;
     uint64 leaderGuid = 0;
     uint32 count = 0;
-    //                                                     0         1              2           3           4              5      6      7      8      9      10     11     12     13      14          15
-    QueryResult *result = CharacterDatabase.Query("SELECT mainTank, mainAssistant, lootMethod, looterGuid, lootThreshold, icon1, icon2, icon3, icon4, icon5, icon6, icon7, icon8, isRaid, difficulty, leaderGuid FROM groups");
-
+    //                                                     0         1              2           3           4              5      6      7      8      9      10     11     12     13      14         15              16
+    QueryResult *result = CharacterDatabase.Query("SELECT mainTank, mainAssistant, lootMethod, looterGuid, lootThreshold, icon1, icon2, icon3, icon4, icon5, icon6, icon7, icon8, isRaid, difficulty, raiddifficulty, leaderGuid FROM groups");
+ 
     if( !result )
     {
         barGoLink bar( 1 );
@@ -3340,7 +3357,7 @@ void ObjectMgr::LoadGroups()
         bar.step();
         Field *fields = result->Fetch();
         ++count;
-        leaderGuid = MAKE_NEW_GUID(fields[15].GetUInt32(),0,HIGHGUID_PLAYER);
+        leaderGuid = MAKE_NEW_GUID(fields[16].GetUInt32(),0,HIGHGUID_PLAYER);
 
         group = new Group;
         if(!group->LoadGroupFromDB(leaderGuid, result, false))
@@ -3454,7 +3471,14 @@ void ObjectMgr::LoadGroups()
                 continue;
             }
 
-            InstanceSave *save = sInstanceSaveManager.AddInstanceSave(mapEntry->MapID, fields[2].GetUInt32(), fields[4].GetUInt8(), (time_t)fields[5].GetUInt64(), (fields[6].GetUInt32() == 0), true);
+            uint32 diff = fields[4].GetUInt8();
+            if(diff >= (mapEntry->IsRaid() ? MAX_RAID_DIFFICULTY : MAX_DUNGEON_DIFFICULTY))
+            {
+                sLog.outErrorDb("Wrong dungeon difficulty use in group_instance table: %d", diff + 1);
+                diff = 0;                                   // default for both difficaly types
+            }
+
+            InstanceSave *save = sInstanceSaveManager.AddInstanceSave(mapEntry->MapID, fields[2].GetUInt32(), Difficulty(diff), (time_t)fields[5].GetUInt64(), (fields[6].GetUInt32() == 0), true);
             group->BindToInstance(save, fields[3].GetBool(), true);
         }while( result->NextRow() );
         delete result;
@@ -3484,31 +3508,31 @@ void ObjectMgr::LoadQuests()
         "QuestFlags, SpecialFlags, CharTitleId, PlayersSlain, BonusTalents, PrevQuestId, NextQuestId, ExclusiveGroup, NextQuestInChain, SrcItemId, SrcItemCount, SrcSpell,"
     //   29     30       31          32               33                34       35              36              37              38
         "Title, Details, Objectives, OfferRewardText, RequestItemsText, EndText, ObjectiveText1, ObjectiveText2, ObjectiveText3, ObjectiveText4,"
-    //   39          40          41          42          43             44             45             46
-        "ReqItemId1, ReqItemId2, ReqItemId3, ReqItemId4, ReqItemCount1, ReqItemCount2, ReqItemCount3, ReqItemCount4,"
-    //   47            48            49            50            51               52               53               54
+    //   39          40          41          42          43          44          45             46             47             48             49             50
+        "ReqItemId1, ReqItemId2, ReqItemId3, ReqItemId4, ReqItemId5, ReqItemId6, ReqItemCount1, ReqItemCount2, ReqItemCount3, ReqItemCount4, ReqItemCount5, ReqItemCount6,"
+    //   51            52            53            54            55               56               57               58
         "ReqSourceId1, ReqSourceId2, ReqSourceId3, ReqSourceId4, ReqSourceCount1, ReqSourceCount2, ReqSourceCount3, ReqSourceCount4,"
-    //   55                  56                  57                  58                  59                     60                     61                     62
+    //   59                  60                  61                  62                  63                     64                     65                     66
         "ReqCreatureOrGOId1, ReqCreatureOrGOId2, ReqCreatureOrGOId3, ReqCreatureOrGOId4, ReqCreatureOrGOCount1, ReqCreatureOrGOCount2, ReqCreatureOrGOCount3, ReqCreatureOrGOCount4,"
-    //   63             64             65             66
+    //   67             68             69             70
         "ReqSpellCast1, ReqSpellCast2, ReqSpellCast3, ReqSpellCast4,"
-    //   67                68                69                70                71                72
+    //   71                72                73                74                75                76
         "RewChoiceItemId1, RewChoiceItemId2, RewChoiceItemId3, RewChoiceItemId4, RewChoiceItemId5, RewChoiceItemId6,"
-    //   73                   74                   75                   76                   77                   78
+    //   77                   78                   79                   80                   81                   82
         "RewChoiceItemCount1, RewChoiceItemCount2, RewChoiceItemCount3, RewChoiceItemCount4, RewChoiceItemCount5, RewChoiceItemCount6,"
-    //   79          80          81          82          83             84             85             86
+    //   83          84          85          86          87             88             89             90
         "RewItemId1, RewItemId2, RewItemId3, RewItemId4, RewItemCount1, RewItemCount2, RewItemCount3, RewItemCount4,"
-    //   87              88              89              90              91              92            93            94            95            96
+    //   91              92              93              94              95              96            97            98            99            100
         "RewRepFaction1, RewRepFaction2, RewRepFaction3, RewRepFaction4, RewRepFaction5, RewRepValue1, RewRepValue2, RewRepValue3, RewRepValue4, RewRepValue5,"
-    //   97                 98             99                100       101           102                103               104         105     106     107
+    //   101                102            103               104       105           106                107               108         109     110     111
         "RewHonorableKills, RewOrReqMoney, RewMoneyMaxLevel, RewSpell, RewSpellCast, RewMailTemplateId, RewMailDelaySecs, PointMapId, PointX, PointY, PointOpt,"
-    //   108            109            110            111            112                 113                 114                 115
+    //   112            113            114            115            116                 117                 118                 119
         "DetailsEmote1, DetailsEmote2, DetailsEmote3, DetailsEmote4, DetailsEmoteDelay1, DetailsEmoteDelay2, DetailsEmoteDelay3, DetailsEmoteDelay4,"
-    //   116              117            118                119                120                121
+    //   120              121            122                123                124                125
         "IncompleteEmote, CompleteEmote, OfferRewardEmote1, OfferRewardEmote2, OfferRewardEmote3, OfferRewardEmote4,"
-    //   122                     123                     124                     125
+    //   126                     127                     128                     129
         "OfferRewardEmoteDelay1, OfferRewardEmoteDelay2, OfferRewardEmoteDelay3, OfferRewardEmoteDelay4,"
-    //   126          127
+    //   130          131
         "StartScript, CompleteScript"
         " FROM quest_template");
     if(result == NULL)
@@ -3537,8 +3561,7 @@ void ObjectMgr::LoadQuests()
 
     delete result;
 
-
-    std::map<uint32,uint32> usedMailTemplates;
+   std::map<uint32,uint32> usedMailTemplates;
 
     // Post processing
     for (QuestMap::iterator iter = mQuestTemplates.begin(); iter != mQuestTemplates.end(); ++iter)
@@ -3765,7 +3788,7 @@ void ObjectMgr::LoadQuests()
             }
         }
 
-        for (uint8 j = 0; j < QUEST_OBJECTIVES_COUNT; ++j )
+        for (uint8 j = 0; j < QUEST_ITEM_OBJECTIVES_COUNT; ++j )
         {
             uint32 id = qinfo->ReqItemId[j];
             if(id)
@@ -4057,7 +4080,7 @@ void ObjectMgr::LoadQuests()
         if (qinfo->NextQuestInChain)
         {
             QuestMap::iterator qNextItr = mQuestTemplates.find(qinfo->NextQuestInChain);
-            if (qNextItr == mQuestTemplates.end())
+            if(qNextItr == mQuestTemplates.end())
             {
                 sLog.outErrorDb("Quest %u has `NextQuestInChain` = %u but quest %u does not exist, quest chain will not work.",
                     qinfo->GetQuestId(),qinfo->NextQuestInChain ,qinfo->NextQuestInChain );
@@ -4068,7 +4091,7 @@ void ObjectMgr::LoadQuests()
         }
 
         // fill additional data stores
-        if (qinfo->PrevQuestId)
+        if(qinfo->PrevQuestId)
         {
             if (mQuestTemplates.find(abs(qinfo->GetPrevQuestId())) == mQuestTemplates.end())
             {
@@ -4080,7 +4103,7 @@ void ObjectMgr::LoadQuests()
             }
         }
 
-        if (qinfo->NextQuestId)
+        if(qinfo->NextQuestId)
         {
             QuestMap::iterator qNextItr = mQuestTemplates.find(abs(qinfo->GetNextQuestId()));
             if (qNextItr == mQuestTemplates.end())
@@ -4094,9 +4117,9 @@ void ObjectMgr::LoadQuests()
             }
         }
 
-        if (qinfo->ExclusiveGroup)
+        if(qinfo->ExclusiveGroup)
             mExclusiveQuestGroups.insert(std::pair<int32, uint32>(qinfo->ExclusiveGroup, qinfo->GetQuestId()));
-        if (qinfo->LimitTime)
+        if(qinfo->LimitTime)
             qinfo->SetFlag(QUEST_TRINITY_FLAGS_TIMED);
     }
 
@@ -4666,36 +4689,36 @@ void ObjectMgr::LoadWaypointScripts()
 void ObjectMgr::LoadItemTexts()
 {
     QueryResult *result = CharacterDatabase.Query("SELECT id, text FROM item_text");
-
+ 
     uint32 count = 0;
-
+ 
     if( !result )
     {
         barGoLink bar( 1 );
         bar.step();
-
+ 
         sLog.outString();
         sLog.outString( ">> Loaded %u item pages", count );
         return;
     }
-
+ 
     barGoLink bar( result->GetRowCount() );
-
+ 
     Field* fields;
     do
     {
         bar.step();
-
+ 
         fields = result->Fetch();
-
+ 
         mItemTexts[ fields[0].GetUInt32() ] = fields[1].GetCppString();
-
+ 
         ++count;
-
+ 
     } while ( result->NextRow() );
-
+ 
     delete result;
-
+ 
     sLog.outString();
     sLog.outString( ">> Loaded %u item texts", count );
 }
@@ -4813,37 +4836,17 @@ void ObjectMgr::LoadInstanceTemplate()
     for (uint32 i = 0; i < sInstanceTemplate.MaxEntry; i++)
     {
         InstanceTemplate* temp = (InstanceTemplate*)GetInstanceTemplate(i);
-        if(!temp) continue;
-        const MapEntry* entry = sMapStore.LookupEntry(temp->map);
-        if(!entry)
-        {
+        if(!temp)
+            continue;
+
+        if(!MapManager::IsValidMAP(temp->map))
             sLog.outErrorDb("ObjectMgr::LoadInstanceTemplate: bad mapid %d for template!", temp->map);
-            continue;
-        }
-        else if(!entry->HasResetTime())
-            continue;
 
-        //FIXME: now exist heroic instance, normal/heroic raid instances
-        // entry->resetTimeHeroic store reset time for both heroic mode instance (raid and non-raid)
-        // entry->resetTimeRaid   store reset time for normal raid only
-        // for current state  entry->resetTimeRaid == entry->resetTimeHeroic in case raid instances with heroic mode.
-        // but at some point wee need implement reset time dependent from raid instance mode
-        if(temp->reset_delay == 0)
+        if(!MapManager::IsValidMapCoord(temp->parent,temp->startLocX,temp->startLocY,temp->startLocZ,temp->startLocO))
         {
-            // use defaults from the DBC
-            if(entry->resetTimeHeroic)                      // for both raid and non raids, read above
-            {
-                temp->reset_delay = entry->resetTimeHeroic / DAY;
-            }
-            else if (entry->resetTimeRaid && entry->map_type == MAP_RAID)
-                                                            // for normal raid only
-            {
-                temp->reset_delay = entry->resetTimeRaid / DAY;
-            }
+            sLog.outErrorDb("ObjectMgr::LoadInstanceTemplate: bad parent entrance coordinates for map id %d template!", temp->map);
+            temp->parent = 0;                               // will have wrong continent 0 parent, at least existed
         }
-
-        // the reset_delay must be at least one day
-        temp->reset_delay = std::max((uint32)1, (uint32)(temp->reset_delay * sWorld.getRate(RATE_INSTANCE_RESET_TIME)));
     }
 
     sLog.outString( ">> Loaded %u Instance Template definitions", sInstanceTemplate.RecordCount );
@@ -5250,6 +5253,7 @@ void ObjectMgr::LoadAreaTriggerScripts()
     sLog.outString( ">> Loaded %u areatrigger scripts", count );
 }
 
+// use searched_node for search some known node
 uint32 ObjectMgr::GetNearestTaxiNode( float x, float y, float z, uint32 mapid, uint32 team )
 {
     bool found = false;
@@ -5259,7 +5263,8 @@ uint32 ObjectMgr::GetNearestTaxiNode( float x, float y, float z, uint32 mapid, u
     for (uint32 i = 1; i < sTaxiNodesStore.GetNumRows(); ++i)
     {
         TaxiNodesEntry const* node = sTaxiNodesStore.LookupEntry(i);
-        if(!node || node->map_id != mapid || !node->MountCreatureID[team == ALLIANCE ? 1 : 0] && node->MountCreatureID[0] != 32981) // dk flight
+
+		if(!node || node->map_id != mapid || !node->MountCreatureID[team == ALLIANCE ? 1 : 0] && node->MountCreatureID[0] != 32981) // dk flight
             continue;
 
         uint8  field   = (uint8)((i - 1) / 32);
@@ -5269,7 +5274,7 @@ uint32 ObjectMgr::GetNearestTaxiNode( float x, float y, float z, uint32 mapid, u
         if((sTaxiNodesMask[field] & submask)==0)
             continue;
 
-        float dist2 = (node->x - x)*(node->x - x)+(node->y - y)*(node->y - y)+(node->z - z)*(node->z - z);
+		float dist2 = (node->x - x)*(node->x - x)+(node->y - y)*(node->y - y)+(node->z - z)*(node->z - z);
         if(found)
         {
             if(dist2 < dist)
@@ -5479,7 +5484,7 @@ WorldSafeLocsEntry const *ObjectMgr::GetClosestGraveYard(float x, float y, float
 
     if(graveLow==graveUp && !map->IsBattleArena())
     {
-        sLog.outErrorDb("Table `game_graveyard_zone` incomplete: Zone %u Team %u does not have a linked graveyard.",zoneId,team);
+        //sLog.outErrorDb("Table `game_graveyard_zone` incomplete: Zone %u Team %u does not have a linked graveyard.",zoneId,team);
         return NULL;
     }
 
