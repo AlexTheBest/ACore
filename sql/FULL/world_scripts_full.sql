@@ -1,7 +1,11 @@
 -- Up to TC2 6928
 
 -- Cleanup first
+UPDATE `instance_template` SET `Script`='';
+UPDATE `item_template` SET `ScriptName`='';
 UPDATE `creature_template` SET `ScriptName`='';
+UPDATE `gameobject_template` SET `ScriptName`='';
+
 
 /* WORLD BOSS */
 UPDATE `creature_template` SET `ScriptName`='boss_ysondre' WHERE `entry`=14887;
@@ -389,6 +393,7 @@ UPDATE `creature_template` SET `ScriptName`='npc_beryl_sorcerer' WHERE `entry`=2
 UPDATE `creature_template` SET `ScriptName`='npc_imprisoned_beryl_sorcerer' WHERE `entry` = 25478;
 UPDATE `creature_template` SET `ScriptName`='npc_mootoo_the_younger' WHERE `entry`= 25504;
 UPDATE `creature_template` SET `ScriptName`='npc_bonker_togglevolt' WHERE `entry`= 25589;
+UPDATE `creature_template` SET `ScriptName`='npc_fezzix_geartwist' WHERE `entry`=25849;
 
 /* BURNING STEPPES */
 UPDATE `creature_template` SET `ScriptName`='npc_ragged_john' WHERE `entry`=9563;
@@ -1214,7 +1219,6 @@ UPDATE `creature_template` SET `ScriptName`='mob_toc5_mage' WHERE entry IN (3470
 UPDATE `creature_template` SET `ScriptName`='mob_toc5_shaman' WHERE entry IN (34701, 35571);
 UPDATE `creature_template` SET `ScriptName`='mob_toc5_hunter' WHERE entry IN (34657, 35570);
 UPDATE `creature_template` SET `ScriptName`='mob_toc5_rogue' WHERE entry IN (34703, 35617);
-UPDATE `creature_template` SET `ScriptName`='mob_toc5_risen_ghoul' WHERE entry IN (35545, 35564);
 UPDATE `creature_template` SET `ScriptName`='npc_risen_ghoul' WHERE `entry` IN (35545,35564);
 UPDATE `creature_template` SET `ScriptName`='boss_black_knight' WHERE `entry`=35451;
 UPDATE `creature_template` SET `ScriptName`='boss_eadric' WHERE `entry`=35119;
