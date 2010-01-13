@@ -602,6 +602,42 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         pVictim->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TAKE_DAMAGE, spellProto ? spellProto->Id : 0);
     }
 
+
+    // Rage from Damage made (only from direct weapon damage)
+    if (cleanDamage && damagetype==DIRECT_DAMAGE && this != pVictim && getPowerType() == POWER_RAGE)
+    {
+        uint32 weaponSpeedHitFactor;
+        uint32 rage_damage = damage + cleanDamage->absorbed_damage;
+
+        switch(cleanDamage->attackType)
+        {
+            case BASE_ATTACK:
+            {
+                if (cleanDamage->hitOutCome == MELEE_HIT_CRIT)
+                    weaponSpeedHitFactor = uint32(GetAttackTime(cleanDamage->attackType)/1000.0f * 7);
+                else
+                    weaponSpeedHitFactor = uint32(GetAttackTime(cleanDamage->attackType)/1000.0f * 3.5f);
+
+                RewardRage(rage_damage, weaponSpeedHitFactor, true);
+
+                break;
+            }
+            case OFF_ATTACK:
+            {
+                if (cleanDamage->hitOutCome == MELEE_HIT_CRIT)
+                    weaponSpeedHitFactor = uint32(GetAttackTime(cleanDamage->attackType)/1000.0f * 3.5f);
+                else
+                    weaponSpeedHitFactor = uint32(GetAttackTime(cleanDamage->attackType)/1000.0f * 1.75f);
+
+                RewardRage(rage_damage, weaponSpeedHitFactor, true);
+
+                break;
+            }
+            case RANGED_ATTACK:
+                break;
+        }
+    }
+
     if (!damage)
     {
         // Rage from absorbed damage
@@ -649,41 +685,6 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
             damage = health-1;
 
         duel_hasEnded = true;
-    }
-
-    // Rage from Damage made (only from direct weapon damage)
-    if (cleanDamage && damagetype==DIRECT_DAMAGE && this != pVictim && getPowerType() == POWER_RAGE)
-    {
-        uint32 weaponSpeedHitFactor;
-        uint32 rage_damage = damage + cleanDamage->absorbed_damage;
-
-        switch(cleanDamage->attackType)
-        {
-            case BASE_ATTACK:
-            {
-                if (cleanDamage->hitOutCome == MELEE_HIT_CRIT)
-                    weaponSpeedHitFactor = uint32(GetAttackTime(cleanDamage->attackType)/1000.0f * 7);
-                else
-                    weaponSpeedHitFactor = uint32(GetAttackTime(cleanDamage->attackType)/1000.0f * 3.5f);
-
-                RewardRage(rage_damage, weaponSpeedHitFactor, true);
-
-                break;
-            }
-            case OFF_ATTACK:
-            {
-                if (cleanDamage->hitOutCome == MELEE_HIT_CRIT)
-                    weaponSpeedHitFactor = uint32(GetAttackTime(cleanDamage->attackType)/1000.0f * 3.5f);
-                else
-                    weaponSpeedHitFactor = uint32(GetAttackTime(cleanDamage->attackType)/1000.0f * 1.75f);
-
-                RewardRage(rage_damage, weaponSpeedHitFactor, true);
-
-                break;
-            }
-            case RANGED_ATTACK:
-                break;
-        }
     }
 
     if (GetTypeId() == TYPEID_PLAYER && this != pVictim)
@@ -1847,6 +1848,14 @@ void Unit::CalcAbsorbResist(Unit *pVictim, SpellSchoolMask schoolMask, DamageEff
                 if (spellProto->SpellIconID == 50)    // only spell with this aura fit
                 {
                     RemainingDamage -= int32(currentAbsorb * pVictim->GetTotalAttackPowerValue(BASE_ATTACK) / 100);
+                    continue;
+                }
+                // Moonkin Form passive
+                if (spellProto->Id == 69366)
+                {
+                    //reduces all damage taken while Stunned
+                    if (unitflag & UNIT_FLAG_STUNNED)
+                        RemainingDamage -= RemainingDamage * currentAbsorb / 100;
                     continue;
                 }
                 break;
@@ -6557,7 +6566,20 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
             // Sacred Shield
             if (dummySpell->SpellFamilyFlags[1]&0x00080000)
             {
-                triggered_spell_id = 58597;
+                if (procFlag & PROC_FLAG_TAKEN_POSITIVE_MAGIC_SPELL)
+                {
+                    if (procSpell->SpellFamilyName == SPELLFAMILY_PALADIN 
+                        && (procSpell->SpellFamilyFlags[0] & 0x40000000))
+                    {
+                        basepoints0 = int32(float(damage)/12.0f);
+                        CastCustomSpell(this,66922,&basepoints0,NULL,NULL,true,0,triggeredByAura, pVictim->GetGUID());
+                        return true;
+                    }
+                    else
+                        return false;
+                }
+                else
+                    triggered_spell_id = 58597;
                 target = this;
                 break;
             }
@@ -8556,11 +8578,14 @@ bool Unit::IsHostileTo(Unit const* unit) const
 
         //= PvP states
         // Green/Blue (can't attack)
-        if(pTester->GetTeam()==pTarget->GetTeam())
-            return false;
+        if (!pTester->HasAuraType(SPELL_AURA_MOD_FACTION) && !pTarget->HasAuraType(SPELL_AURA_MOD_FACTION))
+        {
+            if(pTester->GetTeam()==pTarget->GetTeam())
+                return false;
 
-        // Red (can attack) if true, Blue/Yellow (can't attack) in another case
-        return pTester->IsPvP() && pTarget->IsPvP();
+            // Red (can attack) if true, Blue/Yellow (can't attack) in another case
+            return pTester->IsPvP() && pTarget->IsPvP();
+        }
     }
 
     // faction base cases
@@ -8573,7 +8598,7 @@ bool Unit::IsHostileTo(Unit const* unit) const
         return true;
 
     // PvC forced reaction and reputation case
-    if(tester->GetTypeId() == TYPEID_PLAYER)
+    if(tester->GetTypeId() == TYPEID_PLAYER && !tester->HasAuraType(SPELL_AURA_MOD_FACTION))
     {
         // forced reaction
         if(target_faction->faction)
@@ -8588,7 +8613,7 @@ bool Unit::IsHostileTo(Unit const* unit) const
         }
     }
     // CvP forced reaction and reputation case
-    else if(target->GetTypeId() == TYPEID_PLAYER)
+    else if(target->GetTypeId() == TYPEID_PLAYER && !target->HasAuraType(SPELL_AURA_MOD_FACTION))
     {
         // forced reaction
         if(tester_faction->faction)
@@ -8668,11 +8693,14 @@ bool Unit::IsFriendlyTo(Unit const* unit) const
 
         //= PvP states
         // Green/Blue (non-attackable)
-        if(pTester->GetTeam()==pTarget->GetTeam())
-            return true;
+        if (!pTester->HasAuraType(SPELL_AURA_MOD_FACTION) && !pTarget->HasAuraType(SPELL_AURA_MOD_FACTION))
+        {
+            if(pTester->GetTeam()==pTarget->GetTeam())
+                return true;
 
-        // Blue (friendly/non-attackable) if not PVP, or Yellow/Red in another case (attackable)
-        return !pTarget->IsPvP();
+            // Blue (friendly/non-attackable) if not PVP, or Yellow/Red in another case (attackable)
+            return !pTarget->IsPvP();
+        }
     }
 
     // faction base cases
@@ -8685,7 +8713,7 @@ bool Unit::IsFriendlyTo(Unit const* unit) const
         return false;
 
     // PvC forced reaction and reputation case
-    if (tester->GetTypeId() == TYPEID_PLAYER)
+    if (tester->GetTypeId() == TYPEID_PLAYER && !tester->HasAuraType(SPELL_AURA_MOD_FACTION))
     {
         // forced reaction
         if (target_faction->faction)
@@ -8700,7 +8728,7 @@ bool Unit::IsFriendlyTo(Unit const* unit) const
         }
     }
     // CvP forced reaction and reputation case
-    else if (target->GetTypeId() == TYPEID_PLAYER)
+    else if (target->GetTypeId() == TYPEID_PLAYER && !target->HasAuraType(SPELL_AURA_MOD_FACTION))
     {
         // forced reaction
         if (tester_faction->faction)
@@ -9547,14 +9575,14 @@ void Unit::UnsummonAllTotems()
 void Unit::SendHealSpellLog(Unit *pVictim, uint32 SpellID, uint32 Damage, uint32 OverHeal, bool critical)
 {
     // we guess size
-    WorldPacket data(SMSG_SPELLHEALLOG, (8+8+4+4+1));
+    WorldPacket data(SMSG_SPELLHEALLOG, (8+8+4+4+4+4+1));
     data.append(pVictim->GetPackGUID());
     data.append(GetPackGUID());
     data << uint32(SpellID);
     data << uint32(Damage);
     data << uint32(OverHeal);
+    data << uint32(0);  // Absorb amount
     data << uint8(critical ? 1 : 0);
-    data << uint8(0);                                       // unused in client?
     SendMessageToSet(&data, true);
 }
 
@@ -10646,6 +10674,14 @@ bool Unit::IsImmunedToSpell(SpellEntry const* spellInfo)
                 return true;
     }
 
+    for (int i=0;i<3;++i)
+    {
+        // State/effect immunities applied by aura expect full spell immunity
+        // However function also check for mechanic, so ignore that for now
+        if (IsImmunedToSpellEffect(spellInfo, i, false))
+            return true;
+    }
+
     if (spellInfo->Id != 42292 && spellInfo->Id !=59752)
     {
         SpellImmuneList const& schoolList = m_spellImmune[IMMUNITY_SCHOOL];
@@ -10659,7 +10695,7 @@ bool Unit::IsImmunedToSpell(SpellEntry const* spellInfo)
     return false;
 }
 
-bool Unit::IsImmunedToSpellEffect(SpellEntry const* spellInfo, uint32 index) const
+bool Unit::IsImmunedToSpellEffect(SpellEntry const* spellInfo, uint32 index, bool checkMechanic) const
 {
     if (!spellInfo)
         return false;
@@ -10670,12 +10706,15 @@ bool Unit::IsImmunedToSpellEffect(SpellEntry const* spellInfo, uint32 index) con
         if (itr->type == effect)
             return true;
 
-    if (uint32 mechanic = spellInfo->EffectMechanic[index])
+    if (checkMechanic)
     {
-        SpellImmuneList const& mechanicList = m_spellImmune[IMMUNITY_MECHANIC];
-        for (SpellImmuneList::const_iterator itr = mechanicList.begin(); itr != mechanicList.end(); ++itr)
-            if (itr->type == spellInfo->EffectMechanic[index])
-                return true;
+        if (uint32 mechanic = spellInfo->EffectMechanic[index])
+        {
+            SpellImmuneList const& mechanicList = m_spellImmune[IMMUNITY_MECHANIC];
+            for (SpellImmuneList::const_iterator itr = mechanicList.begin(); itr != mechanicList.end(); ++itr)
+                if (itr->type == spellInfo->EffectMechanic[index])
+                    return true;
+        }
     }
 
     if (uint32 aura = spellInfo->EffectApplyAuraName[index])
@@ -11061,7 +11100,7 @@ float Unit::GetPPMProcChance(uint32 WeaponSpeed, float PPM, const SpellEntry * s
     return uint32((WeaponSpeed * PPM) / 600.0f);   // result is chance in percents (probability = Speed_in_sec * (PPM / 60))
 }
 
-void Unit::Mount(uint32 mount)
+void Unit::Mount(uint32 mount, uint32 VehicleId)
 {
     RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_MOUNT);
 
@@ -11082,6 +11121,27 @@ void Unit::Mount(uint32 mount)
                 pet->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED);
             else
                 ((Player*)this)->UnsummonPetTemporaryIfAny();
+        }
+
+        if(VehicleId !=0)
+        {
+            if(VehicleEntry const *ve = sVehicleStore.LookupEntry(VehicleId))
+            {
+
+                if (CreateVehicleKit(VehicleId))
+                {
+                    GetVehicleKit()->Reset();
+
+                    // Send others that we now have a vehicle
+                    WorldPacket data( SMSG_PLAYER_VEHICLE_DATA, GetPackGUID().size()+4);
+                    data.appendPackGUID(GetGUID());
+                    data << uint32(VehicleId);
+                    SendMessageToSet( &data,true );
+
+                    data.Initialize(SMSG_ON_CANCEL_EXPECTED_RIDE_VEHICLE_AURA, 0);
+                    ((Player*)this)->GetSession()->SendPacket( &data );
+                }
+            }
         }
     }
 
@@ -11109,6 +11169,16 @@ void Unit::Unmount()
         }
         else
             ((Player*)this)->ResummonPetTemporaryUnSummonedIfAny();
+    }
+    if(GetTypeId()==TYPEID_PLAYER && GetVehicleKit())
+    {
+        // Send other players that we are no longer a vehicle
+        WorldPacket data( SMSG_PLAYER_VEHICLE_DATA, 8+4 );
+        data.appendPackGUID(GetGUID());
+        data << uint32(0);
+        ((Player*)this)->SendMessageToSet(&data, true);
+        // Remove vehicle class from player
+        RemoveVehicleKit();
     }
 }
 
@@ -12195,7 +12265,7 @@ void Unit::ModSpellCastTime(SpellEntry const* spellProto, int32 & castTime, Spel
     if (Player* modOwner = GetSpellModOwner())
         modOwner->ApplySpellMod(spellProto->Id, SPELLMOD_CASTING_TIME, castTime, spell);
 
-    if (!(spellProto->Attributes & (SPELL_ATTR_UNK4|SPELL_ATTR_TRADESPELL)) && spellProto->DmgClass == SPELL_DAMAGE_CLASS_MAGIC && spellProto->SpellFamilyName)
+    if (!(spellProto->Attributes & (SPELL_ATTR_UNK4|SPELL_ATTR_TRADESPELL)) && spellProto->SpellFamilyName)
         castTime = int32(float(castTime) * GetFloatValue(UNIT_MOD_CAST_SPEED));
     else
     {
@@ -14916,6 +14986,22 @@ bool Unit::CreateVehicleKit(uint32 id)
     m_updateFlag |= UPDATEFLAG_VEHICLE;
     m_unitTypeMask |= UNIT_MASK_VEHICLE;
     return true;
+}
+
+void Unit::RemoveVehicleKit()
+{
+    if (!m_vehicleKit)
+        return;
+
+    m_vehicleKit->Uninstall();
+    delete m_vehicleKit;
+
+    m_vehicleKit = NULL;
+
+    m_updateFlag &= ~UPDATEFLAG_VEHICLE;
+    m_unitTypeMask &= ~UNIT_MASK_VEHICLE;
+    RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_SPELLCLICK);
+    RemoveFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_PLAYER_VEHICLE);
 }
 
 Unit *Unit::GetVehicleBase() const

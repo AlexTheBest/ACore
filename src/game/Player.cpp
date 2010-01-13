@@ -1323,6 +1323,14 @@ void Player::Update( uint32 p_time )
             m_zoneUpdateTimer -= p_time;
     }
 
+    if (m_timeSyncTimer > 0)
+    {
+        if(p_time >= m_timeSyncTimer)
+            SendTimeSync();
+        else
+            m_timeSyncTimer -= p_time;
+    }
+
     if (isAlive())
     {
         m_regenTimer += p_time;
@@ -3981,6 +3989,7 @@ void Player::InitVisibleBits()
     updateVisualBits.SetBit(PLAYER_BYTES_3);
     updateVisualBits.SetBit(PLAYER_DUEL_TEAM);
     updateVisualBits.SetBit(PLAYER_GUILD_TIMESTAMP);
+    updateVisualBits.SetBit(UNIT_NPC_FLAGS);
 
     // PLAYER_QUEST_LOG_x also visible bit on official (but only on party/raid)...
     for (uint16 i = PLAYER_QUEST_LOG_1_1; i < PLAYER_QUEST_LOG_25_2; i += 4)
@@ -5862,13 +5871,16 @@ void Player::SendActionButtons(uint32 state) const
 
     WorldPacket data(SMSG_ACTION_BUTTONS, 1+(MAX_ACTION_BUTTONS*4));
     data << uint8(state);                                       // can be 0, 1, 2
-    for (uint16 button = 0; button < MAX_ACTION_BUTTONS; ++button)
+    if (state != 2)
     {
-        ActionButtonList::const_iterator itr = m_actionButtons.find(button);
-        if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
-            data << uint32(itr->second.packedData);
-        else
-            data << uint32(0);
+        for (uint16 button = 0; button < MAX_ACTION_BUTTONS; ++button)
+        {
+            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
+            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
+                data << uint32(itr->second.packedData);
+            else
+                data << uint32(0);
+        }
     }
 
     GetSession()->SendPacket(&data);
@@ -7126,12 +7138,29 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
         if (uint32 ssvarmor = ssv->getArmorMod(proto->ScalingStatValue))
             armor = ssvarmor;
     }
-    // Add armor bonus from ArmorDamageModifier if > 0
-    if (proto->ArmorDamageModifier > 0)
-        armor += uint32(proto->ArmorDamageModifier);
 
     if (armor)
-        HandleStatModifier(UNIT_MOD_ARMOR, BASE_VALUE, float(armor), apply);
+    {
+        UnitModifierType modType = TOTAL_VALUE;
+        if (proto->Class == ITEM_CLASS_ARMOR)
+        {
+            switch (proto->SubClass)
+            {
+                case ITEM_SUBCLASS_ARMOR_CLOTH:
+                case ITEM_SUBCLASS_ARMOR_LEATHER:
+                case ITEM_SUBCLASS_ARMOR_MAIL:
+                case ITEM_SUBCLASS_ARMOR_PLATE:
+                case ITEM_SUBCLASS_ARMOR_SHIELD:
+                    modType = BASE_VALUE;
+                break;
+            }
+        }
+        HandleStatModifier(UNIT_MOD_ARMOR, modType, float(armor), apply);
+    }
+
+    // Add armor bonus from ArmorDamageModifier if > 0
+    if (proto->ArmorDamageModifier > 0)
+        HandleStatModifier(UNIT_MOD_ARMOR, TOTAL_VALUE, float(proto->ArmorDamageModifier), apply);
 
     if (proto->Block)
         HandleBaseModValue(SHIELD_BLOCK_VALUE, FLAT_MOD, float(proto->Block), apply);
@@ -7291,7 +7320,14 @@ void Player::_ApplyWeaponDependentAuraDamageMod(Item *item, WeaponAttackType att
     }
 
     if (!item->IsBroken()&&item->IsFitToSpellRequirements(aura->GetSpellProto()))
+    {
         HandleStatModifier(unitMod, unitModType, float(aura->GetAmount()),apply);
+
+        if (unitModType == TOTAL_PCT)
+            ApplyModSignedFloatValue(PLAYER_FIELD_MOD_DAMAGE_DONE_PCT,aura->GetAmount()/100.0f,apply);
+        else
+            ApplyModUInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_POS,aura->GetAmount(),apply);
+    }
 }
 
 void Player::ApplyItemEquipSpell(Item *item, bool apply, bool form_change)
@@ -20200,9 +20236,8 @@ void Player::SendInitialPacketsAfterAddToMap()
     GetZoneAndAreaId(newzone,newarea);
     UpdateZone(newzone,newarea);                            // also call SendInitWorldStates();
 
-    WorldPacket data(SMSG_TIME_SYNC_REQ, 4);                // new 2.0.x, enable movement
-    data << uint32(0x00000000);                             // on blizz it increments periodically
-    GetSession()->SendPacket(&data);
+    ResetTimeSync();
+    SendTimeSync();
 
     CastSpell(this, SPELL_LOGINEFFECT_836, true);                             // LOGINEFFECT
 
@@ -23006,8 +23041,8 @@ void Player::ActivateSpec(uint8 spec)
     m_usedTalentCount = spentTalents;
     InitTalentForLevel();
 
-    _SaveSpells();
-
+    // Let client clear his current Actions
+    SendActionButtons(2);
     m_actionButtons.clear();
     if (QueryResult *result = CharacterDatabase.PQuery("SELECT button,action,type FROM character_action WHERE guid = '%u' AND spec = '%u' ORDER BY button", GetGUIDLow(), m_activeSpec))
         _LoadActions(result, false);
@@ -23020,6 +23055,22 @@ void Player::ActivateSpec(uint8 spec)
         SetPower(POWER_MANA, 0); // Mana must be 0 even if it isn't the active power type.
 
     SetPower(pw, 0);
+}
+
+void Player::ResetTimeSync()
+{
+    m_timeSyncCount = 0;
+    m_timeSyncTimer = 0;
+}
+
+void Player::SendTimeSync()
+{
+    WorldPacket data(SMSG_TIME_SYNC_REQ, 4);
+    data << uint32(m_timeSyncCount++);
+    GetSession()->SendPacket(&data);
+
+    // Send another opcode in 10s again
+    m_timeSyncTimer = 10000;
 }
 
 void Player::SetReputation(uint32 factionentry, uint32 value)

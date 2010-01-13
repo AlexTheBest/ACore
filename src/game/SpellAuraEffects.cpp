@@ -298,7 +298,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleAuraModExpertise,                          //240 SPELL_AURA_MOD_EXPERTISE
     &AuraEffect::HandleForceMoveForward,                          //241 SPELL_AURA_FORCE_MOVE_FORWARD Forces the player to move forward
     &AuraEffect::HandleNULL,                                      //242 SPELL_AURA_MOD_SPELL_DAMAGE_FROM_HEALING - 2 test spells: 44183 and 44182
-    &AuraEffect::HandleNULL,                                      //243 faction reaction override spells
+    &AuraEffect::HandleAuraModFaction,                            //243 SPELL_AURA_MOD_FACTION
     &AuraEffect::HandleComprehendLanguage,                        //244 SPELL_AURA_COMPREHEND_LANGUAGE
     &AuraEffect::HandleNoImmediateEffect,                         //245 SPELL_AURA_MOD_AURA_DURATION_BY_DISPEL
     &AuraEffect::HandleNoImmediateEffect,                         //246 SPELL_AURA_MOD_AURA_DURATION_BY_DISPEL_NOT_STACK implemented in Spell::EffectApplyAura
@@ -2288,6 +2288,7 @@ void AuraEffect::HandleShapeshiftBoosts(Unit * target, bool apply) const
             break;
         case FORM_MOONKIN:
             spellId = 24905;
+            spellId2 = 69366;
             break;
         case FORM_FLIGHT:
             spellId = 33948;
@@ -3470,7 +3471,7 @@ void AuraEffect::HandleAuraMounted(AuraApplication const * aurApp, uint8 mode, b
             if(GetSpellProto()->Effect[i] == SPELL_EFFECT_SUMMON
                 && GetSpellProto()->EffectMiscValue[i] == GetMiscValue())
                 display_id = 0;
-        target->Mount(display_id);
+        target->Mount(display_id,ci->VehicleId);
     }
     else
     {
@@ -5097,18 +5098,18 @@ void AuraEffect::HandleModDamageDone(AuraApplication const * aurApp, uint8 mode,
             target->HandleStatModifier(UNIT_MOD_DAMAGE_MAINHAND, TOTAL_VALUE, float(GetAmount()), apply);
             target->HandleStatModifier(UNIT_MOD_DAMAGE_OFFHAND, TOTAL_VALUE, float(GetAmount()), apply);
             target->HandleStatModifier(UNIT_MOD_DAMAGE_RANGED, TOTAL_VALUE, float(GetAmount()), apply);
+
+            if(target->GetTypeId() == TYPEID_PLAYER)
+            {
+                if(GetAmount() > 0)
+                    target->ApplyModUInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_POS,GetAmount(),apply);
+                else
+                    target->ApplyModUInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_NEG,GetAmount(),apply);
+            }
         }
         else
         {
             // done in Player::_ApplyWeaponDependentAuraMods
-        }
-
-        if(target->GetTypeId() == TYPEID_PLAYER)
-        {
-            if(GetAmount() > 0)
-                target->ApplyModUInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_POS,GetAmount(),apply);
-            else
-                target->ApplyModUInt32Value(PLAYER_FIELD_MOD_DAMAGE_DONE_NEG,GetAmount(),apply);
         }
     }
 
@@ -5184,14 +5185,14 @@ void AuraEffect::HandleModDamagePercentDone(AuraApplication const * aurApp, uint
             target->HandleStatModifier(UNIT_MOD_DAMAGE_MAINHAND, TOTAL_PCT, float(GetAmount()), apply);
             target->HandleStatModifier(UNIT_MOD_DAMAGE_OFFHAND, TOTAL_PCT, float(GetAmount()), apply);
             target->HandleStatModifier(UNIT_MOD_DAMAGE_RANGED, TOTAL_PCT, float(GetAmount()), apply);
+            // For show in client
+            if(target->GetTypeId() == TYPEID_PLAYER)
+                target->ApplyModSignedFloatValue(PLAYER_FIELD_MOD_DAMAGE_DONE_PCT,GetAmount()/100.0f,apply);
         }
         else
         {
             // done in Player::_ApplyWeaponDependentAuraMods
         }
-        // For show in client
-        if(target->GetTypeId() == TYPEID_PLAYER)
-            target->ApplyModSignedFloatValue(PLAYER_FIELD_MOD_DAMAGE_DONE_PCT,GetAmount()/100.0f,apply);
     }
 
     // Skip non magic case for speedup
@@ -5995,6 +5996,28 @@ void AuraEffect::HandleAuraEmpathy(AuraApplication const * aurApp, uint8 mode, b
     if(ci && ci->type == CREATURE_TYPE_BEAST)
         target->ApplyModUInt32Value(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_SPECIALINFO, apply);
 }
+
+void AuraEffect::HandleAuraModFaction(AuraApplication const * aurApp, uint8 mode, bool apply) const
+{
+    if(!(mode & AURA_EFFECT_HANDLE_REAL))
+        return;
+
+    Unit * target = aurApp->GetTarget();
+
+    if(apply)
+    {
+        target->setFaction(GetMiscValue());
+		if(target->GetTypeId()==TYPEID_PLAYER)
+            target->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
+    }
+    else
+    {
+        target->RestoreFaction();
+		if(target->GetTypeId()==TYPEID_PLAYER)
+            target->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
+    }
+}
+
 
 void AuraEffect::HandleComprehendLanguage(AuraApplication const * aurApp, uint8 mode, bool apply) const
 {

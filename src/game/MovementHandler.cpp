@@ -307,7 +307,11 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
         }
 
         if (!mover->GetTransport() && !mover->GetVehicle())
-            movementInfo.flags &= ~MOVEMENTFLAG_ONTRANSPORT;
+        {
+            GameObject *go = mover->GetMap()->GetGameObject(movementInfo.t_guid);
+            if (!go || go->GetGoType() != GAMEOBJECT_TYPE_TRANSPORT)
+                movementInfo.flags &= ~MOVEMENTFLAG_ONTRANSPORT;
+        }
     }
     else if (plMover && plMover->GetTransport())                // if we were on a transport, leave
     {
@@ -353,6 +357,20 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
     {
         plMover->SetPosition(movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o);
         plMover->UpdateFallInformationIfNeed(movementInfo, opcode);
+
+        // If on vehicle, update carried players
+        if (Vehicle *vehicle=plMover->GetVehicleKit())
+        {
+            if (plMover->IsVehicle())
+            {
+                for (int i=0; i < 8; ++i)
+                {
+                    if (Unit *passenger = vehicle->GetPassenger(i))
+                        if (passenger != NULL && passenger->GetTypeId() == TYPEID_PLAYER)
+                            ((Player*)passenger)->SetPosition(movementInfo.x, movementInfo.y, movementInfo.z, movementInfo.o);
+                }
+            }
+        }
 
         if (movementInfo.z < -500.0f)
         {

@@ -1208,6 +1208,16 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
         // Do triggers for unit (reflect triggers passed on hit phase for correct drop charge)
         if (canEffectTrigger && missInfo != SPELL_MISS_REFLECT)
             caster->ProcDamageAndSpell(unit, procAttacker, procVictim, procEx, 0, m_attackType, m_spellInfo, m_triggeredByAuraSpell);
+
+        // Failed Pickpocket, reveal rogue
+        if (missInfo == SPELL_MISS_RESIST 
+            && m_customAttr & SPELL_ATTR_CU_PICKPOCKET
+            && unitTarget->GetTypeId() == TYPEID_UNIT)
+        {
+            m_caster->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TALK);
+            if (((Creature*)unitTarget)->IsAIEnabled)
+                ((Creature*)unitTarget)->AI()->AttackStart(m_caster);
+        }
     }
 
     if(m_caster && !m_caster->IsFriendlyTo(unit) && !IsPositiveSpell(m_spellInfo->Id))
@@ -1421,7 +1431,7 @@ void Spell::DoTriggersOnSpellHit(Unit *unit)
             // Cast Avenging Wrath Marker
             m_caster->CastSpell(unit,61987, true, m_CastItem);
         }
-        else
+        else if (sSpellStore.LookupEntry(m_preCastSpell))
             m_caster->CastSpell(unit,m_preCastSpell, true, m_CastItem);
     }
 
@@ -4114,14 +4124,14 @@ SpellCastResult Spell::CheckRuneCost(uint32 runeCostID)
     if(src->NoRuneCost())
         return SPELL_CAST_OK;
 
-    // Freezing Fog makes Howling Blast cost no runes
-    if (m_caster->HasAura(59052) && m_spellInfo->SpellFamilyFlags[1] & 0x2)
-        return SPELL_CAST_OK;
-
     int32 runeCost[NUM_RUNE_TYPES];                         // blood, frost, unholy, death
 
     for (uint32 i = 0; i < RUNE_DEATH; ++i)
+    {
         runeCost[i] = src->RuneCost[i];
+        if(Player* modOwner = m_caster->GetSpellModOwner())
+            modOwner->ApplySpellMod(m_spellInfo->Id, SPELLMOD_COST, runeCost[i], this);
+    }
 
     runeCost[RUNE_DEATH] = MAX_RUNES;                       // calculated later
 
@@ -4440,6 +4450,39 @@ SpellCastResult Spell::CheckCast(bool strict)
             // Not allow casting on flying player
             if (target->hasUnitState(UNIT_STAT_UNATTACKABLE))
                 return SPELL_FAILED_BAD_TARGETS;
+
+            if(!m_IsTriggeredSpell && (target->HasAuraType(SPELL_AURA_MOD_STEALTH)
+                || target->m_invisibilityMask) && !m_caster->canSeeOrDetect(target, true))
+                return SPELL_FAILED_BAD_TARGETS;
+
+            if (m_caster->GetTypeId() == TYPEID_PLAYER)
+            {
+                // Not allow banish not self target
+                if (m_spellInfo->Mechanic == MECHANIC_BANISH)
+                    if (target->GetTypeId() == TYPEID_UNIT &&
+                        !((Player*)m_caster)->isAllowedToLoot((Creature*)target))
+                        return SPELL_FAILED_CANT_CAST_ON_TAPPED;
+
+                if (m_customAttr & SPELL_ATTR_CU_PICKPOCKET)
+                {
+                     if (target->GetTypeId() == TYPEID_PLAYER)
+                         return SPELL_FAILED_BAD_TARGETS;
+    			     else if ((target->GetCreatureTypeMask() & CREATURE_TYPEMASK_HUMANOID_OR_UNDEAD) == 0)
+                         return SPELL_FAILED_TARGET_NO_POCKETS;
+                }
+
+                // Not allow disarm unarmed player
+                if (m_spellInfo->Mechanic == MECHANIC_DISARM)
+                {
+                    if (target->GetTypeId() == TYPEID_PLAYER)
+                    {
+                        if(!((Player*)target)->GetWeaponForAttack(BASE_ATTACK) || !((Player*)target)->IsUseEquipedWeapon(true))
+                            return SPELL_FAILED_TARGET_NO_WEAPONS;
+                    }
+                    else if (!target->GetUInt32Value(UNIT_VIRTUAL_ITEM_SLOT_ID))
+                        return SPELL_FAILED_TARGET_NO_WEAPONS;
+                }
+            }
 
             if(!m_IsTriggeredSpell && VMAP::VMapFactory::checkSpellForLoS(m_spellInfo->Id) && !m_caster->IsWithinLOSInMap(target))
                 return SPELL_FAILED_LINE_OF_SIGHT;
@@ -4993,17 +5036,6 @@ SpellCastResult Spell::CheckCast(bool strict)
                             return SPELL_FAILED_ALREADY_HAVE_CHARM;
                         break;
                 }
-                break;
-            }
-            // Not used for summon?
-            case SPELL_EFFECT_SUMMON_PHANTASM:
-            {
-                if(m_caster->GetPetGUID())
-                    return SPELL_FAILED_ALREADY_HAVE_SUMMON;
-
-                if(m_caster->GetCharmGUID())
-                    return SPELL_FAILED_ALREADY_HAVE_CHARM;
-
                 break;
             }
             case SPELL_EFFECT_SUMMON_PET:

@@ -159,7 +159,7 @@ pEffect SpellEffects[TOTAL_SPELL_EFFECTS]=
     &Spell::EffectKillCreditPersonal,                       // 90 SPELL_EFFECT_KILL_CREDIT              Kill credit but only for single person
     &Spell::EffectUnused,                                   // 91 SPELL_EFFECT_THREAT_ALL               one spell: zzOLDBrainwash
     &Spell::EffectEnchantHeldItem,                          // 92 SPELL_EFFECT_ENCHANT_HELD_ITEM
-    &Spell::EffectUnused,                                   // 93 SPELL_EFFECT_SUMMON_PHANTASM
+    &Spell::EffectForceDeselect,                            // 93 SPELL_EFFECT_FORCE_DESELECT
     &Spell::EffectSelfResurrect,                            // 94 SPELL_EFFECT_SELF_RESURRECT
     &Spell::EffectSkinning,                                 // 95 SPELL_EFFECT_SKINNING
     &Spell::EffectCharge,                                   // 96 SPELL_EFFECT_CHARGE
@@ -3880,22 +3880,7 @@ void Spell::EffectPickPocket(uint32 /*i*/)
 
     // victim have to be alive and humanoid or undead
     if (unitTarget->isAlive() && (unitTarget->GetCreatureTypeMask() &CREATURE_TYPEMASK_HUMANOID_OR_UNDEAD) != 0)
-    {
-        int32 chance = 10 + int32(m_caster->getLevel()) - int32(unitTarget->getLevel());
-
-        if (chance > irand(0, 19))
-        {
-            // Stealing successful
-            //sLog.outDebug("Sending loot from pickpocket");
-            ((Player*)m_caster)->SendLoot(unitTarget->GetGUID(),LOOT_PICKPOCKETING);
-        }
-        else
-        {
-            // Reveal action + get attack
-            m_caster->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_TALK);
-            m_caster->CombatStart(unitTarget);
-        }
-    }
+        ((Player*)m_caster)->SendLoot(unitTarget->GetGUID(),LOOT_PICKPOCKETING); 
 }
 
 void Spell::EffectAddFarsight(uint32 i)
@@ -4576,12 +4561,9 @@ void Spell::SpellDamageWeaponDmg(uint32 i)
         }
         case SPELLFAMILY_HUNTER:
         {
-            // Kill Shot
+            // Kill Shot - bonus damage from Ranged Attack Power
             if(m_spellInfo->SpellFamilyFlags[1] & 0x800000)
-            {
-                // Increase Weapon Damage by 200% (or Weapon Damage + Weapon Damage)
-                spell_bonus += m_caster->CalculateDamage(RANGED_ATTACK, false, true);
-            }
+                spell_bonus += int32(0.4f*m_caster->GetTotalAttackPowerValue(RANGED_ATTACK));
             break;
         }
         case SPELLFAMILY_DEATHKNIGHT:
@@ -6603,10 +6585,9 @@ void Spell::EffectLeapForward(uint32 i)
             destz = fabs(ground - z) <= fabs(floor - z) ? ground:floor;
         } else break;
     }
-    if (j == 9)
-        return;
 
-    unitTarget->NearTeleportTo(destx, desty, destz + 0.07531, orientation, unitTarget==m_caster);
+    if(j < 10)
+        unitTarget->NearTeleportTo(destx, desty, destz + 0.07531, orientation, unitTarget==m_caster);
 }
 
 void Spell::EffectReputation(uint32 i)
@@ -6637,6 +6618,13 @@ void Spell::EffectQuestComplete(uint32 i)
 
     uint32 quest_id = m_spellInfo->EffectMiscValue[i];
     _player->AreaExploredOrEventHappens(quest_id);
+}
+
+void Spell::EffectForceDeselect(uint32 i)
+{
+    WorldPacket data(SMSG_CLEAR_TARGET, 8);
+    data << uint64(m_caster->GetGUID());
+    m_caster->SendMessageToSet(&data, true);
 }
 
 void Spell::EffectSelfResurrect(uint32 i)
