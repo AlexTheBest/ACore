@@ -23,7 +23,7 @@
 
 #include "SpellAuraDefines.h"
 
-class  Unit;
+class Unit;
 struct SpellEntry;
 struct SpellModifier;
 struct ProcTriggerSpell;
@@ -75,10 +75,9 @@ class AuraApplication
         void SetNeedClientUpdate() { m_needClientUpdate = true;}
         bool IsNeedClientUpdate() const { return m_needClientUpdate;}
         void ClientUpdate(bool remove = false);
-        void ConstructAuraInfo(ByteBuffer &);
 };
 
-class TRINITY_DLL_SPEC Aura
+class Aura
 {
     public:
         typedef std::map<uint64, AuraApplication *> ApplicationMap;
@@ -192,7 +191,7 @@ class TRINITY_DLL_SPEC Aura
         Unit::AuraApplicationList m_removedApplications;
 };
 
-class TRINITY_DLL_SPEC UnitAura : public Aura
+class UnitAura : public Aura
 {
     friend Aura * Aura::Create(SpellEntry const* spellproto, uint8 effMask, WorldObject * owner, Unit * caster, int32 *baseAmount, Item * castItem, uint64 casterGUID);
     protected:
@@ -213,7 +212,7 @@ class TRINITY_DLL_SPEC UnitAura : public Aura
         DiminishingGroup m_AuraDRGroup:8;               // Diminishing
 };
 
-class TRINITY_DLL_SPEC DynObjAura : public Aura
+class DynObjAura : public Aura
 {
     friend Aura * Aura::Create(SpellEntry const* spellproto, uint8 effMask, WorldObject * owner, Unit * caster, int32 *baseAmount, Item * castItem, uint64 casterGUID);
     protected:

@@ -13,10 +13,6 @@
 #include "DBCStructure.h"
 #include "Config/ConfigEnv.h"
 
-#ifndef _TRINITY_SCRIPT_CONFIG
-# define _TRINITY_SCRIPT_CONFIG  sConfig.GetFilename().c_str()
-#endif _TRINITY_SCRIPT_CONFIG
-
 class Player;
 class Creature;
 class CreatureAI;
@@ -101,13 +97,9 @@ class ScriptMgr
         ScriptMgr();
         ~ScriptMgr();
         
-        void ScriptsInit(char const* cfg_file = _TRINITY_SCRIPT_CONFIG);
+        void ScriptsInit();
         void LoadDatabase();
         char const* ScriptsVersion();    
-
-        std::string GetConfigValueStr(char const* option);
-        int32 GetConfigValueInt32(char const* option);
-        float GetConfigValueFloat(char const* option);
 
     //event handlers
         void OnLogin(Player *pPlayer);
@@ -163,15 +155,7 @@ void DoScriptText(int32 textEntry, WorldObject* pSource, Unit *pTarget = NULL);
 #else
 #define FUNC_PTR(name, callconvention, returntype, parameters)    typedef returntype(callconvention *name)parameters;
 #endif
-/*
-#ifdef WIN32
-  #define TRINITY_DLL_EXPORT extern "C" __declspec(dllexport)
-#elif defined( __GNUC__ )
-#define TRINITY_DLL_EXPORT extern "C"
-#else
-#define TRINITY_DLL_EXPORT extern "C" export
-#endif
-*/
+
 #define sScriptMgr Trinity::Singleton<ScriptMgr>::Instance()
 #endif
 
