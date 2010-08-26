@@ -554,7 +554,7 @@ void Spell::SpellDamageSchoolDmg(uint32 effect_idx)
                     if (AuraEffect * aurEff = m_caster->GetDummyAuraEffect(SPELLFAMILY_PRIEST, 2874, 0))
                         back_damage -= aurEff->GetAmount() * back_damage / 100;
 
-                    if (back_damage < unitTarget->GetHealth())
+                    if (back_damage < int32(unitTarget->GetHealth()))
                         m_caster->CastCustomSpell(m_caster, 32409, &back_damage, 0, 0, true);
                 }
                 // Mind Blast - applies Mind Trauma if:
@@ -1617,7 +1617,7 @@ void Spell::EffectDummy(uint32 i)
                     Unit::AttackerSet attackers = unitTarget->getAttackers();
 
                     // selected from list 3
-                    for (int i = 0; i < std::min(size_t(3),attackers.size()); ++i)
+                    for (uint32 i = 0; i < std::min(size_t(3), attackers.size()); ++i)
                     {
                         Unit::AttackerSet::iterator aItr = attackers.begin();
                         std::advance(aItr, rand() % attackers.size());
@@ -1849,8 +1849,10 @@ void Spell::EffectForceCast(uint32 i)
             case 52349: // Overtake
                 unitTarget->CastCustomSpell(unitTarget, spellInfo->Id, &damage, NULL, NULL, true, NULL, NULL, m_originalCasterGUID);
                 return;
-            //case 72378: // Blood Nova
-            //case 73058: // Blood Nova
+            case 72378: // Blood Nova
+            case 73058: // Blood Nova
+                spellInfo = sSpellMgr.GetSpellForDifficultyFromSpell(spellInfo, m_caster);
+                break;
         }
     }
     Unit * caster = GetTriggeredSpellCaster(spellInfo, m_caster, unitTarget);
@@ -1970,7 +1972,7 @@ void Spell::EffectTriggerSpell(uint32 effIndex)
             if (!spell)
                 return;
 
-            for (int j=0; j < spell->StackAmount; ++j)
+            for (uint32 j = 0; j < spell->StackAmount; ++j)
                 m_caster->CastSpell(unitTarget, spell->Id, true);
             return;
         }
@@ -1982,7 +1984,7 @@ void Spell::EffectTriggerSpell(uint32 effIndex)
             if (!spell)
                 return;
 
-            for (int j=0; j < spell->StackAmount; ++j)
+            for (uint32 j = 0; j < spell->StackAmount; ++j)
                 m_caster->CastSpell(unitTarget, spell->Id, true);
             return;
         }
@@ -2423,14 +2425,14 @@ void Spell::EffectPowerBurn(uint32 i)
     // burn x% of target's mana, up to maximum of 2x% of caster's mana (Mana Burn)
     if (m_spellInfo->ManaCostPercentage)
     {
-        uint32 maxdamage = m_caster->GetMaxPower(powertype) * damage * 2 / 100;
+        int32 maxdamage = m_caster->GetMaxPower(powertype) * damage * 2 / 100;
         damage = unitTarget->GetMaxPower(powertype) * damage / 100;
         if (damage > maxdamage) damage = maxdamage;
     }
 
     int32 curPower = int32(unitTarget->GetPower(powertype));
 
-    uint32 power = damage;
+    int32 power = damage;
     // resilience reduce mana draining effect at spell crit damage reduction (added in 2.4)
     if (powertype == POWER_MANA)
         power -= unitTarget->GetSpellCritDamageReduction(power);
@@ -2631,13 +2633,16 @@ void Spell::EffectHealthLeech(uint32 i)
 
     // Do not apply multiplier to damage if it's Death Coil
     int32 new_damage;
-    if (m_spellInfo->SpellFamilyFlags[0] & 0x80000)
+    if (m_spellInfo->SpellFamilyFlags[0] & 0x80000 ||
+        m_spellInfo->Id == 72409 || m_spellInfo->Id == 72447 || // ...or Deathbringer Saurfang's Rune of Blood
+        m_spellInfo->Id == 72448 || m_spellInfo->Id == 72449)
         new_damage = damage;
     else
-        new_damage = int32(damage*multiplier);
+        new_damage = int32(damage * multiplier);
+
     uint32 curHealth = unitTarget->GetHealth();
     new_damage = m_caster->SpellNonMeleeDamageLog(unitTarget, m_spellInfo->Id, new_damage);
-    if (curHealth < new_damage)
+    if (int32(curHealth) < new_damage)
         new_damage = curHealth;
 
     if (m_caster->isAlive())
@@ -3390,7 +3395,7 @@ void Spell::EffectSummonType(uint32 i)
                 {
                     float radius = GetSpellRadiusForHostile(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[i]));
 
-                    int32 amount = damage > 0 ? damage : 1;
+                    uint32 amount = damage > 0 ? damage : 1;
                     if (m_spellInfo->Id == 18662) // Curse of Doom
                         amount = 1;
 
@@ -7138,7 +7143,7 @@ void Spell::SummonGuardian(uint32 i, uint32 entry, SummonPropertiesEntry const *
 
     //float radius = GetSpellRadiusForFriend(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[i]));
     float radius = 5.0f;
-    int32 amount = damage > 0 ? damage : 1;
+    uint32 amount = damage > 0 ? damage : 1;
     int32 duration = GetSpellDuration(m_spellInfo);
     switch (m_spellInfo->Id)
     {

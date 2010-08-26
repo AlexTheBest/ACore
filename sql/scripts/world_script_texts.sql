@@ -1,8 +1,8 @@
 -- Up to TC2 5408
--- 
+--
 -- trinityscript_script_texts.sql Contains data for table `script_texts` mainly used in C++ parts.
 -- valid entries for table are between -1000000 and -1999999
--- 
+--
 
 -- ALTER TABLE `script_texts` ADD COLUMN `npc_entry` mediumint(8)  NOT NULL DEFAULT 0 COMMENT 'creature_template entry' FIRST;
 /*
@@ -27,9 +27,9 @@ CREATE TABLE `script_texts` (
   PRIMARY KEY  (`npc_entry`,`entry`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Script Texts';
 */
--- 
+--
 -- -1 000 000 First 100 entries are reserved for special use, do not add regular text here.
--- 
+--
 DELETE FROM `script_texts` WHERE entry BETWEEN -1999925 AND -1000000;
 INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`,`content_loc2`,`content_loc3`,`content_loc4`,`content_loc5`,`content_loc6`,`content_loc7`,`content_loc8`,`sound`,`type`,`language`,`emote`,`comment`) VALUES
    (0,-1000000,'<TrinityScript Text Entry Missing!>',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'DEFAULT_TEXT'),
@@ -37,9 +37,9 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (0,-1000004,'goes into a berserker rage!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'EMOTE_GENERIC_BERSERK'),
    (0,-1000005,'UNUSED',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'REUSE ME'),
 
--- 
+--
 -- Normal text entries. Say/Yell/Whisper/Emote for any regular world object.
--- 
+--
 
 -- -1 000 100 GENERAL MAPS (not typical instance maps)
    (6109,-1000100,'Come, little ones. Face me!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,1,0,0,'azuregos SAY_TELEPORT'),
@@ -433,6 +433,20 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (5391, -1000504, 'Thank you $N. I will remember you always. You can find my strongbox in my camp, north of Stonard.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Galen - quest complete'),
    (5391, -1000505, '%s whispers to $N the secret to opening his strongbox.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'Galen - emote whisper'),
    (5391, -1000506, '%s disappears into the swamp.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'Galen - emote disappear'),
+   (4880, -1000507,'Ok, let''s get started.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'stinky - quest accepted'),
+   (4880, -1000508,'Now let''s look for the herb.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'stinky - say1'),
+   (4880, -1000509,'Nope, not here...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'stinky - say2'),
+   (4880, -1000510,'There must be one around here somewhere...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'stinky - say3'),
+   (4880, -1000511,'Ah, there''s one! ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'stinky - say4'),
+   (4880, -1000512,'Come, $N!  Let''s go over there and collect it!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'stinky - say5'),
+   (4880, -1000513,'Ok, now let''s get out of here! ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'stinky - say6'),
+   (4880, -1000514,'I can make it from here.  Thanks, $N!  And talk to my employer about a reward!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'stinky - quest complete'),
+   (4880, -1000515,'Help! The beast is on me!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'stinky - aggro'),
+   (4880, -1000516,'%s disappears back into the swamp.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'stinky - emote disapper'),
+   (19589,-1000575,'All systems on-line. Prepare yourself, we leave shortly.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'max_a_million SAY_START'),
+   (19589,-1000576,'Be careful in there and come back in one piece!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'bot-specialist_alley SAY_ALLEY_FAREWELL'),
+   (19589,-1000577,'Proceed.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'max_a_million SAY_CONTINUE'),
+   (19589,-1000578,'You are back! Were you able to get all of the machines?',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'bot-specialist_alley SAY_ALLEY_FINISH'),
    (26588,-1800001, 'Um... I think one of those wolves is back...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0, '12027'),
    (26588,-1800002, 'He''s going for Mr. Floppy! ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0, '12027'),
    (26588,-1800003, 'Oh, no! Look, it''s another wolf, and it''s a biiiiiig one!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0, '12027'),
@@ -474,7 +488,7 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (27316,-1800039, 'You let us worry about how we kill the bastard, Godfrey. ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,NULL),
    (27316,-1800040, 'Return to Halford with the information the good mayor was kind enough to submit, $N, I will finish here and squeeze whatever else this wretch might know about Thel''zan. Now, I will show Godfrey the rarely shown "option three." ',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,NULL),
    (27316,-1800041, 'Let''s you and I have a chat about some things, Godfrey.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,NULL),
-   (29434,-1800042, 'Let me know when you''re ready. I''d prefer sooner than later... what with the slowly dying from poison and all.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0, 'injured goblin SAY_QUEST_START'), 
+   (29434,-1800042, 'Let me know when you''re ready. I''d prefer sooner than later... what with the slowly dying from poison and all.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0, 'injured goblin SAY_QUEST_START'),
    (29434,-1800043, 'I''m going to bring the venom sack to Ricket... and then... you know... collapse. Thank you for helping me!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0, 'injured goblin SAY_END_WP_REACHED'),
    (27463,-1800044, 'Ahh..better..', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 'RANDOM_SAY_1'),
    (27463,-1800045, 'Whoa.. i nearly died there. Thank you, $Race!', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 0, 0, 'RANDOM_SAY_2'),
@@ -497,7 +511,7 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (12717,-1800062, 'I am going to patrol the area for a while longer and ensure that things are truly safe.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 1, 0, 'muglash SAY_MUG_PATROL'),
    (12717,-1800063, 'Please return to Zoram''gar and report our success to the Warsong runner.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, 1, 0, 'muglash SAY_MUG_RETURN'),
 
-   
+
 -- -1 033 000 SHADOWFANG KEEP
    (0,-1033000,'Follow me and I''ll open the courtyard door for you.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,7,1,'prisoner ashcrombe SAY_FREE_AS'),
    (0,-1033001,'I have just the spell to get this door open. Too bad the cell doors weren''t locked so haphazardly.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,7,1,'prisoner ashcrombe SAY_OPEN_DOOR_AS'),
@@ -1096,7 +1110,7 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (15936,-1533116,'The end is upon you.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,8833,1,0,0,'heigan SAY_TAUNT4'),
    (15936,-1533117,'Hungry worms will feast on your rotten flesh!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,8834,1,0,0,'heigan SAY_TAUNT5'),
    (15936,-1533118,'Noo... o...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,8828,1,0,0,'heigan SAY_DEATH'),
-    
+
 -- -1 534 000 THE BATTLE OF MT. HYJAL
    (17772,-1534000,'I''m in jeopardy, help me if you can!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,11007,1,0,0,'jaina hyjal ATTACKED 1'),
    (17772,-1534001,'They''ve broken through!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,11049,1,0,0,'jaina hyjal ATTACKED 2'),
@@ -1806,7 +1820,7 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (24201,-1574018,'There''s no... greater... glory.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13201,1,0,0,'dalronn YELL_DALRONN_DAL_DIEDFIRST'),
    (24201,-1574019,'You may serve me yet.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13202,1,0,0,'dalronn YELL_DALRONN_KILL'),
    (24201,-1574020,'Skarvald, you incompetent slug! Return and make yourself useful!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13203,1,0,0,'dalronn YELL_DALRONN_SKA_DIEDFIRST'),
-   
+
 -- -1 575 000 UTGARDE PINNACLE
 -- Skadi the Ruthless voice
    (26693,-1575004,'What mongrels dare intrude here? Look alive, my brothers! A feast for the one that brings me their heads!' ,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13497,1,0,0, 'Skadi - SAY_AGGRO'),
@@ -2044,7 +2058,7 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (26529,-1595029,'Get up! Me not done!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13432,1,0,0,'meathook SAY_SLAY_3'),
    (26529,-1595030,'New toys!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13429,1,0,0,'meathook SAY_SPAWN'),
    (26529,-1595031,'This... not fun...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13433,1,0,0,'meathook SAY_DEATH'),
--- Salramm the Fleshcrafter 
+-- Salramm the Fleshcrafter
    (26530,-1595032,'Ah, the entertainment has arrived!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13472,1,0,0,'salramm SAY_AGGRO'),
    (26530,-1595033,'You are too late, champion of Lordaeron. The dead shall have their day.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13471,1,0,0,'salramm SAY_SPAWN'),
    (26530,-1595034,'The fun is just beginning!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13473,1,0,0,'salramm SAY_SLAY_1'),
@@ -2058,7 +2072,7 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (26530,-1595042,'Your flesh betrays you.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13482,1,0,0,'salramm SAY_STEAL_FLESH_3'),
    (26530,-1595043,'Say hello to some friends of mine.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13476,1,0,0,'salramm SAY_SUMMON_GHOULS_1'),
    (26530,-1595044,'Come, citizen of Stratholme! Meet your saviors.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13477,1,0,0,'salramm SAY_SUMMON_GHOULS_2'),
--- The Infinite Corruptor 
+-- The Infinite Corruptor
    (32273,-1595045,'How dare you interfere with our work here!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,1,0,0,'infinite SAY_AGGRO'),
    (32273,-1595046,'My work here is finished!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,1,0,0,'infinite SAY_FAIL'),
    (32273,-1595047,'My time... has run out...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,1,0,0,'infinite SAY_DEATH'),
@@ -2121,7 +2135,7 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (26499,-1595118,'We''re going to finish this right now Mal''Ganis... just you and me!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,14317,0,0,0,'culling SAY_PHASE502'),
    (26499,-1595119,'I''ll hunt you to the ends of the earth if I have to! Do you hear me? To the ends of the earth!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,14318,1,0,5,'culling SAY_PHASE503'),
    (26499,-1595120,'You performed well this day. Anything that Mal''Ganis has left behind is yours. Take it as your reward. I must now begin plans for an expedition to Northrend.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,14319,0,0,5,'culling SAY_PHASE504'),
-   
+
 -- -1 599 000 HALLS OF STONE
 /* Maiden of Grief */
    (27975,-1599000,'You shouldn''t have come...now you will die!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13487,1,0,0,'maiden of grief SAY_AGGRO'),
@@ -2589,7 +2603,7 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
 
 /* Sinclari */
    (30658,-1608045,'Prison guards, we are leaving! These adventurers are taking over! Go go go',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,1,0,0,'sinclari SAY_SINCLARI_1'),
-  
+
 -- -1 615 000 OBSIDIAN SANCTUM
    (30451,-1615000,'I fear nothing! Least of all you!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,14111,1,0,0,'shadron SAY_SHADRON_AGGRO'),
    (30451,-1615001,'You are insignificant!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,14112,1,0,0,'shadron SAY_SHADRON_SLAY_1'),
@@ -2677,7 +2691,58 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (36855,-1631025,'Do you yet grasp of the futility of your actions?',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16869,1,0,0,'SAY_KILL_1'),
    (36855,-1631026,'Embrace the darkness... Darkness eternal!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16870,1,0,0,'SAY_KILL_2'),
    (36855,-1631027,'This charade has gone on long enough.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16872,1,0,0,'SAY_BERSERK'),
-   (36855,-1631028,'All part of the masters plan! Your end is... inevitable!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16871,1,0,0,'SAY_DEATH');
+   (36855,-1631028,'All part of the masters plan! Your end is... inevitable!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16871,1,0,0,'SAY_DEATH'),
+
+-- Deathbringer Saurfang
+   (37200,-1631029,'Let''s get a move on then! Move ou...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16974,1,0,0,'SAY_INTRO_ALLIANCE_1'),
+   (37813,-1631030,'For every Horde soldier that you killed -- for every Alliance dog that fell, the Lich King''s armies grew. Even now the val''kyr work to raise your fallen as Scourge.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16701,1,0,0,'SAY_INTRO_ALLIANCE_2'),
+   (37813,-1631031,'Things are about to get much worse. Come, taste the power that the Lich King has bestowed upon me!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16702,1,0,0,'SAY_INTRO_ALLIANCE_3'),
+   (37200,-1631032,'A lone orc against the might of the Alliance???',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16970,1,0,0,'SAY_INTRO_ALLIANCE_4'),
+   (37200,-1631033,'Charge!!!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16971,1,0,0,'SAY_INTRO_ALLIANCE_5'),
+   (37813,-1631034,'Dwarves...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16703,1,0,0,'SAY_INTRO_ALLIANCE_6'),
+   (37813,-1631035,'Deathbringer Saurfang immobilizes Muradin and his guards.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'SAY_INTRO_ALLIANCE_7'),
+   (37187,-1631036,'Kor''kron, move out! Champions, watch your backs. The Scourge have been...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17103,1,0,22,'SAY_INTRO_HORDE_1'),
+   (37813,-1631037,'Join me, father. Join me and we will crush this world in the name of the Scourge -- for the glory of the Lich King!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16704,1,0,0,'SAY_INTRO_HORDE_2'),
+   (37187,-1631038,'My boy died at the Wrath Gate. I am here only to collect his body.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17097,0,0,397,'SAY_INTRO_HORDE_3'),
+   (37813,-1631039,'Stubborn and old. What chance do you have? I am stronger, and more powerful than you ever were.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16705,1,0,5,'SAY_INTRO_HORDE_4'),
+   (37187,-1631040,'We named him Dranosh. It means "Heart of Draenor" in orcish. I would not let the warlocks take him. My boy would be safe, hidden away by the elders of Garadar.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17098,0,0,1,'SAY_INTRO_HORDE_5'),
+   (37187,-1631041,'I made a promise to his mother before she died; that I would cross the Dark Portal alone - whether I lived or died, my son would be safe. Untainted...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17099,0,0,1,'SAY_INTRO_HORDE_6'),
+   (37187,-1631042,'Today, I fulfill that promise.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17100,0,0,397,'SAY_INTRO_HORDE_7'),
+   (37187,-1631043,'High Overlord Saurfang charges!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17104,2,0,53,'SAY_INTRO_HORDE_8'),
+   (37813,-1631044,'Pathetic old orc. Come then heroes. Come and face the might of the Scourge!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16706,1,0,15,'SAY_INTRO_HORDE_9'),
+   (37813,-1631045,'BY THE MIGHT OF THE LICH KING!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16694,1,0,0,'SAY_AGGRO'),
+   (37813,-1631046,'The ground runs red with your blood!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16699,1,0,0,'SAY_MARK_OF_THE_FALLEN_CHAMPION'),
+   (37813,-1631047,'Feast, my minions!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16700,1,0,0,'SAY_BLOOD_BEASTS'),
+   (37813,-1631048,'You are nothing!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16695,1,0,0,'SAY_KILL_1'),
+   (37813,-1631049,'Your soul will find no redemption here!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16696,1,0,0,'SAY_KILL_2'),
+   (37813,-1631050,'Deathbringer Saurfang goes into frenzy!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,3,0,0,'SAY_FRENZY'),
+   (37813,-1631051,'I have become...DEATH!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16698,1,0,0,'SAY_BERSERK'),
+   (37813,-1631052,'I... Am... Released.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16697,1,0,0,'SAY_DEATH'),
+   (37200,-1631053,'Muradin Bronzebeard gasps for air.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16975,2,0,0,'SAY_OUTRO_ALLIANCE_1'),
+   (37200,-1631054,'That was Saurfang''s boy - the Horde commander at the Wrath Gate. Such a tragic end...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16976,0,0,0,'SAY_OUTRO_ALLIANCE_2'),
+   (37200,-1631055,'What in the... There, in the distance!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16977,0,0,0,'SAY_OUTRO_ALLIANCE_3'),
+   (    0,-1631056,'A Horde Zeppelin flies up to the rise.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'SAY_OUTRO_ALLIANCE_4'),
+   (37200,-1631057,'Soldiers, fall in! Looks like the Horde are comin'' to take another shot!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16978,1,0,0,'SAY_OUTRO_ALLIANCE_5'),
+   (    0,-1631058,'The Zeppelin docks, and High Overlord Saurfang hops out, confronting the Alliance soldiers and Muradin',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'SAY_OUTRO_ALLIANCE_6'),
+   (37200,-1631059,'Don''t force me hand, orc. We can''t let ye pass.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16972,0,0,0,'SAY_OUTRO_ALLIANCE_7'),
+   (37187,-1631060,'Behind you lies the body of my only son. Nothing will keep me from him.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17094,0,0,0,'SAY_OUTRO_ALLIANCE_8'),
+   (37200,-1631061,'I... I can''t do it. Get back on yer ship and we''ll spare yer life.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16973,0,0,0,'SAY_OUTRO_ALLIANCE_9'),
+   (    0,-1631062,'A mage portal from Stormwind appears between the two and Varian Wrynn and Jaina Proudmoore emerge.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'SAY_OUTRO_ALLIANCE_10'),
+   (37879,-1631063,'Stand down, Muradin. Let a grieving father pass.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16690,0,0,0,'SAY_OUTRO_ALLIANCE_11'),
+   (37187,-1631064,'High Overlord Saurfang walks over to his son and kneels before his son''s body.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'SAY_OUTRO_ALLIANCE_12'),
+   (37187,-1631065,'[Orcish] No''ku kil zil''nok ha tar.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17096,0,0,0,'SAY_OUTRO_ALLIANCE_13'),
+   (37187,-1631066,'Higher Overlord Saurfang picks up the body of his son and walks over towards Varian',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'SAY_OUTRO_ALLIANCE_14'),
+   (37187,-1631067,'I will not forget this... kindness. I thank you, Highness',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17095,0,0,0,'SAY_OUTRO_ALLIANCE_15'),
+   (37879,-1631068,'I... I was not at the Wrath Gate, but the soldiers who survived told me much of what happened. Your son fought with honor. He died a hero''s death. He deserves a hero''s burial.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16691,0,0,0,'SAY_OUTRO_ALLIANCE_16'),
+   (37188,-1631069,'Lady Jaina Proudmoore cries.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16651,2,0,18,'SAY_OUTRO_ALLIANCE_17'),
+   (37879,-1631070,'Jaina? Why are you crying?',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16692,0,0,0,'SAY_OUTRO_ALLIANCE_18'),
+   (37188,-1631071,'It was nothing, your majesty. Just... I''m proud of my king.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16652,0,0,0,'SAY_OUTRO_ALLIANCE_19'),
+   (37879,-1631072,'Bah! Muradin, secure the deck and prepare our soldiers for an assault on the upper citadel. I''ll send out another regiment from Stormwind.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16693,0,0,0,'SAY_OUTRO_ALLIANCE_20'),
+   (37200,-1631073,'Right away, yer majesty!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16979,0,0,0,'SAY_OUTRO_ALLIANCE_21'),
+   (37187,-1631074,'High Overlord Saurfang coughs.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17105,2,0,0,'SAY_OUTRO_HORDE_1'),
+   (37187,-1631075,'High Overlord Saurfang weeps over the corpse of his son.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17106,2,0,15,'SAY_OUTRO_HORDE_2'),
+   (37187,-1631076,'You will have a proper ceremony in Nagrand next to the pyres of your mother and ancestors.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17101,0,0,0,'SAY_OUTRO_HORDE_3'),
+   (37187,-1631077,'Honor, young heroes... no matter how dire the battle... Never forsake it!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17102,0,0,0,'SAY_OUTRO_HORDE_4'),
 
 -- -1 632 000 ICECROWN CITADEL: FROZEN HALLS: FORGE OF SOULS
 -- Bronjham

@@ -669,16 +669,16 @@ int32 AuraEffect::CalculateAmount(Unit * caster)
             {
                 if (caster->GetTypeId() == TYPEID_PLAYER)
                 {
-                    int32 value = int32((amount*-1)-10);
+                    int32 value = (-1 * amount) - 10;
                     uint32 defva = uint32(caster->ToPlayer()->GetSkillValue(SKILL_DEFENSE) + caster->ToPlayer()->GetRatingBonusValue(CR_DEFENSE_SKILL));
 
                     if (defva > 400)
-                        value += int32((defva-400)*0.15);
+                        value += int32((defva - 400) * 0.15);
 
                     // Glyph of Icebound Fortitude
-                    if (AuraEffect const * aurEff = caster->GetAuraEffect(58625,0))
+                    if (AuraEffect const * aurEff = caster->GetAuraEffect(58625, 0))
                     {
-                        uint32 valMax = aurEff->GetAmount();
+                        int32 valMax = aurEff->GetAmount();
                         if (value < valMax)
                             value = valMax;
                     }
@@ -1921,7 +1921,7 @@ void AuraEffect::PeriodicDummyTick(Unit * target, Unit * caster) const
                 target->CastSpell((Unit*)NULL, m_spellProto->EffectTriggerSpell[m_effIndex], true);
                 break;
             case 62399: // Overload Circuit
-                if (target->GetMap()->IsDungeon() && target->GetAppliedAuras().count(62399) >= (target->GetMap()->IsHeroic() ? 4 : 2))
+                if (target->GetMap()->IsDungeon() && int(target->GetAppliedAuras().count(62399)) >= (target->GetMap()->IsHeroic() ? 4 : 2))
                 {
                      target->CastSpell(target, 62475, true); // System Shutdown
                      if (Unit *veh = target->GetVehicleBase())
@@ -2281,14 +2281,6 @@ void AuraEffect::TriggerSpell(Unit * target, Unit * caster) const
                     case 39857: triggerSpellId = 39856; break;
                     // Personalized Weather
                     case 46736: triggerSpellId = 46737; break;
-                    // Mana Barrier - Lady Deathwhisper
-                    case 70842:
-                    {
-                        int32 missingHealth = caster->GetMaxHealth() - caster->GetHealth();
-                        caster->ModifyHealth(missingHealth);
-                        caster->ModifyPower(POWER_MANA, -missingHealth);
-                        return;
-                    }
                 }
                 break;
             }
@@ -5953,7 +5945,7 @@ void AuraEffect::HandleAuraDummy(AuraApplication const * aurApp, uint8 mode, boo
                     {
                         SpellEntry const * spell = sSpellStore.LookupEntry(spellId);
 
-                        for (int i=0; i < spell->StackAmount; ++i)
+                        for (uint32 i = 0; i < spell->StackAmount; ++i)
                             caster->CastSpell(target, spell->Id, true, NULL, NULL, GetCasterGUID());
                         break;
                     }
@@ -5967,7 +5959,7 @@ void AuraEffect::HandleAuraDummy(AuraApplication const * aurApp, uint8 mode, boo
                     if (apply && caster)
                     {
                         SpellEntry const * spell = sSpellStore.LookupEntry(spellId);
-                        for (int i=0; i < spell->StackAmount; ++i)
+                        for (uint32 i = 0; i < spell->StackAmount; ++i)
                             caster->CastSpell(target, spell->Id, true, NULL, NULL, GetCasterGUID());
                         break;
                     }

@@ -280,12 +280,18 @@ class AuraScript : public _SpellScript
     public:
         bool _Validate(SpellEntry const * entry, const char * scriptname);
         bool _Load(Aura * aura);
-        void _ResetDefault() { m_default = true; }
-        bool _IsDefaultActionPrevented(SpellEffIndex /*effIndex*/) {return !m_default;};
-        void PreventDefaultAction() { m_default = false; };
+        void _ResetDefault() { m_defaultPreventedActionsMask = 0; }
+        bool _IsDefaultActionPrevented(SpellEffIndex effIndex)
+        {
+            uint8 effIndexMask = 1 << effIndex;
+            return (m_defaultPreventedActionsMask & effIndexMask) || (m_defaultPreventedEffectsMask & effIndexMask);
+        }
+        void PreventDefaultAction(SpellEffIndex effIndex) { m_defaultPreventedActionsMask |= 1 << effIndex; }
+        void PreventDefaultEffect(SpellEffIndex effIndex) { m_defaultPreventedEffectsMask |= 1 << effIndex; }
     private:
         Aura * m_aura;
-        bool m_default;
+        uint8 m_defaultPreventedActionsMask;
+        uint8 m_defaultPreventedEffectsMask;
     public:
         //
         // AuraScript interface

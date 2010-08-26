@@ -990,7 +990,7 @@ void Spell::AddUnitTarget(Unit* pVictim, uint32 effIndex)
             if (m_auraScaleMask && ihit->effectMask == m_auraScaleMask && m_caster != pVictim)
             {
                 SpellEntry const * auraSpell = sSpellStore.LookupEntry(sSpellMgr.GetFirstSpellInChain(m_spellInfo->Id));
-                if ((pVictim->getLevel() + 10) >= auraSpell->spellLevel)
+                if (uint32(pVictim->getLevel() + 10) >= auraSpell->spellLevel)
                     ihit->scaleAura = true;
             }
             return;
@@ -1011,7 +1011,7 @@ void Spell::AddUnitTarget(Unit* pVictim, uint32 effIndex)
     if (m_auraScaleMask && target.effectMask == m_auraScaleMask && m_caster != pVictim)
     {
         SpellEntry const * auraSpell = sSpellStore.LookupEntry(sSpellMgr.GetFirstSpellInChain(m_spellInfo->Id));
-        if ((pVictim->getLevel() + 10) >= auraSpell->spellLevel)
+        if (uint32(pVictim->getLevel() + 10) >= auraSpell->spellLevel)
             target.scaleAura = true;
     }
 
@@ -1415,7 +1415,7 @@ SpellMissInfo Spell::DoSpellHitOnUnit(Unit *unit, const uint32 effectMask, bool 
     if (unit->GetTypeId() == TYPEID_PLAYER)
     {
         unit->ToPlayer()->GetAchievementMgr().StartTimedAchievement(ACHIEVEMENT_TIMED_TYPE_SPELL_TARGET, m_spellInfo->Id);
-        unit->ToPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, m_spellInfo->Id);
+        unit->ToPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, m_spellInfo->Id, 0, m_caster);
         unit->ToPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET2, m_spellInfo->Id);
     }
 
@@ -2806,6 +2806,18 @@ void Spell::SelectEffectTargets(uint32 i, uint32 cur)
                     case 55789: // Improved Icy Talons
                     case 59725: // Improved Spell Reflection - aoe aura
                         unitList.remove(m_caster);
+                        break;
+                    case 72255: // Mark of the Fallen Champion (Deathbringer Saurfang)
+                    case 72444:
+                    case 72445:
+                    case 72446:
+                        for (std::list<Unit*>::iterator itr = unitList.begin() ; itr != unitList.end();)
+                        {
+                            if (!(*itr)->HasAura(72293))
+                                itr = unitList.erase(itr);
+                            else
+                                ++itr;
+                        }
                         break;
                 }
                 // Death Pact
@@ -5986,7 +5998,7 @@ SpellCastResult Spell::CheckPower()
     // health as power used - need check health amount
     if (m_spellInfo->powerType == POWER_HEALTH)
     {
-        if (m_caster->GetHealth() <= m_powerCost)
+        if (int32(m_caster->GetHealth()) <= m_powerCost)
             return SPELL_FAILED_CASTER_AURASTATE;
         return SPELL_CAST_OK;
     }
@@ -6007,7 +6019,7 @@ SpellCastResult Spell::CheckPower()
 
     // Check power amount
     Powers powerType = Powers(m_spellInfo->powerType);
-    if (m_caster->GetPower(powerType) < m_powerCost)
+    if (int32(m_caster->GetPower(powerType)) < m_powerCost)
         return SPELL_FAILED_NO_POWER;
     else
         return SPELL_CAST_OK;

@@ -609,6 +609,7 @@ UPDATE `creature_template` SET `ScriptName`='npc_nat_pagle' WHERE `entry`=12919;
 UPDATE `creature_template` SET `ScriptName`='npc_restless_apparition' WHERE `entry`=23861;
 UPDATE `creature_template` SET `ScriptName`='npc_private_hendel' WHERE `entry`=4966;
 UPDATE `creature_template` SET `ScriptName`='npc_zelfrax' WHERE `entry`=23864;
+UPDATE `creature_template` SET `ScriptName`='npc_stinky' WHERE `entry`=4880;
 
 /* EASTERN PLAGUELANDS */
 UPDATE `creature_template` SET `ScriptName`='mobs_ghoul_flayer' WHERE `entry` IN (8530,8531,8532);
@@ -835,6 +836,10 @@ UPDATE `creature_template` SET `ScriptName`='boss_lady_deathwhisper' WHERE `entr
 UPDATE `creature_template` SET `ScriptName`='npc_cult_fanatic' WHERE `entry` IN (37890,38009,38135);
 UPDATE `creature_template` SET `ScriptName`='npc_cult_adherent' WHERE `entry` IN(37949,38010,38136);
 UPDATE `creature_template` SET `ScriptName`='npc_vengeful_shade' WHERE `entry`=38222;
+UPDATE `creature_template` SET `ScriptName`='boss_deathbringer_saurfang' WHERE `entry`=37813;
+UPDATE `creature_template` SET `ScriptName`='npc_high_overlord_saurfang_icc' WHERE `entry`=37187;
+UPDATE `creature_template` SET `ScriptName`='npc_muradin_bronzebeard_icc' WHERE `entry`=37200;
+UPDATE `creature_template` SET `ScriptName`='npc_saurfang_event' WHERE `entry` IN (37920,37830);
 
 /* IRONFORGE */
 UPDATE `creature_template` SET `ScriptName`='npc_royal_historian_archesonus' WHERE `entry`=8879;
@@ -994,6 +999,8 @@ UPDATE `creature_template` SET `ScriptName`='mob_phase_hunter' WHERE `entry`=188
 UPDATE `creature_template` SET `ScriptName`='npc_professor_dabiri' WHERE `entry`=20907;
 UPDATE `creature_template` SET `ScriptName`='npc_bessy' WHERE `entry`=20415;
 UPDATE `creature_template` SET `ScriptName`='npc_commander_dawnforge' WHERE `entry`=19831;
+UPDATE `creature_template` SET `ScriptName`='npc_maxx_a_million_escort', `MovementType`=2 WHERE `entry`=19589;
+
 
 /* THE NEXUS */
 UPDATE `instance_template` SET `script`='instance_nexus' WHERE `map`=576;
@@ -1713,7 +1720,7 @@ UPDATE `outdoorpvp_template` SET `ScriptName`='outdoorpvp_si' WHERE `TypeId`=5;
 UPDATE `outdoorpvp_template` SET `ScriptName`='outdoorpvp_ep' WHERE `TypeId`=6;
 
 /* ACHIEVEMENTS */
-DELETE FROM `achievement_criteria_data` WHERE `criteria_id` IN (3693,6641,6642,6643,6644,3804,3805,3806,3807,3808,3809,3810,3811,3812,3813,1234,1239,5605,5606) AND `type` IN (0,11);
+DELETE FROM `achievement_criteria_data` WHERE `criteria_id` IN (3693,6641,6642,6643,6644,3804,3805,3806,3807,3808,3809,3810,3811,3812,3813,1234,1239,5605,5606,12778,13036,13035,13037) AND `type` IN (0,11);
 INSERT INTO `achievement_criteria_data` (`criteria_id`,`type`,`value1`,`value2`,`ScriptName`) VALUES
 (3693,11,0,0, 'achievement_storm_glory'),
 (6641,11,0,0, 'achievement_school_of_hard_knocks'),
@@ -1733,6 +1740,10 @@ INSERT INTO `achievement_criteria_data` (`criteria_id`,`type`,`value1`,`value2`,
 (1234,11,0,0, 'achievement_bg_control_all_nodes'),
 (1239,11,0,0, 'achievement_bg_control_all_nodes'),
 (5605,11,0,0, 'achievement_save_the_day'),
-(5606,11,0,0, 'achievement_save_the_day');
+(5606,11,0,0, 'achievement_save_the_day')
+(12778,11,0,0, 'achievement_ive_gone_and_made_a_mess'),
+(13036,11,0,0, 'achievement_ive_gone_and_made_a_mess'),
+(13035,11,0,0, 'achievement_ive_gone_and_made_a_mess'),
+(13037,11,0,0, 'achievement_ive_gone_and_made_a_mess');
 
 /* EOF */
