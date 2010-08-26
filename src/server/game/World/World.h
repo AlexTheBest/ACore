@@ -82,6 +82,7 @@ enum WorldTimers
     WUPDATE_EVENTS      = 6,
     WUPDATE_CLEANDB     = 7,
     WUPDATE_AUTOBROADCAST = 8,
+    WUPDATE_AUTOANC     = 9,
     WUPDATE_MAILBOXQUEUE = 9,
     WUPDATE_DELETECHARS = 10,
     WUPDATE_COUNT       = 11
@@ -150,6 +151,8 @@ enum WorldBoolConfigs
     CONFIG_START_ALL_REP,
     CONFIG_ALWAYS_MAXSKILL,
     CONFIG_PVP_TOKEN_ENABLE,
+    CONFIG_OUTDOORPVP_WINTERGRASP_ENABLED,
+    CONFIG_OUTDOORPVP_WINTERGRASP_CUSTOM_HONOR,
     CONFIG_NO_RESET_TALENT_COST,
     CONFIG_SHOW_KICK_IN_WORLD,
     CONFIG_CHATLOG_CHANNEL,
@@ -284,6 +287,15 @@ enum WorldIntConfigs
     CONFIG_PVP_TOKEN_MAP_TYPE,
     CONFIG_PVP_TOKEN_ID,
     CONFIG_PVP_TOKEN_COUNT,
+    CONFIG_OUTDOORPVP_WINTERGRASP_START_TIME,
+    CONFIG_OUTDOORPVP_WINTERGRASP_BATTLE_TIME,
+    CONFIG_OUTDOORPVP_WINTERGRASP_INTERVAL,
+    CONFIG_OUTDOORPVP_WINTERGRASP_WIN_BATTLE,
+    CONFIG_OUTDOORPVP_WINTERGRASP_LOSE_BATTLE,
+    CONFIG_OUTDOORPVP_WINTERGRASP_DAMAGED_TOWER,
+    CONFIG_OUTDOORPVP_WINTERGRASP_DESTROYED_TOWER,
+    CONFIG_OUTDOORPVP_WINTERGRASP_DAMAGED_BUILDING,
+    CONFIG_OUTDOORPVP_WINTERGRASP_INTACT_BUILDING,
     CONFIG_INTERVAL_LOG_UPDATE,
     CONFIG_MIN_LOG_UPDATE,
     CONFIG_ENABLE_SINFO_LOGIN,
@@ -514,8 +526,10 @@ class World
         ~World();
 
         WorldSession* FindSession(uint32 id) const;
+        void SendWintergraspState();
         void AddSession(WorldSession *s);
         void SendRNDBroadcast();
+        void SendRNDBroadcastIRC();
         bool RemoveSession(uint32 id);
         /// Get the number of current active sessions
         void UpdateMaxSessionCounters();
@@ -703,6 +717,18 @@ class World
         static int32 GetVisibilityNotifyPeriodOnContinents(){ return m_visibility_notify_periodOnContinents; }
         static int32 GetVisibilityNotifyPeriodInInstances() { return m_visibility_notify_periodInInstances;  }
         static int32 GetVisibilityNotifyPeriodInBGArenas()  { return m_visibility_notify_periodInBGArenas;   }
+
+        void SetWintergrapsTimer(uint32 timer, uint32 state)
+        {
+            m_WintergrapsTimer = timer;
+            m_WintergrapsState = state;
+        }
+
+        uint32 GetWintergrapsTimer() { return m_WintergrapsTimer; }
+        uint32 GetWintergrapsState() { return m_WintergrapsState; }
+
+        uint32 m_WintergrapsTimer;
+        uint32 m_WintergrapsState;
 
         void ProcessCliCommands();
         void QueueCliCommand(CliCommandHolder* commandHolder) { cliCmdQueue.add(commandHolder); }

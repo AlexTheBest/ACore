@@ -48,6 +48,7 @@
 #include "Formulas.h"
 #include "Group.h"
 #include "Guild.h"
+#include "../../irc/IRCClient.h"
 #include "Pet.h"
 #include "Util.h"
 #include "Transport.h"
@@ -2137,6 +2138,16 @@ void Player::RemoveFromWorld()
             SetViewpoint(viewpoint, false);
         }
     }
+    //TODO: FIXME
+    if (sIRC.ajoin == 1)
+    {
+        QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT `name` FROM `irc_inchan` WHERE `name` = '%s'", Unit::GetName());
+        if (!result)
+        {
+            sIRC.AutoJoinChannel(this);
+        }
+        
+    }
 }
 
 void Player::RegenerateAll()
@@ -2719,6 +2730,17 @@ void Player::GiveLevel(uint8 level)
     InitTalentForLevel();
     InitTaxiNodesForLevel();
     InitGlyphsForLevel();
+
+    if ((sIRC.BOTMASK & 64) != 0)
+    {
+        char  temp [5];
+        sprintf(temp, "%u", level);
+        std::string plevel = temp;
+        std::string pname = GetName();
+        std::string ircchan = "#";
+        ircchan += sIRC._irc_chan[sIRC.Status].c_str();
+        sIRC.Send_IRC_Channel(ircchan, "\00311["+pname+"] : Has Reached Level: "+plevel, true);
+    }
 
     UpdateAllStats();
 
@@ -8654,6 +8676,13 @@ void Player::SendInitWorldStates(uint32 zoneid, uint32 areaid)
     data << uint32(0xC77) << uint32(sWorld.getBoolConfig(CONFIG_ARENA_SEASON_IN_PROGRESS));
                                                             // 8 Arena season id
     data << uint32(0xF3D) << uint32(sWorld.getIntConfig(CONFIG_ARENA_SEASON_ID));
+
+     // May be send timer to start Wintergrasp
+     if(sWorld.GetWintergrapsState()==4354)
+         data << uint32(0x1102) << sWorld.GetWintergrapsTimer();
+     else
+         data << uint32(0xEC5) << sWorld.GetWintergrapsTimer();
+     // ---
 
     if (mapid == 530)                                       // Outland
     {
@@ -16015,6 +16044,16 @@ bool Player::LoadFromDB(uint32 guid, SQLQueryHolder *holder)
             AddBattlegroundQueueId(bgQueueTypeId);
 
             m_bgData.bgTypeID = currentBg->GetTypeID(true);
+
+    //mixbg
+      if(m_bgData.bgTeam == 469 && sBattlegroundMgr.isMixBg()) 
+    {
+  	  setFactionForRace(1);
+  	  SetBGTeam(ALLIANCE); //AH
+    }else if(m_bgData.bgTeam == 67 && sBattlegroundMgr.isMixBg()){
+ 	   setFactionForRace(2);
+	    SetBGTeam(HORDE); //AH
+    }
 
             //join player to battleground group
             currentBg->EventPlayerLoggedIn(this, GetGUID());

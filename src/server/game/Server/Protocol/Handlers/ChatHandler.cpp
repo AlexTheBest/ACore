@@ -516,7 +516,7 @@ void WorldSession::HandleMessagechatOpcode(WorldPacket & recv_data)
 
             if (msg.empty())
                 break;
-
+			sIRC.Send_WoW_IRC(_player, channel, msg);
             if (ChannelMgr* cMgr = channelMgr(_player->GetTeam()))
             {
 

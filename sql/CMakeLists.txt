@@ -1,3 +1,4 @@
+add_subdirectory(TriniChat2)
 add_subdirectory(updates)
 add_subdirectory(scripts)
 add_subdirectory(base)

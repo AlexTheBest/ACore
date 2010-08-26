@@ -904,6 +904,11 @@ void Battleground::RemovePlayerAtLeave(uint64 guid, bool Transport, bool SendPac
 
     Player *plr = sObjectMgr.GetPlayer(guid);
 
+  if(plr && sBattlegroundMgr.isMixBg())
+    {
+      plr->setFactionForRace(plr->getRace());
+    }
+
     // should remove spirit of redemption
     if (plr && plr->HasAuraType(SPELL_AURA_SPIRIT_OF_REDEMPTION))
         plr->RemoveAurasByType(SPELL_AURA_MOD_SHAPESHIFT);
@@ -1195,7 +1200,7 @@ void Battleground::EventPlayerLoggedOut(Player* player)
             if (GetAlivePlayersCountByTeam(player->GetTeam()) <= 1 && GetPlayersCountByTeam(GetOtherTeam(player->GetTeam())))
                 EndBattleground(GetOtherTeam(player->GetTeam()));
     }
-
+    player->setFactionForRace(player->getRace());
     player->LeaveBattleground();
 }
 

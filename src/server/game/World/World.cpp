@@ -49,6 +49,7 @@
 #include "CreatureAIRegistry.h"
 #include "BattlegroundMgr.h"
 #include "OutdoorPvPMgr.h"
+#include "OutdoorPvPWG.h"
 #include "TemporarySummon.h"
 #include "WaypointMovementGenerator.h"
 #include "VMapFactory.h"
@@ -56,6 +57,7 @@
 #include "PoolMgr.h"
 #include "GridNotifiersImpl.h"
 #include "CellImpl.h"
+#include "../irc/IRCClient.h"
 #include "InstanceSaveMgr.h"
 #include "Util.h"
 #include "Language.h"
@@ -1190,6 +1192,18 @@ void World::LoadConfigSettings(bool reload)
     if (m_int_configs[CONFIG_PVP_TOKEN_COUNT] < 1)
         m_int_configs[CONFIG_PVP_TOKEN_COUNT] = 1;
 
+     m_bool_configs[CONFIG_OUTDOORPVP_WINTERGRASP_ENABLED] = sConfig.GetBoolDefault("OutdoorPvP.Wintergrasp.Enabled", true);
+     m_bool_configs[CONFIG_OUTDOORPVP_WINTERGRASP_CUSTOM_HONOR] = sConfig.GetBoolDefault("OutdoorPvP.Wintergrasp.CustomHonorRewards", false);
+     m_int_configs[CONFIG_OUTDOORPVP_WINTERGRASP_START_TIME] = sConfig.GetIntDefault("OutdoorPvP.Wintergrasp.StartTime", 30);
+     m_int_configs[CONFIG_OUTDOORPVP_WINTERGRASP_BATTLE_TIME] = sConfig.GetIntDefault("OutdoorPvP.Wintergrasp.BattleTime", 30);
+     m_int_configs[CONFIG_OUTDOORPVP_WINTERGRASP_INTERVAL] = sConfig.GetIntDefault("OutdoorPvP.Wintergrasp.Interval", 150);
+     m_int_configs[CONFIG_OUTDOORPVP_WINTERGRASP_WIN_BATTLE] = sConfig.GetIntDefault("OutdoorPvP.Wintergrasp.CustomHonorBattleWin", 3000);
+     m_int_configs[CONFIG_OUTDOORPVP_WINTERGRASP_LOSE_BATTLE] = sConfig.GetIntDefault("OutdoorPvP.Wintergrasp.CustomHonorBattleLose", 1250);
+     m_int_configs[CONFIG_OUTDOORPVP_WINTERGRASP_DAMAGED_TOWER] = sConfig.GetIntDefault("OutdoorPvP.Wintergrasp.CustomHonorDamageTower", 750);
+     m_int_configs[CONFIG_OUTDOORPVP_WINTERGRASP_DESTROYED_TOWER] = sConfig.GetIntDefault("OutdoorPvP.Wintergrasp.CustomHonorDestroyedTower", 750);
+     m_int_configs[CONFIG_OUTDOORPVP_WINTERGRASP_DAMAGED_BUILDING] = sConfig.GetIntDefault("OutdoorPvP.Wintergrasp.CustomHonorDamagedBuilding", 750);
+     m_int_configs[CONFIG_OUTDOORPVP_WINTERGRASP_INTACT_BUILDING] = sConfig.GetIntDefault("OutdoorPvP.Wintergrasp.CustomHonorIntactBuilding", 1500);
+
     m_bool_configs[CONFIG_NO_RESET_TALENT_COST] = sConfig.GetBoolDefault("NoResetTalentsCost", false);
     m_bool_configs[CONFIG_SHOW_KICK_IN_WORLD] = sConfig.GetBoolDefault("ShowKickInWorld", false);
     m_int_configs[CONFIG_INTERVAL_LOG_UPDATE] = sConfig.GetIntDefault("RecordUpdateTimeDiffInterval", 60000);
@@ -1206,6 +1220,163 @@ void World::LoadConfigSettings(bool reload)
     m_bool_configs[CONFIG_CHATLOG_PUBLIC] = sConfig.GetBoolDefault("ChatLogs.Public", false);
     m_bool_configs[CONFIG_CHATLOG_ADDON] = sConfig.GetBoolDefault("ChatLogs.Addon", false);
     m_bool_configs[CONFIG_CHATLOG_BGROUND] = sConfig.GetBoolDefault("ChatLogs.Battleground", false);
+
+      // IRC Configurations.
+  
+      int ConfCnt = 0;
+      sIRC._chan_count = 0;
+      if (sConfig.GetIntDefault("irc.active", 1) == 1)
+          sIRC.Active = true;
+      else
+          sIRC.Active = false;
+      sIRC._Host = sConfig.GetStringDefault("irc.host", "irc.freenode.net");
+      if (sIRC._Host.size() > 0)
+          ConfCnt++;
+      sIRC._Mver = "Version 3.0.0";
+      sIRC._Port = sConfig.GetIntDefault("irc.port", 6667);
+      sIRC._User = sConfig.GetStringDefault("irc.user", "TriniChat");
+      sIRC._Pass = sConfig.GetStringDefault("irc.pass", "Services Password");
+      sIRC._Nick = sConfig.GetStringDefault("irc.nick", "TriniChat");
+      sIRC._Auth = sConfig.GetIntDefault("irc.auth", 0);
+      sIRC._Auth_Nick = sConfig.GetStringDefault("irc.auth.nick", "AuthNick");
+      sIRC._ICC = sConfig.GetStringDefault("irc.icc", "001");
+      sIRC._defchan = sConfig.GetStringDefault("irc.defchan", "lobby");
+      sIRC._ldefc = sConfig.GetIntDefault("irc.ldef", 0);
+      sIRC._wct = sConfig.GetIntDefault("irc.wct", 30000);
+      sIRC.ajoin = sConfig.GetIntDefault("irc.ajoin", 1);
+      sIRC.ajchan = sConfig.GetStringDefault("irc.ajchan", "world");
+      sIRC.onlrslt = sConfig.GetIntDefault("irc.online.result", 10);
+      sIRC.BOTMASK = sConfig.GetIntDefault("Botmask", 0);
+      sIRC.logfile = sConfig.GetStringDefault("irc.logfile.prefix", "IRC_");
+      sIRC.logmask = sConfig.GetIntDefault("irc.logmask", 0);
+      sIRC.logchan = sConfig.GetStringDefault("irc.logchannel","");
+      sIRC.logchanpw = sConfig.GetStringDefault("irc.logchannelpassword","");
+      for (int i = 1; i < MAX_CONF_CHANNELS;i++)
+      {
+          std::ostringstream ss;
+          ss << i;
+          std::string ci = "irc.chan_" + ss.str();
+          std::string pw = "irc.pass_" + ss.str();
+          std::string t_chan = sConfig.GetStringDefault(ci.c_str(), "");
+          if (t_chan.size() > 0)
+          {
+              sIRC._chan_count++;
+              sIRC._irc_chan[sIRC._chan_count] = t_chan;
+              sIRC._irc_pass[sIRC._chan_count] = sConfig.GetStringDefault(pw.c_str(), t_chan.c_str());
+              ci = "wow.chan_" + ss.str();
+              sIRC._wow_chan[sIRC._chan_count] = sConfig.GetStringDefault(ci.c_str(), t_chan.c_str());
+          }
+      }
+      sIRC.JoinMsg = sConfig.GetStringDefault("irc.joinmsg", "TriniChat2 $Ver for Trinitycore 3.3.x Maintained by SPGM of Trinitycore http://code.google.com/p/spgm-trinity/");
+      sIRC.RstMsg  = sConfig.GetStringDefault("irc.rstmsg", "TriniChat Is Restarting, I Will Be Right Back!");
+      sIRC.kikmsg = sConfig.GetStringDefault("irc.kickmsg", "Do Not Kick Me Again, Severe Actions Will Be Taken!");
+      // IRC LINES
+      sIRC.ILINES[WOW_IRC] = sConfig.GetStringDefault("chat.wow_irc", "\003<WoW>[\002$Name($Level)\002\003] $Msg");
+      sIRC.ILINES[IRC_WOW] = sConfig.GetStringDefault("chat.irc_wow", "\003<IRC>[$Name]: $Msg");
+      sIRC.ILINES[JOIN_WOW] = sConfig.GetStringDefault("chat.join_wow", "\00312>>\00304 $Name \003Joined The Channel!");
+      sIRC.ILINES[JOIN_IRC] = sConfig.GetStringDefault("chat.join_irc", "\003[$Name]: Has Joined IRC!");
+      sIRC.ILINES[LEAVE_WOW] = sConfig.GetStringDefault("chat.leave_wow", "\00312<<\00304 $Name \003Left The Channel!");
+      sIRC.ILINES[LEAVE_IRC] = sConfig.GetStringDefault("chat.leave_irc", "\003[$Name]: Has Left IRC!");
+      sIRC.ILINES[CHANGE_NICK] = sConfig.GetStringDefault("chat.change_nick", "\003<> $Name Is Now Known As $NewName!");
+      // TriniChat Options
+      sIRC._MCA = sConfig.GetIntDefault("irc.maxattempt", 10);
+      sIRC._autojoinkick = sConfig.GetIntDefault("irc.autojoin_kick", 1);
+      sIRC._cmd_prefx = sConfig.GetStringDefault("irc.command_prefix", ".");
+  
+      sIRC._op_gm = sConfig.GetIntDefault("irc.op_gm_login", 0);
+      sIRC._op_gm_lev = sConfig.GetIntDefault("irc.op_gm_level", 3);
+  
+      // Misc Options
+      sIRC.games = sConfig.GetIntDefault("irc.fun.games", 0);
+      sIRC.gmlog = sConfig.GetIntDefault("irc.gmlog", 1);
+      sIRC.BOTMASK = sConfig.GetIntDefault("BotMask", 0);
+      sIRC.Status = sConfig.GetIntDefault("irc.StatusChannel", 1);
+      sIRC.anchn = sConfig.GetIntDefault("irc.AnnounceChannel", 1);
+      sIRC.autoanc = sConfig.GetIntDefault("irc.auto.announce", 30);
+      sIRC.ojGM1 = sConfig.GetStringDefault("irc.gm1", "[VIP]");
+      sIRC.ojGM2 = sConfig.GetStringDefault("irc.gm2", "[Donator]");
+      sIRC.ojGM3 = sConfig.GetStringDefault("irc.gm3", "[Bug Tracker]");
+      sIRC.ojGM4 = sConfig.GetStringDefault("irc.gm4", "[Moderator]");
+      sIRC.ojGM5 = sConfig.GetStringDefault("irc.gm5", "[Game Master]");
+      sIRC.ojGM6 = sConfig.GetStringDefault("irc.gm6", "[Admin]");
+      sIRC.ojGM7 = sConfig.GetStringDefault("irc.gm7", "[Developer]");
+      sIRC.ojGM8 = sConfig.GetStringDefault("irc.gm8", "[Owner]");
+      // REQUIRED GM LEVEL
+      QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT `Command`, `gmlevel` FROM `irc_commands` ORDER BY `Command`");
+      if (result)
+      {
+          Field *fields = result->Fetch();
+          for (uint64 i=0; i < result->GetRowCount(); i++)
+          {
+              //TODO: ELSEIF? STRCMP?
+              std::string command = fields[0].GetCppString();
+              uint32 gmlvl = fields[1].GetUInt32();
+              if (command == "acct") sIRC.CACCT = gmlvl;
+              if (command == "ban") sIRC.CBAN = gmlvl;
+              if (command == "char") sIRC.CCHAN = gmlvl;
+              if (command == "char") sIRC.CCHAR = gmlvl;
+              if (command == "fun") sIRC.CFUN = gmlvl;
+              if (command == "help") sIRC.CHELP = gmlvl;
+              if (command == "inchan") sIRC.CINCHAN = gmlvl;
+              if (command == "info") sIRC.CINFO = gmlvl;
+              if (command == "item") sIRC.CITEM = gmlvl;
+              if (command == "jail") sIRC.CJAIL = gmlvl;
+              if (command == "kick") sIRC.CKICK = gmlvl;
+              if (command == "kill") sIRC._KILL = gmlvl;
+              if (command == "level") sIRC.CLEVEL = gmlvl;
+              if (command == "lookup") sIRC.CLOOKUP = gmlvl;
+              if (command == "money") sIRC.CMONEY = gmlvl;
+              if (command == "mute") sIRC.CMUTE = gmlvl;
+              if (command == "online") sIRC.CONLINE = gmlvl;
+              if (command == "pm") sIRC.CPM = gmlvl;
+              if (command == "reconnect") sIRC.CRECONNECT = gmlvl;
+              if (command == "reload") sIRC.CRELOAD = gmlvl;
+              if (command == "restart") sIRC.CSHUTDOWN = gmlvl;
+              if (command == "revive") sIRC.CREVIVE = gmlvl;
+              if (command == "saveall") sIRC.CSAVEALL = gmlvl;
+              if (command == "server") sIRC.CSERVERCMD = gmlvl;
+              if (command == "shutdown") sIRC.CSHUTDOWN = gmlvl;
+              if (command == "spell") sIRC.CSPELL = gmlvl;
+              if (command == "sysmsg") sIRC.CSYSMSG = gmlvl;
+              if (command == "tele") sIRC.CTELE = gmlvl;
+              if (command == "top") sIRC.CTOP = gmlvl;
+              if (command == "who") sIRC.CWHO = gmlvl;
+              result->NextRow();
+          }
+          
+      }
+      else
+      {
+          sIRC.CACCT     = 3;
+          sIRC.CBAN      = 3;
+          sIRC.CCHAN     = 3;
+          sIRC.CCHAR     = 3;
+          sIRC.CFUN      = 3;
+          sIRC.CHELP     = 3;
+          sIRC.CINCHAN   = 3;
+          sIRC.CINFO     = 3;
+          sIRC.CITEM     = 3;
+          sIRC.CJAIL     = 3;
+          sIRC.CKICK     = 3;
+          sIRC._KILL     = 3;
+          sIRC.CLEVEL    = 3;
+          sIRC.CLOOKUP   = 3;
+          sIRC.CMONEY    = 3;
+          sIRC.CMUTE     = 3;
+          sIRC.CONLINE   = 3;
+          sIRC.CPM       = 3;
+          sIRC.CRECONNECT= 3;
+          sIRC.CRELOAD   = 3;
+          sIRC.CREVIVE   = 3;
+          sIRC.CSAVEALL  = 3;
+          sIRC.CSERVERCMD= 3;
+          sIRC.CSHUTDOWN = 3;
+          sIRC.CSPELL    = 3;
+          sIRC.CSYSMSG   = 3;
+          sIRC.CTELE     = 3;
+          sIRC.CTOP      = 3;
+          sIRC.CWHO      = 3;
+      }
 
     // Dungeon finder
     m_bool_configs[CONFIG_DUNGEON_FINDER_ENABLE] = sConfig.GetBoolDefault("DungeonFinder.Enable", false);
@@ -1626,7 +1797,9 @@ void World::SetInitialWorldSettings()
 
     LoginDatabase.PExecute("INSERT INTO uptime (realmid, starttime, startstring, uptime, revision) VALUES('%u', " UI64FMTD ", '%s', 0, '%s')",
         realmID, uint64(m_startTime), isoDate, _FULLVERSION);
-
+        
+    static uint32 autoanc = 1;
+    autoanc = sIRC.autoanc;
     static uint32 abtimer = 0;
     abtimer = sConfig.GetIntDefault("AutoBroadcast.Timer", 60000);
     m_timers[WUPDATE_OBJECTS].SetInterval(IN_MILLISECONDS/2);
@@ -1640,6 +1813,9 @@ void World::SetInitialWorldSettings()
     m_timers[WUPDATE_CLEANDB].SetInterval(m_int_configs[CONFIG_LOGDB_CLEARINTERVAL]*MINUTE*IN_MILLISECONDS);
                                                             // clean logs table every 14 days by default
     m_timers[WUPDATE_AUTOBROADCAST].SetInterval(abtimer);
+ 		
+    m_timers[WUPDATE_AUTOANC].SetInterval(autoanc*MINUTE*1000);
+   
     m_timers[WUPDATE_DELETECHARS].SetInterval(DAY*IN_MILLISECONDS); // check for chars to delete every day
 
     //to set mailtimer to return mails every day between 4 and 5 am
@@ -1971,6 +2147,11 @@ void World::Update(uint32 diff)
         uint32 nextGameEvent = sGameEventMgr.Update();
         m_timers[WUPDATE_EVENTS].SetInterval(nextGameEvent);
         m_timers[WUPDATE_EVENTS].Reset();
+    }
+    if (m_timers[WUPDATE_AUTOANC].Passed())
+    {
+        m_timers[WUPDATE_AUTOANC].Reset();
+        SendRNDBroadcastIRC();
     }
 
     // update the instance reset times
@@ -2474,6 +2655,20 @@ void World::SendRNDBroadcast()
     }
 }
 
+void World::SendRNDBroadcastIRC()
+{
+    std::string msg;
+    QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT `message` FROM `irc_autoannounce` ORDER BY RAND() LIMIT 1");
+    if (!result)
+        return;
+    msg = result->Fetch()[0].GetString();
+    
+    sWorld.SendWorldText(6612,msg.c_str());
+    std::string ircchan = "#";
+    ircchan += sIRC._irc_chan[sIRC.anchn].c_str();
+    sIRC.Send_IRC_Channel(ircchan, sIRC.MakeMsg("\00304,08\037/!\\\037\017\00304 Automatic System Message \00304,08\037/!\\\037\017 %s", "%s", msg.c_str()), true);
+}
+
 void World::UpdateRealmCharCount(uint32 accountId)
 {
     m_realmCharCallback.SetParam(accountId);
@@ -2720,5 +2915,31 @@ void World::ProcessQueryCallbacks()
         m_realmCharCallback.GetResult(result);
         _UpdateRealmCharCount(result, param);
         m_realmCharCallback.FreeResult();
+    }
+}
+
+void World::SendWintergraspState()
+{
+    OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr.GetOutdoorPvPToZoneId(4197);
+    if (!pvpWG)
+        return;
+
+    for (SessionMap::const_iterator itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
+    {
+        if (!itr->second || !itr->second->GetPlayer() || !itr->second->GetPlayer()->IsInWorld())
+            continue;
+
+            if (pvpWG->isWarTime())
+            {
+                // "Battle in progress"
+                itr->second->GetPlayer()->SendUpdateWorldState(ClockWorldState[1], (time(NULL)));
+            } else
+                // Time to next battle
+            {
+                pvpWG->SendInitWorldStatesTo(itr->second->GetPlayer());
+                itr->second->GetPlayer()->SendUpdateWorldState(ClockWorldState[1], (time(NULL) + pvpWG->GetTimer()));
+                // Hide unneeded info which in center of screen
+                itr->second->GetPlayer()->SendInitWorldStates(itr->second->GetPlayer()->GetZoneId(), itr->second->GetPlayer()->GetAreaId());
+            }
     }
 }

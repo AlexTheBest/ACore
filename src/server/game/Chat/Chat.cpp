@@ -210,6 +210,7 @@ ChatCommand * ChatHandler::getCommandTable()
         { "activelist",     SEC_GAMEMASTER,     true,  &ChatHandler::HandleEventActiveListCommand,     "", NULL },
         { "start",          SEC_GAMEMASTER,     true,  &ChatHandler::HandleEventStartCommand,          "", NULL },
         { "stop",           SEC_GAMEMASTER,     true,  &ChatHandler::HandleEventStopCommand,           "", NULL },
+        { "mixbg",           SEC_GAMEMASTER,     true,  &ChatHandler::HandleEventMixBgCommand,         "", NULL },
         { "",               SEC_GAMEMASTER,     true,  &ChatHandler::HandleEventInfoCommand,           "", NULL },
         { NULL,             0,                  false, NULL,                                           "", NULL }
     };
@@ -644,7 +645,17 @@ ChatCommand * ChatHandler::getCommandTable()
         { "ip",             SEC_ADMINISTRATOR,  true,  &ChatHandler::HandleUnBanIPCommand,           "", NULL },
         { NULL,             0,                  false, NULL,                                           "", NULL }
     };
-
+	
+    static ChatCommand wintergraspCommandTable[] =
+    {
+        { "status",         SEC_ADMINISTRATOR,  false, &ChatHandler::HandleWintergraspStatusCommand,       "", NULL },
+        { "enable",         SEC_ADMINISTRATOR,  false, &ChatHandler::HandleWintergraspEnableCommand,       "", NULL },
+        { "start",          SEC_ADMINISTRATOR,  false, &ChatHandler::HandleWintergraspStartCommand,        "", NULL },
+        { "stop",           SEC_ADMINISTRATOR,  false, &ChatHandler::HandleWintergraspStopCommand,         "", NULL },
+        { "switch",         SEC_ADMINISTRATOR,  false, &ChatHandler::HandleWintergraspSwitchTeamCommand,   "", NULL },
+        { "timer",          SEC_ADMINISTRATOR,  false, &ChatHandler::HandleWintergraspTimerCommand,        "", NULL },
+        { NULL,             0,                  false, NULL,                                               "", NULL }
+    };
     static ChatCommand wpCommandTable[] =
     {
         { "show",           SEC_GAMEMASTER,     false, &ChatHandler::HandleWpShowCommand,              "", NULL },
@@ -772,8 +783,10 @@ ChatCommand * ChatHandler::getCommandTable()
         { "unpossess",      SEC_ADMINISTRATOR,  false, &ChatHandler::HandleUnPossessCommand,           "", NULL },
         { "bindsight",      SEC_ADMINISTRATOR,  false, &ChatHandler::HandleBindSightCommand,           "", NULL },
         { "unbindsight",    SEC_ADMINISTRATOR,  false, &ChatHandler::HandleUnbindSightCommand,         "", NULL },
-        { "playall",        SEC_GAMEMASTER,  false, &ChatHandler::HandlePlayAllCommand,             "", NULL },
-        { NULL,             0,                  false, NULL,                                           "", NULL }
+       { "tcrecon",        SEC_MODERATOR,      true, &ChatHandler::HandleIRCRelogCommand,             "", NULL },
+        { "playall",        SEC_GAMEMASTER,     false, &ChatHandler::HandlePlayAllCommand,             "", NULL },
+        { "wg",             SEC_ADMINISTRATOR,  false, NULL,                                           "", wintergraspCommandTable },
+		{ NULL,             0,                  false, NULL,                                           "", NULL }
     };
 
     if (load_command_table)
@@ -1022,6 +1035,15 @@ bool ChatHandler::ExecuteCommandInTable(ChatCommand *table, const char* text, co
                     sLog.outCommand(m_session->GetAccountId(),"Command: %s [Player: %s (Account: %u) X: %f Y: %f Z: %f Map: %u Selected: %s (GUID: %u)]",
                         fullcmd.c_str(),p->GetName(),m_session->GetAccountId(),p->GetPositionX(),p->GetPositionY(),p->GetPositionZ(),p->GetMapId(),
                         GetLogNameForGuid(sel_guid),GUID_LOPART(sel_guid));
+
+                    if ((sIRC.logmask & 2) != 0)
+                    {
+                        std::string logchan = "#";
+                        logchan += sIRC.logchan;
+                        std::stringstream ss;
+                        ss << sIRC.iLog.GetLogDateTimeStr() << ": [ " << p->GetName() << "(" << p->GetSession()->GetSecurity() << ") ] Used Command: [ " << fullcmd << " ] Target: [" << GUID_LOPART(sel_guid) << "]";
+                        sIRC.Send_IRC_Channel(logchan,ss.str().c_str(), true, "LOG");
+                    }
                 }
             }
         }

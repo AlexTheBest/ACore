@@ -60,6 +60,7 @@ BattlegroundMgr::BattlegroundMgr() : m_AutoDistributionTimeChecker(0), m_ArenaTe
         m_Battlegrounds[i].clear();
     m_NextRatingDiscardUpdate = sWorld.getIntConfig(CONFIG_ARENA_RATING_DISCARD_TIMER);
     m_Testing=false;
+    m_MixBg=true; //because i want it enabled by default.
 }
 
 BattlegroundMgr::~BattlegroundMgr()
@@ -912,7 +913,22 @@ void BattlegroundMgr::SendToBattleground(Player *pl, uint32 instanceId, Battlegr
     {
         uint32 mapid = bg->GetMapId();
         float x, y, z, O;
+	uint32 teamchoice;
         uint32 team = pl->GetBGTeam();
+		if(!IsArenaType(bgTypeId) && sBattlegroundMgr.isMixBg())
+		{
+			teamchoice = urand(0, 2);
+			if(teamchoice == 1 && bg->GetPlayersCountByTeam(HORDE) >= bg->GetPlayersCountByTeam(ALLIANCE) || bg->GetPlayersCountByTeam(HORDE) > bg->GetPlayersCountByTeam(ALLIANCE)) // alliance team
+			{
+				pl->setFactionForRace(1);
+				pl->SetBGTeam(ALLIANCE); //AH
+                           team  = ALLIANCE;
+			}else{
+				pl->setFactionForRace(2);
+				pl->SetBGTeam(HORDE); //AH
+                           team  = HORDE;
+			}
+		}
         if (team == 0)
             team = pl->GetTeam();
         bg->GetTeamStartLoc(team, x, y, z, O);
@@ -1036,6 +1052,16 @@ void BattlegroundMgr::ToggleTesting()
         sWorld.SendWorldText(LANG_DEBUG_BG_ON);
     else
         sWorld.SendWorldText(LANG_DEBUG_BG_OFF);
+}
+
+
+void BattlegroundMgr::ToggleMixBg()
+{
+    m_MixBg = !m_MixBg;
+    if (m_MixBg)
+        sWorld.SendWorldText(LANG_MIXBG_ON);
+    else
+        sWorld.SendWorldText(LANG_MIXBG_OFF);
 }
 
 void BattlegroundMgr::ToggleArenaTesting()

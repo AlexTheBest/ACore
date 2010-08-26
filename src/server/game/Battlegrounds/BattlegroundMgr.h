@@ -89,6 +89,7 @@ class BattlegroundMgr
         void DistributeArenaPoints();
         void ToggleArenaTesting();
         void ToggleTesting();
+        void ToggleMixBg();
 
         void SetHolidayWeekends(uint32 mask);
         void LoadBattleMastersEntry();
@@ -101,6 +102,7 @@ class BattlegroundMgr
         }
 
         bool isArenaTesting() const { return m_ArenaTesting; }
+        bool isMixBg() const { return m_MixBg; }
         bool isTesting() const { return m_Testing; }
 
         static bool IsArenaType(BattlegroundTypeId bgTypeId);
@@ -127,6 +129,7 @@ class BattlegroundMgr
         time_t m_NextAutoDistributionTime;
         uint32 m_AutoDistributionTimeChecker;
         bool   m_ArenaTesting;
+        bool   m_MixBg;
         bool   m_Testing;
 };
 

@@ -49,6 +49,7 @@
 #include "SocketHandler.h"
 #include "ListenSocket.h"
 #include "BigNumber.h"
+#include "../game/irc/IRCClient.h"
 
 #ifdef _WIN32
 #include "ServiceWin32.h"
@@ -328,6 +329,15 @@ int Master::Run()
 
     uint32 realCurrTime, realPrevTime;
     realCurrTime = realPrevTime = getMSTime();
+
+    // Start up TriniChat
+    if (sIRC.Active == 1)
+    {
+        ACE_Based::Thread irc(new IRCClient);
+        irc.setPriority ((ACE_Based::Priority)2);
+    }
+    else
+        sLog.outString("*** TriniChat Is Disabled. *");
 
     ///- Start up freeze catcher thread
     if(uint32 freeze_delay = sConfig.GetIntDefault("MaxCoreStuckTime", 0))
