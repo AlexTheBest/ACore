@@ -17,6 +17,7 @@
  */
 
 #include "DatabaseEnv.h"
+#include "DatabaseWorker.h"
 #include "DatabaseWorkerPool.h"
 #include "MySQLConnection.h"
 #include "SQLOperation.h"
@@ -33,11 +34,12 @@ m_connections(0)
 
 DatabaseWorkerPool::~DatabaseWorkerPool()
 {
+    mysql_library_end();
 }
 
 bool DatabaseWorkerPool::Open(const std::string& infoString, uint8 num_threads)
 {
-    sLog.outDebug("Creating bundled/master MySQL connection.");
+    sLog.outSQLDriver("Creating bundled/master MySQL connection.");
     m_bundle_conn = new MySQLConnection();
     m_bundle_conn->Open(infoString);
     ++m_connections;
@@ -50,7 +52,7 @@ bool DatabaseWorkerPool::Open(const std::string& infoString, uint8 num_threads)
         m_async_connections[i] = new MySQLConnection(m_queue);
         m_async_connections[i]->Open(infoString);
         ++m_connections;
-        sLog.outDebug("Async database thread pool opened. Worker thread count: %u", num_threads);
+        sLog.outSQLDriver("Async database thread pool opened. Worker thread count: %u", num_threads);
     }
 
     m_infoString = infoString;
@@ -59,32 +61,27 @@ bool DatabaseWorkerPool::Open(const std::string& infoString, uint8 num_threads)
 
 void DatabaseWorkerPool::Close()
 {
-    sLog.outStaticDebug("Closing down %u connections on this DatabaseWorkerPool", (uint32)m_connections.value());
+    sLog.outSQLDriver("Closing down %u connections on this DatabaseWorkerPool", (uint32)m_connections.value());
     /// Shuts down worker threads for this connection pool.
-    ACE_Thread_Mutex shutdown_Mtx;
-    ACE_Condition_Thread_Mutex m_condition(shutdown_Mtx);
+    m_queue->queue()->deactivate();
+    
     for (uint8 i = 0; i < m_async_connections.size(); i++)
     {
-        Enqueue(new DatabaseWorkerPoolEnd(m_condition));
-        m_condition.wait();
+        m_async_connections[i]->m_worker->wait();
         --m_connections;
     }
     
-    m_queue->queue()->deactivate();
-
     delete m_bundle_conn;
     m_bundle_conn = NULL;
     --m_connections;
-    sLog.outStaticDebug("Closed bundled connection.");
+    sLog.outSQLDriver("Closed bundled connection.");
 
     //- MySQL::Thread_End() should be called manually from the aborting calling threads
-    sLog.outStaticDebug("Waiting for %u synchroneous database threads to exit.", (uint32)m_connections.value());
+    sLog.outSQLDriver("Waiting for %u synchroneous database threads to exit.", (uint32)m_connections.value());
     while (!m_sync_connections.empty())
     {
     }
-    sLog.outStaticDebug("Synchroneous database threads exited succesfuly.");
-
-    mysql_library_end();
+    sLog.outSQLDriver("Synchroneous database threads exited succesfuly.");
 }
 
 /*! This function creates a new MySQL connection for every MapUpdate thread
@@ -97,10 +94,15 @@ void DatabaseWorkerPool::Init_MySQL_Connection()
 
     {
         ACE_Guard<ACE_Thread_Mutex> guard(m_connectionMap_mtx);
+        ConnectionMap::const_iterator itr = m_sync_connections.find(ACE_Based::Thread::current());
+        #ifdef _DEBUG
+        if (itr != m_sync_connections.end())
+            sLog.outSQLDriver("Thread ["UI64FMTD"] already started a MySQL connection", (uint64)ACE_Based::Thread::currentId());
+        #endif
         m_sync_connections[ACE_Based::Thread::current()] = conn;
     }
 
-    sLog.outDebug("Core thread with ID ["UI64FMTD"] initializing MySQL connection.",
+    sLog.outSQLDriver("Core thread with ID ["UI64FMTD"] initializing MySQL connection.",
         (uint64)ACE_Based::Thread::currentId());
 
     ++m_connections;
@@ -112,6 +114,10 @@ void DatabaseWorkerPool::End_MySQL_Connection()
     {
         ACE_Guard<ACE_Thread_Mutex> guard(m_connectionMap_mtx);
         ConnectionMap::iterator itr = m_sync_connections.find(ACE_Based::Thread::current());
+        #ifdef _DEBUG
+        if (itr == m_sync_connections.end())
+            sLog.outSQLDriver("Thread ["UI64FMTD"] already shut down their MySQL connection.", (uint64)ACE_Based::Thread::currentId());
+        #endif
         conn = itr->second;
         m_sync_connections.erase(itr);
     }
@@ -192,12 +198,12 @@ void DatabaseWorkerPool::CommitTransaction(SQLTransaction transaction)
     #ifdef _DEBUG
     if (transaction->GetSize() == 0)
     {
-        sLog.outError("Transaction contains 0 queries");
+        sLog.outSQLDriver("Transaction contains 0 queries. Not executing.");
         return;
     }
     if (transaction->GetSize() == 1)
     {
-        sLog.outDetail("Warning: Transaction only holds 1 query, consider removing Transaction context in code.");
+        sLog.outSQLDriver("Warning: Transaction only holds 1 query, consider removing Transaction context in code.");
     }
     #endif
     Enqueue(new TransactionTask(transaction));
