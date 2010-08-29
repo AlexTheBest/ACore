@@ -299,8 +299,9 @@ bool Minion::IsGuardianPet() const
 }
 
 Guardian::Guardian(SummonPropertiesEntry const *properties, Unit *owner) : Minion(properties, owner)
-, m_bonusdamage(0)
+, m_bonusSpellDamage(0)
 {
+    memset(m_statFromOwner, 0, sizeof(float)*MAX_STATS);
     m_unitTypeMask |= UNIT_MASK_GUARDIAN;
     if (properties && properties->Type == SUMMON_TYPE_PET)
     {

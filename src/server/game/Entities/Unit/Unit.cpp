@@ -725,34 +725,8 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         }
 
         Kill(pVictim, durabilityLoss);
-
-        //Hook for OnPVPKill Event
-        if (this->GetTypeId() == TYPEID_PLAYER)
-        {
-            if (pVictim->GetTypeId() == TYPEID_PLAYER)
-            {
-                Player *killer = this->ToPlayer();
-                Player *killed = pVictim->ToPlayer();
-                sScriptMgr.OnPVPKill(killer, killed);
-            }
-            else if (pVictim->GetTypeId() == TYPEID_UNIT)
-            {
-                Player *killer = this->ToPlayer();
-                Creature *killed = pVictim->ToCreature();
-                sScriptMgr.OnCreatureKill(killer, killed);
-            }
-        }
-        else if (this->GetTypeId() == TYPEID_UNIT)
-        {
-            if (pVictim->GetTypeId() == TYPEID_PLAYER)
-            {
-                Creature *killer = this->ToCreature();
-                Player *killed = pVictim->ToPlayer();
-                sScriptMgr.OnPlayerKilledByCreature(killer, killed);
-            }
-        }
     }
-    else                                                    // if (health <= damage)
+    else // if (health > damage)
     {
         sLog.outStaticDebug("DealDamageAlive");
 
@@ -1279,7 +1253,7 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
         case MELEE_HIT_MISS:
         {
             damageInfo->HitInfo    |= HITINFO_MISS;
-            damageInfo->TargetState = VICTIMSTATE_NORMAL;
+            damageInfo->TargetState = VICTIMSTATE_INTACT;
 
             damageInfo->procEx |= PROC_EX_MISS;
             damageInfo->damage  = 0;
@@ -1287,13 +1261,13 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
             break;
         }
         case MELEE_HIT_NORMAL:
-            damageInfo->TargetState = VICTIMSTATE_NORMAL;
+            damageInfo->TargetState = VICTIMSTATE_HIT;
             damageInfo->procEx|=PROC_EX_NORMAL_HIT;
             break;
         case MELEE_HIT_CRIT:
         {
             damageInfo->HitInfo     |= HITINFO_CRITICALHIT;
-            damageInfo->TargetState  = VICTIMSTATE_NORMAL;
+            damageInfo->TargetState  = VICTIMSTATE_HIT;
 
             damageInfo->procEx      |= PROC_EX_CRITICAL_HIT;
             // Crit bonus calc
@@ -1346,7 +1320,7 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
             break;
         case MELEE_HIT_BLOCK:
         {
-            damageInfo->TargetState = VICTIMSTATE_NORMAL;
+            damageInfo->TargetState = VICTIMSTATE_HIT;
             damageInfo->HitInfo    |= HITINFO_BLOCK;
             damageInfo->procEx     |= PROC_EX_BLOCK;
             damageInfo->blocked_amount = damageInfo->target->GetShieldBlockValue();
@@ -1368,7 +1342,7 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
         case MELEE_HIT_GLANCING:
         {
             damageInfo->HitInfo     |= HITINFO_GLANCING;
-            damageInfo->TargetState  = VICTIMSTATE_NORMAL;
+            damageInfo->TargetState  = VICTIMSTATE_HIT;
             damageInfo->procEx      |= PROC_EX_NORMAL_HIT;
             int32 leveldif = int32(pVictim->getLevel()) - int32(getLevel());
             if (leveldif > 3) leveldif = 3;
@@ -1380,7 +1354,7 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
         case MELEE_HIT_CRUSHING:
         {
             damageInfo->HitInfo     |= HITINFO_CRUSHING;
-            damageInfo->TargetState  = VICTIMSTATE_NORMAL;
+            damageInfo->TargetState  = VICTIMSTATE_HIT;
             damageInfo->procEx      |= PROC_EX_NORMAL_HIT;
             // 150% normal damage
             damageInfo->damage += (damageInfo->damage / 2);
@@ -1426,12 +1400,7 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
 
 void Unit::DealMeleeDamage(CalcDamageInfo *damageInfo, bool durabilityLoss)
 {
-    if (!damageInfo)
-        return;
     Unit *pVictim = damageInfo->target;
-
-    if (!pVictim)
-        return;
 
     if (!pVictim->isAlive() || pVictim->hasUnitState(UNIT_STAT_UNATTACKABLE) || (pVictim->GetTypeId() == TYPEID_UNIT && pVictim->ToCreature()->IsInEvadeMode()))
         return;
@@ -1518,43 +1487,39 @@ void Unit::DealMeleeDamage(CalcDamageInfo *damageInfo, bool durabilityLoss)
     // Do effect if any damage done to target
     if (damageInfo->damage)
     {
-        // victim's damage shield
-        std::set<AuraEffect*> alreadyDone;
-        uint32 removedAuras = pVictim->m_removedAurasCount;
         AuraEffectList const& vDamageShields = pVictim->GetAuraEffectsByType(SPELL_AURA_DAMAGE_SHIELD);
-        for (AuraEffectList::const_iterator i = vDamageShields.begin(), next = vDamageShields.begin(); i != vDamageShields.end(); i = next)
+        for (AuraEffectList::const_iterator dmgShieldItr = vDamageShields.begin(); dmgShieldItr != vDamageShields.end(); ++dmgShieldItr)
         {
-           ++next;
-           if (alreadyDone.find(*i) == alreadyDone.end())
-           {
-               alreadyDone.insert(*i);
-               uint32 damage=(*i)->GetAmount();
-               SpellEntry const *i_spellProto = (*i)->GetSpellProto();
-               //Calculate absorb resist ??? no data in opcode for this possibly unable to absorb or resist?
-               //uint32 absorb;
-               //uint32 resist;
-               //CalcAbsorbResist(pVictim, SpellSchools(spellProto->School), SPELL_DIRECT_DAMAGE, damage, &absorb, &resist);
-               //damage-=absorb + resist;
+            SpellEntry const *i_spellProto = (*dmgShieldItr)->GetSpellProto();
+            // Damage shield can be resisted...
+            if (SpellMissInfo missInfo = pVictim->SpellHitResult(this, i_spellProto ,false))
+            {
+                pVictim->SendSpellMiss(this, i_spellProto->Id, missInfo);
+                continue;
+            }
+            // ...or immuned
+            if (IsImmunedToDamage(i_spellProto))
+            {
+                pVictim->SendSpellDamageImmune(this, i_spellProto->Id);
+                continue;
+            }
 
-               pVictim->DealDamageMods(this,damage,NULL);
+            uint32 damage = (*dmgShieldItr)->GetAmount();
 
-               WorldPacket data(SMSG_SPELLDAMAGESHIELD,(8+8+4+4+4+4));
-               data << uint64(pVictim->GetGUID());
-               data << uint64(GetGUID());
-               data << uint32(i_spellProto->Id);
-               data << uint32(damage);                  // Damage
-               data << uint32(0);                       // Overkill
-               data << uint32(i_spellProto->SchoolMask);
-               pVictim->SendMessageToSet(&data, true);
+            // No Unit::CalcAbsorbResist here - opcode doesn't send that data - this damage is probably not affected by that
+            pVictim->DealDamageMods(this,damage,NULL);
 
-               pVictim->DealDamage(this, damage, 0, SPELL_DIRECT_DAMAGE, GetSpellSchoolMask(i_spellProto), i_spellProto, true);
+            WorldPacket data(SMSG_SPELLDAMAGESHIELD,(8+8+4+4+4+4));
+            data << uint64(pVictim->GetGUID());
+            data << uint64(GetGUID());
+            data << uint32(i_spellProto->Id);
+            data << uint32(damage);                  // Damage
+            int32 overkill = int32(damage) - int32(GetHealth());
+            data << uint32(overkill > 0 ? overkill : 0); // Overkill
+            data << uint32(i_spellProto->SchoolMask);
+            pVictim->SendMessageToSet(&data, true);
 
-               if (pVictim->m_removedAurasCount > removedAuras)
-               {
-                   removedAuras = pVictim->m_removedAurasCount;
-                   next = vDamageShields.begin();
-               }
-           }
+            pVictim->DealDamage(this, damage, 0, SPELL_DIRECT_DAMAGE, GetSpellSchoolMask(i_spellProto), i_spellProto, true);
         }
     }
 }
@@ -2320,7 +2285,7 @@ void Unit::CalcHealAbsorb(Unit *pVictim, const SpellEntry *healSpell, uint32 &he
     healAmount = RemainingHeal;
 }
 
-void Unit::AttackerStateUpdate (Unit *pVictim, WeaponAttackType attType, bool /*extra*/)
+void Unit::AttackerStateUpdate (Unit *pVictim, WeaponAttackType attType, bool extra)
 {
     if (hasUnitState(UNIT_STAT_CANNOT_AUTOATTACK) || HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_PACIFIED))
         return;
@@ -2339,36 +2304,46 @@ void Unit::AttackerStateUpdate (Unit *pVictim, WeaponAttackType attType, bool /*
     else
         return;                                             // ignore ranged case
 
-    // melee attack spell casted at main hand attack only
+    // melee attack spell casted at main hand attack only - no normal melee dmg dealt
     if (attType == BASE_ATTACK && m_currentSpells[CURRENT_MELEE_SPELL])
     {
         m_currentSpells[CURRENT_MELEE_SPELL]->cast();
-        return;
+    }
+    else
+    {
+        // attack can be redirected to another target
+        pVictim = SelectMagnetTarget(pVictim);
+
+        CalcDamageInfo damageInfo;
+        CalculateMeleeDamage(pVictim, 0, &damageInfo, attType);
+        // Send log damage message to client
+        DealDamageMods(pVictim, damageInfo.damage, &damageInfo.absorb);
+        SendAttackStateUpdate(&damageInfo);
+
+        ProcDamageAndSpell(damageInfo.target, damageInfo.procAttacker, damageInfo.procVictim, damageInfo.procEx, damageInfo.damage, damageInfo.attackType);
+        DealMeleeDamage(&damageInfo,true);
+
+        if (GetTypeId() == TYPEID_PLAYER)
+            sLog.outStaticDebug("AttackerStateUpdate: (Player) %u attacked %u (TypeId: %u) for %u dmg, absorbed %u, blocked %u, resisted %u.",
+                GetGUIDLow(), pVictim->GetGUIDLow(), pVictim->GetTypeId(), damageInfo.damage, damageInfo.absorb, damageInfo.blocked_amount, damageInfo.resist);
+        else
+            sLog.outStaticDebug("AttackerStateUpdate: (NPC)    %u attacked %u (TypeId: %u) for %u dmg, absorbed %u, blocked %u, resisted %u.",
+                GetGUIDLow(), pVictim->GetGUIDLow(), pVictim->GetTypeId(), damageInfo.damage, damageInfo.absorb, damageInfo.blocked_amount, damageInfo.resist);
+
+        // if damage pVictim call AI reaction
+        //if (pVictim->GetTypeId() == TYPEID_UNIT && pVictim->ToCreature()->AI())
+        //    pVictim->ToCreature()->AI()->AttackedBy(this);
     }
 
-    // attack can be redirected to another target
-    pVictim = SelectMagnetTarget(pVictim);
-
-    CalcDamageInfo damageInfo;
-    CalculateMeleeDamage(pVictim, 0, &damageInfo, attType);
-    // Send log damage message to client
-    DealDamageMods(pVictim, damageInfo.damage, &damageInfo.absorb);
-    SendAttackStateUpdate(&damageInfo);
-
-    ProcDamageAndSpell(damageInfo.target, damageInfo.procAttacker, damageInfo.procVictim, damageInfo.procEx, damageInfo.damage, damageInfo.attackType);
-    DealMeleeDamage(&damageInfo,true);
-
-    if (GetTypeId() == TYPEID_PLAYER)
-        sLog.outStaticDebug("AttackerStateUpdate: (Player) %u attacked %u (TypeId: %u) for %u dmg, absorbed %u, blocked %u, resisted %u.",
-            GetGUIDLow(), pVictim->GetGUIDLow(), pVictim->GetTypeId(), damageInfo.damage, damageInfo.absorb, damageInfo.blocked_amount, damageInfo.resist);
-    else
-        sLog.outStaticDebug("AttackerStateUpdate: (NPC)    %u attacked %u (TypeId: %u) for %u dmg, absorbed %u, blocked %u, resisted %u.",
-            GetGUIDLow(), pVictim->GetGUIDLow(), pVictim->GetTypeId(), damageInfo.damage, damageInfo.absorb, damageInfo.blocked_amount, damageInfo.resist);
-
-    // if damage pVictim call AI reaction
-    //if (pVictim->GetTypeId() == TYPEID_UNIT && pVictim->ToCreature()->AI())
-    //    pVictim->ToCreature()->AI()->AttackedBy(this);
-
+    if(!extra && m_extraAttacks)
+    {
+        while(m_extraAttacks)
+        {
+            AttackerStateUpdate(pVictim, BASE_ATTACK, true);
+            if(m_extraAttacks > 0)
+                --m_extraAttacks;
+        }
+    }
 }
 
 MeleeHitOutcome Unit::RollMeleeOutcomeAgainst(const Unit *pVictim, WeaponAttackType attType) const
@@ -5237,6 +5212,16 @@ void Unit::SendSpellMiss(Unit *target, uint32 spellID, SpellMissInfo missInfo)
     data << uint8(missInfo);
     // end loop
     SendMessageToSet(&data, true);
+}
+
+void Unit::SendSpellDamageImmune(Unit * target, uint32 spellId)
+{
+    WorldPacket data(SMSG_SPELLORDAMAGE_IMMUNE, 8+8+4+1);
+    data << uint64(GetGUID());
+    data << uint64(target->GetGUID());
+    data << uint32(spellId);
+    data << uint8(0); // bool - log format: 0-default, 1-debug
+    SendMessageToSet(&data,true);
 }
 
 void Unit::SendAttackStateUpdate(CalcDamageInfo *damageInfo)
@@ -9927,6 +9912,9 @@ int32 Unit::DealHeal(Unit *pVictim, uint32 addhealth)
 {
     int32 gain = 0;
 
+    if (pVictim->GetTypeId() == TYPEID_UNIT && pVictim->ToCreature()->IsAIEnabled)
+        pVictim->ToCreature()->AI()->HealReceived(this, addhealth);
+
     if (addhealth)
         gain = pVictim->ModifyHealth(int32(addhealth));
 
@@ -10143,7 +10131,7 @@ void Unit::UnsummonAllTotems()
 void Unit::SendHealSpellLog(Unit *pVictim, uint32 SpellID, uint32 Damage, uint32 OverHeal, uint32 Absorb, bool critical)
 {
     // we guess size
-    WorldPacket data(SMSG_SPELLHEALLOG, (8+8+4+4+4+4+1));
+    WorldPacket data(SMSG_SPELLHEALLOG, (8+8+4+4+4+4+1+1));
     data.append(pVictim->GetPackGUID());
     data.append(GetPackGUID());
     data << uint32(SpellID);
@@ -10151,6 +10139,7 @@ void Unit::SendHealSpellLog(Unit *pVictim, uint32 SpellID, uint32 Damage, uint32
     data << uint32(OverHeal);
     data << uint32(Absorb); // Absorb amount
     data << uint8(critical ? 1 : 0);
+    data << uint8(0); // unused
     SendMessageToSet(&data, true);
 }
 
@@ -15283,6 +15272,32 @@ void Unit::Kill(Unit *pVictim, bool durabilityLoss)
             pVictim->ToPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_KILLED_BY_CREATURE, GetEntry());
         else if (GetTypeId() == TYPEID_PLAYER && pVictim != this)
             pVictim->ToPlayer()->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_KILLED_BY_PLAYER, 1, this->ToPlayer()->GetTeam());
+    }
+
+    //Hook for OnPVPKill Event
+    if (this->GetTypeId() == TYPEID_PLAYER)
+    {
+        if (pVictim->GetTypeId() == TYPEID_PLAYER)
+        {
+            Player *killer = this->ToPlayer();
+            Player *killed = pVictim->ToPlayer();
+            sScriptMgr.OnPVPKill(killer, killed);
+        }
+        else if (pVictim->GetTypeId() == TYPEID_UNIT)
+        {
+            Player *killer = this->ToPlayer();
+            Creature *killed = pVictim->ToCreature();
+            sScriptMgr.OnCreatureKill(killer, killed);
+        }
+    }
+    else if (this->GetTypeId() == TYPEID_UNIT)
+    {
+        if (pVictim->GetTypeId() == TYPEID_PLAYER)
+        {
+            Creature *killer = this->ToCreature();
+            Player *killed = pVictim->ToPlayer();
+            sScriptMgr.OnPlayerKilledByCreature(killer, killed);
+        }
     }
 }
 

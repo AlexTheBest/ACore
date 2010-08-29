@@ -534,6 +534,7 @@ m_caster(Caster), m_spellValue(new SpellValue(m_spellInfo))
     }
 
     CleanupTargetList();
+    CleanupEffectExecuteData();
 }
 
 Spell::~Spell()
@@ -557,6 +558,8 @@ Spell::~Spell()
     if (m_caster && m_caster->GetTypeId() == TYPEID_PLAYER)
         ASSERT(m_caster->ToPlayer()->m_spellModTakingSpell != this);
     delete m_spellValue;
+
+    CheckEffectExecuteData();
 }
 
 template<typename T>
@@ -2220,7 +2223,7 @@ void Spell::SelectEffectTargets(uint32 i, uint32 cur)
             Unit *target = m_targets.getUnitTarget();
             if (!target)
             {
-                sLog.outError("SPELL: no unit target for spell ID %u\n", m_spellInfo->Id);
+                sLog.outError("SPELL: no unit target for spell ID %u", m_spellInfo->Id);
                 break;
             }
 
@@ -2263,7 +2266,7 @@ void Spell::SelectEffectTargets(uint32 i, uint32 cur)
         {
             if (!m_targets.HasDst())
             {
-                sLog.outError("SPELL: no destination for spell ID %u\n", m_spellInfo->Id);
+                sLog.outError("SPELL: no destination for spell ID %u", m_spellInfo->Id);
                 break;
             }
 
@@ -3362,6 +3365,8 @@ void Spell::handle_immediate()
         }
     }
 
+    PrepareTargetProcessing();
+
     // process immediate effects (items, ground, etc.) also initialize some variables
     _handle_immediate_phase();
 
@@ -3370,6 +3375,8 @@ void Spell::handle_immediate()
 
     for (std::list<GOTargetInfo>::iterator ihit= m_UniqueGOTargetInfo.begin(); ihit != m_UniqueGOTargetInfo.end(); ++ihit)
         DoAllEffectOnTarget(&(*ihit));
+
+    FinishTargetProcessing();
 
     // spell is finished, perform some last features of the spell here
     _handle_finish_phase();
@@ -3389,6 +3396,8 @@ uint64 Spell::handle_delayed(uint64 t_offset)
         m_caster->ToPlayer()->SetSpellModTakingSpell(this, true);
 
     uint64 next_time = 0;
+
+    PrepareTargetProcessing();
 
     if (!m_immediateHandled)
     {
@@ -3422,6 +3431,8 @@ uint64 Spell::handle_delayed(uint64 t_offset)
         }
     }
 
+    FinishTargetProcessing();
+
     if (m_caster->GetTypeId() == TYPEID_PLAYER)
         m_caster->ToPlayer()->SetSpellModTakingSpell(this, false);
 
@@ -3451,7 +3462,6 @@ void Spell::_handle_immediate_phase()
 
     PrepareScriptHitHandlers();
 
-    m_needSpellLog = IsNeedSendToClient();
     for (uint32 j = 0; j < 3; ++j)
     {
         if (m_spellInfo->Effect[j] == 0)
@@ -3463,10 +3473,6 @@ void Spell::_handle_immediate_phase()
             HandleEffects(NULL, NULL, NULL, j);
             continue;
         }
-
-        // Don't do spell log, if is school damage spell
-        if (m_spellInfo->Effect[j] == SPELL_EFFECT_SCHOOL_DAMAGE || m_spellInfo->Effect[j] == 0)
-            m_needSpellLog = false;
     }
 
     // initialize Diminishing Returns Data
@@ -3545,10 +3551,6 @@ void Spell::_handle_finish_phase()
         if (m_comboPointGain)
             m_caster->m_movedPlayer->GainSpellComboPoints(m_comboPointGain);
     }
-
-    // spell log
-    if (m_needSpellLog)
-        SendLogExecute();
 }
 
 void Spell::SendSpellCooldown()
@@ -3714,10 +3716,6 @@ void Spell::finish(bool ok)
             return;
         }
     }
-
-    // Okay to remove extra attacks
-    if (IsSpellHaveEffect(m_spellInfo, SPELL_EFFECT_ADD_EXTRA_ATTACKS))
-        m_caster->m_extraAttacks = 0;
 
     if (IsMeleeAttackResetSpell())
     {
@@ -4121,110 +4119,103 @@ void Spell::WriteSpellGoTargets(WorldPacket * data)
 
 void Spell::SendLogExecute()
 {
-    Unit *target = m_targets.getUnitTarget() ? m_targets.getUnitTarget() : m_caster;
-
     WorldPacket data(SMSG_SPELLLOGEXECUTE, (8+4+4+4+4+8));
 
-    if (m_caster->GetTypeId() == TYPEID_PLAYER)
-        data.append(m_caster->GetPackGUID());
-    else
-        data.append(target->GetPackGUID());
+    data.append(m_caster->GetPackGUID());
 
     data << uint32(m_spellInfo->Id);
-    uint32 count1 = 1;
-    data << uint32(count1);                                 // count1 (effect count?)
-    for (uint32 i = 0; i < count1; ++i)
+
+    uint8 effCount = 0;
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
     {
-        data << uint32(m_spellInfo->Effect[0]);             // spell effect
-        uint32 count2 = 1;
-        data << uint32(count2);                             // count2 (target count?)
-        for (uint32 j = 0; j < count2; ++j)
-        {
-            switch(m_spellInfo->Effect[0])
-            {
-                case SPELL_EFFECT_POWER_DRAIN:
-                    if (Unit *unit = m_targets.getUnitTarget())
-                        data.append(unit->GetPackGUID());
-                    else
-                        data << uint8(0);
-                    data << uint32(0);
-                    data << uint32(0);
-                    data << float(0);
-                    break;
-                case SPELL_EFFECT_ADD_EXTRA_ATTACKS:
-                    if (Unit *unit = m_targets.getUnitTarget())
-                        data.append(unit->GetPackGUID());
-                    else
-                        data << uint8(0);
-                    data << uint32(m_caster->m_extraAttacks);
-                    break;
-                case SPELL_EFFECT_INTERRUPT_CAST:
-                    if (Unit *unit = m_targets.getUnitTarget())
-                        data.append(unit->GetPackGUID());
-                    else
-                        data << uint8(0);
-                    data << uint32(0);                      // spellid
-                    break;
-                case SPELL_EFFECT_DURABILITY_DAMAGE:
-                    if (Unit *unit = m_targets.getUnitTarget())
-                        data.append(unit->GetPackGUID());
-                    else
-                        data << uint8(0);
-                    data << uint32(0);
-                    data << uint32(0);
-                    break;
-                case SPELL_EFFECT_OPEN_LOCK:
-                    if (Item *item = m_targets.getItemTarget())
-                        data.append(item->GetPackGUID());
-                    else
-                        data << uint8(0);
-                    break;
-                case SPELL_EFFECT_CREATE_ITEM:
-                case SPELL_EFFECT_CREATE_ITEM_2:
-                    data << uint32(m_spellInfo->EffectItemType[0]);
-                    break;
-                case SPELL_EFFECT_SUMMON:
-                case SPELL_EFFECT_TRANS_DOOR:
-                case SPELL_EFFECT_SUMMON_PET:
-                case SPELL_EFFECT_SUMMON_OBJECT_WILD:
-                case SPELL_EFFECT_CREATE_HOUSE:
-                case SPELL_EFFECT_DUEL:
-                case SPELL_EFFECT_SUMMON_OBJECT_SLOT1:
-                case SPELL_EFFECT_SUMMON_OBJECT_SLOT2:
-                case SPELL_EFFECT_SUMMON_OBJECT_SLOT3:
-                case SPELL_EFFECT_SUMMON_OBJECT_SLOT4:
-                    if (Unit *unit = m_targets.getUnitTarget())
-                        data.append(unit->GetPackGUID());
-                    else if (m_targets.getItemTargetGUID())
-                        data.appendPackGUID(m_targets.getItemTargetGUID());
-                    else if (GameObject *go = m_targets.getGOTarget())
-                        data.append(go->GetPackGUID());
-                    else
-                        data << uint8(0);                   // guid
-                    break;
-                case SPELL_EFFECT_FEED_PET:
-                    data << uint32(m_targets.getItemTargetEntry());
-                    break;
-                case SPELL_EFFECT_DISMISS_PET:
-                    if (Unit *unit = m_targets.getUnitTarget())
-                        data.append(unit->GetPackGUID());
-                    else
-                        data << uint8(0);
-                    break;
-                case SPELL_EFFECT_RESURRECT:
-                case SPELL_EFFECT_RESURRECT_NEW:
-                    if (Unit *unit = m_targets.getUnitTarget())
-                        data.append(unit->GetPackGUID());
-                    else
-                        data << uint8(0);
-                    break;
-                default:
-                    return;
-            }
-        }
+        if (m_effectExecuteData[i])
+            ++effCount;
     }
 
+    if (!effCount)
+        return;
+
+    data << uint32(effCount);
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+    {
+        if (!m_effectExecuteData[i])
+            continue;
+
+        data << uint32(m_spellInfo->Effect[i]);             // spell effect
+
+        data.append(*m_effectExecuteData[i]);
+        
+        delete m_effectExecuteData[i];
+        m_effectExecuteData[i] = NULL;
+    }
     m_caster->SendMessageToSet(&data, true);
+}
+
+void Spell::ExecuteLogEffectTakeTargetPower(uint8 effIndex, Unit * target, uint32 powerType, uint32 powerTaken, float gainMultiplier)
+{
+    InitEffectExecuteData(effIndex);
+    m_effectExecuteData[effIndex]->append(target->GetPackGUID());
+    *m_effectExecuteData[effIndex] << uint32(powerTaken);
+    *m_effectExecuteData[effIndex] << uint32(powerType);
+    *m_effectExecuteData[effIndex] << float(gainMultiplier);
+}
+
+void Spell::ExecuteLogEffectExtraAttacks(uint8 effIndex, Unit * victim, uint32 attCount)
+{
+    InitEffectExecuteData(effIndex);
+    m_effectExecuteData[effIndex]->append(victim->GetPackGUID());
+    *m_effectExecuteData[effIndex] << uint32(attCount);
+}
+
+void Spell::ExecuteLogEffectInterruptCast(uint8 effIndex, Unit * victim, uint32 spellId)
+{
+    InitEffectExecuteData(effIndex);
+    m_effectExecuteData[effIndex]->append(victim->GetPackGUID());
+    *m_effectExecuteData[effIndex] << uint32(spellId);
+}
+
+void Spell::ExecuteLogEffectDurabilityDamage(uint8 effIndex, Unit * victim, uint32 itemslot, uint32 damage)
+{
+    InitEffectExecuteData(effIndex);
+    m_effectExecuteData[effIndex]->append(victim->GetPackGUID());
+    *m_effectExecuteData[effIndex] << uint32(m_spellInfo->Id);
+    *m_effectExecuteData[effIndex] << uint32(damage);
+}
+
+void Spell::ExecuteLogEffectOpenLock(uint8 effIndex, Object * obj)
+{
+    InitEffectExecuteData(effIndex);
+    m_effectExecuteData[effIndex]->append(obj->GetPackGUID());
+}
+
+void Spell::ExecuteLogEffectCreateItem(uint8 effIndex, uint32 entry)
+{
+    InitEffectExecuteData(effIndex);
+    *m_effectExecuteData[effIndex] << uint32(entry);
+}
+
+void Spell::ExecuteLogEffectDestroyItem(uint8 effIndex, uint32 entry)
+{
+    InitEffectExecuteData(effIndex);
+    *m_effectExecuteData[effIndex] << uint32(entry);
+}
+
+void Spell::ExecuteLogEffectSummonObject(uint8 effIndex, WorldObject * obj)
+{
+    InitEffectExecuteData(effIndex);
+    m_effectExecuteData[effIndex]->append(obj->GetPackGUID());
+}
+
+void Spell::ExecuteLogEffectUnsummonObject(uint8 effIndex, WorldObject * obj)
+{
+    InitEffectExecuteData(effIndex);
+    m_effectExecuteData[effIndex]->append(obj->GetPackGUID());
+}
+
+void Spell::ExecuteLogEffectResurrect(uint8 effIndex, Unit * target)
+{
+    InitEffectExecuteData(effIndex);
+    m_effectExecuteData[effIndex]->append(target->GetPackGUID());
 }
 
 void Spell::SendInterrupted(uint8 result)
@@ -4694,7 +4685,7 @@ void Spell::HandleEffects(Unit *pUnitTarget,Item *pItemTarget,GameObject *pGOTar
 
     if (!preventDefault && eff < TOTAL_SPELL_EFFECTS)
     {
-        (this->*SpellEffects[eff])(i);
+        (this->*SpellEffects[eff])((SpellEffIndex)i);
     }
 }
 
@@ -6208,6 +6199,7 @@ SpellCastResult Spell::CheckItems()
         switch (m_spellInfo->Effect[i])
         {
             case SPELL_EFFECT_CREATE_ITEM:
+            case SPELL_EFFECT_CREATE_ITEM_2:
             {
                 if (!m_IsTriggeredSpell && m_spellInfo->EffectItemType[i])
                 {
@@ -7007,16 +6999,16 @@ int32 Spell::CalculateDamageDone(Unit *unit, const uint32 effectMask, float *mul
             switch(m_spellInfo->Effect[i])
             {
                 case SPELL_EFFECT_SCHOOL_DAMAGE:
-                    SpellDamageSchoolDmg(i);
+                    SpellDamageSchoolDmg((SpellEffIndex)i);
                     break;
                 case SPELL_EFFECT_WEAPON_DAMAGE:
                 case SPELL_EFFECT_WEAPON_DAMAGE_NOSCHOOL:
                 case SPELL_EFFECT_NORMALIZED_WEAPON_DMG:
                 case SPELL_EFFECT_WEAPON_PERCENT_DAMAGE:
-                    SpellDamageWeaponDmg(i);
+                    SpellDamageWeaponDmg((SpellEffIndex)i);
                     break;
                 case SPELL_EFFECT_HEAL:
-                    SpellDamageHeal(i);
+                    SpellDamageHeal((SpellEffIndex)i);
                     break;
             }
 
@@ -7264,6 +7256,45 @@ void Spell::SelectTrajTargets()
         trajDst.Relocate(x, y, z, m_caster->GetOrientation());
         m_targets.modDst(trajDst);
     }
+}
+
+void Spell::PrepareTargetProcessing()
+{
+    CheckEffectExecuteData();
+}
+
+void Spell::FinishTargetProcessing()
+{
+    SendLogExecute();
+}
+
+void Spell::InitEffectExecuteData(uint8 effIndex)
+{
+    ASSERT(effIndex < MAX_SPELL_EFFECTS);
+    if (!m_effectExecuteData[effIndex])
+    {
+        m_effectExecuteData[effIndex] = new ByteBuffer(0x20);
+        // first dword - target counter
+        *m_effectExecuteData[effIndex] << uint32(1);
+    }
+    else
+    {
+        // increase target counter by one
+        uint32 count = (*m_effectExecuteData[effIndex]).read<uint32>(0);
+        (*m_effectExecuteData[effIndex]).put<uint32>(0, ++count);
+    }
+}
+
+void Spell::CleanupEffectExecuteData()
+{
+    for(uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+        m_effectExecuteData[i] = NULL;
+}
+
+void Spell::CheckEffectExecuteData()
+{
+    for(uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
+        ASSERT(!m_effectExecuteData[i]);
 }
 
 void Spell::LoadScripts()

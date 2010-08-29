@@ -3552,7 +3552,7 @@ void ObjectMgr::LoadArenaTeams()
     // load arena_team members
     QueryResult_AutoPtr arenaTeamMembersResult = CharacterDatabase.Query(
     //          0           1           2           3         4             5           6               7    8
-        "SELECT arenateamid,member.guid,played_week,wons_week,played_season,wons_season,personal_rating,name,class "
+        "SELECT arenateamid,member.guid,played_week,wons_week,played_season,wons_season,name,class "
         "FROM arena_team_member member LEFT JOIN characters chars on member.guid = chars.guid ORDER BY member.arenateamid ASC");
 
     barGoLink bar(result->GetRowCount());
@@ -6986,6 +6986,8 @@ void ObjectMgr::LoadReputationSpilloverTemplate()
 
 void ObjectMgr::LoadPointsOfInterest()
 {
+    mPointsOfInterest.clear();                              // need for reload case
+	
     uint32 count = 0;
 
     //                                                0      1  2  3      4     5     6
@@ -7036,6 +7038,8 @@ void ObjectMgr::LoadPointsOfInterest()
 
 void ObjectMgr::LoadQuestPOI()
 {
+    mQuestPOIMap.clear();                              // need for reload case
+	
     uint32 count = 0;
 
     // 0 1 2 3

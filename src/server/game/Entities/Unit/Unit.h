@@ -266,12 +266,12 @@ enum Swing
 
 enum VictimState
 {
-    VICTIMSTATE_UNKNOWN1       = 0,
-    VICTIMSTATE_NORMAL         = 1,
+    VICTIMSTATE_INTACT         = 0, // set when attacker misses
+    VICTIMSTATE_HIT            = 1, // victim got clear/blocked hit
     VICTIMSTATE_DODGE          = 2,
     VICTIMSTATE_PARRY          = 3,
     VICTIMSTATE_INTERRUPT      = 4,
-    VICTIMSTATE_BLOCKS         = 5,
+    VICTIMSTATE_BLOCKS         = 5, // unused? not set when blocked, even on full block
     VICTIMSTATE_EVADES         = 6,
     VICTIMSTATE_IS_IMMUNE      = 7,
     VICTIMSTATE_DEFLECTS       = 8
@@ -1443,6 +1443,7 @@ class Unit : public WorldObject
         void SendSpellNonMeleeDamageLog(Unit *target,uint32 SpellID, uint32 Damage, SpellSchoolMask damageSchoolMask, uint32 AbsorbedDamage, uint32 Resist, bool PhysicalDamage, uint32 Blocked, bool CriticalHit = false);
         void SendPeriodicAuraLog(SpellPeriodicAuraLogInfo *pInfo);
         void SendSpellMiss(Unit *target, uint32 spellID, SpellMissInfo missInfo);
+        void SendSpellDamageImmune(Unit *target, uint32 spellId);
 
         void NearTeleportTo(float x, float y, float z, float orientation, bool casting = false);
         virtual bool SetPosition(float x, float y, float z, float ang, bool teleport = false);
