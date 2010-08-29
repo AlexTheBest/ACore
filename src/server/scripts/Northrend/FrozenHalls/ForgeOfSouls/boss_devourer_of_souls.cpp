@@ -208,7 +208,7 @@ public:
                     pInstance->DoCompleteAchievement(ACHIEV_THREE_FACED);
 
                 int32 entryIndex;
-                if (pInstance->GetData(DATA_TEAM_IN_INSTANCE) == TEAM_ALLIANCE)
+                if (pInstance->GetData(DATA_TEAM_IN_INSTANCE) == ALLIANCE)
                     entryIndex = 0;
                 else
                     entryIndex = 1;
