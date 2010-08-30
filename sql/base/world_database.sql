@@ -6021,7 +6021,10 @@ INSERT INTO `spell_group` (`id`, `spell_id`) VALUES
 (1110, 27683),
 (1006, 72586), -- Blessing of Forgotten Kings (Drums)
 (1108, 72588), -- Gift of the Wild (Drums)
-(1109, 72590); -- Fortitude (Scroll)
+(1109, 72590), -- Fortitude (Scroll)
+-- Immolate / Unstable Affliction
+(1112, 348),
+(1112, 30108);
 
 /*!40000 ALTER TABLE `spell_group` ENABLE KEYS */;
 UNLOCK TABLES;
@@ -7622,7 +7625,8 @@ INSERT INTO spell_group_stack_rules (`group_id`, `stack_rule`) VALUES
 (1107,1),
 (1108,1),
 (1109,1),
-(1110,1);
+(1110,1),
+(1112,2);
 
 /*!40000 ALTER TABLE `spell_group_stack_rules` ENABLE KEYS */;
 UNLOCK TABLES;
@@ -14820,8 +14824,19 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 -- quest
 ( 45449, 'spell_q11587_arcane_prisoner_rescue'),
 ( 46023, 'spell_q11730_ultrasonic_screwdriver'),
+( 52308, 'spell_q12683_take_sputum_sample'),
+( 55804, 'spell_q12937_relief_for_the_fallen'),
+-- item
+(  8063, 'spell_item_deviate_fish'),
+( 67019, 'spell_item_flask_of_the_north'),
+( 13280, 'spell_item_gnomish_death_ray'),
+( 33060, 'spell_item_make_a_wish'),
+( 13120, 'spell_item_net_o_matic'),
+( 16589, 'spell_item_noggenfogger_elixir'),
+(  8213, 'spell_item_savory_deviate_delight'),
+( 59640, 'spell_item_underbelly_elixir'),
 -- warrior
-( 12975,'spell_warr_last_stand'),
+( 12975, 'spell_warr_last_stand'),
 -- paladin
 ( 20425, 'spell_pal_judgement_of_command'),
 ( 63521, 'spell_pal_guarded_by_the_light'),
@@ -14845,9 +14860,9 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 47948, 'spell_pri_pain_and_suffering_proc'),
 (-47540, 'spell_pri_penance'),
 -- death knight
-(-49158,'spell_dk_corpse_explosion'),
-( 50524,'spell_dk_runic_power_feed'),
-(-55090,'spell_dk_scourge_strike'),
+(-49158, 'spell_dk_corpse_explosion'),
+( 50524, 'spell_dk_runic_power_feed'),
+(-55090, 'spell_dk_scourge_strike'),
 -- shaman
 ( 39610, 'spell_sha_mana_tide_totem'),
 ( -1535, 'spell_sha_fire_nova'),
