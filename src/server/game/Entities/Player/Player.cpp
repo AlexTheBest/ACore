@@ -2248,7 +2248,7 @@ void Player::Regenerate(Powers power)
     {
         AuraEffectList const& ModPowerRegenPCTAuras = GetAuraEffectsByType(SPELL_AURA_MOD_POWER_REGEN_PERCENT);
         for (AuraEffectList::const_iterator i = ModPowerRegenPCTAuras.begin(); i != ModPowerRegenPCTAuras.end(); ++i)
-            if ((*i)->GetMiscValue() == power)
+            if (Powers((*i)->GetMiscValue()) == power)
                 addvalue *= ((*i)->GetAmount() + 100) / 100.0f;
 
         // Butchery requires combat for this effect
@@ -4094,6 +4094,7 @@ bool Player::resetTalents(bool no_cost)
     }
 
     SQLTransaction trans = CharacterDatabase.BeginTransaction();
+    _SaveTalents(trans);
     _SaveSpells(trans);
     CharacterDatabase.CommitTransaction(trans);
 
@@ -16427,6 +16428,8 @@ bool Player::LoadFromDB(uint32 guid, SQLQueryHolder *holder)
     // Do now before stats re-calculation cleanup for ghost state unexpected auras
     if (!isAlive())
         RemoveAllAurasOnDeath();
+    else
+        RemoveAllAurasRequiringDeadTarget();
 
     //apply all stat bonuses from items and auras
     SetCanModifyStats(true);
@@ -17523,7 +17526,7 @@ bool Player::Satisfy(AccessRequirement const* ar, uint32 target_map, bool report
 
         if (sDisableMgr.IsDisabledFor(DISABLE_TYPE_MAP, target_map, this))
         {
-            GetSession()->SendAreaTriggerMessage(GetSession()->GetTrinityString(LANG_INSTANCE_CLOSED));
+            GetSession()->SendAreaTriggerMessage("%s", GetSession()->GetTrinityString(LANG_INSTANCE_CLOSED));
             return false;
         }
 
@@ -17544,7 +17547,7 @@ bool Player::Satisfy(AccessRequirement const* ar, uint32 target_map, bool report
             if (report)
             {
                 if (missingQuest && !ar->questFailedText.empty())
-                    ChatHandler(GetSession()).PSendSysMessage(ar->questFailedText.c_str());
+                    ChatHandler(GetSession()).PSendSysMessage("%s", ar->questFailedText.c_str());
                 else if (mapDiff->hasErrorMessage) // if (missingAchievement) covered by this case
                     SendTransferAborted(target_map, TRANSFER_ABORT_DIFFICULTY, target_difficulty);
                 else if (missingItem)
@@ -18182,7 +18185,6 @@ void Player::_SaveSpells(SQLTransaction& trans)
             itr->second->state = PLAYERSPELL_UNCHANGED;
             ++itr;
         }
-
     }
 }
 
@@ -18295,7 +18297,7 @@ void Player::SavePositionInDB(uint32 mapid, float x,float y,float z,float o,uint
         << "',position_z='"<<z<<"',orientation='"<<o<<"',map='"<<mapid
         << "',zone='"<<zone<<"',trans_x='0',trans_y='0',trans_z='0',"
         << "transguid='0',taxi_path='' WHERE guid='"<< GUID_LOPART(guid) <<"'";
-    sLog.outDebug(ss.str().c_str());
+    sLog.outDebug("%s", ss.str().c_str());
     CharacterDatabase.Execute(ss.str().c_str());
 }
 

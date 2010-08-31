@@ -562,7 +562,7 @@ void WorldSession::HandleAddFriendOpcode(WorldPacket & recv_data)
 void WorldSession::HandleAddFriendOpcodeCallBack(QueryResult_AutoPtr result, std::string friendNote)
 {
     uint64 friendGuid;
-    uint64 friendAcctid;
+    uint32 friendAcctid;
     uint32 team;
     FriendsResult friendResult;
 
@@ -697,7 +697,7 @@ void WorldSession::HandleSetContactNotesOpcode(WorldPacket & recv_data)
     uint64 guid;
     std::string note;
     recv_data >> guid >> note;
-    _player->GetSocial()->SetFriendNote(guid, note);
+    _player->GetSocial()->SetFriendNote(GUID_LOPART(guid), note);
 }
 
 void WorldSession::HandleBugOpcode(WorldPacket & recv_data)
@@ -746,7 +746,7 @@ void WorldSession::HandleReclaimCorpseOpcode(WorldPacket &recv_data)
         return;
 
     // prevent resurrect before 30-sec delay after body release not finished
-    if (corpse->GetGhostTime() + GetPlayer()->GetCorpseReclaimDelay(corpse->GetType() == CORPSE_RESURRECTABLE_PVP) > time_t(time(NULL)))
+    if (time_t(corpse->GetGhostTime() + GetPlayer()->GetCorpseReclaimDelay(corpse->GetType() == CORPSE_RESURRECTABLE_PVP)) > time_t(time(NULL)))
         return;
 
     if (!corpse->IsWithinDistInMap(GetPlayer(), CORPSE_RECLAIM_RADIUS, true))
@@ -1421,7 +1421,7 @@ void WorldSession::HandleFarSightOpcode(WorldPacket & recv_data)
             _player->SetSeer(_player);
             break;
         case 1:
-            sLog.outDebug("Added FarSight " I64FMT " to player %u", _player->GetUInt64Value(PLAYER_FARSIGHT), _player->GetGUIDLow());
+            sLog.outDebug("Added FarSight " UI64FMTD " to player %u", _player->GetUInt64Value(PLAYER_FARSIGHT), _player->GetGUIDLow());
             if (WorldObject *target = _player->GetViewpoint())
                 _player->SetSeer(target);
             else

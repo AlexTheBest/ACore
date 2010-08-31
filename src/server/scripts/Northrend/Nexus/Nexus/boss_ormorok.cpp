@@ -125,6 +125,7 @@ public:
                 return;
             }
             if (bCrystalSpikes)
+            {
                 if (uiCrystalSpikesTimer2 <= diff)
                 {
                     fSpikeXY[0][0] = fBaseX+(SPIKE_DISTANCE*uiCrystalSpikesCount*cos(fBaseO));
@@ -141,6 +142,7 @@ public:
                         bCrystalSpikes = false;
                     uiCrystalSpikesTimer2 = 200;
                 } else uiCrystalSpikesTimer2 -= diff;
+            }
 
             if (!bFrenzy && HealthBelowPct(25))
             {
@@ -241,7 +243,7 @@ public:
 
         void Reset()
         {
-            SpellCrystalSpikeDamageTimer = 3.7*IN_MILLISECONDS;
+            SpellCrystalSpikeDamageTimer = 3700;
             SpellCrystalSpikePrevisualTimer = 1*IN_MILLISECONDS;
         }
 

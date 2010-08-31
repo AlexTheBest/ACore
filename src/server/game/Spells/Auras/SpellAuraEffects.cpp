@@ -1229,7 +1229,7 @@ bool AuraEffect::IsPeriodicTickCrit(Unit * target, Unit const * caster) const
             return true;
     }
     // Rupture - since 3.3.3 can crit
-    if (AuraEffect *AuraRupture = target->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_ROGUE, 0x100000, 0x0, 0x0, caster->GetGUID()))
+    if (target->GetAuraEffect(SPELL_AURA_PERIODIC_DAMAGE, SPELLFAMILY_ROGUE, 0x100000, 0x0, 0x0, caster->GetGUID()))
     {
         if (caster->isSpellCrit(target, m_spellProto, GetSpellSchoolMask(m_spellProto)))
             return true;
@@ -1245,15 +1245,6 @@ void AuraEffect::SendTickImmune(Unit * target, Unit *caster) const
 
 void AuraEffect::PeriodicTick(Unit * target, Unit * caster) const
 {
-    if (!target->isAlive())
-        return;
-
-    if (target->hasUnitState(UNIT_STAT_ISOLATED))
-    {
-        SendTickImmune(target, caster);
-        return;
-    }
-
     bool prevented = GetBase()->CallScriptEffectPeriodicHandlers(const_cast<AuraEffect const *>(this), GetBase()->GetApplicationOfTarget(target->GetGUID()));
     if (prevented)
         return;
@@ -1265,6 +1256,15 @@ void AuraEffect::PeriodicTick(Unit * target, Unit * caster) const
         {
             if (!caster)
                 break;
+
+            if (!target->isAlive())
+                return;
+
+            if (target->hasUnitState(UNIT_STAT_ISOLATED))
+            {
+                SendTickImmune(target, caster);
+                return;
+            }
 
             // Consecrate ticks can miss and will not show up in the combat log
             if (GetSpellProto()->Effect[GetEffIndex()] == SPELL_EFFECT_PERSISTENT_AREA_AURA &&
@@ -1406,6 +1406,15 @@ void AuraEffect::PeriodicTick(Unit * target, Unit * caster) const
             if (!caster->isAlive())
                 return;
 
+            if (!target->isAlive())
+                return;
+
+            if (target->hasUnitState(UNIT_STAT_ISOLATED))
+            {
+                SendTickImmune(target, caster);
+                return;
+            }
+
             if (GetSpellProto()->Effect[GetEffIndex()] == SPELL_EFFECT_PERSISTENT_AREA_AURA &&
                 caster->SpellHitResult(target,GetSpellProto(),false) != SPELL_MISS_NONE)
                 return;
@@ -1486,6 +1495,15 @@ void AuraEffect::PeriodicTick(Unit * target, Unit * caster) const
             if (!caster || !caster->GetHealth())
                 break;
 
+            if (!target->isAlive())
+                return;
+
+            if (target->hasUnitState(UNIT_STAT_ISOLATED))
+            {
+                SendTickImmune(target, caster);
+                return;
+            }
+
             uint32 damage = GetAmount();
             // do not kill health donator
             if (caster->GetHealth() < damage)
@@ -1509,6 +1527,15 @@ void AuraEffect::PeriodicTick(Unit * target, Unit * caster) const
         {
             if (!caster)
                 break;
+
+            if (!target->isAlive())
+                return;
+
+            if (target->hasUnitState(UNIT_STAT_ISOLATED))
+            {
+                SendTickImmune(target, caster);
+                return;
+            }
 
             // heal for caster damage (must be alive)
             if (target != caster && GetSpellProto()->AttributesEx2 & SPELL_ATTR_EX2_HEALTH_FUNNEL && !caster->isAlive())
@@ -1605,8 +1632,17 @@ void AuraEffect::PeriodicTick(Unit * target, Unit * caster) const
         }
         case SPELL_AURA_PERIODIC_MANA_LEECH:
         {
-            if (GetMiscValue() < 0 || GetMiscValue() >= MAX_POWERS)
+            if (GetMiscValue() < 0 || GetMiscValue() >= int8(MAX_POWERS))
                 break;
+
+            if (!target->isAlive())
+                return;
+
+            if (target->hasUnitState(UNIT_STAT_ISOLATED))
+            {
+                SendTickImmune(target, caster);
+                return;
+            }
 
             Powers power = Powers(GetMiscValue());
 
@@ -1712,6 +1748,15 @@ void AuraEffect::PeriodicTick(Unit * target, Unit * caster) const
             if (GetMiscValue() < 0)
                 return;
 
+            if (!target->isAlive())
+                return;
+
+            if (target->hasUnitState(UNIT_STAT_ISOLATED))
+            {
+                SendTickImmune(target, caster);
+                return;
+            }
+
             Powers power;
             if (GetMiscValue() == POWER_ALL)
                 power = target->getPowerType();
@@ -1740,8 +1785,17 @@ void AuraEffect::PeriodicTick(Unit * target, Unit * caster) const
         case SPELL_AURA_PERIODIC_ENERGIZE:
         {
             // ignore non positive values (can be result apply spellmods to aura damage
-            if (m_amount < 0 || GetMiscValue() >= MAX_POWERS)
+            if (m_amount < 0 || GetMiscValue() >= int8(MAX_POWERS))
                 return;
+
+            if (!target->isAlive())
+                return;
+
+            if (target->hasUnitState(UNIT_STAT_ISOLATED))
+            {
+                SendTickImmune(target, caster);
+                return;
+            }
 
             Powers power = Powers(GetMiscValue());
 
@@ -1770,6 +1824,15 @@ void AuraEffect::PeriodicTick(Unit * target, Unit * caster) const
             if (!caster)
                 return;
 
+            if (!target->isAlive())
+                return;
+
+            if (target->hasUnitState(UNIT_STAT_ISOLATED))
+            {
+                SendTickImmune(target, caster);
+                return;
+            }
+
             // Check for immune (not use charges)
             if (target->IsImmunedToDamage(GetSpellProto()))
             {
@@ -1796,7 +1859,7 @@ void AuraEffect::PeriodicTick(Unit * target, Unit * caster) const
             //maybe has to be sent different to client, but not by SMSG_PERIODICAURALOG
             SpellNonMeleeDamage damageInfo(caster, target, spellProto->Id, spellProto->SchoolMask);
             //no SpellDamageBonus for burn mana
-            caster->CalculateSpellDamageTaken(&damageInfo, gain * dmgMultiplier, spellProto);
+            caster->CalculateSpellDamageTaken(&damageInfo, int32(gain * dmgMultiplier), spellProto);
 
             caster->DealDamageMods(damageInfo.target,damageInfo.damage,&damageInfo.absorb);
 
@@ -2612,7 +2675,7 @@ void AuraEffect::HandleShapeshiftBoosts(Unit * target, bool apply) const
             {
                 case FORM_CAT:
                     // Savage Roar
-                    if (AuraEffect const * aurEff = target->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_DRUID, 0 , 0x10000000, 0))
+                    if (target->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_DRUID, 0 , 0x10000000, 0))
                         target->CastSpell(target, 62071, true);
                     // Nurturing Instinct
                     if (AuraEffect const * aurEff = target->GetAuraEffect(SPELL_AURA_MOD_SPELL_HEALING_OF_STAT_PERCENT, SPELLFAMILY_DRUID, 2254, 0))
@@ -2872,12 +2935,22 @@ void AuraEffect::HandlePhase(AuraApplication const * aurApp, uint8 mode, bool ap
 
         // GM-mode have mask 0xFFFFFFFF
         if (!target->ToPlayer()->isGameMaster())
-            target->SetPhaseMask((apply) ? GetMiscValue() : PHASEMASK_NORMAL,false);
-
-        target->ToPlayer()->GetSession()->SendSetPhaseShift((apply) ? GetMiscValue() : PHASEMASK_NORMAL);
+        {
+            if (apply)
+                target->SetPhaseMask(GetMiscValue(), false);
+            else
+                target->SetPhaseMask(PHASEMASK_NORMAL, false);
+        }
+        
+        if (apply)
+            target->ToPlayer()->GetSession()->SendSetPhaseShift(GetMiscValue());
+        else
+            target->ToPlayer()->GetSession()->SendSetPhaseShift(PHASEMASK_NORMAL);
     }
+    else if (apply)
+        target->SetPhaseMask(GetMiscValue(), false);
     else
-        target->SetPhaseMask((apply) ? GetMiscValue() : PHASEMASK_NORMAL,false);
+        target->SetPhaseMask(PHASEMASK_NORMAL, false);
 
     // need triggering visibility update base at phase update of not GM invisible (other GMs anyway see in any phases)
     if (target->GetVisibility() != VISIBILITY_OFF)
@@ -4914,7 +4987,7 @@ void AuraEffect::HandleAuraModIncreaseHealthPercent(AuraApplication const * aurA
     float percent = target->GetHealthPct();
     target->HandleStatModifier(UNIT_MOD_HEALTH, TOTAL_PCT, float(GetAmount()), apply);
     if (target->isAlive())
-        target->SetHealth(target->CountPctFromMaxHealth(percent));
+        target->SetHealth(target->CountPctFromMaxHealth(int32(percent)));
 }
 
 void AuraEffect::HandleAuraIncreaseBaseHealthPercent(AuraApplication const * aurApp, uint8 mode, bool apply) const
@@ -6263,7 +6336,7 @@ void AuraEffect::HandleForceReaction(AuraApplication const * aurApp, uint8 mode,
     player->GetReputationMgr().SendForceReactions();
 
     // stop fighting if at apply forced rank friendly or at remove real rank friendly
-    if (apply && faction_rank >= REP_FRIENDLY || !apply && player->GetReputationRank(faction_id) >= REP_FRIENDLY)
+    if ((apply && faction_rank >= REP_FRIENDLY) || (!apply && player->GetReputationRank(faction_id) >= REP_FRIENDLY))
         player->StopAttackFaction(faction_id);
 }
 

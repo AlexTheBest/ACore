@@ -525,7 +525,7 @@ void hyjalAI::SummonCreature(uint32 entry, float Base[4][3])
     }
 }
 
-void hyjalAI::SummonNextWave(Wave wave[18], uint32 Count, float Base[4][3])
+void hyjalAI::SummonNextWave(const Wave wave[18], uint32 Count, float Base[4][3])
 {
     // 1 in 4 chance we give a rally yell. Not sure if the chance is offilike.
     if (rand()%4 == 0)
@@ -720,7 +720,7 @@ void hyjalAI::DeSpawnVeins()
         if (!ai)return;
         for (uint8 i = 0; i<7; ++i)
         {
-            if (GameObject* gem = pInstance->instance->GetGameObject(pInstance->GetData64(ai->VeinGUID[i])))
+            if (GameObject* gem = pInstance->instance->GetGameObject(ai->VeinGUID[i]))
                 gem->Delete();
         }
     } else if (Faction)
@@ -731,7 +731,7 @@ void hyjalAI::DeSpawnVeins()
         if (!ai)return;
         for (uint8 i = 7; i<14; ++i)
         {
-            if (GameObject* gem = pInstance->instance->GetGameObject(pInstance->GetData64(ai->VeinGUID[i])))
+            if (GameObject* gem = pInstance->instance->GetGameObject(ai->VeinGUID[i]))
                 gem->Delete();
         }
     }

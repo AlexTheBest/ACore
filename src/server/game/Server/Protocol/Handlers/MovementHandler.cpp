@@ -157,9 +157,9 @@ void WorldSession::HandleMoveWorldportAckOpcode()
         {
             if (mapDiff->resetTime)
             {
-                if (uint32 timeReset = sInstanceSaveMgr.GetResetTimeFor(mEntry->MapID,diff))
+                if (time_t timeReset = sInstanceSaveMgr.GetResetTimeFor(mEntry->MapID,diff))
                 {
-                    uint32 timeleft = timeReset - time(NULL);
+                    uint32 timeleft = uint32(timeReset - time(NULL));
                     GetPlayer()->SendInstanceResetWarning(mEntry->MapID, diff, timeleft);
                 }
             }
@@ -499,21 +499,23 @@ void WorldSession::HandleSetActiveMoverOpcode(WorldPacket &recv_data)
     recv_data >> guid;
 
     if (GetPlayer()->IsInWorld())
-       if (Unit *mover = ObjectAccessor::GetUnit(*GetPlayer(), guid))
-       {
-          GetPlayer()->SetMover(mover);
-          if (mover != GetPlayer() && mover->canFly())
-          {
-              WorldPacket data(SMSG_MOVE_SET_CAN_FLY, 12);
-              data.append(mover->GetPackGUID());
-              data << uint32(0);
-              SendPacket(&data);
-          }
-       }
-    else
     {
-        sLog.outError("HandleSetActiveMoverOpcode: incorrect mover guid: mover is " UI64FMTD " and should be " UI64FMTD, guid, _player->m_mover->GetGUID());
-        GetPlayer()->SetMover(GetPlayer());
+        if (Unit *mover = ObjectAccessor::GetUnit(*GetPlayer(), guid))
+        {
+            GetPlayer()->SetMover(mover);
+            if (mover != GetPlayer() && mover->canFly())
+            {
+                WorldPacket data(SMSG_MOVE_SET_CAN_FLY, 12);
+                data.append(mover->GetPackGUID());
+                data << uint32(0);
+                SendPacket(&data);
+            }
+        }
+        else
+        {
+            sLog.outError("HandleSetActiveMoverOpcode: incorrect mover guid: mover is " UI64FMTD " and should be " UI64FMTD, guid, _player->m_mover->GetGUID());
+            GetPlayer()->SetMover(GetPlayer());
+        }
     }
 }
 
@@ -653,7 +655,7 @@ void WorldSession::HandleEjectPasenger(WorldPacket &data)
 {
     if (data.GetOpcode() == CMSG_EJECT_PASSENGER)
     {
-        if (Vehicle* Vv= _player->GetVehicleKit())
+        if (_player->GetVehicleKit())
         {
             uint64 guid;
             data >> guid;

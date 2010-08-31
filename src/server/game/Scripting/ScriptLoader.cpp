@@ -1141,20 +1141,20 @@ void AddOutdoorPvPScripts()
     AddSC_outdoorpvp_si();
     AddSC_outdoorpvp_tf();
     AddSC_outdoorpvp_zm();
-	AddSC_outdoorpvp_wg();
-#endif SCRIPTS
+    AddSC_outdoorpvp_wg();
+#endif
 }
 
 void AddBattlegroundScripts()
 {
 #ifdef SCRIPTS
-#endif SCRIPTS
+#endif
 }
 
 #ifdef SCRIPTS
 /* This is where custom scripts' loading functions should be declared. */
 
-#endif SCRIPTS
+#endif
 
 void AddCustomScripts()
 {

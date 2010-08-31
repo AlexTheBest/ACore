@@ -109,7 +109,7 @@ public:
     struct netherspite_infernalAI : public ScriptedAI
     {
         netherspite_infernalAI(Creature *c) : ScriptedAI(c) ,
-            malchezaar(0), HellfireTimer(0), CleanupTimer(0), point(NULL) {}
+            HellfireTimer(0), CleanupTimer(0), malchezaar(0), point(NULL) {}
 
         uint32 HellfireTimer;
         uint32 CleanupTimer;
@@ -123,19 +123,23 @@ public:
         void UpdateAI(const uint32 diff)
         {
             if (HellfireTimer)
-                if (HellfireTimer <= diff)
             {
-                DoCast(me, SPELL_HELLFIRE);
-                HellfireTimer = 0;
+                if (HellfireTimer <= diff)
+                {
+                    DoCast(me, SPELL_HELLFIRE);
+                    HellfireTimer = 0;
+                }
+                else HellfireTimer -= diff;
             }
-            else HellfireTimer -= diff;
 
             if (CleanupTimer)
-                if (CleanupTimer <= diff)
             {
-                Cleanup();
-                CleanupTimer = 0;
-            } else CleanupTimer -= diff;
+                if (CleanupTimer <= diff)
+                {
+                    Cleanup();
+                    CleanupTimer = 0;
+                } else CleanupTimer -= diff;
+            }
         }
 
         void KilledUnit(Unit *who)
@@ -201,7 +205,7 @@ public:
 
         uint64 axes[2];
         uint64 enfeeble_targets[5];
-        uint64 enfeeble_health[5];
+        uint32 enfeeble_health[5];
 
         uint32 phase;
 
