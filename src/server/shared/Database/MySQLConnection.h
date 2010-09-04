@@ -16,24 +16,30 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <ace/Activation_Queue.h>
+#include "DatabaseWorkerPool.h"
+
 #ifndef _MYSQLCONNECTION_H
 #define _MYSQLCONNECTION_H
 
 class DatabaseWorker;
+class PreparedStatement;
+class MySQLPreparedStatement;
 
 class MySQLConnection
 {
-    friend class DatabaseWorkerPool;
+    template <class T> friend class DatabaseWorkerPool;
 
     public:
         MySQLConnection();                                  //! Constructor for synchroneous connections.
         MySQLConnection(ACE_Activation_Queue* queue);       //! Constructor for asynchroneous connections.
         ~MySQLConnection();
 
-        bool Open(const std::string& infoString);           //! Connection details.
+        virtual bool Open(const std::string& infoString);   //! Connection details.
 
     public:
         bool Execute(const char* sql);
+        bool Execute(PreparedStatement* stmt);
         QueryResult_AutoPtr Query(const char* sql);
         bool _Query(const char *sql, MYSQL_RES **pResult, MYSQL_FIELD **pFields, uint64* pRowCount, uint32* pFieldCount);
 
@@ -45,6 +51,9 @@ class MySQLConnection
 
     protected:
         MYSQL* GetHandle()  { return m_Mysql; }
+        MySQLPreparedStatement* GetPreparedStatement(uint32 index);
+        void PrepareStatement(uint32 index, const char* sql);
+        std::vector<MySQLPreparedStatement*> m_stmts;       //! PreparedStatements storage
 
     private:
         ACE_Activation_Queue* m_queue;                      //! Queue shared with other asynchroneous connections.

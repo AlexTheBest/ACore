@@ -63,7 +63,7 @@ bool StartDB();
 
 bool stopEvent = false;                                     ///< Setting it to true stops the server
 
-DatabaseType LoginDatabase;                                 ///< Accessor to the realm server database
+LoginDatabaseWorkerPool LoginDatabase;                      ///< Accessor to the realm server database
 
 /// Handle realmd's termination signals
 class RealmdSignalHandler : public Trinity::SignalHandler
@@ -346,7 +346,8 @@ bool StartDB()
         num_threads = 1;
     }
 
-    if (!LoginDatabase.Open(dbstring.c_str(), num_threads))
+    //- Authserver has singlethreaded synchronous DB access, hence MYSQL_BUNDLE_ALL
+    if (!LoginDatabase.Open(dbstring.c_str(), num_threads, MYSQL_BUNDLE_ALL))
     {
         sLog.outError("Cannot connect to database");
         return false;

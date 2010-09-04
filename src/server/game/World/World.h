@@ -165,6 +165,7 @@ enum WorldBoolConfigs
     CONFIG_CHATLOG_ADDON,
     CONFIG_CHATLOG_BGROUND,
     CONFIG_DUNGEON_FINDER_ENABLE,
+    CONFIG_AUTOBROADCAST,
     BOOL_CONFIG_VALUE_COUNT
 };
 
@@ -312,9 +313,7 @@ enum WorldIntConfigs
     CONFIG_CHARDELETE_KEEP_DAYS,
     CONFIG_CHARDELETE_METHOD,
     CONFIG_CHARDELETE_MIN_LEVEL,
-    CONFIG_MYSQL_BUNDLE_LOGINDB,
-    CONFIG_MYSQL_BUNDLE_CHARDB,
-    CONFIG_MYSQL_BUNDLE_WORLDDB,
+    CONFIG_AUTOBROADCAST_CENTER,
     INT_CONFIG_VALUE_COUNT
 };
 
@@ -531,6 +530,7 @@ class World
         void AddSession(WorldSession *s);
         void SendRNDBroadcast();
         void SendRNDBroadcastIRC();
+        void SendAutoBroadcast();
         bool RemoveSession(uint32 id);
         /// Get the number of current active sessions
         void UpdateMaxSessionCounters();

@@ -21,6 +21,10 @@
 
 #include "DBCFileLoader.h"
 #include "Logging/Log.h"
+#include "Field.h"
+#include "DatabaseWorkerPool.h"
+#include "Implementation/WorldDatabase.h"
+#include "DatabaseEnv.h"
 
 struct SqlDbc
 {

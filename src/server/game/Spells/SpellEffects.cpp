@@ -527,10 +527,11 @@ void Spell::SpellDamageSchoolDmg(SpellEffIndex effIndex)
                         uint32 pdamage = aura->GetAmount() > 0 ? aura->GetAmount() : 0;
                         pdamage = m_caster->SpellDamageBonus(unitTarget, aura->GetSpellProto(), pdamage, DOT, aura->GetBase()->GetStackAmount());
                         uint32 pct_dir = m_caster->CalculateSpellDamage(unitTarget, m_spellInfo, (effIndex + 1));
-                        damage += pdamage * aura->GetTotalTicks() * pct_dir / 100;
+                        uint8 baseTotalTicks = uint8(m_caster->CalcSpellDuration(aura->GetSpellProto()) / aura->GetSpellProto()->EffectAmplitude[0]);
+                        damage += pdamage * baseTotalTicks * pct_dir / 100;
 
                         uint32 pct_dot = m_caster->CalculateSpellDamage(unitTarget, m_spellInfo, (effIndex + 2)) / 3;
-                        m_spellValue->EffectBasePoints[1] = SpellMgr::CalculateSpellEffectBaseAmount(pdamage * aura->GetTotalTicks() * pct_dot / 100, m_spellInfo, 1);
+                        m_spellValue->EffectBasePoints[1] = SpellMgr::CalculateSpellEffectBaseAmount(pdamage * baseTotalTicks * pct_dot / 100, m_spellInfo, 1);
 
                         apply_direct_bonus = false;
                         // Glyph of Conflagrate
@@ -843,46 +844,6 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
                     }
                     return;
                 }
-                case 14537:                                 // Six Demon Bag
-                {
-                    if( !unitTarget || !unitTarget->isAlive()) return;
-
-                    uint32 ClearSpellId[6] =
-                    {
-                        15662,   // Fireball
-                        11538,   // Frostball
-                        21179,   // Chain Lightning
-                        14621,   // Polymorph
-                        25189,   // Enveloping Winds
-                        14642    // Summon Felhund minion
-                    };
-
-                    uint32 effect = 0;
-                    uint32 rand = urand(0, 100);
-
-                    if (rand < 25)                      // Fireball (25% chance)
-                        effect = ClearSpellId[0];
-                    else if (rand < 50)                 // Frostball (25% chance)
-                        effect = ClearSpellId[1];
-                    else if (rand < 70)                 // Chain Lighting (25% chance)
-                        effect = ClearSpellId[2];
-                    else if (rand < 80)                 // Polymorph (10% chance)
-                    {
-                        effect = ClearSpellId[3];
-                        if (urand(0, 100) <= 30)        // 30% chance to self-cast
-                            unitTarget = m_caster;
-                    }
-                    else if (rand < 95)                 // Enveloping Winds (15% chance)
-                         effect = ClearSpellId[4];
-                    else                                // Summon Felhund minion (5% chance)
-                    {
-                         effect = ClearSpellId[5];
-                         unitTarget = m_caster;
-                    }
-
-                    m_caster->CastSpell(unitTarget, effect, true);
-                    return;
-                }
                 case 17251:                                 // Spirit Healer Res
                 {
                     if (!unitTarget || !m_originalCaster)
@@ -894,18 +855,6 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
                         data << uint64(unitTarget->GetGUID());
                         m_originalCaster->ToPlayer()->GetSession()->SendPacket(&data);
                     }
-                    return;
-                }
-                case 17271:                                 // Test Fetid Skull
-                {
-                    if (!itemTarget && m_caster->GetTypeId() != TYPEID_PLAYER)
-                        return;
-
-                    uint32 spell_id = roll_chance_i(50)
-                        ? 17269                             // Create Resonating Skull
-                        : 17270;                            // Create Bone Dust
-
-                    m_caster->CastSpell(m_caster, spell_id, true, NULL);
                     return;
                 }
                 case 20577:                                 // Cannibalize
@@ -926,22 +875,6 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
 
                     return;
                 }
-                case 23074:                                 // Arcanite Dragonling
-                    if (!m_CastItem) return;
-                    m_caster->CastSpell(m_caster, 19804, true, m_CastItem);
-                    return;
-                case 23075:                                 // Mithril Mechanical Dragonling
-                    if (!m_CastItem) return;
-                    m_caster->CastSpell(m_caster, 12749, true, m_CastItem);
-                    return;
-                case 23076:                                 // Mechanical Dragonling
-                    if (!m_CastItem) return;
-                    m_caster->CastSpell(m_caster, 4073, true, m_CastItem);
-                    return;
-                case 23133:                                 // Gnomish Battle Chicken
-                    if (!m_CastItem) return;
-                    m_caster->CastSpell(m_caster, 13166, true, m_CastItem);
-                    return;
                 case 23448:                                 // Transporter Arrival - Ultrasafe Transporter: Gadgetzan - backfires
                 {
                     int32 r = irand(0, 119);
@@ -1032,20 +965,6 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
                     else                                    // Poultryized! - backfire 20%
                         m_caster->CastSpell(unitTarget, 30504, true, m_CastItem);
                     return;
-                case 34665:                                 //Administer Antidote
-                {
-                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT
-                        || unitTarget->GetEntry() != 16880 || unitTarget->ToCreature()->isPet())
-                        return;
-
-                    unitTarget->ToCreature()->UpdateEntry(16992);
-                    m_caster->ToPlayer()->RewardPlayerAndGroupAtEvent(16992, unitTarget);
-
-                    if (unitTarget->IsAIEnabled)
-                        unitTarget->ToCreature()->AI()->AttackStart(m_caster);
-
-                    return;
-                }
                 case 35745:                                 // Socrethar's Stone
                 {
                     uint32 spell_id;
@@ -1066,39 +985,6 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
 
                     int32 basepoints0 = 100;
                     m_caster->CastCustomSpell(unitTarget, 37675, &basepoints0, NULL, NULL, true);
-                    return;
-                }
-                case 40802:                                 // Mingo's Fortune Generator (Mingo's Fortune Giblets)
-                {
-                    // selecting one from Bloodstained Fortune item
-                    uint32 newitemid;
-                    switch(urand(1, 20))
-                    {
-                        case 1:  newitemid = 32688; break;
-                        case 2:  newitemid = 32689; break;
-                        case 3:  newitemid = 32690; break;
-                        case 4:  newitemid = 32691; break;
-                        case 5:  newitemid = 32692; break;
-                        case 6:  newitemid = 32693; break;
-                        case 7:  newitemid = 32700; break;
-                        case 8:  newitemid = 32701; break;
-                        case 9:  newitemid = 32702; break;
-                        case 10: newitemid = 32703; break;
-                        case 11: newitemid = 32704; break;
-                        case 12: newitemid = 32705; break;
-                        case 13: newitemid = 32706; break;
-                        case 14: newitemid = 32707; break;
-                        case 15: newitemid = 32708; break;
-                        case 16: newitemid = 32709; break;
-                        case 17: newitemid = 32710; break;
-                        case 18: newitemid = 32711; break;
-                        case 19: newitemid = 32712; break;
-                        case 20: newitemid = 32713; break;
-                        default:
-                            return;
-                    }
-
-                    DoCreateItem(effIndex, newitemid);
                     return;
                 }
                 // Wrath of the Astromancer
@@ -2444,14 +2330,14 @@ void Spell::EffectHealthLeech(SpellEffIndex effIndex)
 
     float healMultiplier = SpellMgr::CalculateSpellEffectValueMultiplier(m_spellInfo, effIndex, m_originalCaster, this);
 
-    int32 newDamage = int32(damage * healMultiplier);
-    newDamage = std::min(int32(unitTarget->GetHealth()), newDamage);
-    m_damage += newDamage;
+    m_damage += damage;
+    // get max possible damage, don't count overkill for heal
+    uint32 healthGain = uint32(-unitTarget->GetHealthGain(-damage) * healMultiplier);
 
     if (m_caster->isAlive())
     {
-        newDamage = m_caster->SpellHealingBonus(m_caster, m_spellInfo, newDamage, HEAL);
-        m_caster->HealBySpell(m_caster, m_spellInfo, uint32(newDamage));
+        healthGain = m_caster->SpellHealingBonus(m_caster, m_spellInfo, healthGain, HEAL);
+        m_caster->HealBySpell(m_caster, m_spellInfo, uint32(healthGain));
     }
 }
 
@@ -5845,11 +5731,11 @@ void Spell::EffectFeedPet(SpellEffIndex effIndex)
     if (benefit <= 0)
         return;
 
-    uint32 count = 1;
-    _player->DestroyItemCount(foodItem,count,true);
-    // TODO: fix crash when a spell has two effects, both pointed at the same item target
-
     ExecuteLogEffectDestroyItem(effIndex, foodItem->GetEntry());
+
+    uint32 count = 1;
+    _player->DestroyItemCount(foodItem, count, true);
+    // TODO: fix crash when a spell has two effects, both pointed at the same item target
 
     m_caster->CastCustomSpell(pet, m_spellInfo->EffectTriggerSpell[effIndex], &benefit, NULL, NULL, true);
 }

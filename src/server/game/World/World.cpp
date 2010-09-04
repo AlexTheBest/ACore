@@ -335,7 +335,7 @@ void World::AddQueuedPlayer(WorldSession* sess)
     m_QueuedPlayer.push_back(sess);
 
     // The 1st SMSG_AUTH_RESPONSE needs to contain other info too.
-    WorldPacket packet(SMSG_AUTH_RESPONSE, 1+4+1+4+1);
+    WorldPacket packet(SMSG_AUTH_RESPONSE, 1+4+1+4+1+4+1);
     packet << uint8(AUTH_WAIT_QUEUE);
     packet << uint32(0);                                    // BillingTimeRemaining
     packet << uint8(0);                                     // BillingPlanFlags
@@ -1383,10 +1383,9 @@ void World::LoadConfigSettings(bool reload)
     // Dungeon finder
     m_bool_configs[CONFIG_DUNGEON_FINDER_ENABLE] = sConfig.GetBoolDefault("DungeonFinder.Enable", false);
 
-    // MySQL thread bundling config for other runnable tasks
-    m_int_configs[CONFIG_MYSQL_BUNDLE_LOGINDB] = sConfig.GetIntDefault("LoginDatabase.ThreadBundleMask", MYSQL_BUNDLE_ALL);
-    m_int_configs[CONFIG_MYSQL_BUNDLE_CHARDB] = sConfig.GetIntDefault("CharacterDatabase.ThreadBundleMask", MYSQL_BUNDLE_ALL);
-    m_int_configs[CONFIG_MYSQL_BUNDLE_WORLDDB] = sConfig.GetIntDefault("WorldDatabase.ThreadBundleMask", MYSQL_BUNDLE_ALL);
+    // AutoBroadcast
+    m_bool_configs[CONFIG_AUTOBROADCAST] = sConfig.GetBoolDefault("AutoBroadcast.On", false);
+    m_int_configs[CONFIG_AUTOBROADCAST_CENTER] = sConfig.GetIntDefault("AutoBroadcast.Center", 0);
 
     sScriptMgr.OnConfigLoad(reload);
 }
@@ -1602,6 +1601,12 @@ void World::SetInitialWorldSettings()
 
     sLog.outString("Loading Quests Relations...");
     sObjectMgr.LoadQuestRelations();                            // must be after quest load
+
+    sLog.outString("Loading Dungeon boss data...");
+    sLFGMgr.LoadDungeonEncounters();
+
+    sLog.outString("Loading LFG rewards...");
+    sLFGMgr.LoadRewards();
 
     sLog.outString("Loading UNIT_NPC_FLAG_SPELLCLICK Data...");
     sObjectMgr.LoadNPCSpellClickSpells();
@@ -2111,15 +2116,13 @@ void World::Update(uint32 diff)
     ///- Update objects when the timer has passed (maps, transport, creatures,...)
     sMapMgr.Update(diff);                // As interval = 0
 
-    static uint32 autobroadcaston = 0;
-    autobroadcaston = sConfig.GetIntDefault("AutoBroadcast.On", 0);
-    if (autobroadcaston == 1)
+    if (sWorld.getBoolConfig(CONFIG_AUTOBROADCAST))
     {
-       if (m_timers[WUPDATE_AUTOBROADCAST].Passed())
-       {
-          m_timers[WUPDATE_AUTOBROADCAST].Reset();
-          SendRNDBroadcast();
-       }
+        if (m_timers[WUPDATE_AUTOBROADCAST].Passed())
+        {
+            m_timers[WUPDATE_AUTOBROADCAST].Reset();
+            SendAutoBroadcast();
+        }
     }
 
     sBattlegroundMgr.Update(diff);
@@ -2626,7 +2629,7 @@ void World::ProcessCliCommands()
     }
 }
 
-void World::SendRNDBroadcast()
+void World::SendAutoBroadcast()
 {
     if (m_Autobroadcasts.empty())
         return;
@@ -2637,8 +2640,7 @@ void World::SendRNDBroadcast()
     std::advance(itr, rand() % m_Autobroadcasts.size());
     msg = *itr;
 
-    static uint32 abcenter = 0;
-    abcenter = sConfig.GetIntDefault("AutoBroadcast.Center", 0);
+    uint32 abcenter = sWorld.getIntConfig(CONFIG_AUTOBROADCAST_CENTER);
     if (abcenter == 0)
     {
         sWorld.SendWorldText(LANG_AUTO_BROADCAST, msg.c_str());
