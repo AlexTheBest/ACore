@@ -207,6 +207,8 @@ public:
             uiCountActivationCrystals = 0;
             uiCyanigosaEventPhase = 1;
 
+            uiMainEventPhase = NOT_STARTED;
+
             uiActivationTimer = 5000;
             uiDoorSpellTimer = 2000;
             uiCyanigosaEventTimer = 3*IN_MILLISECONDS;
