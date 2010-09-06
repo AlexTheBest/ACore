@@ -64,7 +64,6 @@ void DoScriptText(int32 textEntry, WorldObject* pSource, Unit *pTarget = NULL);
 /*
     TODO: Add more script type classes.
 
-    ChatScript
     MailScript
     SessionScript
     CollisionScript
@@ -623,7 +622,7 @@ class TransportScript : public ScriptObject, public UpdatableScript<Transport>
         virtual void OnRemovePassenger(Transport* /*transport*/, Player* /*player*/) { }
 
         // Called when a transport moves.
-        virtual void OnRelocate(Transport* /*transport*/, uint32 /*mapId*/, float /*x*/, float /*y*/, float /*z*/) { }
+        virtual void OnRelocate(Transport* /*transport*/, uint32 /*waypointId*/, uint32 /*mapId*/, float /*x*/, float /*y*/, float /*z*/) { }
 };
 
 class AchievementCriteriaScript : public ScriptObject
@@ -675,19 +674,19 @@ public:
     // Called when a player's reputation changes (before it is actually changed)
     virtual void OnReputationChange(Player* /*player*/, uint32 /*factionID*/, int32& /*standing*/, bool /*incremental*/) { }
 
-    // Called when a player sends a chat message. param depends on the chat type:
-    // CHAT_MSG_WHISPER - Player*: receiver;
-    // CHAT_MSG_PARTY, CHAT_MSG_PARTY_LEADER - Group*: group of player;
-    // CHAT_MSG_OFFICER, CHAT_MSG_GUILD - Guild*: guild of player;
-    // CHAT_MSG_RAID, CHAT_MSG_RAID_LEADER, CHAT_MSG_RAID_WARNING - Group*: group of player;
-    // CHAT_MSG_BATTLEGROUND, CHAT_MSG_BATTLEGROUND_LEADER - Group*: group of player;
-    // CHAT_MSG_CHANNEL - Channel*: channel player speaks to;
-    // other - NULL.
-    virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string /*msg*/, void* /*param*/ = NULL) { }
+    // The following methods are called when a player sends a chat message
+    virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string /*msg*/) { }
+    virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string /*msg*/, Player* /*receiver*/) { }
+    virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string /*msg*/, Group* /*group*/) { }
+    virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string /*msg*/, Guild* /*guild*/) { }
+    virtual void OnChat(Player* /*player*/, uint32 /*type*/, uint32 /*lang*/, std::string /*msg*/, Channel* /*channel*/) { }
 
     // Both of the below are called on emote opcodes
     virtual void OnEmote(Player* /*player*/, uint32 /*emote*/) { }
     virtual void OnTextEmote(Player* /*player*/, uint32 /*text_emote*/, uint32 /*emoteNum*/, uint64 /*guid*/) { }
+
+    // Called in Spell::cast
+    virtual void OnSpellCast(Player *player, Spell *spell, bool skipCheck) { }
 };
 
 class GuildScript : public ScriptObject
@@ -867,7 +866,7 @@ class ScriptMgr
         void OnAddCreaturePassenger(Transport* transport, Creature* creature);
         void OnRemovePassenger(Transport* transport, Player* player);
         void OnTransportUpdate(Transport* transport, uint32 diff);
-        void OnRelocate(Transport* transport, uint32 mapId, float x, float y, float z);
+        void OnRelocate(Transport* transport, uint32 waypointId, uint32 mapId, float x, float y, float z);
 
     public: /* AchievementCriteriaScript */
 
@@ -884,9 +883,14 @@ class ScriptMgr
         void OnPlayerMoneyChanged(Player *player, int32& amount);
         void OnGivePlayerXP(Player *player, uint32& amount, Unit *victim);
         void OnPlayerReputationChange(Player *player, uint32 factionID, int32& standing, bool incremental);
-        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string msg, void* param = NULL);
+        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string msg);
+        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string msg, Player* receiver);
+        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string msg, Group* group);
+        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string msg, Guild* guild);
+        void OnPlayerChat(Player* player, uint32 type, uint32 lang, std::string msg, Channel* channel);
         void OnPlayerEmote(Player* player, uint32 emote);
         void OnPlayerTextEmote(Player* player, uint32 text_emote, uint32 emoteNum, uint64 guid);
+        void OnPlayerSpellCast(Player *player, Spell *spell, bool skipCheck);
 
     public: /* GuildScript */
         void OnGuildAddMember(Guild *guild, Player *player, uint32& plRank);

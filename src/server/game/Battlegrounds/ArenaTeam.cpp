@@ -604,14 +604,28 @@ uint32 ArenaTeam::GetAverageMMR(Group *group) const
 {
     if (!group) //should never happen
         return 0;
+
     uint32 matchmakerrating = 0;
+    uint32 player_divider = 0;
     for (MemberList::const_iterator itr = m_members.begin(); itr != m_members.end(); ++itr)
     {
-        if (group->IsMember(itr->guid))
-            matchmakerrating += itr->matchmaker_rating;
-    }
+        // If player not online
+        if (!ObjectAccessor::FindPlayer(itr->guid))
+            continue;
 
-    matchmakerrating /= GetType();
+        // If not in group
+        if (!group->IsMember(itr->guid))
+            continue;
+
+        matchmakerrating += itr->matchmaker_rating;
+        ++player_divider;
+    }
+    
+    //- x/0 = crash
+    if (player_divider == 0)
+        player_divider = 1;
+
+    matchmakerrating /= player_divider;
 
     return matchmakerrating;
 }

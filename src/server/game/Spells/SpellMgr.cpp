@@ -793,6 +793,10 @@ bool SpellMgr::_isPositiveEffect(uint32 spellId, uint32 effIndex, bool deep) con
             if (spellId == 34074)
                 return true;
             break;
+        case SPELLFAMILY_SHAMAN:
+            if (spellId == 30708)
+                return false;
+            break;
         default:
             break;
     }
@@ -3247,7 +3251,7 @@ bool CanSpellPierceImmuneAura(SpellEntry const * pierceSpell, SpellEntry const *
     // these spells (Cyclone for example) can pierce all...
     if ((pierceSpell->AttributesEx & SPELL_ATTR_EX_UNAFFECTED_BY_SCHOOL_IMMUNE)
         // ...but not these (Divine shield for example)
-        && !(aura && (aura->AttributesEx & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY)))
+        && !(aura && (aura->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY)))
         return true;
 
     return false;

@@ -164,7 +164,7 @@ uint32 AccountMgr::GetSecurity(uint32 acc_id)
     return 0;
 }
 
-uint32 AccountMgr::GetSecurity(uint32 acc_id, int32 realm_id)
+uint32 AccountMgr::GetSecurity(uint64 acc_id, int32 realm_id)
 {
     QueryResult_AutoPtr result = (realm_id == -1)
         ? LoginDatabase.PQuery("SELECT gmlevel FROM account_access WHERE id = '%u' AND RealmID = '%d'", acc_id, realm_id)
@@ -226,8 +226,13 @@ bool AccountMgr::normalizeString(std::string& utf8str)
     size_t wstr_len = MAX_ACCOUNT_STR;
     if (!Utf8toWStr(utf8str,wstr_buf,wstr_len))
         return false;
-
+#ifdef _MSC_VER
+#pragma warning(disable: 4996)
+#endif
     std::transform(&wstr_buf[0], wstr_buf+wstr_len, &wstr_buf[0], wcharToUpperOnlyLatin);
+#ifdef _MSC_VER
+#pragma warning(default: 4996)
+#endif
 
     return WStrToUtf8(wstr_buf,wstr_len,utf8str);
 }

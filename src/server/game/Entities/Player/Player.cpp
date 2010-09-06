@@ -385,8 +385,17 @@ void TradeData::SetAccepted(bool state, bool crosssend /*= false*/)
 
 UpdateMask Player::updateVisualBits;
 
+// we can disable this warning for this since it only 
+// causes undefined behavior when passed to the base class constructor
+#ifdef _MSC_VER
+#pragma warning(disable:4355)
+#endif
 Player::Player (WorldSession *session): Unit(), m_achievementMgr(this), m_reputationMgr(this)
 {
+#ifdef _MSC_VER
+#pragma warning(default:4355)
+#endif
+
     m_speakTime = 0;
     m_speakCount = 0;
 
@@ -1392,7 +1401,7 @@ void Player::Update(uint32 p_time)
     {
         if (roll_chance_i(3) && GetTimeInnEnter() > 0)      // freeze update
         {
-            int time_inn = time(NULL)-GetTimeInnEnter();
+            time_t time_inn = time(NULL)-GetTimeInnEnter();
             if (time_inn >= 10)                             // freeze update
             {
                 float bubble = 0.125f*sWorld.getRate(RATE_REST_INGAME);
@@ -1646,8 +1655,17 @@ bool Player::BuildEnumData(QueryResult_AutoPtr result, WorldPacket * p_data)
         char_flags |= CHARACTER_FLAG_DECLINED;
 
     *p_data << uint32(char_flags);                          // character flags
+
     // character customize flags
-    *p_data << uint32(atLoginFlags & AT_LOGIN_CUSTOMIZE ? CHAR_CUSTOMIZE_FLAG_CUSTOMIZE : CHAR_CUSTOMIZE_FLAG_NONE);
+    if (atLoginFlags & AT_LOGIN_CUSTOMIZE)
+        *p_data << uint32(CHAR_CUSTOMIZE_FLAG_CUSTOMIZE);
+    else if (atLoginFlags & AT_LOGIN_CHANGE_FACTION)
+        *p_data << uint32(CHAR_CUSTOMIZE_FLAG_FACTION);
+    else if (atLoginFlags & AT_LOGIN_CHANGE_RACE)
+        *p_data << uint32(CHAR_CUSTOMIZE_FLAG_RACE);
+    else
+        *p_data << uint32(CHAR_CUSTOMIZE_FLAG_NONE);
+
     // First login
     *p_data << uint8(atLoginFlags & AT_LOGIN_FIRST ? 1 : 0);
 
@@ -4009,11 +4027,11 @@ uint32 Player::resetTalentsCost() const
         return 10*GOLD;
     else
     {
-        uint32 months = (sWorld.GetGameTime() - m_resetTalentsTime)/MONTH;
+        uint64 months = (sWorld.GetGameTime() - m_resetTalentsTime)/MONTH;
         if (months > 0)
         {
             // This cost will be reduced by a rate of 5 gold per month
-            int32 new_cost = int32(m_resetTalentsCost) - 5*GOLD*months;
+            int32 new_cost = int32(m_resetTalentsCost - 5*GOLD*months);
             // to a minimum of 10 gold.
             return (new_cost < 10*GOLD ? 10*GOLD : new_cost);
         }
@@ -15194,11 +15212,11 @@ void Player::ItemRemovedQuestCheck(uint32 entry, uint32 count)
 void Player::KilledMonster(CreatureInfo const* cInfo, uint64 guid)
 {
     if (cInfo->Entry)
-        KilledMonsterCredit(cInfo->Entry,guid);
+        KilledMonsterCredit(cInfo->Entry, guid);
 
     for (uint8 i = 0; i < MAX_KILL_CREDIT; ++i)
         if (cInfo->KillCredit[i])
-            KilledMonsterCredit(cInfo->KillCredit[i],guid);
+            KilledMonsterCredit(cInfo->KillCredit[i], guid);
 }
 
 void Player::KilledMonsterCredit(uint32 entry, uint64 guid)
@@ -15242,7 +15260,7 @@ void Player::KilledMonsterCredit(uint32 entry, uint64 guid)
 
                     uint32 reqkill = qInfo->ReqCreatureOrGOId[j];
 
-                    if (reqkill == entry)
+                    if (reqkill == real_entry)
                     {
                         uint32 reqkillcount = qInfo->ReqCreatureOrGOCount[j];
                         uint32 curkillcount = q_status.m_creatureOrGOcount[j];
@@ -15258,7 +15276,7 @@ void Player::KilledMonsterCredit(uint32 entry, uint64 guid)
                             CompleteQuest(questid);
 
                         // same objective target can be in many active quests, but not in 2 objectives for single quest (code optimization).
-                        continue;
+                        break;
                     }
                 }
             }
@@ -16096,10 +16114,7 @@ bool Player::LoadFromDB(uint32 guid, SQLQueryHolder *holder)
     // currently we do not support transport in bg
     else if (transGUID)
     {
-        // There are no transports on instances
-        instanceId = 0;
-
-        m_movementInfo.t_guid = MAKE_NEW_GUID(transGUID, 0, HIGHGUID_TRANSPORT);
+        m_movementInfo.t_guid = MAKE_NEW_GUID(transGUID, 0, HIGHGUID_MO_TRANSPORT);
         m_movementInfo.t_pos.Relocate(fields[26].GetFloat(), fields[27].GetFloat(), fields[28].GetFloat(), fields[29].GetFloat());
 
         if (!Trinity::IsValidMapCoord(
@@ -16108,7 +16123,7 @@ bool Player::LoadFromDB(uint32 guid, SQLQueryHolder *holder)
             // transport size limited
             m_movementInfo.t_pos.m_positionX > 250 || m_movementInfo.t_pos.m_positionY > 250 || m_movementInfo.t_pos.m_positionZ > 250)
         {
-            sLog.outError("Player (guidlow %d) have invalid transport coordinates (X: %f Y: %f Z: %f O: %f). Teleport to default race/class locations.",
+            sLog.outError("Player (guidlow %d) have invalid transport coordinates (X: %f Y: %f Z: %f O: %f). Teleport to bind location.",
                 guid,GetPositionX()+m_movementInfo.t_pos.m_positionX,GetPositionY()+m_movementInfo.t_pos.m_positionY,
                 GetPositionZ()+m_movementInfo.t_pos.m_positionZ,GetOrientation()+m_movementInfo.t_pos.m_orientation);
 
@@ -16128,7 +16143,7 @@ bool Player::LoadFromDB(uint32 guid, SQLQueryHolder *holder)
             }
             if (!m_transport)
             {
-                sLog.outError("Player (guidlow %d) have problems with transport guid (%u). Teleport to default race/class locations.",
+                sLog.outError("Player (guidlow %d) have problems with transport guid (%u). Teleport to bind location.",
                     guid,transGUID);
 
                 RelocateToHomebind();
@@ -17067,7 +17082,7 @@ void Player::_LoadQuestStatus(QueryResult_AutoPtr result)
                     if (quest_time <= sWorld.GetGameTime())
                         questStatusData.m_timer = 1;
                     else
-                        questStatusData.m_timer = (quest_time - sWorld.GetGameTime()) * IN_MILLISECONDS;
+                        questStatusData.m_timer = uint32((quest_time - sWorld.GetGameTime()) * IN_MILLISECONDS);
                 }
                 else
                     quest_time = 0;
@@ -17090,7 +17105,7 @@ void Player::_LoadQuestStatus(QueryResult_AutoPtr result)
                     questStatusData.m_status == QUEST_STATUS_FAILED) &&
                     (!questStatusData.m_rewarded || pQuest->IsRepeatable())))
                 {
-                    SetQuestSlot(slot, quest_id, quest_time);
+                    SetQuestSlot(slot, quest_id, uint32(quest_time)); // cast can't be helped
 
                     if (questStatusData.m_status == QUEST_STATUS_COMPLETE)
                         SetQuestSlotState(slot, QUEST_STATE_COMPLETE);
@@ -22065,7 +22080,7 @@ uint32 Player::GetCorpseReclaimDelay(bool pvp) const
     time_t now = time(NULL);
     // 0..2 full period
     // should be ceil(x)-1 but not floor(x)
-    uint32 count = (now < m_deathExpireTime - 1) ? (m_deathExpireTime - 1 - now)/DEATH_EXPIRE_STEP : 0;
+    uint64 count = (now < m_deathExpireTime - 1) ? (m_deathExpireTime - 1 - now)/DEATH_EXPIRE_STEP : 0;
     return copseReclaimDelay[count];
 }
 
@@ -22081,7 +22096,7 @@ void Player::UpdateCorpseReclaimDelay()
     if (now < m_deathExpireTime)
     {
         // full and partly periods 1..3
-        uint32 count = (m_deathExpireTime - now)/DEATH_EXPIRE_STEP +1;
+        uint64 count = (m_deathExpireTime - now)/DEATH_EXPIRE_STEP +1;
         if (count < MAX_DEATH_COUNT)
             m_deathExpireTime = now+(count+1)*DEATH_EXPIRE_STEP;
         else
@@ -22103,13 +22118,13 @@ void Player::SendCorpseReclaimDelay(bool load)
     else
         pvp = (m_ExtraFlags & PLAYER_EXTRA_PVP_DEATH);
 
-    uint32 delay;
+    time_t delay;
     if (load)
     {
         if (corpse->GetGhostTime() > m_deathExpireTime)
             return;
 
-        uint32 count;
+        uint64 count;
         if ((pvp && sWorld.getBoolConfig(CONFIG_DEATH_CORPSE_RECLAIM_DELAY_PVP)) ||
            (!pvp && sWorld.getBoolConfig(CONFIG_DEATH_CORPSE_RECLAIM_DELAY_PVE)))
         {

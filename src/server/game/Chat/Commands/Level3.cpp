@@ -4345,10 +4345,10 @@ bool ChatHandler::HandleNpcInfoCommand(const char* /*args*/)
     uint32 Entry = target->GetEntry();
     CreatureInfo const* cInfo = target->GetCreatureInfo();
 
-    int32 curRespawnDelay = target->GetRespawnTimeEx()-time(NULL);
+    int64 curRespawnDelay = target->GetRespawnTimeEx()-time(NULL);
     if (curRespawnDelay < 0)
         curRespawnDelay = 0;
-    std::string curRespawnDelayStr = secsToTimeString(curRespawnDelay,true);
+    std::string curRespawnDelayStr = secsToTimeString(uint64(curRespawnDelay),true);
     std::string defRespawnDelayStr = secsToTimeString(target->GetRespawnDelay(),true);
 
     PSendSysMessage(LANG_NPCINFO_CHAR,  target->GetDBTableGUIDLow(), faction, npcflags, Entry, displayid, nativeid);
@@ -5711,7 +5711,7 @@ bool ChatHandler::HandleBanInfoHelper(uint32 accountid, char const* accountname)
         if (fields[2].GetBool() && (fields[1].GetUInt64() == (uint64)0 ||unbandate >= time(NULL)))
             active = true;
         bool permanent = (fields[1].GetUInt64() == (uint64)0);
-        std::string bantime = permanent?GetTrinityString(LANG_BANINFO_INFINITE):secsToTimeString(fields[1].GetUInt64(), true);
+        std::string bantime = permanent ? GetTrinityString(LANG_BANINFO_INFINITE) : secsToTimeString(fields[1].GetUInt64(), true);
         PSendSysMessage(LANG_BANINFO_HISTORYENTRY,
             fields[0].GetString(), bantime.c_str(), active ? GetTrinityString(LANG_BANINFO_YES):GetTrinityString(LANG_BANINFO_NO), fields[4].GetString(), fields[5].GetString());
     }while (result->NextRow());
@@ -6154,7 +6154,7 @@ bool ChatHandler::HandlePDumpWriteCommand(const char *args)
         return false;
     }
 
-    switch(PlayerDumpWriter().WriteDump(file, guid))
+    switch(PlayerDumpWriter().WriteDump(file, uint32(guid)))
     {
         case DUMP_SUCCESS:
             PSendSysMessage(LANG_COMMAND_EXPORT_SUCCESS);
@@ -6550,9 +6550,9 @@ bool ChatHandler::HandleCastSelfCommand(const char *args)
     return true;
 }
 
-std::string GetTimeString(uint32 time)
+std::string GetTimeString(uint64 time)
 {
-    uint16 days = time / DAY, hours = (time % DAY) / HOUR, minute = (time % HOUR) / MINUTE;
+    uint64 days = time / DAY, hours = (time % DAY) / HOUR, minute = (time % HOUR) / MINUTE;
     std::ostringstream ss;
     if (days) ss << days << "d ";
     if (hours) ss << hours << "h ";
@@ -6588,7 +6588,8 @@ bool ChatHandler::HandleInstanceListBindsCommand(const char* /*args*/)
             {
                 InstanceSave *save = itr->second.save;
                 std::string timeleft = GetTimeString(save->GetResetTime() - time(NULL));
-                PSendSysMessage("map: %d inst: %d perm: %s diff: %d canReset: %s TTR: %s", itr->first, save->GetInstanceId(), itr->second.perm ? "yes" : "no",  save->GetDifficulty(), save->CanReset() ? "yes" : "no", timeleft.c_str());                counter++;
+                PSendSysMessage("map: %d inst: %d perm: %s diff: %d canReset: %s TTR: %s", itr->first, save->GetInstanceId(), itr->second.perm ? "yes" : "no",  save->GetDifficulty(), save->CanReset() ? "yes" : "no", timeleft.c_str());
+                counter++;
             }
         }
     }
@@ -6602,31 +6603,40 @@ bool ChatHandler::HandleInstanceUnbindCommand(const char *args)
     if (!*args)
         return false;
 
-    std::string cmd = args;
-    if (cmd == "all")
+    Player* player = getSelectedPlayer();
+    if (!player)
+        player = m_session->GetPlayer();
+
+    char* pMap = strtok((char*)args, " ");
+    char* pDiff = strtok(NULL, " ");
+    int8 diff = -1;
+    if (pDiff)
+        diff = atoi(pDiff);
+    uint16 counter = 0;
+    int16 MapId = 0;
+	
+    if (strcmp(pMap, "all"))
+        if (!(MapId = atoi(pMap)))
+            return false;
+	
+    for(uint8 i = 0; i < MAX_DIFFICULTY; ++i)
     {
-        Player* player = getSelectedPlayer();
-        if (!player) player = m_session->GetPlayer();
-        uint32 counter = 0;
-        for (uint8 i = 0; i < MAX_DIFFICULTY; ++i)
+        Player::BoundInstancesMap &binds = player->GetBoundInstances(Difficulty(i));
+        for(Player::BoundInstancesMap::iterator itr = binds.begin(); itr != binds.end();)
         {
-            Player::BoundInstancesMap &binds = player->GetBoundInstances(Difficulty(i));
-            for (Player::BoundInstancesMap::iterator itr = binds.begin(); itr != binds.end();)
+            InstanceSave *save = itr->second.save;
+            if(itr->first != player->GetMapId() && (!MapId || MapId == itr->first) && (diff == -1 || diff == save->GetDifficulty()))
             {
-                if (itr->first != player->GetMapId())
-                {
-                    InstanceSave *save = itr->second.save;
-                    std::string timeleft = GetTimeString(save->GetResetTime() - time(NULL));
-                    PSendSysMessage("unbinding map: %d inst: %d perm: %s diff: %d canReset: %s TTR: %s", itr->first, save->GetInstanceId(), itr->second.perm ? "yes" : "no",  save->GetDifficulty(), save->CanReset() ? "yes" : "no", timeleft.c_str());
-                    player->UnbindInstance(itr, Difficulty(i));
-                    counter++;
-                }
-                else
-                    ++itr;
+                std::string timeleft = GetTimeString(save->GetResetTime() - time(NULL));
+                PSendSysMessage("unbinding map: %d inst: %d perm: %s diff: %d canReset: %s TTR: %s", itr->first, save->GetInstanceId(), itr->second.perm ? "yes" : "no", save->GetDifficulty(), save->CanReset() ? "yes" : "no", timeleft.c_str());
+                player->UnbindInstance(itr, Difficulty(i));
+                counter++;
             }
+            else
+                ++itr;
         }
-        PSendSysMessage("instances unbound: %d", counter);
     }
+    PSendSysMessage("instances unbound: %d", counter);
     return true;
 }
 

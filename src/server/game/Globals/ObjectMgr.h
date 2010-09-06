@@ -390,6 +390,8 @@ class ObjectMgr
 
         typedef std::vector<std::string> ScriptNameMap;
 
+        typedef std::map<uint32, uint32> CharacterConversionMap;
+
         Player* GetPlayer(const char* name) const { return sObjectAccessor.FindPlayerByName(name);}
         Player* GetPlayer(uint64 guid) const { return ObjectAccessor::FindPlayer(guid); }
 
@@ -961,6 +963,16 @@ class ObjectMgr
                 value = data[loc_idx];
         }
 
+        CharacterConversionMap factionchange_achievements;
+        CharacterConversionMap factionchange_items;
+        CharacterConversionMap factionchange_spells;
+        CharacterConversionMap factionchange_reputations;
+
+        void LoadFactionChangeAchievements();
+        void LoadFactionChangeItems();
+        void LoadFactionChangeSpells();
+        void LoadFactionChangeReputations();
+
     protected:
 
         // first free id for selected id type
@@ -982,6 +994,7 @@ class ObjectMgr
         uint32 m_hiDoGuid;
         uint32 m_hiCorpseGuid;
         uint32 m_hiGroupGuid;
+        uint32 m_hiMoTransGuid;
 
         QuestMap            mQuestTemplates;
 

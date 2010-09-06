@@ -76,7 +76,7 @@ uint32 GameEventMgr::NextCheck(uint16 entry) const
 
     // for NEXTPHASE state world events, return the delay to start the next event, so the followup event will be checked correctly
     if ((mGameEvent[entry].state == GAMEEVENT_WORLD_NEXTPHASE || mGameEvent[entry].state == GAMEEVENT_WORLD_FINISHED) && mGameEvent[entry].nextstart >= currenttime)
-        return (mGameEvent[entry].nextstart - currenttime);
+        return uint32(mGameEvent[entry].nextstart - currenttime);
 
     // for CONDITIONS state world events, return the length of the wait period, so if the conditions are met, this check will be called again to set the timer as NEXTPHASE event
     if (mGameEvent[entry].state == GAMEEVENT_WORLD_CONDITIONS)
@@ -93,7 +93,7 @@ uint32 GameEventMgr::NextCheck(uint16 entry) const
 
     // never started event, we return delay before start
     if (mGameEvent[entry].start > currenttime)
-        return (mGameEvent[entry].start - currenttime);
+        return uint32(mGameEvent[entry].start - currenttime);
 
     uint32 delay;
     // in event, we return the end of it
@@ -104,7 +104,7 @@ uint32 GameEventMgr::NextCheck(uint16 entry) const
         delay = (mGameEvent[entry].occurence * MINUTE) - ((currenttime - mGameEvent[entry].start) % (mGameEvent[entry].occurence * MINUTE));
     // In case the end is before next check
     if (mGameEvent[entry].end  < time_t(currenttime + delay))
-        return (mGameEvent[entry].end - currenttime);
+        return uint32(mGameEvent[entry].end - currenttime);
     else
         return delay;
 }
@@ -279,8 +279,8 @@ void GameEventMgr::LoadFromDB()
 
     sLog.outString("Loading Game Event Saves Data...");
 
-    //                                          0         1            2
-    result = CharacterDatabase.Query("SELECT event_id, state, UNIX_TIMESTAMP(next_start) FROM game_event_save");
+    //                                          0         1           2
+    result = CharacterDatabase.Query("SELECT event_id, state, next_start FROM game_event_save");
 
     count = 0;
     if (!result)
@@ -1683,9 +1683,9 @@ void GameEventMgr::SaveWorldEventStateToDB(uint16 event_id)
     SQLTransaction trans = CharacterDatabase.BeginTransaction();
     trans->PAppend("DELETE FROM game_event_save WHERE event_id = '%u'",event_id);
     if (mGameEvent[event_id].nextstart)
-        trans->PAppend("INSERT INTO game_event_save (event_id, state, next_start) VALUES ('%u','%u',FROM_UNIXTIME("UI64FMTD"))",event_id,mGameEvent[event_id].state,(uint64)(mGameEvent[event_id].nextstart));
+        trans->PAppend("INSERT INTO game_event_save (event_id, state, next_start) VALUES ('%u','%u', "UI64FMTD")",event_id,mGameEvent[event_id].state,(uint64)(mGameEvent[event_id].nextstart));
     else
-        trans->PAppend("INSERT INTO game_event_save (event_id, state, next_start) VALUES ('%u','%u','0000-00-00 00:00:00')",event_id,mGameEvent[event_id].state);
+        trans->PAppend("INSERT INTO game_event_save (event_id, state, next_start) VALUES ('%u','%u','0')",event_id,mGameEvent[event_id].state);
     CharacterDatabase.CommitTransaction(trans);
 }
 

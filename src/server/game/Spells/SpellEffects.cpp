@@ -868,7 +868,7 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
 
                     Creature* creatureTarget = unitTarget->ToCreature();
 
-                    m_caster->SummonGameObject(179644, creatureTarget->GetPositionX(), creatureTarget->GetPositionY(), creatureTarget->GetPositionZ(), creatureTarget->GetOrientation(), 0, 0, 0, 0, creatureTarget->GetRespawnTime()-time(NULL));
+                    m_caster->SummonGameObject(179644, creatureTarget->GetPositionX(), creatureTarget->GetPositionY(), creatureTarget->GetPositionZ(), creatureTarget->GetOrientation(), 0, 0, 0, 0, uint32(creatureTarget->GetRespawnTime()-time(NULL)));
                     sLog.outDebug("SummonGameObject at SpellEfects.cpp EffectDummy for Spell 23019");
 
                     creatureTarget->ForcedDespawn();
@@ -1234,39 +1234,30 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
                 return;
             }
             // Execute
-            if (m_spellInfo->SpellFamilyFlags[0] & SPELLFAMILYFLAG_WARRIOR_EXECUTE)
+            if (m_spellInfo->SpellFamilyFlags[EFFECT_0] & SPELLFAMILYFLAG_WARRIOR_EXECUTE)
             {
                 if (!unitTarget)
                     return;
 
-                uint32 rage = m_caster->GetPower(POWER_RAGE);
-
-                // Glyph of Execution bonus
-                if (AuraEffect *aura = m_caster->GetAuraEffect(58367, 0))
-                    rage += aura->GetAmount();
-
                 spell_id = 20647;
 
-                // Sudden death cost modifier
-                if (Aura * aur = m_caster->GetAura(52437))
+                int32 rageUsed = std::min<int32>(300 - m_powerCost, m_caster->GetPower(POWER_RAGE));
+                int32 newRage = std::max<int32>(0, m_caster->GetPower(POWER_RAGE) - rageUsed);
+
+                // Sudden Death rage save
+                if (AuraEffect * aurEff = m_caster->GetAuraEffect(SPELL_AURA_PROC_TRIGGER_SPELL, SPELLFAMILY_GENERIC, 1989, EFFECT_0))
                 {
-                    rage += m_powerCost;
-                    m_caster->ModifyPower(POWER_RAGE, -m_powerCost);
-                    if (m_caster->GetPower(POWER_RAGE) < 100)
-                        m_caster->SetPower(POWER_RAGE, 100);
-                    m_caster->RemoveAura(aur);
-                }
-                else
-                {
-                    rage += m_powerCost;
-                    m_caster->ModifyPower(POWER_RAGE, -m_powerCost);
+                    int32 ragesave = SpellMgr::CalculateSpellEffectAmount(aurEff->GetSpellProto(), EFFECT_1) * 10;
+                    newRage = std::max(newRage, ragesave);
                 }
 
-                if (rage > 300)
-                    rage = 300;
+                m_caster->SetPower(POWER_RAGE, uint32(newRage));
 
-                bp = damage+int32(rage * m_spellInfo->EffectDamageMultiplier[effIndex] +
-                    m_caster->GetTotalAttackPowerValue(BASE_ATTACK)*0.2f);
+                // Glyph of Execution bonus
+                if (AuraEffect * aurEff = m_caster->GetAuraEffect(58367, EFFECT_0))
+                    rageUsed += aurEff->GetAmount() * 10;
+
+                bp = damage + int32(rageUsed * m_spellInfo->EffectDamageMultiplier[effIndex] + m_caster->GetTotalAttackPowerValue(BASE_ATTACK) * 0.2f);
                 break;
             }
             // Concussion Blow
@@ -1433,7 +1424,7 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
             if (m_spellInfo->SpellFamilyFlags[0] & SPELLFAMILYFLAG_DK_DEATH_STRIKE)
             {
                 uint32 count = unitTarget->GetDiseasesByCaster(m_caster->GetGUID());
-                int32 bp = int32(count * m_caster->CountPctFromMaxHealth(m_spellInfo->EffectDamageMultiplier[0]));
+                int32 bp = int32(count * m_caster->CountPctFromMaxHealth(int32(m_spellInfo->EffectDamageMultiplier[0])));
                 // Improved Death Strike
                 if (AuraEffect const * aurEff = m_caster->GetAuraEffect(SPELL_AURA_ADD_PCT_MODIFIER, SPELLFAMILY_DEATHKNIGHT, 2751, 0))
                     bp = int32(bp * (m_caster->CalculateSpellDamage(m_caster, aurEff->GetSpellProto(), 2) + 100.0f) / 100.0f);
@@ -4465,12 +4456,8 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
                 }
                 // Escape artist
                 case 20589:
-                {
-                    if (!unitTarget)
-                        return;
-                    unitTarget->RemoveMovementImpairingAuras();
+                    m_caster->RemoveMovementImpairingAuras();
                     return;
-                }
                 // Decimate
                 case 28374:
                 case 54426:

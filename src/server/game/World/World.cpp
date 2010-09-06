@@ -1386,6 +1386,7 @@ void World::LoadConfigSettings(bool reload)
     // AutoBroadcast
     m_bool_configs[CONFIG_AUTOBROADCAST] = sConfig.GetBoolDefault("AutoBroadcast.On", false);
     m_int_configs[CONFIG_AUTOBROADCAST_CENTER] = sConfig.GetIntDefault("AutoBroadcast.Center", 0);
+    m_int_configs[CONFIG_AUTOBROADCAST_INTERVAL] = sConfig.GetIntDefault("AutoBroadcast.Timer", 60000);
 
     sScriptMgr.OnConfigLoad(reload);
 }
@@ -1748,6 +1749,18 @@ void World::SetInitialWorldSettings()
     sLog.outString("Loading Conditions...");
     sConditionMgr.LoadConditions();
 
+    sLog.outString("Loading faction change achievement pairs...");
+    sObjectMgr.LoadFactionChangeAchievements();
+
+    sLog.outString("Loading faction change spell pairs...");
+    sObjectMgr.LoadFactionChangeSpells();
+
+    sLog.outString("Loading faction change item pairs...");
+    sObjectMgr.LoadFactionChangeItems();
+
+    sLog.outString("Loading faction change reputation pairs...");
+    sObjectMgr.LoadFactionChangeReputations();
+
     sLog.outString("Loading GM tickets...");
     sTicketMgr.LoadGMTickets();
 
@@ -1817,6 +1830,7 @@ void World::SetInitialWorldSettings()
     autoanc = sIRC.autoanc;
     static uint32 abtimer = 0;
     abtimer = sConfig.GetIntDefault("AutoBroadcast.Timer", 60000);
+
     m_timers[WUPDATE_OBJECTS].SetInterval(IN_MILLISECONDS/2);
     m_timers[WUPDATE_SESSIONS].SetInterval(0);
     m_timers[WUPDATE_WEATHERS].SetInterval(1*IN_MILLISECONDS);
@@ -1827,10 +1841,10 @@ void World::SetInitialWorldSettings()
                                                             //erase corpses every 20 minutes
     m_timers[WUPDATE_CLEANDB].SetInterval(m_int_configs[CONFIG_LOGDB_CLEARINTERVAL]*MINUTE*IN_MILLISECONDS);
                                                             // clean logs table every 14 days by default
-    m_timers[WUPDATE_AUTOBROADCAST].SetInterval(abtimer);
- 		
-    m_timers[WUPDATE_AUTOANC].SetInterval(autoanc*MINUTE*1000);
-   
+
+    m_timers[WUPDATE_AUTOBROADCAST].SetInterval(getIntConfig(CONFIG_AUTOBROADCAST_INTERVAL));
+    m_timers[WUPDATE_AUTOANC].SetInterval(autoanc*MINUTE*1000); //IRC?
+
     m_timers[WUPDATE_DELETECHARS].SetInterval(DAY*IN_MILLISECONDS); // check for chars to delete every day
 
     //to set mailtimer to return mails every day between 4 and 5 am
@@ -1861,10 +1875,6 @@ void World::SetInitialWorldSettings()
 
     sLog.outString("Loading World States...");              // must be loaded before battleground and outdoor PvP
     LoadWorldStates();
-
-    ///- Initialize Looking For Group
-    sLog.outString("Starting Looking For Group System");
-    sLFGMgr.InitLFG();
 
     ///- Initialize Battlegrounds
     sLog.outString("Starting Battleground System");
@@ -2085,13 +2095,13 @@ void World::Update(uint32 diff)
     if (m_timers[WUPDATE_WEATHERS].Passed())
     {
         m_timers[WUPDATE_WEATHERS].Reset();
-        sWeatherMgr.Update(m_timers[WUPDATE_WEATHERS].GetInterval());
+        sWeatherMgr.Update(uint32(m_timers[WUPDATE_WEATHERS].GetInterval()));
     }
 
     /// <li> Update uptime table
     if (m_timers[WUPDATE_UPTIME].Passed())
     {
-        uint32 tmpDiff = (m_gameTime - m_startTime);
+        uint32 tmpDiff = uint32(m_gameTime - m_startTime);
         uint32 maxClientsNum = GetMaxActiveSessionCount();
 
         m_timers[WUPDATE_UPTIME].Reset();

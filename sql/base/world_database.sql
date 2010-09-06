@@ -361,6 +361,8 @@ INSERT INTO `command` VALUES
 ('character rename',2,'Syntax: .character rename [$name]\r\n\r\nMark selected in game or by $name in command character for rename at next login.'),
 ('character reputation',2,'Syntax: .character reputation [$player_name]\r\n\r\nShow reputation information for selected player or player find by $player_name.'),
 ('character titles',2,'Syntax: .character titles [$player_name]\r\n\r\nShow known titles list for selected player or player find by $player_name.'),
+('character changefaction',2,'Syntax: .character changefaction $name\r\n\r\nChange character faction.'),
+('character changerace',2,'Syntax: .character changerace $name\r\n\r\nChange character race.'),
 ('channel set public', 3, 'Syntax: .channel set public  $channel $public\r\n\r\nChange password-changing ability for a channel. 1 for possible, 0 for GM only.'),
 ('combatstop',2,'Syntax: .combatstop [$playername]\r\nStop combat for selected character. If selected non-player then command applied to self. If $playername provided then attempt applied to online player $playername.'),
 ('cometome',3,'SYntax: .cometome $parameter\nMake selected creature come to your current location (new position not saved to DB).'),
@@ -436,7 +438,7 @@ INSERT INTO `command` VALUES
 ('instance listbinds',3,'Syntax: .instance listbinds\r\n  Lists the binds of the selected player.'),
 ('instance savedata',3,'Syntax: .instance savedata\r\n  Save the InstanceData for the current player''s map to the DB.'),
 ('instance stats',3,'Syntax: .instance stats\r\n  Shows statistics about instances.'),
-('instance unbind',3,'Syntax: .instance unbind all\r\n  All of the selected player''s binds will be cleared.'),
+('instance unbind',3,'Syntax: .instance unbind <mapid|all> [difficulty]\r\n  Clear all/some of player''s binds'),
 ('itemmove',2,'Syntax: .itemmove #sourceslotid #destinationslotid\r\n\r\nMove an item from slots #sourceslotid to #destinationslotid in your inventory\r\n\r\nNot yet implemented'),
 ('kick',2,'Syntax: .kick [$charactername] [$reason]\r\n\r\nKick the given character name from the world with or without reason. If no character name is provided then the selected player (except for yourself) will be kicked. If no reason is provided, default is \"No Reason\".'),
 ('learn',3,'Syntax: .learn #spell [all]\r\n\r\nSelected character learn a spell of id #spell. If ''all'' provided then all ranks learned.'),
@@ -7738,6 +7740,102 @@ INSERT INTO `player_classlevelstats` VALUES
 (11,79,6902,3383),
 (11,80,7417,3496);
 /*!40000 ALTER TABLE `player_classlevelstats` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `player_factionchange_achievement`
+--
+
+DROP TABLE IF EXISTS `player_factionchange_achievement`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `player_factionchange_achievement` (
+ `alliance_id` int(8) NOT NULL,
+ `horde_id` int(8) NOT NULL,
+ PRIMARY KEY (`alliance_id`,`horde_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `player_factionchange_achievement`
+--
+
+LOCK TABLES `player_factionchange_achievement` WRITE;
+/*!40000 ALTER TABLE `player_factionchange_achievement` DISABLE KEYS */;
+/*!40000 ALTER TABLE `player_factionchange_achievement` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `player_factionchange_items`
+--
+
+DROP TABLE IF EXISTS `player_factionchange_items`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `player_factionchange_items` (
+ `race_A` int(8) NOT NULL,
+ `alliance_id` int(8) NOT NULL,
+ `commentA` text,
+ `race_H` int(8) NOT NULL,
+ `horde_id` int(8) NOT NULL,
+ `commentH` text,
+PRIMARY KEY (`alliance_id`,`horde_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `player_factionchange_items`
+--
+
+LOCK TABLES `player_factionchange_items` WRITE;
+/*!40000 ALTER TABLE `player_factionchange_items` DISABLE KEYS */;
+/*!40000 ALTER TABLE `player_factionchange_items` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `player_factionchange_reputations`
+--
+
+DROP TABLE IF EXISTS `player_factionchange_reputations`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `player_factionchange_reputations` (
+ `alliance_id` int(8) NOT NULL,
+ `horde_id` int(8) NOT NULL,
+ PRIMARY KEY (`alliance_id`,`horde_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `player_factionchange_reputations`
+--
+
+LOCK TABLES `player_factionchange_reputations` WRITE;
+/*!40000 ALTER TABLE `player_factionchange_reputations` DISABLE KEYS */;
+/*!40000 ALTER TABLE `player_factionchange_reputations` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `player_factionchange_spells`
+--
+
+DROP TABLE IF EXISTS `player_factionchange_spells`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `player_factionchange_spells` (
+ `alliance_id` int(8) NOT NULL,
+ `horde_id` int(8) NOT NULL,
+ PRIMARY KEY (`alliance_id`,`horde_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `player_factionchange_spells`
+--
+
+LOCK TABLES `player_factionchange_spells` WRITE;
+/*!40000 ALTER TABLE `player_factionchange_spells` DISABLE KEYS */;
+/*!40000 ALTER TABLE `player_factionchange_spells` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -17499,7 +17597,6 @@ INSERT INTO `spell_group` (`id`, `spell_id`) VALUES
 -- Increased Spell Power Buff
 (1044,54646), -- Focus Magic
 (1045,52109), -- Flametongue Totem
-(1046,63283), -- Totem of Wrath
 (1046,57658), -- Totem of Wrath
 (1046,57660), -- Totem of Wrath
 (1046,57662), -- Totem of Wrath
@@ -18855,9 +18952,9 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 53256, 0x00,   9, 0x00000800, 0x00800001, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Cobra Strikes (Rank 1)
 ( 53259, 0x00,   9, 0x00000800, 0x00800001, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Cobra Strikes (Rank 2)
 ( 53260, 0x00,   9, 0x00000800, 0x00800001, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Cobra Strikes (Rank 3)
-( 53290, 0x00,   9, 0x00000800, 0x7FFFFFFF, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Hunting Party (Rank 1)
-( 53291, 0x00,   9, 0x00000800, 0x7FFFFFFF, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Hunting Party (Rank 2)
-( 53292, 0x00,   9, 0x00000800, 0x7FFFFFFF, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Hunting Party (Rank 3)
+( 53290, 0x00,   9, 0x00000800, 0x00000001, 0x00000200, 0x00000000, 0x00000002,   0,   0,   0), -- Hunting Party (Rank 1)
+( 53291, 0x00,   9, 0x00000800, 0x00000001, 0x00000200, 0x00000000, 0x00000002,   0,   0,   0), -- Hunting Party (Rank 2)
+( 53292, 0x00,   9, 0x00000800, 0x00000001, 0x00000200, 0x00000000, 0x00000002,   0,   0,   0), -- Hunting Party (Rank 3)
 ( 53375, 0x00,  10, 0x00000000, 0x00002000, 0x00000000, 0x00000400, 0x00000000,   0,   0,   6), -- Sanctified Wrath (Rank 1)
 ( 53376, 0x00,  10, 0x00000000, 0x00002000, 0x00000000, 0x00000400, 0x00000000,   0,   0,   6), -- Sanctified Wrath (Rank 2)
 ( 53380, 0x00,  10, 0x00800000, 0x00020000, 0x00000000, 0x00000000, 0x00040002,   0,   0,   0), -- Righteous Vengeance (Rank 1)
@@ -19007,6 +19104,7 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 63108, 0x00,   5, 0x00000002, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Siphon Life
 ( 63158, 0x00,   5, 0x00000001, 0x000000C0, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Decimation
 ( 63156, 0x00,   5, 0x00000001, 0x000000C0, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Decimation
+( 63280, 0x00,  11, 0x20000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Glyph ofTotem of Wrath
 ( 64343, 0x00,   3, 0x00000002, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Impact
 ( 64976, 0x00,   4, 0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Juggernaut
 ( 64914, 0x00,   8, 0x00010000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Item - Rogue T8 2P Bonus
@@ -19102,6 +19200,8 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 56636, 0x00,   4, 0x00000020, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Taste for Blood (Rank 1)
 ( 56637, 0x00,   4, 0x00000020, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Taste for Blood (Rank 2)
 ( 56638, 0x00,   4, 0x00000020, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Taste for Blood (Rank 3)
+( 50421, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Scent of Blood
+( 53386, 0x30,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Rune of Cinderglacier
 ( 56375, 0x00,   3, 0x01000000, 0x00000000, 0x00000000, 0x00010000, 0x00000000,   0,   0,   0), -- Glyphs of Polymorph
 ( 54639, 0x00,  15, 0x00400000, 0x00010000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Blood of the north
 ( 54638, 0x00,  15, 0x00400000, 0x00010000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Blood of the north
@@ -19181,7 +19281,8 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 72417, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  60), -- Item - Icecrown Reputation Ring Caster Trigger
 ( 72413, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  60), -- Item - Icecrown Reputation Ring Melee
 ( 72419, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  60), -- Item - Icecrown Reputation Ring Healer Trigger
-( 71404, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,  45); -- Item - Icecrown Dungeon Melee Trinket
+( 71404, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,  45), -- Item - Icecrown Dungeon Melee Trinket
+( 71564, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0); -- Nevermelting Ice Crystal
 /*!40000 ALTER TABLE `spell_proc_event` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -26721,11 +26822,13 @@ DROP TABLE IF EXISTS `transports`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `transports` (
+  `guid` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `entry` mediumint(8) unsigned NOT NULL DEFAULT '0',
   `name` text,
   `period` mediumint(8) unsigned NOT NULL DEFAULT '0',
   `ScriptName` char(64) NOT NULL DEFAULT '',
-  PRIMARY KEY (`entry`)
+  PRIMARY KEY (`guid`),
+  UNIQUE INDEX `idx_entry` (`entry`)
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=FIXED COMMENT='Transports';
 /*!40101 SET character_set_client = @saved_cs_client */;
 
