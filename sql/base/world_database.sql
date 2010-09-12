@@ -17242,7 +17242,8 @@ INSERT INTO `spell_dbc` (`Id`,`Dispel`,`Mechanic`,`Attributes`,`AttributesEx`,`A
 (45767,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Quest 11670 RewSpellCast serverside spell'),
 (71098,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Quest 24451 RewSpellCast serverside spell'),
 (70878,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Creature 40160 creature_addon serverside spell'),
-(38406,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Quest 10721 RewSpellCast serverside spell');
+(38406,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Quest 10721 RewSpellCast serverside spell'),
+(44805,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Aura used in creature_addon - serverside spell');
 /*!40000 ALTER TABLE `spell_dbc` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -17770,7 +17771,10 @@ INSERT INTO `spell_group` (`id`, `spell_id`) VALUES
 (1109, 72590), -- Fortitude (Scroll)
 -- Immolate / Unstable Affliction
 (1112, 348),
-(1112, 30108);
+(1112, 30108),
+-- Amplify Magic / Dampen Magic
+(1113, 1008),
+(1113, 604);
 
 /*!40000 ALTER TABLE `spell_group` ENABLE KEYS */;
 UNLOCK TABLES;
@@ -18105,7 +18109,11 @@ INSERT INTO `spell_linked_spell` (`spell_trigger`,`spell_effect`,`type`,`comment
 ( 69377, 72590, 1, 'Runescroll of Fortitude'),
 ( 50141, 50001, 0, 'Blood Oath to Blood Oath Aura'),
 ( 61263, 61267, 0, 'Intravenous Healing Effect'),
-( 61263, 61268, 0, 'Intravenous Mana Regeneration Effect');
+( 61263, 61268, 0, 'Intravenous Mana Regeneration Effect'),
+-- PvP Trinket / Every Man for Himself / Will of the Forsaken
+(7744, 72757, 0, 'Will of the Forsaken Cooldown Trigger (WOTF)'),
+(42292, 72752, 0, 'Will of the Forsaken Cooldown Trigger'),
+(59752, 72752, 0, 'Will of the Forsaken Cooldown Trigger');
 /*!40000 ALTER TABLE `spell_linked_spell` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -18961,8 +18969,8 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 53381, 0x00,  10, 0x00800000, 0x00020000, 0x00000000, 0x00000000, 0x00040002,   0,   0,   0), -- Righteous Vengeance (Rank 2)
 ( 53382, 0x00,  10, 0x00800000, 0x00020000, 0x00000000, 0x00000000, 0x00040002,   0,   0,   0), -- Righteous Vengeance (Rank 3)
 ( 53397, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Invigoration (Rank 1)
-( 53486, 0x00,  10, 0x00800000, 0x00028000, 0x00000000, 0x00000004, 0x00040002,   0,   0,   0), -- The Art of War (Rank 1)
-( 53488, 0x00,  10, 0x00800000, 0x00028000, 0x00000000, 0x00000004, 0x00040002,   0,   0,   0), -- The Art of War (Rank 2)
+( 53486, 0x00,  10, 0x00800000, 0x00028000, 0x00000000, 0x00000000, 0x00040002,   0,   0,   0), -- The Art of War (Rank 1)
+( 53488, 0x00,  10, 0x00800000, 0x00028000, 0x00000000, 0x00000000, 0x00040002,   0,   0,   0), -- The Art of War (Rank 2)
 ( 53501, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Sheath of Light (Rank 1)
 ( 53502, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Sheath of Light (Rank 2)
 ( 53503, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Sheath of Light (Rank 3)
@@ -19104,7 +19112,6 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 63108, 0x00,   5, 0x00000002, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Siphon Life
 ( 63158, 0x00,   5, 0x00000001, 0x000000C0, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Decimation
 ( 63156, 0x00,   5, 0x00000001, 0x000000C0, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Decimation
-( 63280, 0x00,  11, 0x20000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Glyph ofTotem of Wrath
 ( 64343, 0x00,   3, 0x00000002, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Impact
 ( 64976, 0x00,   4, 0x00000001, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Juggernaut
 ( 64914, 0x00,   8, 0x00010000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Item - Rogue T8 2P Bonus
@@ -19282,7 +19289,13 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 72413, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  60), -- Item - Icecrown Reputation Ring Melee
 ( 72419, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  60), -- Item - Icecrown Reputation Ring Healer Trigger
 ( 71404, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,  45), -- Item - Icecrown Dungeon Melee Trinket
-( 71564, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0); -- Nevermelting Ice Crystal
+( 71564, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Nevermelting Ice Crystal
+ (71545, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,  50,   0), -- Tiny Abomination in a Jar (Heroic)
+( 71406, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,  50,   0), -- Tiny Abomination in a Jar
+( 75474, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Charred Twilight Scale (Heroic)
+( 75465, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Charred Twilight Scale
+( 75457, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Sharpened Twilight Scale (Heroic)
+( 75455, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45); -- Sharpened Twilight Scale
 /*!40000 ALTER TABLE `spell_proc_event` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -19430,7 +19443,8 @@ INSERT INTO spell_group_stack_rules (`group_id`, `stack_rule`) VALUES
 (1108,1),
 (1109,1),
 (1110,1),
-(1112,2);
+(1112,2),
+(1113,1);
 
 /*!40000 ALTER TABLE `spell_group_stack_rules` ENABLE KEYS */;
 UNLOCK TABLES;
@@ -26707,6 +26721,14 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 -- generic
 ( 58601, 'spell_gen_remove_flight_auras'),
 (  6962, 'spell_gen_pet_summoned'),
+( 29266, 'spell_creature_permanent_feign_death'),
+( 57685, 'spell_creature_permanent_feign_death'),
+( 58951, 'spell_creature_permanent_feign_death'),
+( 70592, 'spell_creature_permanent_feign_death'),
+( 70628, 'spell_creature_permanent_feign_death'),
+( 74490, 'spell_creature_permanent_feign_death'),
+( 72752, 'spell_pvp_trinket_wotf_shared_cd'),
+( 72757, 'spell_pvp_trinket_wotf_shared_cd'),
 -- instances
 ( 69057, 'spell_marrowgar_bone_spike_graveyard'),
 ( 69140, 'spell_marrowgar_coldflame'),
@@ -27642,6 +27664,7 @@ INSERT INTO `trinity_string` (`entry`,`content_default`,`content_loc1`,`content_
 (5026, 'DisplayID: %u', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (5027, 'Name: %s', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (5028, 'Lootid: %u', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(5029, 'Result limit reached (max results: %d)', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (6604, 'You cannot say, yell or emote until you become level %d.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (6605, 'You cannot whisper until you become level %d.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (6606, 'You cannot write to channels until you become level %d.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),

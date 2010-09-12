@@ -193,7 +193,7 @@ bool ChatHandler::HandleReloadAllGossipsCommand(const char* args)
    HandleReloadNpcGossipCommand("a");
    HandleReloadPointsOfInterestCommand("a");
    return true;
-}	
+}
 
 bool ChatHandler::HandleReloadAllItemCommand(const char*)
 {
@@ -294,7 +294,7 @@ bool ChatHandler::HandleReloadCreatureTemplateCommand(const char* args)
         return false;
 
     uint32 entry = (uint32) atoi((char*)args);
-    QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT difficulty_entry_1,difficulty_entry_2,difficulty_entry_3,KillCredit1,KillCredit2,modelid1,modelid2,modelid3,modelid4,name,subname,IconName,gossip_menu_id,minlevel,maxlevel,exp,faction_A,faction_H,npcflag,speed_walk,speed_run,scale,rank,mindmg,maxdmg,dmgschool,attackpower,dmg_multiplier,baseattacktime,rangeattacktime,unit_class,unit_flags,dynamicflags,family,trainer_type,trainer_spell,trainer_class,trainer_race,minrangedmg,maxrangedmg,rangedattackpower,type,type_flags,lootid,pickpocketloot,skinloot,resistance1,resistance2,resistance3,resistance4,resistance5,resistance6,spell1,spell2,spell3,spell4,spell5,spell6,spell7,spell8,PetSpellDataId,VehicleId,mingold,maxgold,AIName,MovementType,InhabitType,Health_mod,Mana_mod,Armor_mod,RacialLeader,questItem1,questItem2,questItem3,questItem4,questItem5,questItem6,movementId,RegenHealth,equipment_id,mechanic_immune_mask,flags_extra,ScriptName FROM creature_template WHERE entry = %u", entry);
+    QueryResult result = WorldDatabase.PQuery("SELECT difficulty_entry_1,difficulty_entry_2,difficulty_entry_3,KillCredit1,KillCredit2,modelid1,modelid2,modelid3,modelid4,name,subname,IconName,gossip_menu_id,minlevel,maxlevel,exp,faction_A,faction_H,npcflag,speed_walk,speed_run,scale,rank,mindmg,maxdmg,dmgschool,attackpower,dmg_multiplier,baseattacktime,rangeattacktime,unit_class,unit_flags,dynamicflags,family,trainer_type,trainer_spell,trainer_class,trainer_race,minrangedmg,maxrangedmg,rangedattackpower,type,type_flags,lootid,pickpocketloot,skinloot,resistance1,resistance2,resistance3,resistance4,resistance5,resistance6,spell1,spell2,spell3,spell4,spell5,spell6,spell7,spell8,PetSpellDataId,VehicleId,mingold,maxgold,AIName,MovementType,InhabitType,Health_mod,Mana_mod,Armor_mod,RacialLeader,questItem1,questItem2,questItem3,questItem4,questItem5,questItem6,movementId,RegenHealth,equipment_id,mechanic_immune_mask,flags_extra,ScriptName FROM creature_template WHERE entry = %u", entry);
     if (!result)
     {
         PSendSysMessage(LANG_COMMAND_CREATURETEMPLATE_NOTFOUND, entry);
@@ -1238,7 +1238,7 @@ bool ChatHandler::HandleAccountSetGmLevelCommand(const char *args)
     // Check and abort if the target gm has a higher rank on one of the realms and the new realm is -1
     if (gmRealmID == -1)
     {
-        QueryResult_AutoPtr result = LoginDatabase.PQuery("SELECT * FROM account_access WHERE id = '%u' AND gmlevel > '%d'", targetAccountId, gm);
+        QueryResult result = LoginDatabase.PQuery("SELECT * FROM account_access WHERE id = '%u' AND gmlevel > '%d'", targetAccountId, gm);
         if (result)
         {
             SendSysMessage(LANG_YOURS_SECURITY_IS_LOW);
@@ -2405,7 +2405,7 @@ bool ChatHandler::HandleAddItemCommand(const char *args)
         {
             std::string itemName = citemName+1;
             WorldDatabase.escape_string(itemName);
-            QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT entry FROM item_template WHERE name = '%s'", itemName.c_str());
+            QueryResult result = WorldDatabase.PQuery("SELECT entry FROM item_template WHERE name = '%s'", itemName.c_str());
             if (!result)
             {
                 PSendSysMessage(LANG_COMMAND_COULDNOTFIND, citemName+1);
@@ -2596,7 +2596,7 @@ bool ChatHandler::HandleListItemCommand(const char *args)
         return false;
     uint32 count = uint32(_count);
 
-    QueryResult_AutoPtr result;
+    QueryResult result;
 
     // inventory case
     uint32 inv_count = 0;
@@ -2661,7 +2661,7 @@ bool ChatHandler::HandleListItemCommand(const char *args)
             item_id, count);
     }
     else
-        result = QueryResult_AutoPtr(NULL);
+        result = QueryResult(NULL);
 
     if (result)
     {
@@ -2705,7 +2705,7 @@ bool ChatHandler::HandleListItemCommand(const char *args)
             item_id, count);
     }
     else
-        result = QueryResult_AutoPtr(NULL);
+        result = QueryResult(NULL);
 
     if (result)
     {
@@ -2801,7 +2801,7 @@ bool ChatHandler::HandleListObjectCommand(const char *args)
     if (count < 0)
         return false;
 
-    QueryResult_AutoPtr result;
+    QueryResult result;
 
     uint32 obj_count = 0;
     result=WorldDatabase.PQuery("SELECT COUNT(guid) FROM gameobject WHERE id='%u'",go_id);
@@ -2931,7 +2931,7 @@ bool ChatHandler::HandleListCreatureCommand(const char *args)
     if (count < 0)
         return false;
 
-    QueryResult_AutoPtr result;
+    QueryResult result;
 
     uint32 cr_count = 0;
     result=WorldDatabase.PQuery("SELECT COUNT(guid) FROM creature WHERE id='%u'",cr_id);
@@ -2985,6 +2985,8 @@ bool ChatHandler::HandleLookupItemCommand(const char *args)
     wstrToLower(wnamepart);
 
     bool found = false;
+    uint32 count = 0;
+    uint32 maxResults = sWorld.getIntConfig(CONFIG_MAX_RESULTS_LOOKUP_COMMANDS);
 
     // Search in `item_template`
     for (uint32 id = 0; id < sItemStorage.MaxEntry; id++)
@@ -3005,6 +3007,12 @@ bool ChatHandler::HandleLookupItemCommand(const char *args)
 
                     if (Utf8FitTo(name, wnamepart))
                     {
+                        if (maxResults && count++ == maxResults)
+                        {
+                            PSendSysMessage(LANG_COMMAND_LOOKUP_MAX_RESULTS, maxResults);
+                            return true;
+                        }
+
                         if (m_session)
                             PSendSysMessage(LANG_ITEM_LIST_CHAT, id, id, name.c_str());
                         else
@@ -3025,6 +3033,12 @@ bool ChatHandler::HandleLookupItemCommand(const char *args)
 
         if (Utf8FitTo(name, wnamepart))
         {
+            if (maxResults && count++ == maxResults)
+            {
+                PSendSysMessage(LANG_COMMAND_LOOKUP_MAX_RESULTS, maxResults);
+                return true;
+            }
+
             if (m_session)
                 PSendSysMessage(LANG_ITEM_LIST_CHAT, id, id, name.c_str());
             else
@@ -3056,6 +3070,8 @@ bool ChatHandler::HandleLookupItemSetCommand(const char *args)
     wstrToLower(wnamepart);
 
     bool found = false;
+    uint32 count = 0;
+    uint32 maxResults = sWorld.getIntConfig(CONFIG_MAX_RESULTS_LOOKUP_COMMANDS);
 
     // Search in ItemSet.dbc
     for (uint32 id = 0; id < sItemSetStore.GetNumRows(); id++)
@@ -3087,6 +3103,12 @@ bool ChatHandler::HandleLookupItemSetCommand(const char *args)
 
             if (loc < MAX_LOCALE)
             {
+                if (maxResults && count++ == maxResults)
+                {
+                    PSendSysMessage(LANG_COMMAND_LOOKUP_MAX_RESULTS, maxResults);
+                    return true;
+                }
+
                 // send item set in "id - [namedlink locale]" format
                 if (m_session)
                     PSendSysMessage(LANG_ITEMSET_LIST_CHAT,id,id,name.c_str(),localeNames[loc]);
@@ -3121,6 +3143,8 @@ bool ChatHandler::HandleLookupSkillCommand(const char *args)
     wstrToLower(wnamepart);
 
     bool found = false;
+    uint32 count = 0;
+    uint32 maxResults = sWorld.getIntConfig(CONFIG_MAX_RESULTS_LOOKUP_COMMANDS);
 
     // Search in SkillLine.dbc
     for (uint32 id = 0; id < sSkillLineStore.GetNumRows(); id++)
@@ -3152,6 +3176,12 @@ bool ChatHandler::HandleLookupSkillCommand(const char *args)
 
             if (loc < MAX_LOCALE)
             {
+                if (maxResults && count++ == maxResults)
+                {
+                    PSendSysMessage(LANG_COMMAND_LOOKUP_MAX_RESULTS, maxResults);
+                    return true;
+                }
+
                 char valStr[50] = "";
                 char const* knownStr = "";
                 if (target && target->HasSkill(id))
@@ -3200,6 +3230,8 @@ bool ChatHandler::HandleLookupSpellCommand(const char *args)
     wstrToLower(wnamepart);
 
     bool found = false;
+    uint32 count = 0;
+    uint32 maxResults = sWorld.getIntConfig(CONFIG_MAX_RESULTS_LOOKUP_COMMANDS);
 
     // Search in Spell.dbc
     for (uint32 id = 0; id < sSpellStore.GetNumRows(); id++)
@@ -3231,6 +3263,12 @@ bool ChatHandler::HandleLookupSpellCommand(const char *args)
 
             if (loc < MAX_LOCALE)
             {
+                if (maxResults && count++ == maxResults)
+                {
+                    PSendSysMessage(LANG_COMMAND_LOOKUP_MAX_RESULTS, maxResults);
+                    return true;
+                }
+
                 bool known = target && target->HasSpell(id);
                 bool learn = (spellInfo->Effect[0] == SPELL_EFFECT_LEARN_SPELL);
 
@@ -3301,6 +3339,8 @@ bool ChatHandler::HandleLookupQuestCommand(const char *args)
     wstrToLower(wnamepart);
 
     bool found = false;
+    uint32 count = 0;
+    uint32 maxResults = sWorld.getIntConfig(CONFIG_MAX_RESULTS_LOOKUP_COMMANDS);
 
     ObjectMgr::QuestMap const& qTemplates = sObjectMgr.GetQuestTemplates();
     for (ObjectMgr::QuestMap::const_iterator iter = qTemplates.begin(); iter != qTemplates.end(); ++iter)
@@ -3319,6 +3359,12 @@ bool ChatHandler::HandleLookupQuestCommand(const char *args)
 
                     if (Utf8FitTo(title, wnamepart))
                     {
+                        if (maxResults && count++ == maxResults)
+                        {
+                            PSendSysMessage(LANG_COMMAND_LOOKUP_MAX_RESULTS, maxResults);
+                            return true;
+                        }
+
                         char const* statusStr = "";
 
                         if (target)
@@ -3356,6 +3402,12 @@ bool ChatHandler::HandleLookupQuestCommand(const char *args)
 
         if (Utf8FitTo(title, wnamepart))
         {
+            if (maxResults && count++ == maxResults)
+            {
+                PSendSysMessage(LANG_COMMAND_LOOKUP_MAX_RESULTS, maxResults);
+                return true;
+            }
+
             char const* statusStr = "";
 
             if (target)
@@ -3404,6 +3456,8 @@ bool ChatHandler::HandleLookupCreatureCommand(const char *args)
     wstrToLower (wnamepart);
 
     bool found = false;
+    uint32 count = 0;
+    uint32 maxResults = sWorld.getIntConfig(CONFIG_MAX_RESULTS_LOOKUP_COMMANDS);
 
     for (uint32 id = 0; id< sCreatureStorage.MaxEntry; ++id)
     {
@@ -3423,6 +3477,12 @@ bool ChatHandler::HandleLookupCreatureCommand(const char *args)
 
                     if (Utf8FitTo (name, wnamepart))
                     {
+                        if (maxResults && count++ == maxResults)
+                        {
+                            PSendSysMessage(LANG_COMMAND_LOOKUP_MAX_RESULTS, maxResults);
+                            return true;
+                        }
+
                         if (m_session)
                             PSendSysMessage (LANG_CREATURE_ENTRY_LIST_CHAT, id, id, name.c_str ());
                         else
@@ -3443,6 +3503,12 @@ bool ChatHandler::HandleLookupCreatureCommand(const char *args)
 
         if (Utf8FitTo(name, wnamepart))
         {
+            if (maxResults && count++ == maxResults)
+            {
+                PSendSysMessage(LANG_COMMAND_LOOKUP_MAX_RESULTS, maxResults);
+                return true;
+            }
+
             if (m_session)
                 PSendSysMessage (LANG_CREATURE_ENTRY_LIST_CHAT, id, id, name.c_str ());
             else
@@ -3474,6 +3540,8 @@ bool ChatHandler::HandleLookupObjectCommand(const char *args)
     wstrToLower(wnamepart);
 
     bool found = false;
+    uint32 count = 0;
+    uint32 maxResults = sWorld.getIntConfig(CONFIG_MAX_RESULTS_LOOKUP_COMMANDS);
 
     for (uint32 id = 0; id< sGOStorage.MaxEntry; id++)
     {
@@ -3493,6 +3561,12 @@ bool ChatHandler::HandleLookupObjectCommand(const char *args)
 
                     if (Utf8FitTo(name, wnamepart))
                     {
+                        if (maxResults && count++ == maxResults)
+                        {
+                            PSendSysMessage(LANG_COMMAND_LOOKUP_MAX_RESULTS, maxResults);
+                            return true;
+                        }
+
                         if (m_session)
                             PSendSysMessage(LANG_GO_ENTRY_LIST_CHAT, id, id, name.c_str());
                         else
@@ -3513,6 +3587,12 @@ bool ChatHandler::HandleLookupObjectCommand(const char *args)
 
         if (Utf8FitTo(name, wnamepart))
         {
+            if (maxResults && count++ == maxResults)
+            {
+                PSendSysMessage(LANG_COMMAND_LOOKUP_MAX_RESULTS, maxResults);
+                return true;
+            }
+
             if (m_session)
                 PSendSysMessage(LANG_GO_ENTRY_LIST_CHAT, id, id, name.c_str());
             else
@@ -3547,6 +3627,8 @@ bool ChatHandler::HandleLookupFactionCommand(const char *args)
     wstrToLower (wnamepart);
 
     bool found = false;
+    uint32 count = 0;
+    uint32 maxResults = sWorld.getIntConfig(CONFIG_MAX_RESULTS_LOOKUP_COMMANDS);
 
     for (uint32 id = 0; id < sFactionStore.GetNumRows(); ++id)
     {
@@ -3579,6 +3661,12 @@ bool ChatHandler::HandleLookupFactionCommand(const char *args)
 
             if (loc < MAX_LOCALE)
             {
+                if (maxResults && count++ == maxResults)
+                {
+                    PSendSysMessage(LANG_COMMAND_LOOKUP_MAX_RESULTS, maxResults);
+                    return true;
+                }
+
                 // send faction in "id - [faction] rank reputation [visible] [at war] [own team] [unknown] [invisible] [inactive]" format
                 // or              "id - [faction] [no reputation]" format
                 std::ostringstream ss;
@@ -3638,6 +3726,8 @@ bool ChatHandler::HandleLookupTaxiNodeCommand(const char * args)
     wstrToLower(wnamepart);
 
     bool found = false;
+    uint32 count = 0;
+    uint32 maxResults = sWorld.getIntConfig(CONFIG_MAX_RESULTS_LOOKUP_COMMANDS);
 
     // Search in TaxiNodes.dbc
     for (uint32 id = 0; id < sTaxiNodesStore.GetNumRows(); id++)
@@ -3669,6 +3759,12 @@ bool ChatHandler::HandleLookupTaxiNodeCommand(const char * args)
 
             if (loc < MAX_LOCALE)
             {
+                if (maxResults && count++ == maxResults)
+                {
+                    PSendSysMessage(LANG_COMMAND_LOOKUP_MAX_RESULTS, maxResults);
+                    return true;
+                }
+
                 // send taxinode in "id - [name] (Map:m X:x Y:y Z:z)" format
                 if (m_session)
                     PSendSysMessage (LANG_TAXINODE_ENTRY_LIST_CHAT, id, id, name.c_str(),localeNames[loc],
@@ -5694,7 +5790,7 @@ bool ChatHandler::HandleBanInfoCharacterCommand(const char *args)
 
 bool ChatHandler::HandleBanInfoHelper(uint32 accountid, char const* accountname)
 {
-    QueryResult_AutoPtr result = LoginDatabase.PQuery("SELECT FROM_UNIXTIME(bandate), unbandate-bandate, active, unbandate,banreason,bannedby FROM account_banned WHERE id = '%u' ORDER BY bandate ASC",accountid);
+    QueryResult result = LoginDatabase.PQuery("SELECT FROM_UNIXTIME(bandate), unbandate-bandate, active, unbandate,banreason,bannedby FROM account_banned WHERE id = '%u' ORDER BY bandate ASC",accountid);
     if (!result)
     {
         PSendSysMessage(LANG_BANINFO_NOACCOUNTBAN, accountname);
@@ -5734,7 +5830,7 @@ bool ChatHandler::HandleBanInfoIPCommand(const char *args)
     std::string IP = cIP;
 
     LoginDatabase.escape_string(IP);
-    QueryResult_AutoPtr result = LoginDatabase.PQuery("SELECT ip, FROM_UNIXTIME(bandate), FROM_UNIXTIME(unbandate), unbandate-UNIX_TIMESTAMP(), banreason,bannedby,unbandate-bandate FROM ip_banned WHERE ip = '%s'",IP.c_str());
+    QueryResult result = LoginDatabase.PQuery("SELECT ip, FROM_UNIXTIME(bandate), FROM_UNIXTIME(unbandate), unbandate-UNIX_TIMESTAMP(), banreason,bannedby,unbandate-bandate FROM ip_banned WHERE ip = '%s'",IP.c_str());
     if (!result)
     {
         PSendSysMessage(LANG_BANINFO_NOIP);
@@ -5760,7 +5856,7 @@ bool ChatHandler::HandleBanListCharacterCommand(const char *args)
 
     std::string filter = cFilter;
     LoginDatabase.escape_string(filter);
-    QueryResult_AutoPtr result = CharacterDatabase.PQuery("SELECT account FROM characters WHERE name "_LIKE_" "_CONCAT3_("'%%'","'%s'","'%%'"),filter.c_str());
+    QueryResult result = CharacterDatabase.PQuery("SELECT account FROM characters WHERE name "_LIKE_" "_CONCAT3_("'%%'","'%s'","'%%'"),filter.c_str());
     if (!result)
     {
         PSendSysMessage(LANG_BANLIST_NOCHARACTER);
@@ -5778,7 +5874,7 @@ bool ChatHandler::HandleBanListAccountCommand(const char *args)
     std::string filter = cFilter ? cFilter : "";
     LoginDatabase.escape_string(filter);
 
-    QueryResult_AutoPtr result;
+    QueryResult result;
 
     if (filter.empty())
     {
@@ -5801,7 +5897,7 @@ bool ChatHandler::HandleBanListAccountCommand(const char *args)
     return HandleBanListHelper(result);
 }
 
-bool ChatHandler::HandleBanListHelper(QueryResult_AutoPtr result)
+bool ChatHandler::HandleBanListHelper(QueryResult result)
 {
     PSendSysMessage(LANG_BANLIST_MATCHINGACCOUNT);
 
@@ -5813,7 +5909,7 @@ bool ChatHandler::HandleBanListHelper(QueryResult_AutoPtr result)
             Field* fields = result->Fetch();
             uint32 accountid = fields[0].GetUInt32();
 
-            QueryResult_AutoPtr banresult = LoginDatabase.PQuery("SELECT account.username FROM account,account_banned WHERE account_banned.id='%u' AND account_banned.id=account.id",accountid);
+            QueryResult banresult = LoginDatabase.PQuery("SELECT account.username FROM account,account_banned WHERE account_banned.id='%u' AND account_banned.id=account.id",accountid);
             if (banresult)
             {
                 Field* fields2 = banresult->Fetch();
@@ -5843,7 +5939,7 @@ bool ChatHandler::HandleBanListHelper(QueryResult_AutoPtr result)
                 sAccountMgr.GetName (account_id,account_name);
 
             // No SQL injection. id is uint32.
-            QueryResult_AutoPtr banInfo = LoginDatabase.PQuery("SELECT bandate,unbandate,bannedby,banreason FROM account_banned WHERE id = %u ORDER BY unbandate", account_id);
+            QueryResult banInfo = LoginDatabase.PQuery("SELECT bandate,unbandate,bannedby,banreason FROM account_banned WHERE id = %u ORDER BY unbandate", account_id);
             if (banInfo)
             {
                 Field *fields2 = banInfo->Fetch();
@@ -5883,7 +5979,7 @@ bool ChatHandler::HandleBanListIPCommand(const char *args)
     std::string filter = cFilter ? cFilter : "";
     LoginDatabase.escape_string(filter);
 
-    QueryResult_AutoPtr result;
+    QueryResult result;
 
     if (filter.empty())
     {
@@ -6614,11 +6710,11 @@ bool ChatHandler::HandleInstanceUnbindCommand(const char *args)
         diff = atoi(pDiff);
     uint16 counter = 0;
     int16 MapId = 0;
-	
+
     if (strcmp(pMap, "all"))
         if (!(MapId = atoi(pMap)))
             return false;
-	
+
     for(uint8 i = 0; i < MAX_DIFFICULTY; ++i)
     {
         Player::BoundInstancesMap &binds = player->GetBoundInstances(Difficulty(i));
@@ -6677,7 +6773,7 @@ bool ChatHandler::HandleInstanceSaveDataCommand(const char * /*args*/)
 bool ChatHandler::HandleGMListFullCommand(const char* /*args*/)
 {
     ///- Get the accounts with GM Level >0
-    QueryResult_AutoPtr result = LoginDatabase.Query("SELECT a.username,aa.gmlevel FROM account a, account_access aa WHERE a.id=aa.id AND aa.gmlevel > 0");
+    QueryResult result = LoginDatabase.Query("SELECT a.username,aa.gmlevel FROM account a, account_access aa WHERE a.id=aa.id AND aa.gmlevel > 0");
     if (result)
     {
         SendSysMessage(LANG_GMLIST);
@@ -7206,7 +7302,7 @@ bool ChatHandler::HandleUnFreezeCommand(const char *args)
         if (TargetName)
         {
             //check for offline players
-            QueryResult_AutoPtr result = CharacterDatabase.PQuery("SELECT characters.guid FROM characters WHERE characters.name = '%s'",name.c_str());
+            QueryResult result = CharacterDatabase.PQuery("SELECT characters.guid FROM characters WHERE characters.name = '%s'",name.c_str());
             if (!result)
             {
                 SendSysMessage(LANG_COMMAND_FREEZE_WRONG);
@@ -7233,7 +7329,7 @@ bool ChatHandler::HandleUnFreezeCommand(const char *args)
 bool ChatHandler::HandleListFreezeCommand(const char * /*args*/)
 {
     //Get names from DB
-    QueryResult_AutoPtr result = CharacterDatabase.Query("SELECT characters.name FROM characters LEFT JOIN character_aura ON (characters.guid = character_aura.guid) WHERE character_aura.spell = 9454");
+    QueryResult result = CharacterDatabase.Query("SELECT characters.name FROM characters LEFT JOIN character_aura ON (characters.guid = character_aura.guid) WHERE character_aura.spell = 9454");
     if (!result)
     {
         SendSysMessage(LANG_COMMAND_NO_FROZEN_PLAYERS);
@@ -7290,7 +7386,7 @@ bool ChatHandler::HandleGroupRemoveCommand(const char *args)
 
     if (GetPlayerGroupAndGUIDByName(cname, plr, group, guid, true))
         if (group)
-            group->RemoveMember(guid, 0);
+            group->RemoveMember(guid);
 
     return true;
 }

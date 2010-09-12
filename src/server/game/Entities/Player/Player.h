@@ -1022,7 +1022,7 @@ class Player : public Unit, public GridObject<Player>
 
         void Update(uint32 time);
 
-        static bool BuildEnumData(QueryResult_AutoPtr result,  WorldPacket * p_data);
+        static bool BuildEnumData(QueryResult result,  WorldPacket * p_data);
 
         void SetInWater(bool apply);
 
@@ -1194,6 +1194,7 @@ class Player : public Unit, public GridObject<Player>
         bool StoreNewItemInBestSlots(uint32 item_id, uint32 item_count);
         void AutoStoreLoot(uint8 bag, uint8 slot, uint32 loot_id, LootStore const& store, bool broadcast = false);
         void AutoStoreLoot(uint32 loot_id, LootStore const& store, bool broadcast = false) { AutoStoreLoot(NULL_BAG,NULL_SLOT,loot_id,store,broadcast); }
+        void StoreLootItem(uint8 lootSlot, Loot* loot);
 
         uint8 _CanTakeMoreSimilarItems(uint32 entry, uint32 count, Item* pItem, uint32* no_space_count = NULL) const;
         uint8 _CanStoreItem(uint8 bag, uint8 slot, ItemPosCountVec& dest, uint32 entry, uint32 count, Item *pItem = NULL, bool swap = false, uint32* no_space_count = NULL) const;
@@ -1540,7 +1541,7 @@ class Player : public Unit, public GridObject<Player>
         bool IsSpellFitByClassAndRace(uint32 spell_id) const;
         bool IsNeedCastPassiveSpellAtLearn(SpellEntry const* spellInfo) const;
 
-        void SendProficiency(uint8 pr1, uint32 pr2);
+        void SendProficiency(ItemClass itemClass, uint32 itemSubclassMask);
         void SendInitialSpells();
         bool addSpell(uint32 spell_id, bool active, bool learning, bool dependent, bool disabled);
         void learnSpell(uint32 spell_id, bool dependent);
@@ -1630,7 +1631,7 @@ class Player : public Unit, public GridObject<Player>
         void RemoveCategoryCooldown(uint32 cat);
         void RemoveArenaSpellCooldowns();
         void RemoveAllSpellCooldown();
-        void _LoadSpellCooldowns(QueryResult_AutoPtr result);
+        void _LoadSpellCooldowns(QueryResult result);
         void _SaveSpellCooldowns(SQLTransaction& trans);
         void SetLastPotionId(uint32 item_id) { m_lastPotionId = item_id; }
         void UpdatePotionCooldown(Spell* spell = NULL);
@@ -2251,7 +2252,7 @@ class Player : public Unit, public GridObject<Player>
         void RemoveAtLoginFlag(AtLoginFlags f, bool in_db_also = false);
 
         // Dungeon Finder
-        bool isLfgDungeonDone(const uint32 entry) { return m_LookingForGroup.donerandomDungeons.find(entry) != m_LookingForGroup.donerandomDungeons.end(); }  
+        bool isLfgDungeonDone(const uint32 entry) { return m_LookingForGroup.donerandomDungeons.find(entry) != m_LookingForGroup.donerandomDungeons.end(); }
         LfgDungeonSet *GetLfgDungeons() { return &m_LookingForGroup.applyDungeons; }
         LfgDungeonSet *GetLfgDungeonsDone() { return &m_LookingForGroup.donerandomDungeons; }
         void SetLfgDungeonDone(const uint32 entry) { m_LookingForGroup.donerandomDungeons.insert(entry); }
@@ -2415,30 +2416,30 @@ class Player : public Unit, public GridObject<Player>
         /***                   LOAD SYSTEM                     ***/
         /*********************************************************/
 
-        void _LoadActions(QueryResult_AutoPtr result);
-        void _LoadAuras(QueryResult_AutoPtr result, uint32 timediff);
+        void _LoadActions(QueryResult result);
+        void _LoadAuras(QueryResult result, uint32 timediff);
         void _LoadGlyphAuras();
-        void _LoadBoundInstances(QueryResult_AutoPtr result);
-        void _LoadInventory(QueryResult_AutoPtr result, uint32 timediff);
-        void _LoadMailInit(QueryResult_AutoPtr resultUnread, QueryResult_AutoPtr resultDelivery);
+        void _LoadBoundInstances(QueryResult result);
+        void _LoadInventory(QueryResult result, uint32 timediff);
+        void _LoadMailInit(QueryResult resultUnread, QueryResult resultDelivery);
         void _LoadMail();
         void _LoadMailedItems(Mail *mail);
-        void _LoadQuestStatus(QueryResult_AutoPtr result);
-        void _LoadDailyQuestStatus(QueryResult_AutoPtr result);
-        void _LoadWeeklyQuestStatus(QueryResult_AutoPtr result);
-        void _LoadRandomBGStatus(QueryResult_AutoPtr result);
-        void _LoadGroup(QueryResult_AutoPtr result);
-        void _LoadSkills(QueryResult_AutoPtr result);
-        void _LoadSpells(QueryResult_AutoPtr result);
-        void _LoadFriendList(QueryResult_AutoPtr result);
-        bool _LoadHomeBind(QueryResult_AutoPtr result);
-        void _LoadDeclinedNames(QueryResult_AutoPtr result);
-        void _LoadArenaTeamInfo(QueryResult_AutoPtr result);
-        void _LoadArenaStatsInfo(QueryResult_AutoPtr result);
-        void _LoadEquipmentSets(QueryResult_AutoPtr result);
-        void _LoadBGData(QueryResult_AutoPtr result);
-        void _LoadGlyphs(QueryResult_AutoPtr result);
-        void _LoadTalents(QueryResult_AutoPtr result);
+        void _LoadQuestStatus(QueryResult result);
+        void _LoadDailyQuestStatus(QueryResult result);
+        void _LoadWeeklyQuestStatus(QueryResult result);
+        void _LoadRandomBGStatus(QueryResult result);
+        void _LoadGroup(QueryResult result);
+        void _LoadSkills(QueryResult result);
+        void _LoadSpells(QueryResult result);
+        void _LoadFriendList(QueryResult result);
+        bool _LoadHomeBind(QueryResult result);
+        void _LoadDeclinedNames(QueryResult result);
+        void _LoadArenaTeamInfo(QueryResult result);
+        void _LoadArenaStatsInfo(QueryResult result);
+        void _LoadEquipmentSets(QueryResult result);
+        void _LoadBGData(QueryResult result);
+        void _LoadGlyphs(QueryResult result);
+        void _LoadTalents(QueryResult result);
 
         /*********************************************************/
         /***                   SAVE SYSTEM                     ***/

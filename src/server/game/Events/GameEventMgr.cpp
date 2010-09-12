@@ -198,7 +198,7 @@ void GameEventMgr::StopEvent(uint16 event_id, bool overwrite)
 void GameEventMgr::LoadFromDB()
 {
     {
-        QueryResult_AutoPtr result = WorldDatabase.Query("SELECT MAX(entry) FROM game_event");
+        QueryResult result = WorldDatabase.Query("SELECT MAX(entry) FROM game_event");
         if (!result)
         {
             sLog.outString(">> Table game_event is empty.");
@@ -213,7 +213,7 @@ void GameEventMgr::LoadFromDB()
         mGameEvent.resize(max_event_id+1);
     }
 
-    QueryResult_AutoPtr result = WorldDatabase.Query("SELECT entry,UNIX_TIMESTAMP(start_time),UNIX_TIMESTAMP(end_time),occurence,length,holiday,description,world_event FROM game_event");
+    QueryResult result = WorldDatabase.Query("SELECT entry,UNIX_TIMESTAMP(start_time),UNIX_TIMESTAMP(end_time),occurence,length,holiday,description,world_event FROM game_event");
     if (!result)
     {
         mGameEvent.clear();
@@ -1074,7 +1074,7 @@ uint32 GameEventMgr::Initialize()                           // return the next e
 
 void GameEventMgr::StartArenaSeason()
 {
-    QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT event FROM season_linked_event WHERE season = '%i'",sWorld.getIntConfig(CONFIG_ARENA_SEASON_ID));
+    QueryResult result = WorldDatabase.PQuery("SELECT event FROM season_linked_event WHERE season = '%i'",sWorld.getIntConfig(CONFIG_ARENA_SEASON_ID));
 
     if (!result)
     {

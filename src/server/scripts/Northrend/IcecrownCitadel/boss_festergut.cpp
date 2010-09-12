@@ -52,8 +52,8 @@ enum eSpells
 };
 
 // Used for HasAura checks
-#define PUNGENT_BLIGHT_HELPER RAID_MODE(69195,71219,73031,73032)
-#define INOCULATED_HELPER     RAID_MODE(69291,72101,72102,72103)
+#define PUNGENT_BLIGHT_HELPER RAID_MODE<uint32>(69195,71219,73031,73032)
+#define INOCULATED_HELPER     RAID_MODE<uint32>(69291,72101,72102,72103)
 
 static const uint32 gaseousBlight[3]        = {69157, 69162, 69164};
 static const uint32 gaseousBlightVisual[3]  = {69126, 69152, 69154};
@@ -304,7 +304,7 @@ class npc_stinky_icc : public CreatureScript
                 DoMeleeAttackIfReady();
             }
 
-            void JustDied(Unit* who)
+            void JustDied(Unit* /*who*/)
             {
                 uint64 festergutGUID = pInstance ? pInstance->GetData64(DATA_FESTERGUT) : 0;
                 if (Creature *festergut = me->GetCreature(*me, festergutGUID))
@@ -329,7 +329,7 @@ class spell_festergut_pungent_blight : public SpellScriptLoader
 
         class spell_festergut_pungent_blight_SpellScript : public SpellScript
         {
-            void HandleScript(SpellEffIndex effIndex)
+            void HandleScript(SpellEffIndex /*effIndex*/)
             {
                 SpellEntry const* spellInfo = sSpellStore.LookupEntry(GetEffectValue());
                 if (!spellInfo)
@@ -362,7 +362,7 @@ class spell_festergut_gastric_bloat : public SpellScriptLoader
 
         class spell_festergut_gastric_bloat_SpellScript : public SpellScript
         {
-            void HandleScript(SpellEffIndex effIndex)
+            void HandleScript(SpellEffIndex /*effIndex*/)
             {
                 Aura const* aura = GetHitUnit()->GetAura(GetSpellInfo()->Id);
                 if (!(aura && aura->GetStackAmount() == 10))

@@ -54,7 +54,7 @@ enum ePhases
 
 enum ePoints
 {
-    POINT_FESTERGUT = -366260,
+    POINT_FESTERGUT = 366260,
 };
 
 static const Position festergutWatchPos = {4324.82f, 3166.03f, 389.3831f, 3.316126f}; //emote 432 (release gas)
@@ -183,7 +183,7 @@ class spell_stinky_precious_decimate : public SpellScriptLoader
 
         class spell_stinky_precious_decimate_SpellScript : public SpellScript
         {
-            void HandleScript(SpellEffIndex effIndex)
+            void HandleScript(SpellEffIndex /*effIndex*/)
             {
                 if (GetHitUnit()->GetHealthPct() > float(GetEffectValue()))
                 {

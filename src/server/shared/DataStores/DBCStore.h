@@ -50,7 +50,7 @@ struct SqlDbc
         DBCFileLoader::GetFormatRecordSize(fmt, &indexPos);
         if (indexPos >= 0)
         {
-			uint32 uindexPos = uint32(indexPos);
+            uint32 uindexPos = uint32(indexPos);
             for (uint32 x = 0; x < formatString->size(); ++x)
             {
                 // Count only fields present in sql
@@ -88,7 +88,7 @@ class DBCStorage
             uint32 sqlRecordCount = 0;
             uint32 sqlHighestIndex = 0;
             Field *fields = NULL;
-            QueryResult_AutoPtr result = QueryResult_AutoPtr(NULL);
+            QueryResult result = QueryResult(NULL);
             // Load data from sql
             if (sql)
             {

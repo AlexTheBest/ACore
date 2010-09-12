@@ -59,7 +59,6 @@ typedef std::map<RepListID,FactionState> FactionStateList;
 typedef std::map<uint32,ReputationRank> ForcedReactions;
 
 class Player;
-class QueryResult;
 
 class ReputationMgr
 {
@@ -69,7 +68,7 @@ class ReputationMgr
         ~ReputationMgr() {}
 
         void SaveToDB(SQLTransaction& trans);
-        void LoadFromDB(QueryResult_AutoPtr result);
+        void LoadFromDB(QueryResult result);
     public:                                                 // statics
         static const int32 PointsInRank[MAX_REPUTATION_RANK];
         static const int32 Reputation_Cap    =  42999;
@@ -103,8 +102,8 @@ class ReputationMgr
         ReputationRank GetBaseRank(FactionEntry const* factionEntry) const;
         uint32 GetReputationRankStrIndex(FactionEntry const* factionEntry)
         {
-			return ReputationRankStrIndex[GetRank(factionEntry)];
-		};
+            return ReputationRankStrIndex[GetRank(factionEntry)];
+        };
 
         ReputationRank const* GetForcedRankIfAny(FactionTemplateEntry const* factionTemplateEntry) const
         {

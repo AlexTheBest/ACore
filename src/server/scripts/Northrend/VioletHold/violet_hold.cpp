@@ -447,6 +447,9 @@ public:
             me->SetReactState(REACT_PASSIVE);
             if (pInstance && !uiBoss)
                 uiBoss = pInstance->GetData(DATA_WAVE_COUNT) == 6 ? pInstance->GetData(DATA_FIRST_BOSS) : pInstance->GetData(DATA_SECOND_BOSS);
+            me->SetReactState(REACT_PASSIVE);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_OOC_NOT_ATTACKABLE|UNIT_FLAG_NON_ATTACKABLE);
+            me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
         }
 
         void WaypointReached(uint32 uiWPointId)
