@@ -541,7 +541,8 @@ class Creature : public Unit, public GridObject<Creature>
         bool lootForPickPocketed;
         bool lootForBody;
         Player *GetLootRecipient() const;
-        bool hasLootRecipient() const { return m_lootRecipient != 0; }
+        Group *GetLootRecipientGroup() const;
+        bool hasLootRecipient() const { return m_lootRecipient || m_lootRecipientGroup; }
         bool isTappedBy(Player *player) const;                          // return true if the creature is tapped by the player or a member of his party.
 
         void SetLootRecipient (Unit* unit);
@@ -589,7 +590,7 @@ class Creature : public Unit, public GridObject<Creature>
 
         bool IsVisibleInGridForPlayer(Player const* pl) const;
 
-        void RemoveCorpse();
+        void RemoveCorpse(bool setSpawnTime = true);
         bool isDeadByDefault() const { return m_isDeadByDefault; };
 
         void ForcedDespawn(uint32 timeMSToDespawn = 0);
@@ -682,9 +683,10 @@ class Creature : public Unit, public GridObject<Creature>
 
         uint32 m_lootMoney;
         uint64 m_lootRecipient;
+        uint32 m_lootRecipientGroup;
 
         /// Timers
-        uint32 m_deathTimer;                                // (msecs)timer for death or corpse disappearance
+        time_t m_corpseRemoveTime;                          // (msecs)timer for death or corpse disappearance
         time_t m_respawnTime;                               // (secs) time of next respawn
         uint32 m_respawnDelay;                              // (secs) delay between corpse disappearance and respawning
         uint32 m_corpseDelay;                               // (secs) delay between death and corpse disappearance

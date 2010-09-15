@@ -1332,6 +1332,8 @@ class Unit : public WorldObject
         uint32 GetRangedDamageReduction(uint32 damage) const { return GetCombatRatingDamageReduction(CR_CRIT_TAKEN_RANGED, 2.0f, 100.0f, damage); }
         uint32 GetSpellDamageReduction(uint32 damage) const { return GetCombatRatingDamageReduction(CR_CRIT_TAKEN_SPELL, 2.0f, 100.0f, damage); }
 
+        void ApplyResilience(const Unit * pVictim, float * crit, int32 * damage, bool isCrit, CombatRating type) const;
+
         float MeleeSpellMissChance(const Unit *pVictim, WeaponAttackType attType, int32 skillDiff, uint32 spellId) const;
         SpellMissInfo MeleeSpellHitResult(Unit *pVictim, SpellEntry const *spell);
         SpellMissInfo MagicSpellHitResult(Unit *pVictim, SpellEntry const *spell);
@@ -1411,7 +1413,7 @@ class Unit : public WorldObject
         bool isFrozen() const;
 
         bool isTargetableForAttack() const;
-        bool isAttackableByAOE() const;
+        bool isAttackableByAOE(bool requireDeadTarget = false) const;
         bool canAttack(Unit const* target, bool force = true) const;
         virtual bool IsInWater() const;
         virtual bool IsUnderWater() const;
@@ -1638,6 +1640,10 @@ class Unit : public WorldObject
         bool HasAuraTypeWithAffectMask(AuraType auratype, SpellEntry const * affectedSpell) const;
         bool HasAuraTypeWithValue(AuraType auratype, int32 value) const;
         bool HasNegativeAuraWithInterruptFlag(uint32 flag, uint64 guid = 0);
+        bool HasCrowdControl() {
+            return (HasAuraType(SPELL_AURA_MOD_CONFUSE) || HasAuraType(SPELL_AURA_MOD_FEAR) || HasAuraType(SPELL_AURA_MOD_STUN) ||
+                    HasAuraType(SPELL_AURA_MOD_ROOT) || HasAuraType(SPELL_AURA_TRANSFORM));
+        }
 
         AuraEffect * IsScriptOverriden(SpellEntry const * spell, int32 script) const;
         uint32 GetDiseasesByCaster(uint64 casterGUID, bool remove = false);

@@ -468,6 +468,7 @@ void World::LoadConfigSettings(bool reload)
     rate_values[RATE_DROP_ITEM_LEGENDARY]  = sConfig.GetFloatDefault("Rate.Drop.Item.Legendary", 1.0f);
     rate_values[RATE_DROP_ITEM_ARTIFACT]   = sConfig.GetFloatDefault("Rate.Drop.Item.Artifact", 1.0f);
     rate_values[RATE_DROP_ITEM_REFERENCED] = sConfig.GetFloatDefault("Rate.Drop.Item.Referenced", 1.0f);
+    rate_values[RATE_DROP_ITEM_REFERENCED_AMOUNT] = sConfig.GetFloatDefault("Rate.Drop.Item.ReferencedAmount", 1.0f);
     rate_values[RATE_DROP_MONEY]  = sConfig.GetFloatDefault("Rate.Drop.Money", 1.0f);
     rate_values[RATE_XP_KILL]     = sConfig.GetFloatDefault("Rate.XP.Kill", 1.0f);
     rate_values[RATE_XP_QUEST]    = sConfig.GetFloatDefault("Rate.XP.Quest", 1.0f);
@@ -1578,20 +1579,17 @@ void World::SetInitialWorldSettings()
     sLog.outString("Loading Vehicle Accessories...");
     sObjectMgr.LoadVehicleAccessories();                        // must be after LoadCreatureTemplates()
 
-    sLog.outString("Loading Creature Respawn Data...");     // must be after PackInstances()
+    sLog.outString("Loading Creature Respawn Data...");         // must be after PackInstances()
     sObjectMgr.LoadCreatureRespawnTimes();
 
     sLog.outString("Loading Gameobject Data...");
     sObjectMgr.LoadGameobjects();
 
-    sLog.outString("Loading Gameobject Respawn Data...");   // must be after PackInstances()
+    sLog.outString("Loading Gameobject Respawn Data...");       // must be after PackInstances()
     sObjectMgr.LoadGameobjectRespawnTimes();
 
     sLog.outString("Loading Objects Pooling Data...");
     sPoolMgr.LoadFromDB();
-
-    sLog.outString("Loading Game Event Data...");
-    sGameEventMgr.LoadFromDB();
 
     sLog.outString("Loading Weather Data...");
     sWeatherMgr.LoadWeatherData();
@@ -1600,13 +1598,19 @@ void World::SetInitialWorldSettings()
     sObjectMgr.LoadQuests();                                    // must be loaded after DBCs, creature_template, item_template, gameobject tables
 
     sLog.outString("Checking Quest Disables");
-    sDisableMgr.CheckQuestDisables();                       // must be after loading quests
+    sDisableMgr.CheckQuestDisables();                           // must be after loading quests
 
     sLog.outString("Loading Quest POI");
     sObjectMgr.LoadQuestPOI();
 
     sLog.outString("Loading Quests Relations...");
     sObjectMgr.LoadQuestRelations();                            // must be after quest load
+
+    sLog.outString("Loading Quest Pooling Data...");
+    sPoolMgr.LoadQuestPools();
+
+    sLog.outString("Loading Game Event Data...");               // must be after loading pools fully
+    sGameEventMgr.LoadFromDB();
 
     sLog.outString("Loading Dungeon boss data...");
     sLFGMgr.LoadDungeonEncounters();
@@ -1899,6 +1903,9 @@ void World::SetInitialWorldSettings()
     sLog.outString("Deleting expired bans...");
     LoginDatabase.Execute("DELETE FROM ip_banned WHERE unbandate <= UNIX_TIMESTAMP() AND unbandate<>bandate");
 
+    sLog.outString("Starting objects Pooling system...");
+    sPoolMgr.Initialize();
+
     sLog.outString("Calculate next daily quest reset time...");
     InitDailyQuestResetTime();
 
@@ -1907,9 +1914,6 @@ void World::SetInitialWorldSettings()
 
     sLog.outString("Calculate random battleground reset time..." );
     InitRandomBGResetTime();
-
-    sLog.outString("Starting objects Pooling system...");
-    sPoolMgr.Initialize();
 
     // possibly enable db logging; avoid massive startup spam by doing it here.
     if (sLog.GetLogDBLater())
@@ -2795,6 +2799,9 @@ void World::ResetDailyQuests()
     for (SessionMap::const_iterator itr = m_sessions.begin(); itr != m_sessions.end(); ++itr)
         if (itr->second->GetPlayer())
             itr->second->GetPlayer()->ResetDailyQuestStatus();
+
+    // change available dailies
+    sPoolMgr.ChangeDailyQuests();
 }
 
 void World::LoadDBAllowedSecurityLevel()
@@ -2822,6 +2829,9 @@ void World::ResetWeeklyQuests()
 
     m_NextWeeklyQuestReset = time_t(m_NextWeeklyQuestReset + WEEK);
     sWorld.setWorldState(WS_WEEKLY_QUEST_RESET_TIME, uint64(m_NextWeeklyQuestReset));
+
+    // change available weeklies
+    sPoolMgr.ChangeWeeklyQuests();
 }
 
 void World::ResetRandomBG()

@@ -890,8 +890,8 @@ bool Player::Create(uint32 guidlow, const std::string& name, uint8 race, uint8 c
                         count = 2;
                         break;
                 }
-                if (uint32(iProto->Stackable) < count)
-                    count = iProto->Stackable;
+                if (iProto->GetMaxStackSize() < count)
+                    count = iProto->GetMaxStackSize();
             }
             StoreNewItemInBestSlots(item_id, count);
         }
@@ -2605,15 +2605,16 @@ void Player::UninviteFromGroup()
     }
 }
 
-void Player::RemoveFromGroup(Group* group, uint64 guid)
+void Player::RemoveFromGroup(Group* group, uint64 guid, RemoveMethod method /* = GROUP_REMOVEMETHOD_DEFAULT*/)
 {
     if (group)
     {
-        if (group->RemoveMember(guid) <= 1)
+        if (group->RemoveMember(guid, method) <= 1)
         {
             // group->Disband(); already disbanded in RemoveMember
             sObjectMgr.RemoveGroup(group);
             delete group;
+            group = NULL;
             // removemember sets the player's group pointer to NULL
         }
     }
@@ -7194,6 +7195,8 @@ void Player::DuelComplete(DuelCompleteType type)
         data << GetName();
         SendMessageToSet(&data,true);
     }
+
+    sScriptMgr.OnPlayerDuelEnd(duel->opponent, this, type);
 
     switch (type)
     {
@@ -13827,17 +13830,15 @@ uint32 Player::GetDefaultGossipMenuForSource(WorldObject *pSource)
 
 void Player::PrepareQuestMenu(uint64 guid)
 {
-    Object *pObject;
-    QuestRelations* pObjectQR;
-    QuestRelations* pObjectQIR;
+    QuestRelationBounds pObjectQR;
+    QuestRelationBounds pObjectQIR;
 
     // pets also can have quests
     Creature *pCreature = ObjectAccessor::GetCreatureOrPetOrVehicle(*this, guid);
     if (pCreature)
     {
-        pObject = (Object*)pCreature;
-        pObjectQR  = &sObjectMgr.mCreatureQuestRelations;
-        pObjectQIR = &sObjectMgr.mCreatureQuestInvolvedRelations;
+        pObjectQR  = sObjectMgr.GetCreatureQuestRelationBounds(pCreature->GetEntry());
+        pObjectQIR = sObjectMgr.GetCreatureQuestInvolvedRelationBounds(pCreature->GetEntry());
     }
     else
     {
@@ -13848,9 +13849,8 @@ void Player::PrepareQuestMenu(uint64 guid)
         GameObject *pGameObject = _map->GetGameObject(guid);
         if (pGameObject)
         {
-            pObject = (Object*)pGameObject;
-            pObjectQR  = &sObjectMgr.mGOQuestRelations;
-            pObjectQIR = &sObjectMgr.mGOQuestInvolvedRelations;
+            pObjectQR  = sObjectMgr.GetGOQuestRelationBounds(pGameObject->GetEntry());
+            pObjectQIR = sObjectMgr.GetGOQuestInvolvedRelationBounds(pGameObject->GetEntry());
         }
         else
             return;
@@ -13859,7 +13859,7 @@ void Player::PrepareQuestMenu(uint64 guid)
     QuestMenu &qm = PlayerTalkClass->GetQuestMenu();
     qm.ClearMenu();
 
-    for (QuestRelations::const_iterator i = pObjectQIR->lower_bound(pObject->GetEntry()); i != pObjectQIR->upper_bound(pObject->GetEntry()); ++i)
+    for (QuestRelations::const_iterator i = pObjectQIR.first; i != pObjectQIR.second; ++i)
     {
         uint32 quest_id = i->second;
         QuestStatus status = GetQuestStatus(quest_id);
@@ -13871,7 +13871,7 @@ void Player::PrepareQuestMenu(uint64 guid)
         //    qm.AddMenuItem(quest_id, 2);
     }
 
-    for (QuestRelations::const_iterator i = pObjectQR->lower_bound(pObject->GetEntry()); i != pObjectQR->upper_bound(pObject->GetEntry()); ++i)
+    for (QuestRelations::const_iterator i = pObjectQR.first; i != pObjectQR.second; ++i)
     {
         uint32 quest_id = i->second;
         Quest const* pQuest = sObjectMgr.GetQuestTemplate(quest_id);
@@ -13991,17 +13991,11 @@ bool Player::IsActiveQuest(uint32 quest_id) const
 
 Quest const * Player::GetNextQuest(uint64 guid, Quest const *pQuest)
 {
-    Object *pObject;
-    QuestRelations* pObjectQR;
-    QuestRelations* pObjectQIR;
+    QuestRelationBounds pObjectQR;
 
     Creature *pCreature = ObjectAccessor::GetCreatureOrPetOrVehicle(*this,guid);
     if (pCreature)
-    {
-        pObject = (Object*)pCreature;
-        pObjectQR  = &sObjectMgr.mCreatureQuestRelations;
-        pObjectQIR = &sObjectMgr.mCreatureQuestInvolvedRelations;
-    }
+        pObjectQR  = sObjectMgr.GetCreatureQuestRelationBounds(pCreature->GetEntry());
     else
     {
         //we should obtain map pointer from GetMap() in 99% of cases. Special case
@@ -14010,17 +14004,13 @@ Quest const * Player::GetNextQuest(uint64 guid, Quest const *pQuest)
         ASSERT(_map);
         GameObject *pGameObject = _map->GetGameObject(guid);
         if (pGameObject)
-        {
-            pObject = (Object*)pGameObject;
-            pObjectQR  = &sObjectMgr.mGOQuestRelations;
-            pObjectQIR = &sObjectMgr.mGOQuestInvolvedRelations;
-        }
+            pObjectQR  = sObjectMgr.GetGOQuestRelationBounds(pGameObject->GetEntry());
         else
             return NULL;
     }
 
     uint32 nextQuestID = pQuest->GetNextQuestInChain();
-    for (QuestRelations::const_iterator itr = pObjectQR->lower_bound(pObject->GetEntry()); itr != pObjectQR->upper_bound(pObject->GetEntry()); ++itr)
+    for (QuestRelations::const_iterator itr = pObjectQR.first; itr != pObjectQR.second; ++itr)
     {
         if (itr->second == nextQuestID)
             return sObjectMgr.GetQuestTemplate(nextQuestID);
@@ -15555,7 +15545,7 @@ bool Player::HasQuestForItem(uint32 itemid) const
                     {
                         if (GetItemCount(itemid, true) < qinfo->ReqSourceCount[j])
                             return true;
-                    } else if (int32(GetItemCount(itemid, true)) < pProto->Stackable)
+                    } else if (GetItemCount(itemid, true) < pProto->GetMaxStackSize())
                         return true;
                 }
             }
@@ -16540,17 +16530,10 @@ bool Player::isAllowedToLoot(const Creature* creature)
     if (loot->isLooted()) // nothing to loot or everything looted.
         return false;
 
-    Player* recipient = creature->GetLootRecipient();
-    if (!recipient)
-        // prevent other players from looting if the recipient got disconnected
-        return !creature->hasLootRecipient();
-
-    Group* recipientGroup = recipient->GetGroup();
-    if (!recipientGroup)
-        return (this == recipient);
-
     Group* thisGroup = GetGroup();
-    if (!thisGroup || thisGroup != recipientGroup)
+    if (!thisGroup)
+        return this == creature->GetLootRecipient();
+    else if (thisGroup != creature->GetLootRecipientGroup())
         return false;
 
     switch(thisGroup->GetLootMethod())
@@ -18514,6 +18497,8 @@ void Player::UpdateDuelFlag(time_t currTime)
 {
     if (!duel || duel->startTimer == 0 ||currTime < duel->startTimer + 3)
         return;
+
+    sScriptMgr.OnPlayerDuelStart(this, duel->opponent);
 
     SetUInt32Value(PLAYER_DUEL_TEAM, 1);
     duel->opponent->SetUInt32Value(PLAYER_DUEL_TEAM, 2);

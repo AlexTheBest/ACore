@@ -1449,7 +1449,7 @@ CREATE TABLE `guild_bank_eventlog` (
   `EventType` tinyint(3) unsigned NOT NULL default '0' COMMENT 'Event type',
   `PlayerGuid` int(11) unsigned NOT NULL default '0',
   `ItemOrMoney` int(11) unsigned NOT NULL default '0',
-  `ItemStackCount` tinyint(3) unsigned NOT NULL default '0',
+  `ItemStackCount` smallint(4) unsigned NOT NULL default '0',
   `DestTabId` tinyint(1) unsigned NOT NULL default '0' COMMENT 'Destination Tab Id',
   `TimeStamp` bigint(20) unsigned NOT NULL default '0' COMMENT 'Event UNIX time',
   PRIMARY KEY  (`guildid`,`LogGuid`,`TabId`),
@@ -1990,6 +1990,29 @@ CREATE TABLE `petition_sign` (
 LOCK TABLES `petition_sign` WRITE;
 /*!40000 ALTER TABLE `petition_sign` DISABLE KEYS */;
 /*!40000 ALTER TABLE `petition_sign` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `pool_quest_save`
+--
+
+DROP TABLE IF EXISTS `pool_quest_save`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `pool_quest_save` (
+  `pool_id` int(10) unsigned NOT NULL DEFAULT '0',
+  `quest_id` int(10) unsigned NOT NULL DEFAULT '0',
+  PRIMARY KEY (`pool_id`,`quest_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `pool_quest_save`
+--
+
+LOCK TABLES `pool_quest_save` WRITE;
+/*!40000 ALTER TABLE `pool_quest_save` DISABLE KEYS */;
+/*!40000 ALTER TABLE `pool_quest_save` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --

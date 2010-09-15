@@ -192,6 +192,7 @@ typedef UNORDERED_MAP<uint32,GossipMenuItemsLocale> GossipMenuItemsLocaleMap;
 typedef UNORDERED_MAP<uint32,PointOfInterestLocale> PointOfInterestLocaleMap;
 
 typedef std::multimap<uint32,uint32> QuestRelations;
+typedef std::pair<QuestRelations::const_iterator, QuestRelations::const_iterator> QuestRelationBounds;
 typedef std::multimap<uint32,ItemRequiredTarget> ItemRequiredTargetMap;
 typedef std::pair<ItemRequiredTargetMap::const_iterator, ItemRequiredTargetMap::const_iterator>  ItemRequiredTargetMapBounds;
 
@@ -394,6 +395,7 @@ class ObjectMgr
 
         Player* GetPlayer(const char* name) const { return sObjectAccessor.FindPlayerByName(name);}
         Player* GetPlayer(uint64 guid) const { return ObjectAccessor::FindPlayer(guid); }
+        Player* GetPlayerByLowGUID(uint32 lowguid) const;
 
         static GameObjectInfo const *GetGameObjectInfo(uint32 id) { return sGOStorage.LookupEntry<GameObjectInfo>(id); }
         int LoadReferenceVendor(int32 vendor, int32 item_id, std::set<uint32> *skip_vendors);
@@ -611,10 +613,35 @@ class ObjectMgr
         void LoadCreatureQuestRelations();
         void LoadCreatureInvolvedRelations();
 
-        QuestRelations mGOQuestRelations;
-        QuestRelations mGOQuestInvolvedRelations;
-        QuestRelations mCreatureQuestRelations;
-        QuestRelations mCreatureQuestInvolvedRelations;
+        QuestRelations* GetGOQuestRelationMap()
+        {
+            return &mGOQuestRelations;
+        }
+
+        QuestRelationBounds GetGOQuestRelationBounds(uint32 go_entry)
+        {
+            return mGOQuestRelations.equal_range(go_entry);
+        }
+
+        QuestRelationBounds GetGOQuestInvolvedRelationBounds(uint32 go_entry)
+        {
+            return mGOQuestInvolvedRelations.equal_range(go_entry);
+        }
+
+        QuestRelations* GetCreatureQuestRelationMap()
+        {
+            return &mCreatureQuestRelations;
+        }
+
+        QuestRelationBounds GetCreatureQuestRelationBounds(uint32 creature_entry)
+        {
+            return mCreatureQuestRelations.equal_range(creature_entry);
+        }
+
+        QuestRelationBounds GetCreatureQuestInvolvedRelationBounds(uint32 creature_entry)
+        {
+            return mCreatureQuestInvolvedRelations.equal_range(creature_entry);
+        }
 
         void LoadGameObjectScripts();
         void LoadQuestEndScripts();
@@ -1025,6 +1052,11 @@ class ObjectMgr
 
         QuestPOIMap         mQuestPOIMap;
 
+        QuestRelations mGOQuestRelations;
+        QuestRelations mGOQuestInvolvedRelations;
+        QuestRelations mCreatureQuestRelations;
+        QuestRelations mCreatureQuestInvolvedRelations;
+
         //character reserved names
         typedef std::set<std::wstring> ReservedNamesMap;
         ReservedNamesMap    m_ReservedNames;
@@ -1054,7 +1086,7 @@ class ObjectMgr
         void CheckScripts(ScriptsType type, std::set<int32>& ids);
         void LoadCreatureAddons(SQLStorage& creatureaddons, char const* entryName, char const* comment);
         void ConvertCreatureAddonAuras(CreatureDataAddon* addon, char const* table, char const* guidEntryStr);
-        void LoadQuestRelationsHelper(QuestRelations& map,char const* table);
+        void LoadQuestRelationsHelper(QuestRelations& map, std::string table, bool starter, bool go);
         void PlayerCreateInfoAddItemHelper(uint32 race_, uint32 class_, uint32 itemId, int32 count);
 
         MailLevelRewardMap m_mailLevelRewardMap;

@@ -16106,6 +16106,31 @@ LOCK TABLES `pool_pool` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `pool_quest`
+--
+
+DROP TABLE IF EXISTS `pool_quest`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `pool_quest` (
+  `entry` int(10) unsigned NOT NULL DEFAULT '0',
+  `pool_entry` mediumint(8) unsigned NOT NULL DEFAULT '0',
+  `description` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`entry`),
+  KEY `idx_guid` (`entry`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `pool_quest`
+--
+
+LOCK TABLES `pool_quest` WRITE;
+/*!40000 ALTER TABLE `pool_quest` DISABLE KEYS */;
+/*!40000 ALTER TABLE `pool_quest` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `pool_template`
 --
 
@@ -16944,7 +16969,7 @@ INSERT INTO `spell_bonus_data` (`entry`,`direct_bonus`,`dot_bonus`,`ap_bonus`,`a
 (53000, 0.229, -1, -1, -1, 'Priest - Penance Hurt (Rank 4)'),
 (17, 0.8068, -1, -1, -1, 'Priest - Power Word: Shield'),
 (596, 0.8068, -1, -1, -1, 'Priest - Prayer of Healing'),
-(33110, 0.8068, -1, -1, -1, 'Priest - Prayer of Mending Heal Proc'),
+(33110, 0.8068, 0, 0, 0, 'Priest - Prayer of Mending Heal Proc'),
 (33619, 0, 0, 0, 0, 'Priest - Reflective Shield'),
 (139, -1, 0.376, -1, -1, 'Priest - Renew'),
 (32379, 0.4296, -1, -1, -1, 'Priest - Shadow Word: Death'),
@@ -18850,7 +18875,7 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 49543, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   9,  20), -- Bloodworms (Rank 3)
 ( 49208, 0x00,  15, 0x00400000, 0x00010000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Reaping (Rank 1)
 ( 49219, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000004, 0x00000000,   0,   0,   0), -- Blood-Caked Blade (Rank 1)
-( 49222, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   3), -- Bone Shield
+( 49222, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x000222A8, 0x00000000,   0,   0,   3), -- Bone Shield
 ( 49280, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   3), -- Lightning Shield (Rank 10)
 ( 49281, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   3), -- Lightning Shield (Rank 11)
 ( 49283, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x000222A8, 0x00000000,   0,   0,   3), -- Earth Shield (Rank 4)

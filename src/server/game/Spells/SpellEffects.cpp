@@ -5526,6 +5526,8 @@ void Spell::EffectDuel(SpellEffIndex effIndex)
 
     caster->SetUInt64Value(PLAYER_DUEL_ARBITER, pGameObj->GetGUID());
     target->SetUInt64Value(PLAYER_DUEL_ARBITER, pGameObj->GetGUID());
+
+    sScriptMgr.OnPlayerDuelRequest(target, caster);
 }
 
 void Spell::EffectStuck(SpellEffIndex /*effIndex*/)

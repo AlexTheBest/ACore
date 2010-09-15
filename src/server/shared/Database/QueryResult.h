@@ -101,18 +101,14 @@ class ResultBind
     friend class PreparedResultSet;
     public:
 
-        ResultBind(MYSQL_STMT* stmt) : m_rBind(NULL), m_stmt(stmt), m_isNull(NULL), m_length(NULL), m_fieldCount(0) {}
+        ResultBind(MYSQL_STMT* stmt) : m_rBind(NULL), m_stmt(stmt), m_res(NULL), m_isNull(NULL), m_length(NULL), m_fieldCount(0) {}
 
         ~ResultBind()
         {
-            if (!m_fieldCount)
-                return;
-
             CleanUp();  // Clean up buffer
-            mysql_stmt_free_result(m_stmt);
         }
 
-        void BindResult(uint32& num_rows);
+        void BindResult(uint64& num_rows);
 
     protected:
         MYSQL_BIND* m_rBind;
@@ -205,10 +201,14 @@ class PreparedResultSet
         int16 GetInt16(uint32 index);
         uint32 GetUInt32(uint32 index);
         int32 GetInt32(uint32 index);
+        uint64 GetUInt64(uint32 index);
+        int64 GetInt64(uint32 index);
         float GetFloat(uint32 index);
         std::string GetString(uint32 index);
+        const char* GetCString(uint32 index);
 
         bool NextRow();
+        uint64 GetRowCount() const { return num_rows; }
 
     private:
         bool CheckFieldIndex(uint32 index)  const
@@ -223,8 +223,8 @@ class PreparedResultSet
         }
 
         ResultBind* rbind;
-        uint32 row_position;
-        uint32 num_rows;
+        uint64 row_position;
+        uint64 num_rows;
 };
 
 typedef ACE_Refcounted_Auto_Ptr<PreparedResultSet, ACE_Null_Mutex> PreparedQueryResult;

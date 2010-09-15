@@ -101,8 +101,8 @@ static bool procPrepared = InitTriggerAuraData();
 Unit::Unit(): WorldObject(),
 m_movedPlayer(NULL), IsAIEnabled(false), NeedChangeAI(false),
 m_ControlledByPlayer(false), i_AI(NULL), i_disabledAI(NULL), m_procDeep(0),
-m_removedAurasCount(0),  m_vehicle(NULL), i_motionMaster(this), m_vehicleKit(NULL),
-m_ThreatManager(this), m_unitTypeMask(UNIT_MASK_NONE), m_HostileRefManager(this)
+m_removedAurasCount(0), i_motionMaster(this), m_ThreatManager(this), m_vehicle(NULL),
+m_vehicleKit(NULL), m_unitTypeMask(UNIT_MASK_NONE), m_HostileRefManager(this)
 {
 #ifdef _MSC_VER
 #pragma warning(default:4355)
@@ -650,29 +650,6 @@ uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDa
         return 0;
     }
 
-    // no xp,health if type 8 /critters/
-    if (pVictim->GetTypeId() != TYPEID_PLAYER && pVictim->GetCreatureType() == CREATURE_TYPE_CRITTER)
-    {
-        // allow loot only if has loot_id in creature_template
-        if (damage >= pVictim->GetHealth())
-        {
-            pVictim->setDeathState(JUST_DIED);
-
-            CreatureInfo const* cInfo = pVictim->ToCreature()->GetCreatureInfo();
-            if (cInfo && cInfo->lootid)
-                pVictim->SetFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE);
-
-            // some critters required for quests (need normal entry instead possible heroic in any cases)
-            if (GetTypeId() == TYPEID_PLAYER)
-                if (CreatureInfo const* normalInfo = sObjectMgr.GetCreatureTemplate(pVictim->GetEntry()))
-                    this->ToPlayer()->KilledMonster(normalInfo,pVictim->GetGUID());
-        }
-        else
-            pVictim->ModifyHealth(- (int32)damage);
-
-        return damage;
-    }
-
     sLog.outStaticDebug("DealDamageStart");
 
     uint32 health = pVictim->GetHealth();
@@ -1081,23 +1058,10 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage *damageInfo, int32 dama
                 damage -= damageInfo->blocked;
             }
 
-            // Reduce damage from resilience for players and pets only.
-            // As of patch 3.3 pets inherit 100% of master resilience.
-            if (GetSpellModOwner())
-                if (Player* modOwner = pVictim->GetSpellModOwner())
-                {
-                    if (crit)
-                    {
-                        if (attackType != RANGED_ATTACK)
-                            damage -= modOwner->GetMeleeCritDamageReduction(damage);
-                        else
-                            damage -= modOwner->GetRangedCritDamageReduction(damage);
-                    }
-                    if (attackType != RANGED_ATTACK)
-                        damage -= modOwner->GetMeleeDamageReduction(damage);
-                    else
-                        damage -= modOwner->GetRangedDamageReduction(damage);
-                }
+            if (attackType != RANGED_ATTACK)
+                ApplyResilience(pVictim, NULL, &damage, crit, CR_CRIT_TAKEN_MELEE);
+            else
+                ApplyResilience(pVictim, NULL, &damage, crit, CR_CRIT_TAKEN_RANGED);
         }
         break;
         // Magical Attacks
@@ -1111,15 +1075,7 @@ void Unit::CalculateSpellDamageTaken(SpellNonMeleeDamage *damageInfo, int32 dama
                 damage = SpellCriticalDamageBonus(spellInfo, damage, pVictim);
             }
 
-            // Reduce damage from resilience for players and pets only.
-            // As of patch 3.3 pets inherit 100% of master resilience.
-            if (GetSpellModOwner())
-                if (Player* modOwner = pVictim->GetSpellModOwner())
-                {
-                    if (crit)
-                        damage -= modOwner->GetSpellCritDamageReduction(damage);
-                    damage -= modOwner->GetSpellDamageReduction(damage);
-                }
+            ApplyResilience(pVictim, NULL, &damage, crit, CR_CRIT_TAKEN_SPELL);
         }
         break;
     }
@@ -1295,21 +1251,6 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
             mod += GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_CRIT_PERCENT_VERSUS, crTypeMask);
             if (mod != 0)
                 damageInfo->damage = int32((damageInfo->damage) * float((100.0f + mod)/100.0f));
-
-            // Reduce damage from resilience for players and pets only.
-            // As of patch 3.3 pets inherit 100% of master resilience.
-            if (GetSpellModOwner())
-                if (Player* modOwner = pVictim->GetSpellModOwner())
-                {
-                    uint32 resilienceReduction;
-                    if (attackType != RANGED_ATTACK)
-                        resilienceReduction = modOwner->GetMeleeCritDamageReduction(damageInfo->damage);
-                    else
-                        resilienceReduction = modOwner->GetRangedCritDamageReduction(damageInfo->damage);
-
-                    damageInfo->damage      -= resilienceReduction;
-                    damageInfo->cleanDamage += resilienceReduction;
-                }
             break;
         }
         case MELEE_HIT_PARRY:
@@ -1371,20 +1312,14 @@ void Unit::CalculateMeleeDamage(Unit *pVictim, uint32 damage, CalcDamageInfo *da
             break;
     }
 
-    // Reduce damage from resilience for players and pets only.
-    // As of patch 3.3 pets inherit 100% of master resilience.
-    if (GetSpellModOwner())
-        if (Player* modOwner = pVictim->GetSpellModOwner())
-        {
-            uint32 resilienceReduction;
-            if (attackType != RANGED_ATTACK)
-                resilienceReduction = modOwner->GetMeleeDamageReduction(damageInfo->damage);
-            else
-                resilienceReduction = modOwner->GetRangedDamageReduction(damageInfo->damage);
-
-            damageInfo->damage      -= resilienceReduction;
-            damageInfo->cleanDamage += resilienceReduction;
-        }
+    int32 resilienceReduction = damageInfo->damage;
+    if (attackType != RANGED_ATTACK)
+        ApplyResilience(pVictim, NULL, &resilienceReduction, (damageInfo->hitOutCome == MELEE_HIT_CRIT), CR_CRIT_TAKEN_MELEE);
+    else
+        ApplyResilience(pVictim, NULL, &resilienceReduction, (damageInfo->hitOutCome == MELEE_HIT_CRIT), CR_CRIT_TAKEN_RANGED);
+    resilienceReduction = damageInfo->damage - resilienceReduction;
+    damageInfo->damage      -= resilienceReduction;
+    damageInfo->cleanDamage += resilienceReduction;
 
     // Calculate absorb resist
     if (int32(damageInfo->damage) > 0)
@@ -3248,18 +3183,13 @@ float Unit::GetUnitCriticalChance(WeaponAttackType attackType, const Unit *pVict
     // reduce crit chance from Rating for players
     if (attackType != RANGED_ATTACK)
     {
-        // Reduce crit chance from resilience for players and pets only.
-        // As of patch 3.3 pets inherit 100% of master resilience.
-        if (GetSpellModOwner())
-            if (Player* modOwner = pVictim->GetSpellModOwner())
-                crit -= modOwner->GetMeleeCritChanceReduction();
+        ApplyResilience(pVictim, &crit, NULL, false, CR_CRIT_TAKEN_MELEE);
         // Glyph of barkskin
         if (pVictim->HasAura(63057) && pVictim->HasAura(22812))
             crit -= 25.0f;
     }
-    else if (GetSpellModOwner())
-        if (Player* modOwner = pVictim->GetSpellModOwner())
-            crit -= modOwner->GetRangedCritChanceReduction();
+    else
+        ApplyResilience(pVictim, &crit, NULL, false, CR_CRIT_TAKEN_RANGED);
 
     // Apply crit chance from defence skill
     crit += (int32(GetMaxSkillValueForLevel(pVictim)) - int32(pVictim->GetDefenseSkillValue(this))) * 0.04f;
@@ -3538,14 +3468,14 @@ bool Unit::IsNonMeleeSpellCasted(bool withDelayed, bool skipChanneled, bool skip
         (m_currentSpells[CURRENT_GENERIC_SPELL]->getState() != SPELL_STATE_FINISHED) &&
         (withDelayed || m_currentSpells[CURRENT_GENERIC_SPELL]->getState() != SPELL_STATE_DELAYED))
     {
-        if (!isAutoshoot || !(m_currentSpells[CURRENT_GENERIC_SPELL]->m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_NOT_RESET_AUTOSHOT))
+        if (!isAutoshoot || !(m_currentSpells[CURRENT_GENERIC_SPELL]->m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_NOT_RESET_AUTO_ACTIONS))
             return(true);
     }
     // channeled spells may be delayed, but they are still considered casted
     else if (!skipChanneled && m_currentSpells[CURRENT_CHANNELED_SPELL] &&
         (m_currentSpells[CURRENT_CHANNELED_SPELL]->getState() != SPELL_STATE_FINISHED))
     {
-        if (!isAutoshoot || !(m_currentSpells[CURRENT_CHANNELED_SPELL]->m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_NOT_RESET_AUTOSHOT))
+        if (!isAutoshoot || !(m_currentSpells[CURRENT_CHANNELED_SPELL]->m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_NOT_RESET_AUTO_ACTIONS))
             return(true);
     }
     // autorepeat spells may be finished or delayed, but they are still considered casted
@@ -10892,11 +10822,7 @@ bool Unit::isSpellCrit(Unit *pVictim, SpellEntry const *spellProto, SpellSchoolM
                     crit_chance += pVictim->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE, schoolMask);
                     // Modify critical chance by victim SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE
                     crit_chance += pVictim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE);
-                    // Reduce crit chance from resilience for players and pets only.
-                    // As of patch 3.3 pets inherit 100% of master resilience.
-                    if (GetSpellModOwner())
-                        if (Player* modOwner = pVictim->GetSpellModOwner())
-                            crit_chance -= modOwner->GetSpellCritChanceReduction();
+                    ApplyResilience(pVictim, &crit_chance, NULL, false, CR_CRIT_TAKEN_SPELL);
                 }
                 // scripted (increase crit chance ... against ... target by x%
                 AuraEffectList const& mOverrideClassScript = GetAuraEffectsByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
@@ -11917,9 +11843,9 @@ void Unit::Mount(uint32 mount, uint32 VehicleId, uint32 creatureEntry)
     SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_MOUNT);
 
     // unsummon pet
-    if (GetTypeId() == TYPEID_PLAYER)
+    if (Player* plr = ToPlayer())
     {
-        Pet* pet = this->ToPlayer()->GetPet();
+        Pet* pet = plr->GetPet();
         if (pet)
         {
             Battleground *bg = ToPlayer()->GetBattleground();
@@ -11927,31 +11853,26 @@ void Unit::Mount(uint32 mount, uint32 VehicleId, uint32 creatureEntry)
             if (bg && bg->isArena())
                 pet->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_STUNNED);
             else
-                this->ToPlayer()->UnsummonPetTemporaryIfAny();
+                plr->UnsummonPetTemporaryIfAny();
         }
 
-        if (VehicleId != 0)
+        if (VehicleId)
         {
-            if (sVehicleStore.LookupEntry(VehicleId))
+            if (CreateVehicleKit(VehicleId))
             {
+                GetVehicleKit()->Reset();
 
-                if (CreateVehicleKit(VehicleId))
-                {
-                    GetVehicleKit()->Reset();
+                // mounts can also have accessories
+                GetVehicleKit()->InstallAllAccessories(creatureEntry);
 
-                    // mounts can also have accessories
-                    GetVehicleKit()->GetBase()->SetEntry(creatureEntry); // set creature entry so InstallAllAccessories() can read correct accessories
-                    GetVehicleKit()->InstallAllAccessories();
+                // Send others that we now have a vehicle
+                WorldPacket data(SMSG_PLAYER_VEHICLE_DATA, GetPackGUID().size()+4);
+                data.appendPackGUID(GetGUID());
+                data << uint32(VehicleId);
+                SendMessageToSet(&data,true);
 
-                    // Send others that we now have a vehicle
-                    WorldPacket data(SMSG_PLAYER_VEHICLE_DATA, GetPackGUID().size()+4);
-                    data.appendPackGUID(GetGUID());
-                    data << uint32(VehicleId);
-                    SendMessageToSet(&data,true);
-
-                    data.Initialize(SMSG_ON_CANCEL_EXPECTED_RIDE_VEHICLE_AURA, 0);
-                    this->ToPlayer()->GetSession()->SendPacket(&data);
-                }
+                data.Initialize(SMSG_ON_CANCEL_EXPECTED_RIDE_VEHICLE_AURA, 0);
+                plr->GetSession()->SendPacket(&data);
             }
         }
     }
@@ -12173,9 +12094,9 @@ bool Unit::canAttack(Unit const* target, bool force) const
     return true;
 }
 
-bool Unit::isAttackableByAOE() const
+bool Unit::isAttackableByAOE(bool requireDeadTarget) const
 {
-    if (!isAlive())
+    if (isAlive() == requireDeadTarget)
         return false;
 
     if (HasFlag(UNIT_FIELD_FLAGS,
@@ -15136,7 +15057,6 @@ bool Unit::HandleAuraRaidProcFromChargeWithValue(AuraEffect *triggeredByAura)
                 CastCustomSpell(target, spellProto->Id, &heal, NULL, NULL, true, NULL, triggeredByAura, caster_guid);
                 if (Aura * aura = target->GetAura(spellProto->Id, caster->GetGUID()))
                     aura->SetCharges(jumps);
-                heal = caster->SpellHealingBonus(this, spellProto, heal, HEAL);
             }
         }
     }
@@ -15305,7 +15225,8 @@ void Unit::Kill(Unit *pVictim, bool durabilityLoss)
         if (Unit *owner = GetOwner())
             owner->ProcDamageAndSpell(pVictim, PROC_FLAG_KILL, PROC_FLAG_NONE, PROC_EX_NONE, 0);
 
-    ProcDamageAndSpell(pVictim, PROC_FLAG_KILL, PROC_FLAG_KILLED, PROC_EX_NONE, 0);
+    if (pVictim->GetCreatureType() != CREATURE_TYPE_CRITTER)
+        ProcDamageAndSpell(pVictim, PROC_FLAG_KILL, PROC_FLAG_KILLED, PROC_EX_NONE, 0);
 
     // Proc auras on death - must be before aura/combat remove
     pVictim->ProcDamageAndSpell(NULL, PROC_FLAG_DEATH, PROC_FLAG_NONE, PROC_EX_NONE, 0, BASE_ATTACK, 0);
@@ -16168,6 +16089,78 @@ void Unit::SetAuraStack(uint32 spellId, Unit *target, uint32 stack)
         aura->SetStackAmount(stack);
 }
 
+void Unit::ApplyResilience(const Unit *pVictim, float *crit, int32 *damage, bool isCrit, CombatRating type) const
+{
+    if (IsVehicle() || pVictim->IsVehicle())
+        return;
+
+    const Unit *source = ToPlayer();
+    if (!source)
+    {
+        source = ToCreature();
+        if (source)
+        {
+            source = source->ToCreature()->GetOwner();
+            if (source)
+                source = source->ToPlayer();
+        }
+    }
+
+    const Unit *target = pVictim->ToPlayer();
+    if (!target)
+    {
+        target = pVictim->ToCreature();
+        if (target)
+        {
+            target = target->ToCreature()->GetOwner();
+            if (target)
+                target = target->ToPlayer();
+        }
+    }
+
+    if (!target)
+        return;
+
+    switch (type)
+    {
+        case CR_CRIT_TAKEN_MELEE:
+            // Crit chance reduction works against nonpets
+            if (crit)
+                *crit -= target->ToPlayer()->GetMeleeCritChanceReduction();
+            if (source && damage)
+            {
+                if (isCrit)
+                    *damage -= target->ToPlayer()->GetMeleeCritDamageReduction(*damage);
+                *damage -= target->ToPlayer()->GetMeleeDamageReduction(*damage);
+            }
+            break;
+        case CR_CRIT_TAKEN_RANGED:
+            // Crit chance reduction works against nonpets
+            if (crit)
+                *crit -= target->ToPlayer()->GetRangedCritChanceReduction();
+            if (source && damage)
+            {
+                if (isCrit)
+                    *damage -= target->ToPlayer()->GetRangedCritDamageReduction(*damage);
+                *damage -= target->ToPlayer()->GetRangedDamageReduction(*damage);
+            }
+            break;
+        case CR_CRIT_TAKEN_SPELL:
+            // Crit chance reduction works against nonpets
+            if (crit)
+                *crit -= target->ToPlayer()->GetSpellCritChanceReduction();
+            if (source && damage)
+            {
+                if (isCrit)
+                    *damage -= target->ToPlayer()->GetSpellCritDamageReduction(*damage);
+                *damage -= target->ToPlayer()->GetSpellDamageReduction(*damage);
+            }
+            break;
+        default:
+            break;
+    }
+}
+
 // Melee based spells can be miss, parry or dodge on this step
 // Crit or block - determined on damage calculation phase! (and can be both in some time)
 float Unit::MeleeSpellMissChance(const Unit *pVictim, WeaponAttackType attType, int32 skillDiff, uint32 spellId) const
@@ -16670,21 +16663,20 @@ void Unit::EnterVehicle(Vehicle *vehicle, int8 seatId)
         }
     }
 
-    if (GetTypeId() == TYPEID_PLAYER)
+    if (Player* plr = ToPlayer())
     {
-        if (vehicle->GetBase()->GetTypeId() == TYPEID_PLAYER && this->ToPlayer()->isInCombat())
+        if (vehicle->GetBase()->GetTypeId() == TYPEID_PLAYER && plr->isInCombat())
             return;
 
-        this->ToPlayer()->InterruptNonMeleeSpells(false);
-        this->ToPlayer()->StopCastingCharm();
-        this->ToPlayer()->StopCastingBindSight();
-        this->ToPlayer()->Unmount();
-        this->ToPlayer()->RemoveAurasByType(SPELL_AURA_MOUNTED);
+        InterruptNonMeleeSpells(false);
+        plr->StopCastingCharm();
+        plr->StopCastingBindSight();
+        Unmount();
+        RemoveAurasByType(SPELL_AURA_MOUNTED);
 
         // drop flag at invisible in bg
-        if (this->ToPlayer()->InBattleground())
-            if (Battleground *bg = this->ToPlayer()->GetBattleground())
-          bg->EventPlayerDroppedFlag(this->ToPlayer());
+        if (Battleground *bg = plr->GetBattleground())
+            bg->EventPlayerDroppedFlag(plr);
     }
 
     ASSERT(!m_vehicle);
