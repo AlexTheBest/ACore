@@ -155,6 +155,7 @@ LFGMgr::~LFGMgr()
     m_QueueInfoMap.clear();
     m_currentQueue.clear();
     m_newToQueue.clear();
+    m_JoinQueue.clear();
 }
 
 /// <summary>
@@ -779,9 +780,22 @@ void LFGMgr::FindNewGroups(LfgGuidList &check, LfgGuidList all, LfgProposalList 
     if (!check.size() || check.size() > MAXGROUPSIZE)
         return;
 
+    if (check.size() == 1)                                  // Consistency check
+    {
+        uint64 guid = *check.begin();
+        LfgQueueInfoMap::iterator itQueue = m_QueueInfoMap.find(guid);
+        if (itQueue == m_QueueInfoMap.end())
+        {
+            sLog.outError("LFGMgr::FindNewGroups: [" UI64FMTD "] is not queued but listed as queued!", guid);
+            RemoveFromQueue(guid);
+            return;
+        }
+    }
+
     sLog.outDebug("LFGMgr::FindNewGroup: (%s) - all(%s)", ConcatenateGuids(check).c_str(), ConcatenateGuids(all).c_str());
-    LfgGuidList compatibles;
+
     // Check individual compatibilities
+    LfgGuidList compatibles;
     for (LfgGuidList::iterator it = all.begin(); it != all.end(); ++it)
     {
         check.push_back(*it);
@@ -901,13 +915,35 @@ bool LFGMgr::CheckCompatibility(LfgGuidList check, LfgProposalList *proposals)
             // Assign new leader
             if (itRoles->second & ROLE_LEADER && (!newLeaderLowGuid || urand(0, 1)))
                 newLeaderLowGuid = itRoles->first;
+            if (rolesMap[itRoles->first])                   // Player already added!
+            {
+                // Find the other guid
+                uint64 guid1 = it->first;
+                uint64 guid2 = 0;
+                for (LfgQueueInfoMap::const_iterator it2 = pqInfoMap.begin(); it2 != it && !guid2; ++it2)
+                {
+                    if (it2->second->roles.find(itRoles->first) != it2->second->roles.end())
+                        guid2 = it2->first;
+                }
+                uint64 playerguid;
+
+                // store in guid2 the obsolete group
+                if (pqInfoMap[guid2]->joinTime > it->second->joinTime)
+                {
+                    playerguid = guid2;
+                    guid2 = guid1;
+                    guid1 = playerguid;
+                }
+                playerguid = MAKE_NEW_GUID(itRoles->first, 0, HIGHGUID_PLAYER);
+                sLog.outError("LFGMgr::CheckCompatibility: check(%s) player [" UI64FMTD "] in queue with [" UI64FMTD "] and OBSOLETE! [" UI64FMTD "]", 
+                    strGuids.c_str(), playerguid, guid1, guid2);
+            }
             rolesMap[itRoles->first] = itRoles->second;
         }
     }
 
     if (rolesMap.size() != numPlayers)
     {
-        sLog.outError("LFGMgr::CheckCompatibility: There is a player multiple times in queue.");
         pqInfoMap.clear();
         rolesMap.clear();
         return false;
@@ -1426,6 +1462,7 @@ void LFGMgr::UpdateProposal(uint32 proposalId, uint32 lowGuid, bool accept)
     LfgProposalPlayer *ppPlayer = itProposalPlayer->second;
 
     ppPlayer->accept = LfgAnswer(accept);
+    sLog.outDebug("LFGMgr::UpdateProposal: Player [" UI64FMTD "] of proposal %u selected: %u", MAKE_NEW_GUID(lowGuid, 0, HIGHGUID_PLAYER), proposalId, accept);
     if (!accept)
     {
         RemoveProposal(itProposal, LFG_UPDATETYPE_PROPOSAL_DECLINED);
@@ -1467,7 +1504,12 @@ void LFGMgr::UpdateProposal(uint32 proposalId, uint32 lowGuid, bool accept)
         // Save wait times before redoing groups
         for (LfgPlayerList::const_iterator it = players.begin(); it != players.end(); ++it)
         {
-            uint64 guid = (*it)->GetGroup() ? (*it)->GetGroup()->GetGUID() : (*it)->GetGUID();
+            LfgProposalPlayer *pPlayer = pProposal->players[(*it)->GetGUIDLow()];
+            uint32 lowgroupguid = (*it)->GetGroup() ? (*it)->GetGroup()->GetLowGUID() : 0;
+            if (pPlayer->groupLowGuid != lowgroupguid)
+                sLog.outError("LFGMgr::UpdateProposal: [" UI64FMTD "] group mismatch: actual (%u) - queued (%u)", (*it)->GetGUID(), lowgroupguid, pPlayer->groupLowGuid);
+
+            uint64 guid = pPlayer->groupLowGuid ? MAKE_NEW_GUID(pPlayer->groupLowGuid, 0, HIGHGUID_GROUP) : (*it)->GetGUID();
             LfgQueueInfoMap::iterator itQueue = m_QueueInfoMap.find(guid);
             if (itQueue == m_QueueInfoMap.end())
             {
@@ -1574,6 +1616,7 @@ void LFGMgr::RemoveProposal(LfgProposalMap::iterator itProposal, LfgUpdateType t
     LfgProposal *pProposal = itProposal->second;
     pProposal->state = LFG_PROPOSAL_FAILED;
 
+    sLog.outDebug("LFGMgr::RemovalProposal: Proposal %u, state FAILED, UpdateType %u", itProposal->first, type);
     // Mark all people that didn't answered as no accept
     if (type == LFG_UPDATETYPE_PROPOSAL_FAILED)
         for (LfgProposalPlayerMap::const_iterator it = pProposal->players.begin(); it != pProposal->players.end(); ++it)
@@ -1586,7 +1629,7 @@ void LFGMgr::RemoveProposal(LfgProposalMap::iterator itProposal, LfgUpdateType t
         plr = sObjectMgr.GetPlayerByLowGUID(it->first);
         if (!plr)
             continue;
-        guid = plr->GetGroup() ? plr->GetGroup()->GetGUID(): plr->GetGUID();
+        guid = it->second->groupLowGuid ? MAKE_NEW_GUID(it->second->groupLowGuid, 0, HIGHGUID_GROUP) : plr->GetGUID();
 
         plr->GetSession()->SendUpdateProposal(itProposal->first, pProposal);
         // Remove members that didn't accept
@@ -1597,6 +1640,7 @@ void LFGMgr::RemoveProposal(LfgProposalMap::iterator itProposal, LfgUpdateType t
             plr->GetLfgDungeons()->clear();
             plr->SetLfgRoles(ROLE_NONE);
 
+            sLog.outError("LFGMgr::RemoveProposal: [" UI64FMTD "] didn't accept. Removing from queue and compatible cache", guid);
             if (itQueue != m_QueueInfoMap.end())
                 m_QueueInfoMap.erase(itQueue);
             RemoveFromCompatibles(guid);
@@ -1604,9 +1648,13 @@ void LFGMgr::RemoveProposal(LfgProposalMap::iterator itProposal, LfgUpdateType t
         else                                                // Readd to queue
         {
             if (itQueue == m_QueueInfoMap.end())            // Can't readd! misssing queue info!
+            {
+                sLog.outError("LFGMgr::RemoveProposal: Imposible to readd [" UI64FMTD "] to queue. Missing queue info!", guid);
                 updateType = LFG_UPDATETYPE_REMOVED_FROM_QUEUE;
+            }
             else
             {
+                sLog.outError("LFGMgr::RemoveProposal: Readding [" UI64FMTD "] to queue.", guid);
                 itQueue->second->joinTime = time_t(time(NULL));
                 AddGuidToNewQueue(guid);
                 updateType = LFG_UPDATETYPE_ADDED_TO_QUEUE;

@@ -387,7 +387,7 @@ bool AuthSocket::_HandleLogonChallenge()
             bool locked = false;
             if (res2->GetUInt8(2) == 1)            // if ip is locked
             {
-                sLog.outStaticDebug("[AuthChallenge] Account '%s' is locked to IP - '%s'", _login.c_str(), res2->GetString(3));
+                sLog.outStaticDebug("[AuthChallenge] Account '%s' is locked to IP - '%s'", _login.c_str(), res2->GetCString(3));
                 sLog.outStaticDebug("[AuthChallenge] Player address is '%s'", ip_address.c_str());
                 if (strcmp(res2->GetCString(3), ip_address.c_str()))
                 {
@@ -656,7 +656,7 @@ bool AuthSocket::_HandleLogonProof()
     }
     else
     {
-        char data[4]= { AUTH_LOGON_PROOF, WOW_FAIL_INCORRECT_PASSWORD, 3, 0};
+        char data[4]= { AUTH_LOGON_PROOF, WOW_FAIL_UNKNOWN_ACCOUNT, 3, 0};
         socket().send(data, sizeof(data));
         sLog.outBasic("[AuthChallenge] account %s tried to login with wrong password!",_login.c_str ());
 

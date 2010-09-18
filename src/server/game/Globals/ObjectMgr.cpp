@@ -415,14 +415,10 @@ void ObjectMgr::AddLocaleString(std::string& s, LocaleConstant locale, StringVec
 {
     if (!s.empty())
     {
-        int idx = GetOrNewIndexForLocale(locale);
-        if (idx >= 0)
-        {
-            if (data.size() <= size_t(idx))
-                data.resize(idx + 1);
+        if (data.size() <= size_t(locale))
+            data.resize(locale + 1);
 
-            data[idx] = s;
-        }
+        data[locale] = s;
     }
 }
 
@@ -7058,7 +7054,7 @@ void ObjectMgr::LoadQuestPOI()
 
     uint32 count = 0;
 
-    // 0 1 2 3
+    //                                               0        1   2         3      4               5        6     7
     QueryResult result = WorldDatabase.Query("SELECT questId, id, objIndex, mapid, WorldMapAreaId, FloorId, unk3, unk4 FROM quest_poi order by questId");
 
     if (!result)
@@ -7072,7 +7068,38 @@ void ObjectMgr::LoadQuestPOI()
         return;
     }
 
-    barGoLink bar(result->GetRowCount());
+    //                                                0        1   2  3
+    QueryResult points = WorldDatabase.PQuery("SELECT questId, id, x, y FROM quest_poi_points ORDER BY questId DESC, idx");
+
+    barGoLink bar(result->GetRowCount() + (points ? points->GetRowCount() : 0));
+
+    std::vector<std::vector<std::vector<QuestPOIPoint> > > POIs;
+
+    if (points)
+    {
+        // The first result should have the highest questId
+        Field *fields = points->Fetch();
+        uint32 questId = fields[0].GetUInt32();
+        POIs.resize(questId + 1);
+
+        do
+        {
+            bar.step();
+
+            Field *fields = points->Fetch();
+
+            uint32 questId            = fields[0].GetUInt32();
+            uint32 id                 = fields[1].GetUInt32();
+            int32  x                  = fields[2].GetInt32();
+            int32  y                  = fields[3].GetInt32();
+
+            if(POIs[questId].size() <= id + 1)
+                POIs[questId].resize(id + 10);
+
+            QuestPOIPoint point(x, y);
+            POIs[questId][id].push_back(point);
+        } while (points->NextRow());
+    }
 
     do
     {
@@ -7089,20 +7116,7 @@ void ObjectMgr::LoadQuestPOI()
         uint32 unk4               = fields[7].GetUInt32();
 
         QuestPOI POI(id, objIndex, mapId, WorldMapAreaId, FloorId, unk3, unk4);
-
-        QueryResult points = WorldDatabase.PQuery("SELECT x, y FROM quest_poi_points WHERE questId='%u' AND id='%i'", questId, id);
-
-        if (points)
-        {
-            do
-            {
-                Field *pointFields = points->Fetch();
-                int32 x = pointFields[0].GetInt32();
-                int32 y = pointFields[1].GetInt32();
-                QuestPOIPoint point(x, y);
-                POI.points.push_back(point);
-            } while (points->NextRow());
-        }
+        POI.points = POIs[questId][id];
 
         mQuestPOIMap[questId].push_back(POI);
 
@@ -7625,39 +7639,6 @@ PetNameInvalidReason ObjectMgr::CheckPetName(const std::string& name)
     return PET_NAME_SUCCESS;
 }
 
-int ObjectMgr::GetIndexForLocale(LocaleConstant loc)
-{
-    if (loc == LOCALE_enUS)
-        return -1;
-
-    for (size_t i=0; i < m_LocalForIndex.size(); ++i)
-        if (m_LocalForIndex[i] == loc)
-            return i;
-
-    return -1;
-}
-
-LocaleConstant ObjectMgr::GetLocaleForIndex(int i)
-{
-    if (i < 0 || i >= int(m_LocalForIndex.size()))
-        return LOCALE_enUS;
-
-    return m_LocalForIndex[i];
-}
-
-int ObjectMgr::GetOrNewIndexForLocale(LocaleConstant loc)
-{
-    if (loc == LOCALE_enUS)
-        return -1;
-
-    for (size_t i = 0; i < m_LocalForIndex.size(); ++i)
-        if (m_LocalForIndex[i] == loc)
-            return i;
-
-    m_LocalForIndex.push_back(loc);
-    return m_LocalForIndex.size() - 1;
-}
-
 void ObjectMgr::LoadGameObjectForQuests()
 {
     mGameObjectForQuestSet.clear();                         // need for reload case
@@ -7800,12 +7781,9 @@ bool ObjectMgr::LoadTrinityStrings(char const* table, int32 min_value, int32 max
         data.Content.resize(1);
         ++count;
 
-        // 0 -> default, idx in to idx+1
-        data.Content[0] = fields[1].GetCppString();
-
-        for (uint8 i = 1; i < MAX_LOCALE; ++i)
+        for (uint8 i = 0; i < MAX_LOCALE; ++i)
         {
-            std::string str = fields[i+1].GetCppString();
+            std::string str = fields[i + 1].GetCppString();
             AddLocaleString(str, LocaleConstant(i), data.Content);
         }
     } while (result->NextRow());
@@ -7819,17 +7797,14 @@ bool ObjectMgr::LoadTrinityStrings(char const* table, int32 min_value, int32 max
     return true;
 }
 
-const char *ObjectMgr::GetTrinityString(int32 entry, int locale_idx) const
+const char *ObjectMgr::GetTrinityString(int32 entry, LocaleConstant locale_idx) const
 {
-    // locale_idx == -1 -> default, locale_idx >= 0 in to idx+1
-    // Content[0] always exist if exist TrinityStringLocale
     if (TrinityStringLocale const *msl = GetTrinityStringLocale(entry))
     {
-        int idx = locale_idx + 1;
-        if (int(msl->Content.size()) > idx && !msl->Content[idx].empty())
-            return msl->Content[idx].c_str();
-        else
-            return msl->Content[0].c_str();
+        if (msl->Content.size() > size_t(locale_idx) && !msl->Content[locale_idx].empty())
+            return msl->Content[locale_idx].c_str();
+
+        return msl->Content[DEFAULT_LOCALE].c_str();
     }
 
     if (entry > 0)

@@ -967,6 +967,7 @@ void Creature::SetLootRecipient(Unit *unit)
     if (!unit)
     {
         m_lootRecipient = 0;
+        m_lootRecipientGroup = 0;
         RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_LOOTABLE|UNIT_DYNFLAG_TAPPED);
         return;
     }
@@ -2260,17 +2261,16 @@ void Creature::AllLootRemovedFromCorpse()
         float decayRate;
         CreatureInfo const *cinfo = GetCreatureInfo();
 
-        // corpse was not skinnable -> apply corpse looted timer
-        if (!cinfo || !cinfo->SkinLootId)
-            decayRate = sWorld.getRate(RATE_CORPSE_DECAY_LOOTED);
-        // corpse skinnable, but without skinning flag, and then skinned, corpse will despawn next update
-        else
-            decayRate = 0.0f;
+        decayRate = sWorld.getRate(RATE_CORPSE_DECAY_LOOTED);
+        uint32 diff = uint32((m_corpseRemoveTime - now) * decayRate);
 
-        uint32 diff = (m_corpseRemoveTime - now) * decayRate;
-
-        m_corpseRemoveTime -= diff;
         m_respawnTime -= diff;
+
+        // corpse skinnable, but without skinning flag, and then skinned, corpse will despawn next update
+        if (cinfo && cinfo->SkinLootId)
+            m_corpseRemoveTime = time(NULL);
+        else
+            m_corpseRemoveTime -= diff;
     }
 }
 
@@ -2385,9 +2385,9 @@ TrainerSpellData const* Creature::GetTrainerSpells() const
 }
 
 // overwrite WorldObject function for proper name localization
-const char* Creature::GetNameForLocaleIdx(int32 loc_idx) const
+const char* Creature::GetNameForLocaleIdx(LocaleConstant loc_idx) const
 {
-    if (loc_idx >= 0)
+    if (loc_idx != DEFAULT_LOCALE)
     {
         uint8 uloc_idx = uint8(loc_idx);
         CreatureLocale const *cl = sObjectMgr.GetCreatureLocale(GetEntry());
