@@ -272,7 +272,7 @@ bool ConditionMgr::IsPlayerMeetToConditions(Player* player, ConditionList condit
     sLog.outDebug("ConditionMgr::IsPlayerMeetToConditions");
     bool result = IsPlayerMeetToConditionList(player, conditions, targetOverride);
 
-    if (player && player->m_ConditionErrorMsgId && player->GetSession())
+    if (player && player->m_ConditionErrorMsgId && player->GetSession() && !result)
             player->GetSession()->SendNotification(player->m_ConditionErrorMsgId);//m_ConditionErrorMsgId is set only if a condition was not met
 
     return result;
@@ -281,7 +281,7 @@ bool ConditionMgr::IsPlayerMeetToConditions(Player* player, ConditionList condit
 ConditionList ConditionMgr::GetConditionsForNotGroupedEntry(ConditionSourceType sType, uint32 uEntry)
 {
     ConditionList spellCond;
-    if (sType > CONDITION_SOURCE_TYPE_NONE && sType < MAX_CONDITIONSOURCETYPE)
+    if (sType > CONDITION_SOURCE_TYPE_NONE && sType < CONDITION_SOURCE_TYPE_MAX)
     {
         ConditionMap::const_iterator itr = m_ConditionMap.find(sType);
         if (itr != m_ConditionMap.end())
@@ -568,7 +568,7 @@ bool ConditionMgr::addToGossipMenuItems(Condition* cond)
 
 bool ConditionMgr::isSourceTypeValid(Condition* cond)
 {
-    if (cond->mSourceType == CONDITION_SOURCE_TYPE_NONE || cond->mSourceType >= MAX_CONDITIONSOURCETYPE)
+    if (cond->mSourceType == CONDITION_SOURCE_TYPE_NONE || cond->mSourceType >= CONDITION_SOURCE_TYPE_MAX)
     {
         sLog.outErrorDb("Invalid ConditionSourceType %u in `condition` table, ignoring.", uint32(cond->mSourceType));
         return false;
@@ -905,9 +905,30 @@ bool ConditionMgr::isSourceTypeValid(Condition* cond)
             }
             break;
         }
+        case CONDITION_SOURCE_TYPE_QUEST_ACCEPT:
+            {
+                Quest const *Quest = sObjectMgr.GetQuestTemplate(cond->mSourceEntry);
+                if (!Quest)
+                {
+                    sLog.outErrorDb("CONDITION_SOURCE_TYPE_QUEST_ACCEPT specifies non-existing quest (%u), skipped", cond->mSourceEntry);
+                    return false;
+                }
+            }
+            break;
+        case CONDITION_SOURCE_TYPE_QUEST_SHOW_MARK:
+            {
+                Quest const *Quest = sObjectMgr.GetQuestTemplate(cond->mSourceEntry);
+                if (!Quest)
+                {
+                    sLog.outErrorDb("CONDITION_SOURCE_TYPE_QUEST_SHOW_MARK specifies non-existing quest (%u), skipped", cond->mSourceEntry);
+                    return false;
+                }
+            }
+            break;
         case CONDITION_SOURCE_TYPE_GOSSIP_MENU:
         case CONDITION_SOURCE_TYPE_GOSSIP_MENU_OPTION:
         case CONDITION_SOURCE_TYPE_NONE:
+        default:
             break;
     }
 
@@ -915,7 +936,7 @@ bool ConditionMgr::isSourceTypeValid(Condition* cond)
 }
 bool ConditionMgr::isConditionTypeValid(Condition* cond)
 {
-    if (cond->mConditionType == CONDITION_NONE || cond->mConditionType >= MAX_CONDITION)
+    if (cond->mConditionType == CONDITION_NONE || cond->mConditionType >= CONDITION_MAX)
     {
         sLog.outErrorDb("Invalid ConditionType %u at SourceEntry %u in `condition` table, ignoring.", uint32(cond->mConditionType),cond->mSourceEntry);
         return false;

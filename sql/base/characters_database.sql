@@ -489,6 +489,33 @@ LOCK TABLES `character_aura` WRITE;
 UNLOCK TABLES;
 
 --
+-- Table structure for table `character_banned`
+--
+
+DROP TABLE IF EXISTS `character_banned`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `character_banned` (
+  `guid` int(11) NOT NULL default '0' COMMENT 'Account id',
+  `bandate` bigint(40) NOT NULL default '0',
+  `unbandate` bigint(40) NOT NULL default '0',
+  `bannedby` varchar(50) NOT NULL,
+  `banreason` varchar(255) NOT NULL,
+  `active` tinyint(4) NOT NULL default '1',
+  PRIMARY KEY  (`guid`,`bandate`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Ban List';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `character_banned`
+--
+
+LOCK TABLES `character_banned` WRITE;
+/*!40000 ALTER TABLE `character_banned` DISABLE KEYS */;
+/*!40000 ALTER TABLE `character_banned` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `character_battleground_data`
 --
 
@@ -1762,6 +1789,29 @@ CREATE TABLE `item_refund_instance` (
 LOCK TABLES `item_refund_instance` WRITE;
 /*!40000 ALTER TABLE `item_refund_instance` DISABLE KEYS */;
 /*!40000 ALTER TABLE `item_refund_instance` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `item_soulbound_trade_data`
+--
+
+DROP TABLE IF EXISTS `item_soulbound_trade_data`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `item_soulbound_trade_data` (
+  `itemGuid` int(11) unsigned NOT NULL COMMENT 'Item GUID',
+  `allowedPlayers` text NOT NULL COMMENT 'Space separated GUID list of players who can receive this item in trade',
+  PRIMARY KEY (`itemGuid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Item Refund System';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `item_soulbound_trade_data`
+--
+
+LOCK TABLES `item_soulbound_trade_data` WRITE;
+/*!40000 ALTER TABLE `item_soulbound_trade_data` DISABLE KEYS */;
+/*!40000 ALTER TABLE `item_soulbound_trade_data` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --

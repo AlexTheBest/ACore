@@ -371,7 +371,9 @@ void Item::SaveToDB(SQLTransaction& trans)
         }break;
         case ITEM_REMOVED:
         {
-            trans->PAppend("DELETE FROM item_instance WHERE guid = '%u'", guid);
+            PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ITEM_INSTANCE);
+            stmt->setUInt32(0, guid);
+            trans->Append(stmt);
             if (HasFlag(ITEM_FIELD_FLAGS, ITEM_FLAG_WRAPPED))
                 trans->PAppend("DELETE FROM character_gifts WHERE item_guid = '%u'", GetGUIDLow());
             delete this;
@@ -383,7 +385,7 @@ void Item::SaveToDB(SQLTransaction& trans)
     SetState(ITEM_UNCHANGED);
 }
 
-bool Item::LoadFromDB(uint32 guid, uint64 owner_guid, QueryResult result, uint32 entry)
+bool Item::LoadFromDB(uint32 guid, uint64 owner_guid, PreparedQueryResult result, uint32 entry)
 {
     //                                                    0                1      2         3        4      5             6                 7           8           9    10
     //result = CharacterDatabase.PQuery("SELECT creatorGuid, giftCreatorGuid, count, duration, charges, flags, enchantments, randomPropertyId, durability, playedTime, text FROM item_instance WHERE guid = '%u'", guid);
@@ -410,13 +412,12 @@ bool Item::LoadFromDB(uint32 guid, uint64 owner_guid, QueryResult result, uint32
     if (owner_guid != 0)
         SetOwnerGUID(owner_guid);
 
-    Field *fields = result->Fetch();
     bool need_save = false;                                 // need explicit save data at load fixes
-    SetUInt64Value(ITEM_FIELD_CREATOR, MAKE_NEW_GUID(fields[0].GetUInt32(), 0, HIGHGUID_PLAYER));
-    SetUInt64Value(ITEM_FIELD_GIFTCREATOR, MAKE_NEW_GUID(fields[1].GetUInt32(), 0, HIGHGUID_PLAYER));
-    SetCount(fields[2].GetUInt32());
+    SetUInt64Value(ITEM_FIELD_CREATOR, MAKE_NEW_GUID(result->GetUInt32(0), 0, HIGHGUID_PLAYER));
+    SetUInt64Value(ITEM_FIELD_GIFTCREATOR, MAKE_NEW_GUID(result->GetUInt32(1), 0, HIGHGUID_PLAYER));
+    SetCount(result->GetUInt32(2));
 
-    uint32 duration = fields[3].GetUInt32();
+    uint32 duration = result->GetUInt32(3);
     SetUInt32Value(ITEM_FIELD_DURATION, duration);
     // update duration if need, and remove if not need
     if ((proto->Duration == 0) != (duration == 0))
@@ -425,12 +426,12 @@ bool Item::LoadFromDB(uint32 guid, uint64 owner_guid, QueryResult result, uint32
         need_save = true;
     }
 
-    Tokens tokens = StrSplit(fields[4].GetCppString(), " ");
+    Tokens tokens = StrSplit(result->GetString(4), " ");
     if (tokens.size() == MAX_ITEM_PROTO_SPELLS)
         for (uint8 i = 0; i < MAX_ITEM_PROTO_SPELLS; ++i)
             SetSpellCharges(i, atoi(tokens[i].c_str()));
 
-    SetUInt32Value(ITEM_FIELD_FLAGS, fields[5].GetUInt32());
+    SetUInt32Value(ITEM_FIELD_FLAGS, result->GetUInt32(5));
     // Remove bind flag for items vs NO_BIND set
     if (IsSoulBound() && proto->Bonding == NO_BIND)
     {
@@ -438,13 +439,13 @@ bool Item::LoadFromDB(uint32 guid, uint64 owner_guid, QueryResult result, uint32
         need_save = true;
     }
 
-    _LoadIntoDataField(fields[6].GetString(), ITEM_FIELD_ENCHANTMENT_1_1, MAX_ENCHANTMENT_SLOT * MAX_ENCHANTMENT_OFFSET);
-    SetInt32Value(ITEM_FIELD_RANDOM_PROPERTIES_ID, fields[7].GetInt32());
+    _LoadIntoDataField(result->GetString(6).c_str(), ITEM_FIELD_ENCHANTMENT_1_1, MAX_ENCHANTMENT_SLOT * MAX_ENCHANTMENT_OFFSET);
+    SetInt32Value(ITEM_FIELD_RANDOM_PROPERTIES_ID, result->GetInt32(7));
     // recalculate suffix factor
     if (GetItemRandomPropertyId() < 0)
         UpdateItemSuffixFactor();
 
-    uint32 durability = fields[8].GetUInt32();
+    uint32 durability = result->GetUInt32(8);
     SetUInt32Value(ITEM_FIELD_DURABILITY, durability);
     // update max durability (and durability) if need
     SetUInt32Value(ITEM_FIELD_MAXDURABILITY, proto->MaxDurability);
@@ -454,8 +455,8 @@ bool Item::LoadFromDB(uint32 guid, uint64 owner_guid, QueryResult result, uint32
         need_save = true;
     }
 
-    SetUInt32Value(ITEM_FIELD_CREATE_PLAYED_TIME, fields[9].GetUInt32());
-    SetText(fields[10].GetCppString());
+    SetUInt32Value(ITEM_FIELD_CREATE_PLAYED_TIME, result->GetUInt32(9));
+    SetText(result->GetString(10));
 
     if (need_save)                                           // normal item changed state set not work at loading
     {
@@ -473,12 +474,16 @@ bool Item::LoadFromDB(uint32 guid, uint64 owner_guid, QueryResult result, uint32
 
 void Item::DeleteFromDB(SQLTransaction& trans)
 {
-    trans->PAppend("DELETE FROM item_instance WHERE guid = '%u'",GetGUIDLow());
+    PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ITEM_INSTANCE);
+    stmt->setUInt32(0, GetGUIDLow());
+    trans->Append(stmt);
 }
 
 void Item::DeleteFromInventoryDB(SQLTransaction& trans)
 {
-    trans->PAppend("DELETE FROM character_inventory WHERE item = '%u'",GetGUIDLow());
+    PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_INVENTORY_ITEM);
+    stmt->setUInt32(0, GetGUIDLow());
+    trans->Append(stmt);
 }
 
 ItemPrototype const *Item::GetProto() const
@@ -737,12 +742,12 @@ bool Item::IsEquipped() const
     return !IsInBag() && m_slot < EQUIPMENT_SLOT_END;
 }
 
-bool Item::CanBeTraded(bool mail) const
+bool Item::CanBeTraded(bool mail, bool trade) const
 {
     if (m_lootGenerated)
         return false;
 
-    if ((!mail || !IsBoundAccountWide()) && IsSoulBound())
+    if ((!mail || !IsBoundAccountWide()) && (IsSoulBound() && (!HasFlag(ITEM_FIELD_FLAGS, ITEM_FLAG_BOP_TRADEABLE) || !trade)))
         return false;
 
     if (IsBag() && (Player::IsBagPos(GetPos()) || !((Bag const*)this)->IsEmpty()))
@@ -1068,6 +1073,10 @@ bool Item::IsBindedNotWith(Player const* player) const
     if (GetOwnerGUID() == player->GetGUID())
         return false;
 
+    if (HasFlag(ITEM_FIELD_FLAGS, ITEM_FLAG_BOP_TRADEABLE))
+        if (allowedGUIDs.find(player->GetGUIDLow()) != allowedGUIDs.end())
+            return false;
+
     // BOA item case
     if (IsBoundAccountWide())
         return false;
@@ -1171,4 +1180,37 @@ uint32 Item::GetPlayedTime()
 bool Item::IsRefundExpired()
 {
     return (GetPlayedTime() > 2*HOUR);
+}
+
+void Item::SetSoulboundTradeable(AllowedLooterSet* allowedLooters, Player* currentOwner, bool apply)
+{
+    if (apply)
+    {
+        SetFlag(ITEM_FIELD_FLAGS, ITEM_FLAG_BOP_TRADEABLE);
+        allowedGUIDs = *allowedLooters;
+    }
+    else
+    {
+        RemoveFlag(ITEM_FIELD_FLAGS, ITEM_FLAG_BOP_TRADEABLE);
+        if (allowedGUIDs.empty())
+            return;
+
+        allowedGUIDs.clear();
+        SetState(ITEM_CHANGED, currentOwner);
+        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_ITEM_BOP_TRADE);
+        stmt->setUInt32(0, GetGUIDLow());
+        CharacterDatabase.Execute(stmt);
+    }
+}
+
+bool Item::CheckSoulboundTradeExpire()
+{
+    // called from owner's update - GetOwner() MUST be valid
+    if (GetUInt32Value(ITEM_FIELD_CREATE_PLAYED_TIME) + 2*HOUR < GetOwner()->GetTotalPlayedTime())
+    {
+        SetSoulboundTradeable(NULL, GetOwner(), false);
+        return true; // remove from tradeable list
+    }
+
+    return false;
 }

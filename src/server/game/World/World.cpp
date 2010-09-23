@@ -1862,7 +1862,7 @@ void World::SetInitialWorldSettings()
     mail_timer = ((((localtime(&m_gameTime)->tm_hour + 20) % 24)* HOUR * IN_MILLISECONDS) / m_timers[WUPDATE_AUCTIONS].GetInterval());
                                                             //1440
     mail_timer_expires = ((DAY * IN_MILLISECONDS) / (m_timers[WUPDATE_AUCTIONS].GetInterval()));
-    sLog.outDebug("Mail timer set to: %u, mail return is called every %u minutes", mail_timer, mail_timer_expires);
+    sLog.outDebug("Mail timer set to: " UI64FMTD ", mail return is called every " UI64FMTD " minutes", uint64(mail_timer), uint64(mail_timer_expires));
 
     ///- Initilize static helper structures
     AIRegistry::Initialize();
@@ -2482,6 +2482,72 @@ bool World::RemoveBanAccount(BanMode mode, std::string nameOrIP)
         //NO SQL injection as account is uint32
         LoginDatabase.PExecute("UPDATE account_banned SET active = '0' WHERE id = '%u'",account);
     }
+    return true;
+}
+
+/// Ban an account or ban an IP address, duration will be parsed using TimeStringToSecs if it is positive, otherwise permban
+BanReturn World::BanCharacter(std::string name, std::string duration, std::string reason, std::string author)
+{
+    Player *pBanned = sObjectMgr.GetPlayer(name.c_str());
+    uint32 guid = 0;
+
+    uint32 duration_secs = TimeStringToSecs(duration);
+
+    /// Pick a player to ban if not online
+    if (!pBanned)
+    {
+        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_GET_GUID_BY_NAME);
+        stmt->setString(0, name);
+        PreparedQueryResult resultCharacter = CharacterDatabase.Query(stmt);
+
+        if (!resultCharacter)
+            return BAN_NOTFOUND;                                    // Nobody to ban
+
+        guid = resultCharacter->GetUInt32(0);
+    }
+    else
+        guid = pBanned->GetGUIDLow();
+
+    PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_ADD_BAN);
+    stmt->setUInt32(0, guid);
+    stmt->setUInt32(1, duration_secs);
+    stmt->setString(2, author);
+    stmt->setString(3, reason);
+    CharacterDatabase.Execute(stmt);
+
+    if (pBanned)
+        pBanned->GetSession()->KickPlayer();
+
+    return BAN_SUCCESS;
+}
+
+/// Remove a ban from a character
+bool World::RemoveBanCharacter(std::string name)
+{
+    Player *pBanned = sObjectMgr.GetPlayer(name.c_str());
+    uint32 guid = 0;
+
+    /// Pick a player to ban if not online
+    if (!pBanned)
+    {
+        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_GET_GUID_BY_NAME);
+        stmt->setString(0, name);
+        PreparedQueryResult resultCharacter = CharacterDatabase.Query(stmt);
+
+        if (!resultCharacter)
+            return false;
+
+        guid = resultCharacter->GetUInt32(0);
+    }
+    else
+        guid = pBanned->GetGUIDLow();
+
+    if (!guid)
+        return false;
+
+    PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SET_NOT_BANNED);
+    stmt->setUInt32(0, guid);
+    CharacterDatabase.Execute(stmt);
     return true;
 }
 

@@ -3251,7 +3251,7 @@ bool CanSpellPierceImmuneAura(SpellEntry const * pierceSpell, SpellEntry const *
     // these spells (Cyclone for example) can pierce all...
     if ((pierceSpell->AttributesEx & SPELL_ATTR_EX_UNAFFECTED_BY_SCHOOL_IMMUNE)
         // ...but not these (Divine shield for example)
-        && !(aura && (aura->Attributes & SPELL_ATTR_UNAFFECTED_BY_INVULNERABILITY)))
+        && !(aura && (aura->Mechanic == MECHANIC_IMMUNE_SHIELD || aura->Mechanic == MECHANIC_INVULNERABILITY)))
         return true;
 
     return false;
@@ -3817,6 +3817,7 @@ void SpellMgr::LoadSpellCustomAttr()
         case 51735: // Ebon Plague
         case 51734:
         case 51726:
+            spellInfo->AttributesEx3 |= SPELL_ATTR_EX3_STACK_FOR_DIFF_CASTERS;
             spellInfo->SpellFamilyFlags[2] = 0x10;
             count++;
             break;

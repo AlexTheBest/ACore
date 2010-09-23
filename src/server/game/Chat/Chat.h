@@ -123,6 +123,7 @@ class ChatHandler
         bool HandleGMNotifyCommand(const char* args);
 
         bool HandleBanAccountCommand(const char* args);
+        bool HandleBanAccountByCharCommand(const char* args);
         bool HandleBanCharacterCommand(const char* args);
         bool HandleBanIPCommand(const char* args);
         bool HandleBanInfoAccountCommand(const char* args);
@@ -495,6 +496,7 @@ class ChatHandler
         bool HandleTitlesSetMaskCommand(const char* args);
 
         bool HandleUnBanAccountCommand(const char* args);
+        bool HandleUnBanAccountByCharCommand(const char* args);
         bool HandleUnBanCharacterCommand(const char* args);
         bool HandleUnBanIPCommand(const char* args);
 
@@ -576,6 +578,9 @@ class ChatHandler
         bool HandleBankCommand(const char* args);
         bool HandleChangeWeather(const char* args);
         bool HandleKickPlayerCommand(const char * args);
+
+        // Achievement commands
+        bool HandleAchievementAddCommand(const char* args);
 
         // GM ticket command handlers
         bool HandleGMTicketListCommand(const char* args);
