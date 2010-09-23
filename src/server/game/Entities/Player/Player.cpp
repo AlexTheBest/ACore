@@ -2159,7 +2159,7 @@ void Player::RemoveFromWorld()
     //TODO: FIXME
     if (sIRC.ajoin == 1)
     {
-        QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT `name` FROM `irc_inchan` WHERE `name` = '%s'", Unit::GetName());
+        QueryResult result = WorldDatabase.PQuery("SELECT `name` FROM `irc_inchan` WHERE `name` = '%s'", Unit::GetName());
         if (!result)
         {
             sIRC.AutoJoinChannel(this);

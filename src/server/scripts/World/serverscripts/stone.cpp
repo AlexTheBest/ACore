@@ -29,7 +29,7 @@ public:
 	void creategossiplist_2(Player *player, Creature *_Creature, uint32 permission, std::string parent)
 	{
 		player->PlayerTalkClass->ClearMenus();
-		QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT id,name,folder, faction FROM telelist WHERE parent='%s' && permissionflag<='%u'", parent.c_str(), permission);
+		QueryResult result = WorldDatabase.PQuery("SELECT id,name,folder, faction FROM telelist WHERE parent='%s' && permissionflag<='%u'", parent.c_str(), permission);
 			if(result) //check if we got a result
 			{
 					Field *fields = result->Fetch();  
@@ -52,7 +52,7 @@ public:
 				_Creature->MonsterWhisper("Nothing to display", player->GetGUID());
 			}
 			
-		QueryResult_AutoPtr BackResult = WorldDatabase.PQuery("SELECT id FROM telelist WHERE name IN (SELECT parent FROM telelist WHERE name='%s')", parent.c_str());
+		QueryResult BackResult = WorldDatabase.PQuery("SELECT id FROM telelist WHERE name IN (SELECT parent FROM telelist WHERE name='%s')", parent.c_str());
 		if(BackResult)
 		{
 			Field *BackFields = BackResult->Fetch();
@@ -68,7 +68,7 @@ public:
 		if(player->HasItemCount(100180,1,false))
 			{
 
-			QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT id,name,permissionflag,parent,folder,x,y,z,mapid,levelreq FROM telelist WHERE id = '%u' AND permissionflag<='%u'",action, type);
+			QueryResult result = WorldDatabase.PQuery("SELECT id,name,permissionflag,parent,folder,x,y,z,mapid,levelreq FROM telelist WHERE id = '%u' AND permissionflag<='%u'",action, type);
 			if(result){
 				Field* pFields = result->Fetch();
 				

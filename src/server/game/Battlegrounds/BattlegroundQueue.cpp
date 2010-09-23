@@ -575,7 +575,6 @@ void BattlegroundQueue::FillPlayersToBG(Battleground* bg, BattlegroundBracketId 
 // it tries to invite as much players as it can - to MaxPlayersPerTeam, because premade groups have more than MinPlayersPerTeam players
 bool BattlegroundQueue::CheckPremadeMatch(BattlegroundBracketId bracket_id, uint32 MinPlayersPerTeam, uint32 MaxPlayersPerTeam)
 {
-    uint32 BGPlayerCounter = 0;
     //check match
     if (!m_QueuedGroups[bracket_id][BG_QUEUE_PREMADE_ALLIANCE].empty() && !m_QueuedGroups[bracket_id][BG_QUEUE_PREMADE_HORDE].empty())
     {
@@ -647,17 +646,14 @@ uint32 BGPlayerCounter = 0;
 			//Time for the worlds biggest HACK =D but hay it works
 				if(bg_template->isBattleground() && sBattlegroundMgr.isMixBg())
 				{
-					BGPlayerCounter = BGPlayerCounter + int32(m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount());
-					if(i != BG_TEAM_ALLIANCE)
-						BGPlayerCounter =  int32(m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount()) +  int32(m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount());
+					BGPlayerCounter =  m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount() +  m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount();
+sLog.outError("BattlegroundQueue:Players Join... %u", BGPlayerCounter);
 					if (BGPlayerCounter >= minPlayers * 2)
 						break;
 				}else{
 					if (m_SelectionPools[i].GetPlayerCount() >= minPlayers)
 						break;  
 				}
-		BGPlayerCounter = 0;
-                    break;
             }
         }
     }
@@ -687,8 +683,9 @@ uint32 BGPlayerCounter = 0;
 
 	if(bg_template->isBattleground() && sBattlegroundMgr.isMixBg())
 	{
-		int32 Ali   = int32(m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount());
-		int32 Horde = int32(m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount());
+		int32 Ali   = m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount();
+		int32 Horde = m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount();
+sLog.outError("BattlegroundQueue:Players Queued.. %u", (Ali + Horde));
 		return (Ali + Horde) >= minPlayers * 2;
 	}else{
 		 return m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount() >= minPlayers && m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount() >= minPlayers;

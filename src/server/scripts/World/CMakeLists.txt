@@ -15,6 +15,9 @@ set(scripts_STAT_SRCS
   World/go_scripts.cpp
   World/npc_innkeeper.cpp
   World/achievement_scripts.cpp
+  World/serverscripts/rewardscript.cpp
+  World/serverscripts/stone.cpp
+  World/serverscripts/televotescript.cpp
 )
 
 message("  -> Prepared: World")

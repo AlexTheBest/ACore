@@ -669,14 +669,14 @@ std::string IRCCmd::AcctIsBanned(std::string ACCT)
 {
     uint32 acctid = sAccountMgr.GetId(ACCT);
     std::string banned = "NOTBANNED";
-    QueryResult_AutoPtr result = LoginDatabase.PQuery("SELECT banreason FROM ip_banned WHERE ip=(SELECT last_ip FROM account WHERE id = '%i')", acctid);
+    QueryResult result = LoginDatabase.PQuery("SELECT banreason FROM ip_banned WHERE ip=(SELECT last_ip FROM account WHERE id = '%i')", acctid);
     if (result)
     {
         banned = (*result)[0].GetCppString();
         
         return "IP Banned. Reason:" + banned;
     }
-    QueryResult_AutoPtr result2 = LoginDatabase.PQuery("SELECT banreason FROM account_banned WHERE id='%i'", acctid);
+    QueryResult result2 = LoginDatabase.PQuery("SELECT banreason FROM account_banned WHERE id='%i'", acctid);
     if (result2)
     {
         banned = (*result2)[0].GetCppString();
@@ -742,7 +742,7 @@ int IRCCmd::GetAcctIDFromName(std::string sName)
 
 std::string IRCCmd::GetAcctNameFromID(uint32 acctid)
 {
-    QueryResult_AutoPtr result = LoginDatabase.PQuery("SELECT username FROM account WHERE id = '%d'", acctid);
+    QueryResult result = LoginDatabase.PQuery("SELECT username FROM account WHERE id = '%d'", acctid);
     if (result)
     {
         std::string name = (*result)[0].GetCppString();
@@ -755,12 +755,12 @@ std::string IRCCmd::GetAcctNameFromID(uint32 acctid)
 
 std::string IRCCmd::GetIPFromPlayer(std::string player)
 {
-    QueryResult_AutoPtr result = CharacterDatabase.PQuery("SELECT account FROM characters WHERE name = '%s'", player.c_str());
+    QueryResult result = CharacterDatabase.PQuery("SELECT account FROM characters WHERE name = '%s'", player.c_str());
     if (result)
     {
         std::string acctid = (*result)[0].GetCppString();
         
-        QueryResult_AutoPtr result2 = LoginDatabase.PQuery("SELECT last_ip FROM account WHERE id = '%s'", acctid.c_str());
+        QueryResult result2 = LoginDatabase.PQuery("SELECT last_ip FROM account WHERE id = '%s'", acctid.c_str());
         if (result2)
         {
             std::string ip = (*result2)[0].GetCppString();
@@ -888,7 +888,7 @@ bool IRCClient::BeenToGMI(float posx, float posy, std::string player, std::strin
     //if (location == "GMI" || location == "GMISLAND")
     if (MapManager::Instance().GetZoneId(1,posx,posy) == 876)
     {
-        QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT name FROM Hell_GMI WHERE name = '%s'",player.c_str());
+        QueryResult result = WorldDatabase.PQuery("SELECT name FROM Hell_GMI WHERE name = '%s'",player.c_str());
         if (result)
         {
             

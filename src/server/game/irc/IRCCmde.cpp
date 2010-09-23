@@ -52,7 +52,7 @@ void IRCCmd::Handle_Login(_CDATA *CD)
         {
             if (!AcctIsLoggedIn(_PARAMS[0].c_str()))
             {
-                QueryResult_AutoPtr result = LoginDatabase.PQuery("SELECT `gmlevel` FROM `account`, `account_access` WHERE `username`='%s' AND `account_access`.`id`=`account`.`id` AND `sha_pass_hash`=SHA1(CONCAT(UPPER(`username`),':',UPPER('%s')));", _PARAMS[0].c_str(), _PARAMS[1].c_str());
+                QueryResult result = LoginDatabase.PQuery("SELECT `gmlevel` FROM `account`, `account_access` WHERE `username`='%s' AND `account_access`.`id`=`account`.`id` AND `sha_pass_hash`=SHA1(CONCAT(UPPER(`username`),':',UPPER('%s')));", _PARAMS[0].c_str(), _PARAMS[1].c_str());
                 if (result)
                 {
                     Field *fields = result->Fetch();
@@ -218,7 +218,7 @@ void IRCCmd::Ban_Player(_CDATA *CD)
         }
         else
         {
-            QueryResult_AutoPtr result = LoginDatabase.PQuery("SELECT id FROM `account` WHERE username = '%s'", _PARAMS[0].c_str());
+            QueryResult result = LoginDatabase.PQuery("SELECT id FROM `account` WHERE username = '%s'", _PARAMS[0].c_str());
             if (result)
             {
                 Field *fields = result->Fetch();
@@ -384,7 +384,7 @@ void IRCCmd::Char_Player(_CDATA *CD)
                 {
                     QName = cQName+1;
                     WorldDatabase.escape_string(QName);
-                    QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT entry FROM quest_template WHERE name = '%s'", QName.c_str());
+                    QueryResult result = WorldDatabase.PQuery("SELECT entry FROM quest_template WHERE name = '%s'", QName.c_str());
                     if (!result)
                     {
                         Send_IRCA(CD->USER, "\0034[ERROR] : Quest Not Found!", true, "ERROR");
@@ -397,7 +397,7 @@ void IRCCmd::Char_Player(_CDATA *CD)
             else
             {
                 qId = atoi(args);
-                QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT title FROM quest_template WHERE entry = '%d'", qId);
+                QueryResult result = WorldDatabase.PQuery("SELECT title FROM quest_template WHERE entry = '%d'", qId);
                 if (!result)
                 {
                     Send_IRCA(CD->USER, "\0034[ERROR] : Quest Not Found!", true, "ERROR");
@@ -583,14 +583,14 @@ void IRCCmd::Fun_Player(_CDATA *CD)
 void IRCCmd::Help_IRC(_CDATA *CD)
 {
     std::string* _PARAMS = getArray(CD->PARAMS, 1);
-    QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT `Command`, `Description`, `gmlevel` FROM `irc_commands`");
+    QueryResult result = WorldDatabase.PQuery("SELECT `Command`, `Description`, `gmlevel` FROM `irc_commands`");
     if (result)
     {
         if (IsLoggedIn(CD->USER))
         {
             if (_PARAMS[0] == "")
             {
-                QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT * FROM `irc_commands` WHERE `gmlevel` <= %u ORDER BY `Command`", GetLevel(CD->USER));
+                QueryResult result = WorldDatabase.PQuery("SELECT * FROM `irc_commands` WHERE `gmlevel` <= %u ORDER BY `Command`", GetLevel(CD->USER));
                 if (result)
                 {
                     std::string output = "\002TriniChat IRC Commands:\017 ";
@@ -606,7 +606,7 @@ void IRCCmd::Help_IRC(_CDATA *CD)
             }
             else
             {
-                QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT `Description`, `gmlevel` FROM `irc_commands` WHERE `Command` = '%s'", _PARAMS[0].c_str());
+                QueryResult result = WorldDatabase.PQuery("SELECT `Description`, `gmlevel` FROM `irc_commands` WHERE `Command` = '%s'", _PARAMS[0].c_str());
                 if (result)
                 {
                     Field *fields = result->Fetch();
@@ -630,7 +630,7 @@ void IRCCmd::Help_IRC(_CDATA *CD)
         {
             if (_PARAMS[0] == "")
             {
-                QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT * FROM `irc_commands` WHERE `gmlevel` = 0 ORDER BY `Command`");
+                QueryResult result = WorldDatabase.PQuery("SELECT * FROM `irc_commands` WHERE `gmlevel` = 0 ORDER BY `Command`");
                 if (result)
                 {
                     std::string output = "\002TriniChat IRC Commands:\017 ";
@@ -647,7 +647,7 @@ void IRCCmd::Help_IRC(_CDATA *CD)
             }
             else
             {
-                QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT `Description`, `gmlevel` FROM `irc_commands` WHERE `Command` = '%s'", _PARAMS[0].c_str());
+                QueryResult result = WorldDatabase.PQuery("SELECT `Description`, `gmlevel` FROM `irc_commands` WHERE `Command` = '%s'", _PARAMS[0].c_str());
                 if (result)
                 {
                     Field *fields = result->Fetch();
@@ -677,7 +677,7 @@ void IRCCmd::Inchan_Server(_CDATA *CD)
         Send_IRCA(CD->USER, "\0034[ERROR] : Syntax Error! ("+sIRC._cmd_prefx+"inchan <ChannelName>)", true, "ERROR");
         return;
     }
-    QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT * FROM `irc_inchan` WHERE `channel` = '%s' ORDER BY `name`", _PARAMS[0].c_str());
+    QueryResult result = WorldDatabase.PQuery("SELECT * FROM `irc_inchan` WHERE `channel` = '%s' ORDER BY `name`", _PARAMS[0].c_str());
     if (result)
     {
         Field *fields = result->Fetch();
@@ -736,7 +736,7 @@ void IRCCmd::Item_Player(_CDATA *CD)
             {
                 std::string itemName = citemName+1;
                 WorldDatabase.escape_string(itemName);
-                QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT entry FROM item_template WHERE name = '%s'", itemName.c_str());
+                QueryResult result = WorldDatabase.PQuery("SELECT entry FROM item_template WHERE name = '%s'", itemName.c_str());
                 if (!result)
                 {
                     Send_IRCA(CD->USER, "\0034[ERROR] : Item Not Found!", true, "ERROR");
@@ -755,7 +755,7 @@ void IRCCmd::Item_Player(_CDATA *CD)
         {
             std::string itemName = s_param;
             WorldDatabase.escape_string(itemName);
-            QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT entry FROM item_template WHERE name = '%s'", itemName.c_str());
+            QueryResult result = WorldDatabase.PQuery("SELECT entry FROM item_template WHERE name = '%s'", itemName.c_str());
             if (result)
             {
                 itemId = result->Fetch()->GetUInt16();
@@ -810,7 +810,7 @@ void IRCCmd::Item_Player(_CDATA *CD)
         if (count > 0 && item)
         {
                 plTarget->SendNewItem(item,count,true,false);
-                QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT name FROM item_template WHERE entry = %d", itemId);
+                QueryResult result = WorldDatabase.PQuery("SELECT name FROM item_template WHERE entry = %d", itemId);
                 char* dbitemname = NULL;
                 if (result)
                 {
@@ -854,7 +854,7 @@ void IRCCmd::Jail_Player(_CDATA *CD)
                 float rposx, rposy, rposz, rposo = 0;
                 uint32 rmapid = 0;
                 CharacterDatabase.escape_string(_PARAMS[0]);
-                QueryResult_AutoPtr result = CharacterDatabase.PQuery("SELECT `map`, `position_x`, `position_y`, `position_z` FROM `character_homebind` WHERE `guid` = '" UI64FMTD "'", plr->GetGUID());
+                QueryResult result = CharacterDatabase.PQuery("SELECT `map`, `position_x`, `position_y`, `position_z` FROM `character_homebind` WHERE `guid` = '" UI64FMTD "'", plr->GetGUID());
                 if (result)
                 {
                     Field *fields = result->Fetch();
@@ -950,7 +950,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
         if (acctid > 0)
         {
             std::string DateTime = "%a, %b %d, %Y - %h:%i%p";
-            QueryResult_AutoPtr result = LoginDatabase.PQuery("SELECT `account`.`id`, username, `gmlevel`, last_ip, (SELECT banreason FROM account_banned WHERE `account`.`id` = %d LIMIT 1) as banned, (SELECT banreason FROM ip_banned WHERE ip = last_ip) as bannedip, DATE_FORMAT(last_login, '%s') FROM `account`, `account_access` WHERE `account`.`id` = %d AND `account`.`id`=`account_access`.`id`" , acctid, DateTime.c_str(), acctid, acctid);
+            QueryResult result = LoginDatabase.PQuery("SELECT `account`.`id`, username, `gmlevel`, last_ip, (SELECT banreason FROM account_banned WHERE `account`.`id` = %d LIMIT 1) as banned, (SELECT banreason FROM ip_banned WHERE ip = last_ip) as bannedip, DATE_FORMAT(last_login, '%s') FROM `account`, `account_access` WHERE `account`.`id` = %d AND `account`.`id`=`account_access`.`id`" , acctid, DateTime.c_str(), acctid, acctid);
             if (result)
             {
                 Field *fields = result->Fetch();
@@ -964,7 +964,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 std::string lastlogin = fields[6].GetCppString();
                 
 
-                QueryResult_AutoPtr chars = CharacterDatabase.PQuery("SELECT guid, name, (SELECT SUM(totaltime) FROM characters WHERE account = %d) AS tottime FROM characters WHERE account = %u", id, id);
+                QueryResult chars = CharacterDatabase.PQuery("SELECT guid, name, (SELECT SUM(totaltime) FROM characters WHERE account = %d) AS tottime FROM characters WHERE account = %u", id, id);
                 std::string characters = "None";
                 std::string totaccttime = "Never Logged In";
                 if (chars)
@@ -993,7 +993,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
         }
         else
         {
-            QueryResult_AutoPtr result = LoginDatabase.PQuery("SELECT id, username FROM `account` WHERE username LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
+            QueryResult result = LoginDatabase.PQuery("SELECT id, username FROM `account` WHERE username LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
             if (result)
             {
                 Field *fields = result->Fetch();
@@ -1019,7 +1019,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
             plguid = sObjectMgr.GetPlayerGUIDByName(_PARAMS[1].c_str());
         if (plguid > 0)
         {
-            QueryResult_AutoPtr result = CharacterDatabase.PQuery("SELECT guid, account, name, race, class, online, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 35), ' ' , -1) AS level, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 238), ' ' , -1) AS guildid, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 239), ' ' , -1) AS guildrank, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 927), ' ' , -1) AS xp, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 928), ' ' , -1) AS maxxp, SUBSTRING_INDEX(SUBSTRING_INDEX(name, ' ' , 1462), ' ' , -1) AS gold, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 1454), ' ' , -1) AS hk, totaltime FROM characters WHERE guid =%i", plguid);
+            QueryResult result = CharacterDatabase.PQuery("SELECT guid, account, name, race, class, online, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 35), ' ' , -1) AS level, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 238), ' ' , -1) AS guildid, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 239), ' ' , -1) AS guildrank, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 927), ' ' , -1) AS xp, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 928), ' ' , -1) AS maxxp, SUBSTRING_INDEX(SUBSTRING_INDEX(name, ' ' , 1462), ' ' , -1) AS gold, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 1454), ' ' , -1) AS hk, totaltime FROM characters WHERE guid =%i", plguid);
             uint32 latency = 0;
             Player *chr = sObjectMgr.GetPlayer(plguid);
             if (chr)
@@ -1047,7 +1047,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 std::string totaltim = SecToDay(fields[13].GetCppString());
                 
                 std::string sqlquery = "SELECT `gmlevel` FROM `account_access` WHERE `id` = '" + pacct + "';";
-                QueryResult_AutoPtr result = LoginDatabase.Query(sqlquery.c_str());
+                QueryResult result = LoginDatabase.Query(sqlquery.c_str());
                 Field *fields2 = result->Fetch();
                 std::string pgmlvl = fields2[0].GetCppString();
                 
@@ -1097,7 +1097,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
         }
         else
         {
-            QueryResult_AutoPtr result = CharacterDatabase.PQuery("SELECT guid, account, name FROM characters WHERE name LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
+            QueryResult result = CharacterDatabase.PQuery("SELECT guid, account, name FROM characters WHERE name LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
             if (result)
             {
                 Field *fields = result->Fetch();
@@ -1124,7 +1124,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
         if (atoi(creature.c_str()) > 0)
         {
             WorldDatabase.escape_string(_PARAMS[1]);
-            QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT entry, modelid_A, name, (minlevel*maxlevel/2) as level, faction_A, armor,  (SELECT count(*) FROM creature WHERE id = '%s') as spawns FROM creature_template WHERE entry = '%s';", _PARAMS[1].c_str(), _PARAMS[1].c_str());
+            QueryResult result = WorldDatabase.PQuery("SELECT entry, modelid_A, name, (minlevel*maxlevel/2) as level, faction_A, armor,  (SELECT count(*) FROM creature WHERE id = '%s') as spawns FROM creature_template WHERE entry = '%s';", _PARAMS[1].c_str(), _PARAMS[1].c_str());
             if (result)
             {
                 Field *fields = result->Fetch();
@@ -1146,7 +1146,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
         }
         else
         {
-            QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT entry, name FROM creature_template WHERE name LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
+            QueryResult result = WorldDatabase.PQuery("SELECT entry, name FROM creature_template WHERE name LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
             if (result)
             {
                 Field *fields = result->Fetch();
@@ -1213,7 +1213,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
         if (atoi(gobject.c_str()) > 0)
         {
             WorldDatabase.escape_string(_PARAMS[1]);
-            QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT entry, type, displayId, name, faction, (SELECT count(*) FROM gameobject WHERE id = '%s') as spawns FROM gameobject_template WHERE entry = '%s';", _PARAMS[1].c_str(), _PARAMS[1].c_str());
+            QueryResult result = WorldDatabase.PQuery("SELECT entry, type, displayId, name, faction, (SELECT count(*) FROM gameobject WHERE id = '%s') as spawns FROM gameobject_template WHERE entry = '%s';", _PARAMS[1].c_str(), _PARAMS[1].c_str());
             if (result)
             {
                 Field *fields = result->Fetch();
@@ -1234,7 +1234,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
         }
         else
         {
-            QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT entry, name FROM gameobject_template WHERE name LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
+            QueryResult result = WorldDatabase.PQuery("SELECT entry, name FROM gameobject_template WHERE name LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
             if (result)
             {
                 Field *fields = result->Fetch();
@@ -1258,11 +1258,11 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
         std::string item = _PARAMS[1];
         if (atoi(item.c_str()) > 0)
         {
-            QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT entry, name, displayid, (SELECT count(*) FROM creature_loot_template WHERE item = '%s') as loot FROM `item_template` WHERE entry = %s", _PARAMS[1].c_str(), _PARAMS[1].c_str());
+            QueryResult result = WorldDatabase.PQuery("SELECT entry, name, displayid, (SELECT count(*) FROM creature_loot_template WHERE item = '%s') as loot FROM `item_template` WHERE entry = %s", _PARAMS[1].c_str(), _PARAMS[1].c_str());
             if (result)
             {
                 Field *fields = result->Fetch();
-                QueryResult_AutoPtr result2 = CharacterDatabase.PQuery("SELECT count(*) FROM `character_inventory` WHERE item_template = %s", _PARAMS[1].c_str());
+                QueryResult result2 = CharacterDatabase.PQuery("SELECT count(*) FROM `character_inventory` WHERE item_template = %s", _PARAMS[1].c_str());
                 Field *fields2 = result2->Fetch();
                 uint32 charcnt = fields2[0].GetUInt32();
                 
@@ -1280,7 +1280,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
         }
         else
         {
-            QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT entry, name FROM `item_template` WHERE name LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
+            QueryResult result = WorldDatabase.PQuery("SELECT entry, name FROM `item_template` WHERE name LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
             if (result)
             {
                 Field *fields = result->Fetch();
@@ -1305,10 +1305,10 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
         if (atoi(quest.c_str()) > 0)
         {
             WorldDatabase.escape_string(_PARAMS[1]);
-            QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT entry, Title FROM quest_template WHERE entry = '%s';", _PARAMS[1].c_str(), _PARAMS[1].c_str());
+            QueryResult result = WorldDatabase.PQuery("SELECT entry, Title FROM quest_template WHERE entry = '%s';", _PARAMS[1].c_str(), _PARAMS[1].c_str());
             if (result)
             {
-                QueryResult_AutoPtr result2 = CharacterDatabase.PQuery("SELECT count(*) FROM character_queststatus WHERE quest = '%s' AND status = '1';", _PARAMS[1].c_str());
+                QueryResult result2 = CharacterDatabase.PQuery("SELECT count(*) FROM character_queststatus WHERE quest = '%s' AND status = '1';", _PARAMS[1].c_str());
                 Field *fields2 = result2->Fetch();
                 uint32 status = fields2[0].GetUInt32();
                 
@@ -1324,7 +1324,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
         }
         else
         {
-            QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT entry, Title FROM quest_template WHERE Title LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
+            QueryResult result = WorldDatabase.PQuery("SELECT entry, Title FROM quest_template WHERE Title LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
             if (result)
             {
                 Field *fields = result->Fetch();
@@ -1431,7 +1431,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
         std::string tele = _PARAMS[1];
         if (atoi(tele.c_str()) > 0)
         {
-            QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT * FROM `game_tele` WHERE id = %s", _PARAMS[1].c_str());
+            QueryResult result = WorldDatabase.PQuery("SELECT * FROM `game_tele` WHERE id = %s", _PARAMS[1].c_str());
             if (result)
             {
                 Field *fields = result->Fetch();
@@ -1452,7 +1452,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
         }
         else
         {
-            QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT id, name FROM `game_tele` WHERE name LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
+            QueryResult result = WorldDatabase.PQuery("SELECT id, name FROM `game_tele` WHERE name LIKE '%%%s%%' LIMIT 10", _PARAMS[1].c_str());
             if (result)
             {
                 Field *fields = result->Fetch();
@@ -1512,7 +1512,7 @@ void IRCCmd::Money_Player(_CDATA *CD)
         else {
         CharacterDatabase.escape_string(player);
         std::string sqlquery = "SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(name, ' ' , 1462), ' ' , -1) AS `gold` FROM `characters` WHERE `name` = '"+player+"';";
-        QueryResult_AutoPtr result = CharacterDatabase.Query(sqlquery.c_str());
+        QueryResult result = CharacterDatabase.Query(sqlquery.c_str());
             Field *fields = result->Fetch();
             moneyuser = fields[0].GetInt32();
             
@@ -1822,7 +1822,7 @@ void IRCCmd::Sysmsg_Server(_CDATA *CD)
     }
     else if (_PARAMS[0] == "list")
     {
-        QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT * FROM irc_autoannounce LIMIT 5;", _PARAMS[1].c_str());
+        QueryResult result = WorldDatabase.PQuery("SELECT * FROM irc_autoannounce LIMIT 5;", _PARAMS[1].c_str());
         if (result)
         {
             Field *fields = result->Fetch();
@@ -1870,7 +1870,7 @@ void IRCCmd::Tele_Player(_CDATA *CD)
         if (_PARAMS[1].size() > 1)
             _PARAMS[2] = _PARAMS[1];
         WorldDatabase.escape_string(_PARAMS[2]);
-        QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT position_x, position_y, position_z, orientation, map FROM game_tele WHERE name='%s';", _PARAMS[2].c_str());
+        QueryResult result = WorldDatabase.PQuery("SELECT position_x, position_y, position_z, orientation, map FROM game_tele WHERE name='%s';", _PARAMS[2].c_str());
         if (result)
         {
             Field *fields = result->Fetch();
@@ -1892,7 +1892,7 @@ void IRCCmd::Tele_Player(_CDATA *CD)
         else
         {
             WorldDatabase.escape_string(_PARAMS[2]);
-            QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT name FROM game_tele WHERE name LIKE '%%%s%%' LIMIT 7;", _PARAMS[2].c_str());
+            QueryResult result = WorldDatabase.PQuery("SELECT name FROM game_tele WHERE name LIKE '%%%s%%' LIMIT 7;", _PARAMS[2].c_str());
             if (result)
             {
                 std::string telename = "<> ";
@@ -1989,7 +1989,7 @@ void IRCCmd::Tele_Player(_CDATA *CD)
     }
     else if (_PARAMS[1] == "cr")
     {
-      QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT position_x,position_y,position_z,orientation,map FROM creature WHERE guid ='%s' LIMIT 1", _PARAMS[2].c_str());
+      QueryResult result = WorldDatabase.PQuery("SELECT position_x,position_y,position_z,orientation,map FROM creature WHERE guid ='%s' LIMIT 1", _PARAMS[2].c_str());
       if (!result)
       {
           Send_IRCA(CD->USER, "\0034[ERROR] : Creature GUID not found", true, "ERROR");
@@ -2016,7 +2016,7 @@ void IRCCmd::Tele_Player(_CDATA *CD)
     }
     else if (_PARAMS[1] == "go")
     {
-      QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT position_x,position_y,position_z,orientation,map FROM gameobject WHERE guid ='%s' LIMIT 1", _PARAMS[2].c_str());
+      QueryResult result = WorldDatabase.PQuery("SELECT position_x,position_y,position_z,orientation,map FROM gameobject WHERE guid ='%s' LIMIT 1", _PARAMS[2].c_str());
       if (!result)
       {
           Send_IRCA(CD->USER, "\0034[ERROR] : GO GUID not found", true, "ERROR");
@@ -2043,7 +2043,7 @@ void IRCCmd::Tele_Player(_CDATA *CD)
     }
     else if (_PARAMS[1] == "homebind")
     {
-        QueryResult_AutoPtr result = CharacterDatabase.PQuery("SELECT position_x,position_y,position_z,map FROM `character_homebind` WHERE guid = '%d'", plr->GetGUID());
+        QueryResult result = CharacterDatabase.PQuery("SELECT position_x,position_y,position_z,map FROM `character_homebind` WHERE guid = '%d'", plr->GetGUID());
         if (!result)
         {
           Send_IRCA(CD->USER, "\0034[ERROR] : Unexpected Error Loading Homebind Location", true, "ERROR");
@@ -2104,7 +2104,7 @@ void IRCCmd::Top_Player(_CDATA *CD)
         limitr = atoi(_PARAMS[1].c_str());
     if (_PARAMS[0] == "accttime")
     {
-        QueryResult_AutoPtr result = CharacterDatabase.PQuery("SELECT account, name, (SUM(totaltime)) AS combinetime FROM characters GROUP BY account ORDER BY combinetime DESC LIMIT 0, %d ", limitr);
+        QueryResult result = CharacterDatabase.PQuery("SELECT account, name, (SUM(totaltime)) AS combinetime FROM characters GROUP BY account ORDER BY combinetime DESC LIMIT 0, %d ", limitr);
         if (result)
         {
             Field *fields = result->Fetch();
@@ -2126,7 +2126,7 @@ void IRCCmd::Top_Player(_CDATA *CD)
     }
     if (_PARAMS[0] == "chartime")
     {
-        QueryResult_AutoPtr result = CharacterDatabase.PQuery("SELECT name, totaltime FROM characters ORDER BY totaltime DESC LIMIT 0, %d ", limitr);
+        QueryResult result = CharacterDatabase.PQuery("SELECT name, totaltime FROM characters ORDER BY totaltime DESC LIMIT 0, %d ", limitr);
         if (result)
         {
             Field *fields = result->Fetch();
@@ -2147,7 +2147,7 @@ void IRCCmd::Top_Player(_CDATA *CD)
     }
     if (_PARAMS[0] == "money")
     {
-        QueryResult_AutoPtr result = CharacterDatabase.PQuery("SELECT name, money FROM characters ORDER BY money DESC LIMIT 0, %d ", limitr);
+        QueryResult result = CharacterDatabase.PQuery("SELECT name, money FROM characters ORDER BY money DESC LIMIT 0, %d ", limitr);
         if (result)
         {
             Field *fields = result->Fetch();

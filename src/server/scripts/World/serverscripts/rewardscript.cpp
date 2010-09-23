@@ -172,7 +172,7 @@ bool OnGossipHello(Player *player, Creature *_Creature)
 		count -= noSpaceForCount;	 
 		if( count > 0 ) // can't add any
 		{
-			QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT entry FROM mangos.item_template WHERE itemset = '%u' AND itemlevel LIKE \"\%u\%\"", itemsetid, itemlevel);
+			QueryResult result = WorldDatabase.PQuery("SELECT entry FROM mangos.item_template WHERE itemset = '%u' AND itemlevel LIKE \"\%u\%\"", itemsetid, itemlevel);
 			do
 			{
 				Field *fields = result->Fetch();
@@ -209,7 +209,7 @@ bool OnGossipHello(Player *player, Creature *_Creature)
 	void createfolders(std::string typedonation, Creature *_Creature, Player *player)
 	{
 		player->PlayerTalkClass->ClearMenus();
-		QueryResult_AutoPtr pResult = WorldDatabase.PQuery("SELECT id,name,class,type,cost,folder,icon,faction FROM donationlist WHERE type=\"%s\" && extension<=1 ORDER BY id", typedonation.c_str());
+		QueryResult pResult = WorldDatabase.PQuery("SELECT id,name,class,type,cost,folder,icon,faction FROM donationlist WHERE type=\"%s\" && extension<=1 ORDER BY id", typedonation.c_str());
 			// Make sure the result is valid
 		if(pResult){
 			int32 count = 0;
@@ -232,7 +232,7 @@ bool OnGossipHello(Player *player, Creature *_Creature)
 		}else{
 				_Creature->MonsterWhisper("Nothing to display", player->GetGUID());	
 		}
-		QueryResult_AutoPtr pResult2 = WorldDatabase.PQuery("SELECT id FROM donationlist WHERE name = (SELECT type FROM donationlist WHERE name=\"%s\")", typedonation.c_str());
+		QueryResult pResult2 = WorldDatabase.PQuery("SELECT id FROM donationlist WHERE name = (SELECT type FROM donationlist WHERE name=\"%s\")", typedonation.c_str());
 		if(pResult2){
 			Field* pFields2 = pResult2->Fetch();
 			if(pFields2[0].GetInt32())
@@ -315,7 +315,7 @@ bool OnGossipHello(Player *player, Creature *_Creature)
 			_Creature->MonsterSay("You are in combat!", LANG_UNIVERSAL, NULL);
 			return;
 		}
-			QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT donationpoints FROM realmd.account WHERE id = '%u'", player->GetSession()->GetAccountId());
+			QueryResult result = WorldDatabase.PQuery("SELECT donationpoints FROM realmd.account WHERE id = '%u'", player->GetSession()->GetAccountId());
 		Field *Fields = result->Fetch();
 		if(result)//prevent a crash maybe?
 		{	
@@ -346,7 +346,7 @@ bool OnGossipHello(Player *player, Creature *_Creature)
 			_Creature->MonsterWhisper("There is a problem with server connecting to the database, please come back later....", player->GetGUID());
 			player->CLOSE_GOSSIP_MENU();
 		}
-		QueryResult_AutoPtr pResult = WorldDatabase.PQuery("SELECT id,name,itemid,cost,itemlevel,requiredslots,flags,type,folder,level,min_level,skill_id,skill_level,count,money,extension,max_level FROM donationlist WHERE extension<=1 AND id='%u'", action);
+		QueryResult pResult = WorldDatabase.PQuery("SELECT id,name,itemid,cost,itemlevel,requiredslots,flags,type,folder,level,min_level,skill_id,skill_level,count,money,extension,max_level FROM donationlist WHERE extension<=1 AND id='%u'", action);
 		/*
 		//id // name // itemid // cost // itemlevel // requiredslots // flags // type // folder // level // req_level // skill_id // skill_level //  count   //  money // extension //
 		//0 //   1  //    2   //   3  //     4    //        5      //   6   //   7  //   8  //	 9    //	 10     //   11     //    12       //    13    //   14   //  15  //

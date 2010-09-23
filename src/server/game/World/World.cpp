@@ -1310,7 +1310,7 @@ void World::LoadConfigSettings(bool reload)
       sIRC.ojGM7 = sConfig.GetStringDefault("irc.gm7", "[Developer]");
       sIRC.ojGM8 = sConfig.GetStringDefault("irc.gm8", "[Owner]");
       // REQUIRED GM LEVEL
-      QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT `Command`, `gmlevel` FROM `irc_commands` ORDER BY `Command`");
+      QueryResult result = WorldDatabase.PQuery("SELECT `Command`, `gmlevel` FROM `irc_commands` ORDER BY `Command`");
       if (result)
       {
           Field *fields = result->Fetch();
@@ -2689,7 +2689,7 @@ void World::SendAutoBroadcast()
 void World::SendRNDBroadcastIRC()
 {
     std::string msg;
-    QueryResult_AutoPtr result = WorldDatabase.PQuery("SELECT `message` FROM `irc_autoannounce` ORDER BY RAND() LIMIT 1");
+    QueryResult result = WorldDatabase.PQuery("SELECT `message` FROM `irc_autoannounce` ORDER BY RAND() LIMIT 1");
     if (!result)
         return;
     msg = result->Fetch()[0].GetString();
