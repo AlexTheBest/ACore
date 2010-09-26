@@ -226,9 +226,7 @@ bool WorldSession::Update(uint32 diff)
                         break;
                     case STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT:
                         if (!_player && !m_playerRecentlyLogout)
-                        {
                             LogUnexpectedOpcode(packet, "the player has not logged in yet and not recently logout");
-                        }
                         else
                         {
                             // not expected _player or must checked in packet hanlder
@@ -270,11 +268,14 @@ bool WorldSession::Update(uint32 diff)
                             LogUnprocessedTail(packet);
                         break;
                     case STATUS_NEVER:
-                        /*
                         sLog.outError("SESSION: received not allowed opcode %s (0x%.4X)",
                             LookupOpcodeName(packet->GetOpcode()),
                             packet->GetOpcode());
-                        */
+                        break;
+                    case STATUS_UNHANDLED:
+                        sLog.outDebug("SESSION: received not handled opcode %s (0x%.4X)",
+                            LookupOpcodeName(packet->GetOpcode()),
+                            packet->GetOpcode());
                         break;
                 }
             }
@@ -599,7 +600,8 @@ void WorldSession::LoadAccountData(PreparedQueryResult result, uint32 mask)
 
     do
     {
-        uint32 type = result->GetUInt32(0);
+        Field* fields = result->Fetch();
+        uint32 type = fields[0].GetUInt32();
         if (type >= NUM_ACCOUNT_DATA_TYPES)
         {
             sLog.outError("Table `%s` have invalid account data type (%u), ignore.",
@@ -614,10 +616,11 @@ void WorldSession::LoadAccountData(PreparedQueryResult result, uint32 mask)
             continue;
         }
 
-        m_accountData[type].Time = result->GetUInt32(1);
-        m_accountData[type].Data = result->GetString(2);
+        m_accountData[type].Time = fields[1].GetUInt32();
+        m_accountData[type].Data = fields[2].GetString();
 
-    } while (result->NextRow());
+    }
+    while (result->NextRow());
 }
 
 void WorldSession::SetAccountData(AccountDataType type, time_t time_, std::string data)

@@ -530,7 +530,7 @@ void WorldSession::HandleContactListOpcode(WorldPacket & recv_data)
     uint32 unk;
     recv_data >> unk;
     sLog.outDebug("unk value is %u", unk);
-    _player->GetSocial()->SendSocialList();
+    _player->GetSocial()->SendSocialList(_player);
 }
 
 void WorldSession::HandleAddFriendOpcode(WorldPacket & recv_data)
@@ -1331,13 +1331,13 @@ void WorldSession::HandleWhoisOpcode(WorldPacket& recv_data)
     }
 
     Field *fields = result->Fetch();
-    std::string acc = fields[0].GetCppString();
+    std::string acc = fields[0].GetString();
     if (acc.empty())
         acc = "Unknown";
-    std::string email = fields[1].GetCppString();
+    std::string email = fields[1].GetString();
     if (email.empty())
         email = "Unknown";
-    std::string lastip = fields[2].GetCppString();
+    std::string lastip = fields[2].GetString();
     if (lastip.empty())
         lastip = "Unknown";
 

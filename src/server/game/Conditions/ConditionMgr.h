@@ -113,7 +113,7 @@ struct Condition
         mScriptId           = 0;
     }
 
-    bool Meets(Player * player, Unit* targetOverride = NULL);
+    bool Meets(Player * player, Unit* invoker = NULL);
     bool isLoaded() { return mConditionType > CONDITION_NONE || mReferenceId; }
 };
 
@@ -135,7 +135,7 @@ class ConditionMgr
         bool isConditionTypeValid(Condition* cond);
         ConditionList GetConditionReferences(uint32 refId);
 
-        bool IsPlayerMeetToConditions(Player* player, ConditionList conditions, Unit* targetOverride = NULL);
+        bool IsPlayerMeetToConditions(Player* player, ConditionList conditions, Unit* invoker = NULL);
         ConditionList GetConditionsForNotGroupedEntry(ConditionSourceType sType, uint32 uEntry);
 
     protected:
@@ -149,7 +149,7 @@ class ConditionMgr
         bool addToLootTemplate(Condition* cond, LootTemplate* loot);
         bool addToGossipMenus(Condition* cond);
         bool addToGossipMenuItems(Condition* cond);
-        bool IsPlayerMeetToConditionList(Player* player,const ConditionList& conditions, Unit* targetOverride = NULL);
+        bool IsPlayerMeetToConditionList(Player* player,const ConditionList& conditions, Unit* invoker = NULL);
 
         bool isGroupable(ConditionSourceType sourceType)
         {

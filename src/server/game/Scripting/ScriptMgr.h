@@ -573,7 +573,7 @@ class ConditionScript : public ScriptObject
         bool IsDatabaseBound() const { return true; }
 
         // Called when a single condition is checked for a player.
-        virtual bool OnConditionCheck(Condition* /*condition*/, Player* /*player*/, Unit* /*targetOverride*/) { return true; }
+        virtual bool OnConditionCheck(Condition* /*condition*/, Player* /*player*/, Unit* /*invoker*/) { return true; }
 };
 
 class VehicleScript : public ScriptObject
@@ -690,7 +690,7 @@ class PlayerScript : public ScriptObject
 
         // Called when a duel starts (after 3s countdown)
         virtual void OnDuelStart(Player* /*player1*/, Player* /*player2*/) { }
-        
+
         // Called when a duel ends
         virtual void OnDuelEnd(Player* /*winner*/, Player* /*looser*/, DuelCompleteType /*type*/) { }
 
@@ -737,7 +737,7 @@ class GuildScript : public ScriptObject
 class GroupScript : public ScriptObject
 {
 protected:
-	GroupScript(const char* name);
+    GroupScript(const char* name);
 
 public:
     bool IsDatabaseBound() const { return false; }
@@ -889,7 +889,7 @@ class ScriptMgr
 
     public: /* ConditionScript */
 
-        bool OnConditionCheck(Condition* condition, Player* player, Unit* targetOverride);
+        bool OnConditionCheck(Condition* condition, Player* player, Unit* invoker);
 
     public: /* VehicleScript */
 

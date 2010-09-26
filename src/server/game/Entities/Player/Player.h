@@ -1262,7 +1262,7 @@ class Player : public Unit, public GridObject<Player>
 
         void UpdateEnchantTime(uint32 time);
         void UpdateSoulboundTradeItems();
-        void RemoveTradeableItem(uint32 guid);
+        void RemoveTradeableItem(Item* item);
         void UpdateItemDuration(uint32 time, bool realtimeonly = false);
         void AddEnchantmentDurations(Item *item);
         void RemoveEnchantmentDurations(Item *item);
@@ -2266,6 +2266,9 @@ class Player : public Unit, public GridObject<Player>
         void SetLfgRoles(uint8 _roles) { m_LookingForGroup.roles = _roles; }
         bool GetLfgUpdate() { return m_LookingForGroup.update; }
         void SetLfgUpdate(bool update) { m_LookingForGroup.update = update; }
+        LfgState GetLfgState() { return m_LookingForGroup.state; }
+        void SetLfgState(LfgState state) { m_LookingForGroup.state = state; }
+        bool isUsingLfg() { return GetLfgState() != LFG_STATE_NONE; }
 
         // Temporarily removed pet cache
         uint32 GetTemporaryUnsummonedPetNumber() const { return m_temporaryUnsummonedPetNumber; }

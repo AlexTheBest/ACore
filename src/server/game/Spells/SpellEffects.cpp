@@ -2159,9 +2159,10 @@ void Spell::EffectPowerBurn(SpellEffIndex effIndex)
     // NO - Not a typo - EffectPowerBurn uses effect value multiplier - not effect damage multiplier
     float dmgMultiplier = SpellMgr::CalculateSpellEffectValueMultiplier(m_spellInfo, effIndex, m_originalCaster, this);
 
-    newDamage = int32(newDamage * dmgMultiplier);
+    // add log data before multiplication (need power amount, not damage)
+    ExecuteLogEffectTakeTargetPower(effIndex, unitTarget, powerType, newDamage, 0.0f);
 
-    ExecuteLogEffectTakeTargetPower(effIndex, unitTarget, powerType, newDamage, dmgMultiplier);
+    newDamage = int32(newDamage * dmgMultiplier);
 
     m_damage += newDamage;
 }
@@ -3413,7 +3414,7 @@ void Spell::EffectAddHonor(SpellEffIndex /*effIndex*/)
     {
         //maybe we have correct honor_gain in damage already
         unitTarget->ToPlayer()->RewardHonor(NULL, 1, damage);
-        sLog.outError("SpellEffect::AddHonor (spell_id %u) rewards %u honor points (non scale) for player: %u", m_spellInfo->Id, damage, unitTarget->ToPlayer()->GetGUIDLow());
+        sLog.outDebug("SpellEffect::AddHonor (spell_id %u) rewards %u honor points (non scale) for player: %u", m_spellInfo->Id, damage, unitTarget->ToPlayer()->GetGUIDLow());
     }
 }
 

@@ -73,6 +73,7 @@
 #include "CharacterDatabaseCleaner.h"
 #include "ScriptMgr.h"
 #include "WeatherMgr.h"
+#include "CreatureTextMgr.h"
 
 volatile bool World::m_stopEvent = false;
 uint8 World::m_ExitCode = SHUTDOWN_EXIT_CODE;
@@ -1813,6 +1814,9 @@ void World::SetInitialWorldSettings()
     sLog.outString("Loading spell script names...");
     sObjectMgr.LoadSpellScriptNames();
 
+    sLog.outString("Loading Creature Texts...");
+    sCreatureTextMgr.LoadCreatureTexts();
+
     sLog.outString("Initializing Scripts...");
     sScriptMgr.Initialize();
 
@@ -2024,7 +2028,7 @@ void World::LoadAutobroadcasts()
 
         Field *fields = result->Fetch();
 
-        std::string message = fields[0].GetCppString();
+        std::string message = fields[0].GetString();
 
         m_Autobroadcasts.push_back(message);
 
@@ -2503,7 +2507,7 @@ BanReturn World::BanCharacter(std::string name, std::string duration, std::strin
         if (!resultCharacter)
             return BAN_NOTFOUND;                                    // Nobody to ban
 
-        guid = resultCharacter->GetUInt32(0);
+        guid = (*resultCharacter)[0].GetUInt32();
     }
     else
         guid = pBanned->GetGUIDLow();
@@ -2537,7 +2541,7 @@ bool World::RemoveBanCharacter(std::string name)
         if (!resultCharacter)
             return false;
 
-        guid = resultCharacter->GetUInt32(0);
+        guid = (*resultCharacter)[0].GetUInt32();
     }
     else
         guid = pBanned->GetGUIDLow();
@@ -2926,8 +2930,8 @@ void World::LoadDBVersion()
     {
         Field* fields = result->Fetch();
 
-        m_DBVersion              = fields[0].GetCppString();
-        m_CreatureEventAIVersion = fields[1].GetCppString();
+        m_DBVersion              = fields[0].GetString();
+        m_CreatureEventAIVersion = fields[1].GetString();
 
         // will be overwrite by config values if different and non-0
         m_int_configs[CONFIG_CLIENTCACHE_VERSION] = fields[2].GetUInt32();

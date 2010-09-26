@@ -930,14 +930,14 @@ void ScriptMgr::OnAuctionExpire(AuctionHouseObject* ah, AuctionEntry* entry)
     FOREACH_SCRIPT(AuctionHouseScript)->OnAuctionExpire(ah, entry);
 }
 
-bool ScriptMgr::OnConditionCheck(Condition* condition, Player* player, Unit* targetOverride)
+bool ScriptMgr::OnConditionCheck(Condition* condition, Player* player, Unit* invoker)
 {
     ASSERT(condition);
     ASSERT(player);
-    // targetOverride can be NULL.
+    // invoker can be NULL.
 
     GET_SCRIPT_RET(ConditionScript, condition->mScriptId, tmpscript, true);
-    return tmpscript->OnConditionCheck(condition, player, targetOverride);
+    return tmpscript->OnConditionCheck(condition, player, invoker);
 }
 
 void ScriptMgr::OnInstall(Vehicle* veh)
@@ -1221,31 +1221,31 @@ void ScriptMgr::OnGuildDisband(Guild *guild)
 
 void ScriptMgr::OnGroupAddMember(Group* group, uint64 guid)
 {
-	ASSERT(group);
+    ASSERT(group);
     FOREACH_SCRIPT(GroupScript)->OnAddMember(group, guid);
 }
 
 void ScriptMgr::OnGroupInviteMember(Group* group, uint64 guid)
 {
-	ASSERT(group);
+    ASSERT(group);
     FOREACH_SCRIPT(GroupScript)->OnInviteMember(group, guid);
 }
 
 void ScriptMgr::OnGroupRemoveMember(Group* group, uint64 guid, RemoveMethod method)
 {
-	ASSERT(group);
+    ASSERT(group);
     FOREACH_SCRIPT(GroupScript)->OnRemoveMember(group, guid, method);
 }
 
 void ScriptMgr::OnGroupChangeLeader(Group* group, uint64 newLeaderGuid, uint64 oldLeaderGuid)
 {
-	ASSERT(group);
+    ASSERT(group);
     FOREACH_SCRIPT(GroupScript)->OnChangeLeader(group, newLeaderGuid, oldLeaderGuid);
 }
 
 void ScriptMgr::OnGroupDisband(Group* group)
 {
-	ASSERT(group);
+    ASSERT(group);
     FOREACH_SCRIPT(GroupScript)->OnDisband(group);
 }
 
