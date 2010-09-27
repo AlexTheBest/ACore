@@ -623,13 +623,16 @@ public:
                         me->AI()->SetData(DATA_START,0);
 
                     if (pInstance->GetData(BOSS_GRAND_CHAMPIONS) == DONE)
+			{
                         DoStartArgentChampionEncounter();
+                     }
                 }
 
                if (pInstance->GetData(BOSS_GRAND_CHAMPIONS) == DONE &&
                    pInstance->GetData(BOSS_ARGENT_CHALLENGE_E) == DONE ||
                    pInstance->GetData(BOSS_ARGENT_CHALLENGE_P) == DONE)
                 {
+
                    if (Unit* pBlackKnight = me->SummonCreature(VEHICLE_BLACK_KNIGHT,801.369507f, 640.574280f, 469.314362f, 3.97124f,TEMPSUMMON_DEAD_DESPAWN,180000))
     			    {
     			                uiBlackKnightGUID = pBlackKnight->GetGUID();

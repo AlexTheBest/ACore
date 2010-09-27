@@ -56,7 +56,7 @@ Rewrite count of Nexus Lord, Scion of Eternity to blizzlike values.
 #include "eye_of_eternity.h"
 #include "WorldPacket.h"
 #include "ObjectAccessor.h"
- 
+  #define M_PI_F 3.1415926535897932384626433832795
 enum
 {
     // ******************************** SPELLS ******************************** //
@@ -1546,59 +1546,105 @@ public:
         }
      
         InstanceScript* m_pInstance;
-        uint32 m_uiArcaneBarrageTimer;
-        uint32 m_uiMoveTimer;
-        uint8 m_uiMovePoint;
+    uint32 m_uiArcaneBarrageTimer;
+    //Movement - they are moving in "circles"....
+    uint32 m_uiMoveTimer;
+    bool m_bClockWise;
+    float m_fDistance;
+    float m_fAngle;
+
      
         void Reset()
         {
-            me->SetFlying(true);
-            me->AddUnitMovementFlag(MOVEMENTFLAG_SPLINE_ELEVATION);
-            me->SetSpeed(MOVE_WALK, 0.7f, true);
-            me->SetSpeed(MOVE_RUN, 0.7f, true);
-            me->SetSpeed(MOVE_FLIGHT, 0.7f, true);
-            DoNextMovement();
-            m_uiMovePoint = 0;
-            m_uiMoveTimer = 10000;
-            m_uiArcaneBarrageTimer = 5000 + rand()%15000;
-            me->SetInCombatWithZone();
+        me->SetSpeed(MOVE_WALK, 0.7f, true);
+        me->SetSpeed(MOVE_RUN, 0.7f, true);
+        me->SetSpeed(MOVE_FLIGHT, 0.7f, true);
+        m_uiArcaneBarrageTimer = 5000 + rand()%15000;
+        InitMovement();
         }
-        void AttackStart(Unit *pWho)
-        {
-            if(pWho->GetTypeId() != TYPEID_PLAYER)
-                return;
-     
-            if (me->Attack(pWho, true))
-            {
-                me->AddThreat(pWho, 1.0f);
-                me->SetInCombatWith(pWho);
-                pWho->SetInCombatWith(me);
-                //me->GetMotionMaster()->MoveChase(pWho, 15.0f);
-            }
-        }
+    void InitMovement()
+    {
+        m_bClockWise = urand(0,1) ? true : false;
+        m_uiMoveTimer = 1000;
+        m_fDistance = me->GetDistance2d(OtherLoc[2].x, OtherLoc[2].y); // From center of platform
         
-        void DoNextMovement()
+        //Calculate angle - lol, i hope its right.
+        float m_fLenght = 2*M_PI_F*m_fDistance; // perimeter of circle
+        m_fAngle = (M_PI_F - ((2*M_PI_F) / m_fLenght)) / 2; // (Triangle(PI) - angle at center of circle) / 2  =  one of two another angles, I wish this can be explain in ASCII image :/
+
+        if(m_bClockWise)
+            m_fAngle += ((2*M_PI_F) / m_fLenght) + me->GetAngle(OtherLoc[2].x, OtherLoc[2].y); // angle from 0 to center + alpha angle + beta angle
+        else
+            m_fAngle = me->GetAngle(OtherLoc[2].x, OtherLoc[2].y) - m_fAngle - ((2*M_PI_F) / m_fLenght);
+
+        //because it cant be lower than 0 or bigger than 2*PI
+        m_fAngle = (m_fAngle >= 0) ? m_fAngle : 2 * M_PI_F + m_fAngle;
+        m_fAngle = (m_fAngle <= 2*M_PI_F) ? m_fAngle : m_fAngle - 2 * M_PI_F;
+    }
+    
+    void DoNextMovement()
+    {
+        WorldPacket heart;
+       me->BuildHeartBeatMsg(&heart);
+        me->SendMessageToSet(&heart, false);
+        //Just rand point in range, not very smooth
+        /*++m_uiMovePoint;
+        uint32 x = urand(SHELL_MIN_X, SHELL_MAX_X);
+        uint32 y = urand(SHELL_MIN_Y, SHELL_MAX_Y);
+        me->GetMotionMaster()->MovePoint(m_uiMovePoint, x, y, FLOOR_Z+10); */
+
+        // Moving in "circles", <3 numberz :P
+        bool canIncerase = true;
+        bool canDecerase = true;
+        if(m_fDistance > 22)
+            canIncerase = false;
+        if(m_fDistance < 4)
+            canDecerase = false;
+
+        uint8 tmp = urand(0,2); // 0 nothing, 1 incerase, 2 decerase
+        if(tmp == 1 && canIncerase)
+            m_fDistance += 0.5f;
+        else if(tmp == 2 && canDecerase)
+            m_fDistance -= 0.5f; 
+
+        float m_fLenght = 2*M_PI_F*m_fDistance;
+        float m_fRotateAngle = (2*M_PI_F) / m_fLenght; // Moving by 1y every 700ms
+        //float m_fDestAngle = me->GetOrientation();  <-- cant use this, creature is in combat
+        if(m_bClockWise)
+            m_fAngle -= m_fRotateAngle;
+        else
+            m_fAngle += m_fRotateAngle;
+
+        //because it cant be lower than 0 or bigger than 2*PI
+        m_fAngle = (m_fAngle >= 0) ? m_fAngle : 2 * M_PI_F + m_fAngle;
+        m_fAngle = (m_fAngle <= 2*M_PI_F) ? m_fAngle : m_fAngle - 2 * M_PI_F;
+
+        float destX = me->GetPositionX();
+        float destY = me->GetPositionY();
+
+        destX += cos(m_fAngle);
+        destY += sin(m_fAngle);
+
+        Trinity::NormalizeMapCoord(destX);
+        Trinity::NormalizeMapCoord(destY);
+        me->AddUnitMovementFlag(MOVEMENTFLAG_SPLINE_ELEVATION);
+        me->GetMap()->CreatureRelocation(me, destX, destY, me->GetPositionZ(), m_fAngle);
+        me->SendMonsterMove(destX, destY, me->GetPositionZ(), SPLINETYPE_NORMAL , 0, 900);
+    }
+    void AttackStart(Unit *pWho)
+    {
+        if(pWho->GetTypeId() != TYPEID_PLAYER)
+            return;
+
+        if (me->Attack(pWho, true))
         {
-            WorldPacket heart;
-            me->BuildHeartBeatMsg(&heart);
-            me->SendMessageToSet(&heart, false);
-            m_uiMovePoint++;
-            uint32 x = urand(SHELL_MIN_X, SHELL_MAX_X);
-            uint32 y = urand(SHELL_MIN_Y, SHELL_MAX_Y);
-            me->GetMotionMaster()->MovePoint(m_uiMovePoint, x, y, FLOOR_Z+10);
+            me->AddThreat(pWho,1.0f);
+            me->SetInCombatWith(pWho);
+            pWho->SetInCombatWith(me);
+            //me->GetMotionMaster()->MoveChase(pWho, 15.0f);
         }
+    }
 
-        bool isFlying(Unit* pUnit)
-        {
-            if(!m_pInstance)
-                return false;
-
-            m_pInstance->SetData64(TYPE_SET_PLAYER_TO_CHECK, pUnit->GetGUID());
-            bool result = m_pInstance->GetData(TYPE_CHECK_PLAYER_FLYING);
-            m_pInstance->SetData64(TYPE_SET_PLAYER_TO_CHECK, 0);
-
-            return result;
-        }
         
         void UpdateAI(const uint32 uiDiff)
         {
@@ -1609,8 +1655,6 @@ public:
             {
                 if (Unit* pTarget = SelectUnit(SELECT_TARGET_RANDOM, 0))
                 {
-                    if(isFlying(pTarget))
-                        return;
 
                     int32 bpoints0 = RAID_MODE(int32(BP_BARRAGE0), int32(BP_BARRAGE0_H));
                     me->CastCustomSpell(pTarget, SPELL_ARCANE_BARRAGE, &bpoints0, 0, 0, false);  

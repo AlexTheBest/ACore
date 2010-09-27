@@ -118,6 +118,18 @@ void AggroAllPlayers(Creature* pTemp)
         }
     }
 }
+        void DespawnCreatures(Creature* me, uint32 entry, float distance, bool discs = false)
+        {
+            std::list<Creature*> m_pCreatures;
+            GetCreatureListWithEntryInGrid(m_pCreatures, me, entry, distance);
+
+            if (m_pCreatures.empty())
+                return;
+
+            for(std::list<Creature*>::iterator iter = m_pCreatures.begin(); iter != m_pCreatures.end(); ++iter)
+                (*iter)->ForcedDespawn();
+        }
+
 
 bool GrandChampionsOutVehicle(Creature* me)
 {
@@ -135,7 +147,9 @@ bool GrandChampionsOutVehicle(Creature* me)
         if (!pGrandChampion1->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) &&
             !pGrandChampion2->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) &&
             !pGrandChampion3->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+            {
             return true;
+            }
     }
 
     return false;
@@ -290,7 +304,6 @@ public:
     };
 };
 
-
 // Marshal Jacob Alerius && Mokra the Skullcrusher || Warrior
 class boss_warrior_toc5 : public CreatureScript
 {
@@ -360,7 +373,8 @@ public:
                 bDone = true;
 
      		DoScriptText(SAY_START_2, me);
-
+                        DespawnCreatures(me, 36557, 200);
+                        DespawnCreatures(me, 36559, 200);
                 if (pInstance && me->GetGUID() == pInstance->GetData64(DATA_GRAND_CHAMPION_1))
                     me->SetHomePosition(739.678f,662.541f,412.393f,4.49f);
                 else if (pInstance && me->GetGUID() == pInstance->GetData64(DATA_GRAND_CHAMPION_2))
@@ -497,7 +511,8 @@ public:
             if (!bDone && GrandChampionsOutVehicle(me))
             {
                 bDone = true;
-
+                        DespawnCreatures(me, 36557, 200);
+                        DespawnCreatures(me, 36559, 200);
                 if (pInstance && me->GetGUID() == pInstance->GetData64(DATA_GRAND_CHAMPION_1))
                     me->SetHomePosition(739.678f,662.541f,412.393f,4.49f);
                 else if (pInstance && me->GetGUID() == pInstance->GetData64(DATA_GRAND_CHAMPION_2))
@@ -637,7 +652,8 @@ public:
             if (!bDone && GrandChampionsOutVehicle(me))
             {
                 bDone = true;
-
+                        DespawnCreatures(me, 36557, 200);
+                        DespawnCreatures(me, 36559, 200);
                 if (pInstance && me->GetGUID() == pInstance->GetData64(DATA_GRAND_CHAMPION_1))
                     me->SetHomePosition(739.678f,662.541f,412.393f,4.49f);
                 else if (pInstance && me->GetGUID() == pInstance->GetData64(DATA_GRAND_CHAMPION_2))
@@ -787,7 +803,8 @@ public:
             if (!bDone && GrandChampionsOutVehicle(me))
             {
                 bDone = true;
-
+                        DespawnCreatures(me, 36557, 200);
+                        DespawnCreatures(me, 36559, 200);
                 if (pInstance && me->GetGUID() == pInstance->GetData64(DATA_GRAND_CHAMPION_1))
                     me->SetHomePosition(739.678f,662.541f,412.393f,4.49f);
                 else if (pInstance && me->GetGUID() == pInstance->GetData64(DATA_GRAND_CHAMPION_2))
@@ -950,7 +967,8 @@ public:
             if (!bDone && GrandChampionsOutVehicle(me))
             {
                 bDone = true;
-
+                        DespawnCreatures(me, 36557, 200);
+                        DespawnCreatures(me, 36559, 200);
                 if (pInstance && me->GetGUID() == pInstance->GetData64(DATA_GRAND_CHAMPION_1))
                     me->SetHomePosition(739.678f,662.541f,412.393f,4.49f);
                 else if (pInstance && me->GetGUID() == pInstance->GetData64(DATA_GRAND_CHAMPION_2))
