@@ -3461,7 +3461,7 @@ void Spell::EffectEnchantItemPerm(SpellEffIndex effIndex)
         SpellItemEnchantmentEntry const *pEnchant = sSpellItemEnchantmentStore.LookupEntry(enchant_id);
         if (!pEnchant)
             return;
-
+        
         // item can be in trade slot and have owner diff. from caster
         Player* item_owner = itemTarget->GetOwner();
         if (!item_owner)
@@ -3507,7 +3507,7 @@ void Spell::EffectEnchantItemPrismatic(SpellEffIndex effIndex)
     // support only enchantings with add socket in this slot
     {
         bool add_socket = false;
-        for (uint8 i = 0; i < 3; ++i)
+        for (uint8 i = 0; i < MAX_ITEM_ENCHANTMENT_EFFECTS; ++i)
         {
             if (pEnchant->type[i] == ITEM_ENCHANTMENT_TYPE_PRISMATIC_SOCKET)
             {
@@ -3887,7 +3887,7 @@ void Spell::SpellDamageWeaponDmg(SpellEffIndex effIndex)
     // multiple weapon dmg effect workaround
     // execute only the last weapon damage
     // and handle all effects at once
-    for (uint32 j = effIndex + 1; j < 3; ++j)
+    for (uint32 j = effIndex + 1; j < MAX_SPELL_EFFECTS; ++j)
     {
         switch (m_spellInfo->Effect[j])
         {
@@ -4096,7 +4096,7 @@ void Spell::SpellDamageWeaponDmg(SpellEffIndex effIndex)
 
     bool normalized = false;
     float weaponDamagePercentMod = 1.0;
-    for (int j = 0; j < 3; ++j)
+    for (int j = 0; j < MAX_SPELL_EFFECTS; ++j)
     {
         switch(m_spellInfo->Effect[j])
         {
@@ -4141,7 +4141,7 @@ void Spell::SpellDamageWeaponDmg(SpellEffIndex effIndex)
     int32 weaponDamage = m_caster->CalculateDamage(m_attackType, normalized, true);
 
     // Sequence is important
-    for (int j = 0; j < 3; ++j)
+    for (int j = 0; j < MAX_SPELL_EFFECTS; ++j)
     {
         // We assume that a spell have at most one fixed_bonus
         // and at most one weaponDamagePercentMod

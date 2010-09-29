@@ -148,9 +148,11 @@ Player* World::FindPlayerInZone(uint32 zone)
     {
         if (!itr->second)
             continue;
+
         Player *player = itr->second->GetPlayer();
         if (!player)
             continue;
+
         if (player->IsInWorld() && player->GetZoneId() == zone)
         {
             // Used by the weather system. We return the player to broadcast the change weather message to him and all players in the zone.
@@ -218,7 +220,7 @@ void World::AddSession(WorldSession* s)
 }
 
 void
-World::AddSession_ (WorldSession* s)
+World::AddSession_(WorldSession* s)
 {
     ASSERT (s);
 
@@ -270,19 +272,11 @@ World::AddSession_ (WorldSession* s)
         return;
     }
 
-    WorldPacket packet(SMSG_AUTH_RESPONSE, 1 + 4 + 1 + 4 + 1);
-    packet << uint8 (AUTH_OK);
-    packet << uint32 (0);                                   // BillingTimeRemaining
-    packet << uint8 (0);                                    // BillingPlanFlags
-    packet << uint32 (0);                                   // BillingTimeRested
-    packet << uint8 (s->Expansion());                       // 0 - normal, 1 - TBC, 2 - WOTLK, must be set in database manually for each account
-    s->SendPacket (&packet);
+    s->SendAuthResponse(AUTH_OK, true);
 
     s->SendAddonsInfo();
 
-    WorldPacket pkt(SMSG_CLIENTCACHE_VERSION, 4);
-    pkt << uint32(sWorld.getIntConfig(CONFIG_CLIENTCACHE_VERSION));
-    s->SendPacket(&pkt);
+    s->SendClientCacheVersion(sWorld.getIntConfig(CONFIG_CLIENTCACHE_VERSION));
 
     s->SendTutorialsData();
 
@@ -300,7 +294,8 @@ World::AddSession_ (WorldSession* s)
 
 bool World::HasRecentlyDisconnected(WorldSession* session)
 {
-    if (!session) return false;
+    if (!session)
+        return false;
 
     if (uint32 tolerance = getIntConfig(CONFIG_INTERVAL_DISCONNECT_TOLERANCE))
     {
@@ -336,17 +331,7 @@ void World::AddQueuedPlayer(WorldSession* sess)
     m_QueuedPlayer.push_back(sess);
 
     // The 1st SMSG_AUTH_RESPONSE needs to contain other info too.
-    WorldPacket packet(SMSG_AUTH_RESPONSE, 1+4+1+4+1+4+1);
-    packet << uint8(AUTH_WAIT_QUEUE);
-    packet << uint32(0);                                    // BillingTimeRemaining
-    packet << uint8(0);                                     // BillingPlanFlags
-    packet << uint32(0);                                    // BillingTimeRested
-    packet << uint8(sess->Expansion());                     // 0 - normal, 1 - TBC, 2 - WOTLK, must be set in database manually for each account
-    packet << uint32(GetQueuePos(sess));                    // Queue position
-    packet << uint8(0);                                     // Unk 3.3.0
-    sess->SendPacket(&packet);
-
-    //sess->SendAuthWaitQue (GetQueuePos (sess));
+    sess->SendAuthResponse(AUTH_WAIT_QUEUE, false, GetQueuePos(sess));
 }
 
 bool World::RemoveQueuedPlayer(WorldSession* sess)
@@ -388,10 +373,7 @@ bool World::RemoveQueuedPlayer(WorldSession* sess)
         pop_sess->SendAuthWaitQue(0);
         pop_sess->SendAddonsInfo();
 
-        WorldPacket pkt(SMSG_CLIENTCACHE_VERSION, 4);
-        pkt << uint32(sWorld.getIntConfig(CONFIG_CLIENTCACHE_VERSION));
-        pop_sess->SendPacket(&pkt);
-
+        pop_sess->SendClientCacheVersion(sWorld.getIntConfig(CONFIG_CLIENTCACHE_VERSION));
         pop_sess->SendAccountDataTimes(GLOBAL_CACHE_MASK);
         pop_sess->SendTutorialsData();
 
@@ -1863,6 +1845,7 @@ void World::SetInitialWorldSettings()
     //to set mailtimer to return mails every day between 4 and 5 am
     //mailtimer is increased when updating auctions
     //one second is 1000 -(tested on win system)
+    //TODO: Get rid of magic numbers
     mail_timer = ((((localtime(&m_gameTime)->tm_hour + 20) % 24)* HOUR * IN_MILLISECONDS) / m_timers[WUPDATE_AUCTIONS].GetInterval());
                                                             //1440
     mail_timer_expires = ((DAY * IN_MILLISECONDS) / (m_timers[WUPDATE_AUCTIONS].GetInterval()));
@@ -1936,9 +1919,9 @@ void World::DetectDBCLang()
 {
     uint8 m_lang_confid = sConfig.GetIntDefault("DBC.Locale", 255);
 
-    if (m_lang_confid != 255 && m_lang_confid >= MAX_LOCALE)
+    if (m_lang_confid != 255 && m_lang_confid >= TOTAL_LOCALES)
     {
-        sLog.outError("Incorrect DBC.Locale! Must be >= 0 and < %d (set to 0)",MAX_LOCALE);
+        sLog.outError("Incorrect DBC.Locale! Must be >= 0 and < %d (set to 0)", TOTAL_LOCALES);
         m_lang_confid = LOCALE_enUS;
     }
 
@@ -1946,8 +1929,8 @@ void World::DetectDBCLang()
 
     std::string availableLocalsStr;
 
-    uint8 default_locale = MAX_LOCALE;
-    for (uint8 i = default_locale-1; i < MAX_LOCALE; --i)  // -1 will be 255 due to uint8
+    uint8 default_locale = TOTAL_LOCALES;
+    for (uint8 i = default_locale-1; i < TOTAL_LOCALES; --i)  // -1 will be 255 due to uint8
     {
         if (strlen(race->name[i]) > 0)                     // check by race names
         {
@@ -1958,13 +1941,13 @@ void World::DetectDBCLang()
         }
     }
 
-    if (default_locale != m_lang_confid && m_lang_confid < MAX_LOCALE &&
+    if (default_locale != m_lang_confid && m_lang_confid < TOTAL_LOCALES &&
         (m_availableDbcLocaleMask & (1 << m_lang_confid)))
     {
         default_locale = m_lang_confid;
     }
 
-    if (default_locale >= MAX_LOCALE)
+    if (default_locale >= TOTAL_LOCALES)
     {
         sLog.outError("Unable to determine your DBC Locale! (corrupt DBC?)");
         exit(1);
@@ -1992,9 +1975,9 @@ void World::RecordTimeDiff(const char *text, ...)
     if (diff > m_int_configs[CONFIG_MIN_LOG_UPDATE])
     {
         va_list ap;
-        char str [256];
+        char str[256];
         va_start(ap, text);
-        vsnprintf(str,256,text, ap);
+        vsnprintf(str, 256, text, ap);
         va_end(ap);
         sLog.outDetail("Difftime %s: %u.", str, diff);
     }
@@ -2027,7 +2010,6 @@ void World::LoadAutobroadcasts()
         bar.step();
 
         Field *fields = result->Fetch();
-
         std::string message = fields[0].GetString();
 
         m_Autobroadcasts.push_back(message);
@@ -2061,10 +2043,12 @@ void World::Update(uint32 diff)
 
     ///- Update the different timers
     for (int i = 0; i < WUPDATE_COUNT; ++i)
+    {
         if (m_timers[i].GetCurrent() >= 0)
             m_timers[i].Update(diff);
         else
             m_timers[i].SetCurrent(0);
+    }
 
     ///- Update the game time and check for shutdown time
     _UpdateGameTime();
@@ -2126,9 +2110,6 @@ void World::Update(uint32 diff)
     {
         if (m_timers[WUPDATE_CLEANDB].Passed())
         {
-            //uint32 tmpDiff = (m_gameTime - m_startTime);
-            //uint32 maxClientsNum = sWorld.GetMaxActiveSessionCount();
-
             m_timers[WUPDATE_CLEANDB].Reset();
             LoginDatabase.PExecute("DELETE FROM logs WHERE (time + %u) < "UI64FMTD";",
                 sWorld.getIntConfig(CONFIG_LOGDB_CLEARTIME), uint64(time(0)));
@@ -2172,7 +2153,6 @@ void World::Update(uint32 diff)
     if (m_timers[WUPDATE_CORPSES].Passed())
     {
         m_timers[WUPDATE_CORPSES].Reset();
-
         sObjectAccessor.RemoveOldCorpses();
     }
 
@@ -2257,19 +2237,19 @@ namespace Trinity
                 {
                     // we need copy va_list before use or original va_list will corrupted
                     va_list ap;
-                    va_copy(ap,*i_args);
+                    va_copy(ap, *i_args);
 
-                    char str [2048];
-                    vsnprintf(str,2048,text, ap);
+                    char str[2048];
+                    vsnprintf(str, 2048, text, ap);
                     va_end(ap);
 
-                    do_helper(data_list,&str[0]);
+                    do_helper(data_list, &str[0]);
                 }
                 else
-                    do_helper(data_list,(char*)text);
+                    do_helper(data_list, (char*)text);
             }
         private:
-            char* lineFromMessage(char*& pos) { char* start = strtok(pos,"\n"); pos = NULL; return start; }
+            char* lineFromMessage(char*& pos) { char* start = strtok(pos, "\n"); pos = NULL; return start; }
             void do_helper(WorldPacketList& data_list, char* text)
             {
                 char* pos = text;
@@ -2340,7 +2320,7 @@ void World::SendGMText(int32 string_id, ...)
     va_end(ap);
 }
 
-/// DEPRICATED, only for debug purpose. Send a System Message to all players (except self if mentioned)
+/// DEPRECATED, only for debug purpose. Send a System Message to all players (except self if mentioned)
 void World::SendGlobalText(const char* text, WorldSession *self)
 {
     WorldPacket data;
@@ -2406,29 +2386,36 @@ void World::KickAllLess(AccountTypes sec)
 /// Ban an account or ban an IP address, duration will be parsed using TimeStringToSecs if it is positive, otherwise permban
 BanReturn World::BanAccount(BanMode mode, std::string nameOrIP, std::string duration, std::string reason, std::string author)
 {
-    LoginDatabase.escape_string(nameOrIP);
-    LoginDatabase.escape_string(reason);
-    std::string safe_author=author;
-    LoginDatabase.escape_string(safe_author);
-
     uint32 duration_secs = TimeStringToSecs(duration);
-    QueryResult resultAccounts = QueryResult(NULL);                     //used for kicking
+    PreparedQueryResult resultAccounts = PreparedQueryResult(NULL); //used for kicking
+    PreparedStatement* stmt = NULL;
 
     ///- Update the database with ban information
     switch(mode)
     {
         case BAN_IP:
-            //No SQL injection as strings are escaped
-            resultAccounts = LoginDatabase.PQuery("SELECT id FROM account WHERE last_ip = '%s'",nameOrIP.c_str());
-            LoginDatabase.PExecute("INSERT INTO ip_banned VALUES ('%s',UNIX_TIMESTAMP(),UNIX_TIMESTAMP()+%u,'%s','%s')",nameOrIP.c_str(),duration_secs,safe_author.c_str(),reason.c_str());
+            // No SQL injection with prepared statements
+            stmt = LoginDatabase.GetPreparedStatement(LOGIN_GET_ACCOUNT_BY_IP);
+            stmt->setString(0, nameOrIP);
+            resultAccounts = LoginDatabase.Query(stmt);
+            stmt = LoginDatabase.GetPreparedStatement(LOGIN_SET_IP_BANNED);
+            stmt->setString(0, nameOrIP);
+            stmt->setUInt32(1, duration_secs);
+            stmt->setString(2, author);
+            stmt->setString(3, reason);
+            LoginDatabase.Execute(stmt);
             break;
         case BAN_ACCOUNT:
-            //No SQL injection as string is escaped
-            resultAccounts = LoginDatabase.PQuery("SELECT id FROM account WHERE username = '%s'",nameOrIP.c_str());
+            // No SQL injection with prepared statements
+            stmt = LoginDatabase.GetPreparedStatement(LOGIN_GET_ACCIDBYNAME);
+            stmt->setString(0, nameOrIP);
+            resultAccounts = LoginDatabase.Query(stmt);
             break;
         case BAN_CHARACTER:
-            //No SQL injection as string is escaped
-            resultAccounts = CharacterDatabase.PQuery("SELECT account FROM characters WHERE name = '%s'",nameOrIP.c_str());
+            // No SQL injection with prepared statements
+            stmt = CharacterDatabase.GetPreparedStatement(CHAR_GET_ACCOUNT_BY_NAME);
+            stmt->setString(0, nameOrIP);
+            resultAccounts = CharacterDatabase.Query(stmt);
             break;
         default:
             return BAN_SYNTAX_ERROR;
@@ -2439,10 +2426,11 @@ BanReturn World::BanAccount(BanMode mode, std::string nameOrIP, std::string dura
         if (mode == BAN_IP)
             return BAN_SUCCESS;                             // ip correctly banned but nobody affected (yet)
         else
-            return BAN_NOTFOUND;                                // Nobody to ban
+            return BAN_NOTFOUND;                            // Nobody to ban
     }
 
     ///- Disconnect all affected players (for IP it can be several)
+    SQLTransaction trans = LoginDatabase.BeginTransaction();
     do
     {
         Field* fieldsAccount = resultAccounts->Fetch();
@@ -2450,16 +2438,25 @@ BanReturn World::BanAccount(BanMode mode, std::string nameOrIP, std::string dura
 
         if (mode != BAN_IP)
         {
-            //No SQL injection as strings are escaped
-            LoginDatabase.PExecute("INSERT INTO account_banned VALUES ('%u', UNIX_TIMESTAMP(), UNIX_TIMESTAMP()+%u, '%s', '%s', '1')",
-                account,duration_secs,safe_author.c_str(),reason.c_str());
+            // make sure there is only one active ban
+            stmt = LoginDatabase.GetPreparedStatement(LOGIN_SET_ACCOUNT_NOT_BANNED);
+            stmt->setUInt32(0, account);
+            trans->Append(stmt);
+            // No SQL injection with prepared statements
+            stmt = LoginDatabase.GetPreparedStatement(LOGIN_SET_ACCOUNT_BANNED);
+            stmt->setUInt32(0, account);
+            stmt->setUInt32(1, duration_secs);
+            stmt->setString(2, author);
+            stmt->setString(3, reason);
+            trans->Append(stmt);
         }
 
         if (WorldSession* sess = FindSession(account))
             if (std::string(sess->GetPlayerName()) != author)
                 sess->KickPlayer();
-    }
-    while (resultAccounts->NextRow());
+    } while (resultAccounts->NextRow());
+
+    LoginDatabase.CommitTransaction(trans);
 
     return BAN_SUCCESS;
 }
@@ -2467,24 +2464,28 @@ BanReturn World::BanAccount(BanMode mode, std::string nameOrIP, std::string dura
 /// Remove a ban from an account or IP address
 bool World::RemoveBanAccount(BanMode mode, std::string nameOrIP)
 {
+    PreparedStatement* stmt = NULL;
     if (mode == BAN_IP)
     {
-        LoginDatabase.escape_string(nameOrIP);
-        LoginDatabase.PExecute("DELETE FROM ip_banned WHERE ip = '%s'",nameOrIP.c_str());
+        stmt = LoginDatabase.GetPreparedStatement(LOGIN_SET_IP_NOT_BANNED);
+        stmt->setString(0, nameOrIP);
+        LoginDatabase.Execute(stmt);
     }
     else
     {
         uint32 account = 0;
         if (mode == BAN_ACCOUNT)
-            account = sAccountMgr.GetId (nameOrIP);
+            account = sAccountMgr.GetId(nameOrIP);
         else if (mode == BAN_CHARACTER)
-            account = sObjectMgr.GetPlayerAccountIdByPlayerName (nameOrIP);
+            account = sObjectMgr.GetPlayerAccountIdByPlayerName(nameOrIP);
 
         if (!account)
             return false;
 
         //NO SQL injection as account is uint32
-        LoginDatabase.PExecute("UPDATE account_banned SET active = '0' WHERE id = '%u'",account);
+        stmt = LoginDatabase.GetPreparedStatement(LOGIN_SET_ACCOUNT_NOT_BANNED);
+        stmt->setUInt32(0, account);
+        LoginDatabase.Execute(stmt);
     }
     return true;
 }
@@ -2512,7 +2513,12 @@ BanReturn World::BanCharacter(std::string name, std::string duration, std::strin
     else
         guid = pBanned->GetGUIDLow();
 
-    PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_ADD_BAN);
+    // make sure there is only one active ban
+    PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_SET_NOT_BANNED);
+    stmt->setUInt32(0, guid);
+    CharacterDatabase.Execute(stmt);
+
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_ADD_BAN);
     stmt->setUInt32(0, guid);
     stmt->setUInt32(1, duration_secs);
     stmt->setString(2, author);
@@ -2622,16 +2628,11 @@ void World::ShutdownMsg(bool show, Player* player)
     ///- Display a message every 12 hours, hours, 5 minutes, minute, 5 seconds and finally seconds
     if (show ||
         (m_ShutdownTimer < 10) ||
-                                                            // < 30 sec; every 5 sec
-        (m_ShutdownTimer<30        && (m_ShutdownTimer % 5) == 0) ||
-                                                            // < 5 min ; every 1 min
-        (m_ShutdownTimer<5*MINUTE  && (m_ShutdownTimer % MINUTE) == 0) ||
-                                                            // < 30 min ; every 5 min
-        (m_ShutdownTimer<30*MINUTE && (m_ShutdownTimer % (5*MINUTE)) == 0) ||
-                                                            // < 12 h ; every 1 h
-        (m_ShutdownTimer<12*HOUR   && (m_ShutdownTimer % HOUR) == 0) ||
-                                                            // > 12 h ; every 12 h
-        (m_ShutdownTimer>12*HOUR   && (m_ShutdownTimer % (12*HOUR)) == 0))
+        (m_ShutdownTimer < 30 && (m_ShutdownTimer % 5) == 0) || // < 30 sec; every 5 sec
+        (m_ShutdownTimer < 5 * MINUTE && (m_ShutdownTimer % MINUTE) == 0) || // < 5 min ; every 1 min
+        (m_ShutdownTimer < 30 * MINUTE && (m_ShutdownTimer % (5 * MINUTE)) == 0) || // < 30 min ; every 5 min
+        (m_ShutdownTimer < 12 * HOUR && (m_ShutdownTimer % HOUR) == 0) || // < 12 h ; every 1 h
+        (m_ShutdownTimer > 12 * HOUR && (m_ShutdownTimer % (12 * HOUR)) == 0)) // > 12 h ; every 12 h
     {
         std::string str = secsToTimeString(m_ShutdownTimer);
 
@@ -2730,13 +2731,13 @@ void World::SendAutoBroadcast()
     msg = *itr;
 
     uint32 abcenter = sWorld.getIntConfig(CONFIG_AUTOBROADCAST_CENTER);
+
     if (abcenter == 0)
     {
         sWorld.SendWorldText(LANG_AUTO_BROADCAST, msg.c_str());
-
         sLog.outString("AutoBroadcast: '%s'",msg.c_str());
     }
-    if (abcenter == 1)
+    else if (abcenter == 1)
     {
         WorldPacket data(SMSG_NOTIFICATION, (msg.size()+1));
         data << msg;
@@ -2744,7 +2745,7 @@ void World::SendAutoBroadcast()
 
         sLog.outString("AutoBroadcast: '%s'",msg.c_str());
     }
-    if (abcenter == 2)
+    else if (abcenter == 2)
     {
         sWorld.SendWorldText(LANG_AUTO_BROADCAST, msg.c_str());
 
@@ -2773,9 +2774,7 @@ void World::SendRNDBroadcastIRC()
 void World::UpdateRealmCharCount(uint32 accountId)
 {
     m_realmCharCallback.SetParam(accountId);
-    m_realmCharCallback.SetFutureResult(
-        CharacterDatabase.AsyncPQuery("SELECT COUNT(guid) FROM characters WHERE account = '%u'", accountId)
-        );
+    m_realmCharCallback.SetFutureResult(CharacterDatabase.AsyncPQuery("SELECT COUNT(guid) FROM characters WHERE account = '%u'", accountId));
 }
 
 void World::_UpdateRealmCharCount(QueryResult resultCharCount, uint32 accountId)
@@ -2805,7 +2804,6 @@ void World::InitDailyQuestResetTime()
     if (result)
     {
         Field *fields = result->Fetch();
-
         mostRecentQuestTime = (time_t)fields[0].GetUInt64();
     }
     else
@@ -2828,11 +2826,8 @@ void World::InitDailyQuestResetTime()
     // need reset (if we have quest time before last reset time (not processed by some reason)
     if (mostRecentQuestTime && mostRecentQuestTime <= resetTime)
         m_NextDailyQuestReset = mostRecentQuestTime;
-    else
-    {
-        // plan next reset time
+    else // plan next reset time
         m_NextDailyQuestReset = (curTime >= curDayResetTime) ? curDayResetTime + DAY : curDayResetTime;
-    }
 }
 
 void World::InitRandomBGResetTime()
@@ -2845,8 +2840,8 @@ void World::InitRandomBGResetTime()
     time_t curTime = time(NULL);
     tm localTm = *localtime(&curTime);
     localTm.tm_hour = getIntConfig(CONFIG_RANDOM_BG_RESET_HOUR);
-    localTm.tm_min  = 0;
-    localTm.tm_sec  = 0;
+    localTm.tm_min = 0;
+    localTm.tm_sec = 0;
 
     // current day reset time
     time_t nextDayResetTime = mktime(&localTm);
@@ -2925,11 +2920,9 @@ void World::UpdateMaxSessionCounters()
 void World::LoadDBVersion()
 {
     QueryResult result = WorldDatabase.Query("SELECT db_version, script_version, cache_id FROM version LIMIT 1");
-    //QueryResult* result = WorldDatabase.Query("SELECT version, creature_ai_version, cache_id FROM db_version LIMIT 1");
     if (result)
     {
         Field* fields = result->Fetch();
-
         m_DBVersion              = fields[0].GetString();
         m_CreatureEventAIVersion = fields[1].GetString();
 
@@ -2987,8 +2980,7 @@ void World::LoadWorldStates()
         m_worldstates[fields[0].GetUInt32()] = fields[1].GetUInt64();
         bar.step();
         ++counter;
-    }
-    while (result->NextRow());
+    } while (result->NextRow());
 
     sLog.outString();
     sLog.outString(">> Loaded %u world states.", counter);
@@ -3015,7 +3007,6 @@ void World::ProcessQueryCallbacks()
 {
     QueryResult result;
 
-    //-UpdateRealmCharCount
     if (m_realmCharCallback.IsReady())
     {
         uint32 param = m_realmCharCallback.GetParam();

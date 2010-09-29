@@ -468,32 +468,24 @@ void LFGMgr::Update(uint32 diff)
 void LFGMgr::AddGuidToNewQueue(uint64 guid)
 {
     // Consistency check
-    LfgGuidList::const_iterator it;
-    for (it = m_newToQueue.begin(); it != m_newToQueue.end(); ++it)
+    LfgGuidList::iterator it = std::find(m_newToQueue.begin(), m_newToQueue.end(), guid);
+
+    if (it != m_newToQueue.end())
     {
-        if (*it == guid)
-        {
-            sLog.outError("LFGMgr::AddGuidToNewQueue: [" UI64FMTD "] being added to queue and it was already added. ignoring", guid);
-            break;
-        }
+        sLog.outError("LFGMgr::AddGuidToNewQueue: [" UI64FMTD "] being added to queue and it was already added. ignoring", guid);
+        return;
     }
-    if (it == m_newToQueue.end())
+
+    it = std::find(m_currentQueue.begin(), m_currentQueue.end(), guid);
+    if (it != m_currentQueue.end())
     {
-        LfgGuidList::iterator itRemove;
-        for (LfgGuidList::iterator it = m_currentQueue.begin(); it != m_currentQueue.end() && (*it) != guid;)
-        {
-            itRemove = it++;
-            if (*itRemove == guid)
-            {
-                sLog.outError("LFGMgr::AddGuidToNewQueue: [" UI64FMTD "] being added to queue and already in current queue (removing to readd)", guid);
-                m_currentQueue.erase(itRemove);
-                break;
-            }
-        }
-        // Add to queue
-        m_newToQueue.push_back(guid);
-        sLog.outError("DEBUG:LFGMgr::AddGuidToNewQueue: [" UI64FMTD "] added to m_newToQueue (size: %u)", guid, m_newToQueue.size());
+        sLog.outError("LFGMgr::AddGuidToNewQueue: [" UI64FMTD "] being added to queue and already in current queue (removing to readd)", guid);
+        m_currentQueue.erase(it);
     }
+
+    // Add to queue
+    m_newToQueue.push_back(guid);
+    sLog.outError("DEBUG:LFGMgr::AddGuidToNewQueue: [" UI64FMTD "] added to m_newToQueue (size: %u)", guid, m_newToQueue.size());
 }
 
 /// <summary>
@@ -584,11 +576,11 @@ void LFGMgr::Join(Player* plr)
         sLog.outError("LFGMgr::Join: [" UI64FMTD "] trying to join but is already in queue! Forcing leave before readding", guid);
         Leave(plr, grp);
     }
-    else if (plr->InBattleground() || plr->InArena())
+    else if (plr->InBattleground() || plr->InArena() || plr->InBattlegroundQueue())
         result = LFG_JOIN_USING_BG_SYSTEM;
-    else if (plr->HasAura(LFG_SPELL_DESERTER))
+    else if (plr->HasAura(LFG_SPELL_DUNGEON_DESERTER))
         result = LFG_JOIN_DESERTER;
-    else if (plr->HasAura(LFG_SPELL_COOLDOWN))
+    else if (plr->HasAura(LFG_SPELL_DUNGEON_COOLDOWN))
         result = LFG_JOIN_RANDOM_COOLDOWN;
     else
     {
@@ -617,9 +609,9 @@ void LFGMgr::Join(Player* plr)
                 plrg = itr->getSource();
                 if (plrg)
                 {
-                    if (plrg->HasAura(LFG_SPELL_DESERTER))
+                    if (plrg->HasAura(LFG_SPELL_DUNGEON_DESERTER))
                         result = LFG_JOIN_PARTY_DESERTER;
-                    else if (plrg->HasAura(LFG_SPELL_COOLDOWN))
+                    else if (plrg->HasAura(LFG_SPELL_DUNGEON_COOLDOWN))
                         result = LFG_JOIN_PARTY_RANDOM_COOLDOWN;
                     ++memberCount;
                 }
@@ -726,8 +718,8 @@ void LFGMgr::Leave(Player* plr, Group* grp /* = NULL*/)
 
     // Remove from Proposals
     bool proposalFound = false;
-    LfgProposalMap::iterator it;
-    for (it = m_Proposals.begin(); it != m_Proposals.end() && !proposalFound; ++it)
+    LfgProposalMap::iterator it = m_Proposals.begin();
+    while (it != m_Proposals.end() && !proposalFound)
     {
         // Mark the player/leader of group who left as didn't accept the proposal
         for (LfgProposalPlayerMap::iterator itPlayer = it->second->players.begin(); itPlayer != it->second->players.end(); ++itPlayer)
@@ -738,6 +730,8 @@ void LFGMgr::Leave(Player* plr, Group* grp /* = NULL*/)
                 proposalFound = true;
             }
         }
+        if (!proposalFound)
+            ++it;
     }
 
     // Remove from queue - if proposal is found, RemoveProposal will call RemoveFromQueue
@@ -763,6 +757,7 @@ void LFGMgr::Leave(Player* plr, Group* grp /* = NULL*/)
         plr->GetLfgDungeons()->clear();
         plr->SetLfgRoles(ROLE_NONE);
         plr->SetLfgState(LFG_STATE_NONE);
+        plr->RemoveAurasDueToSpell(LFG_SPELL_LUCK_OF_THE_DRAW);
     }
 }
 
@@ -1232,7 +1227,7 @@ void LFGMgr::UpdateRoleCheck(Group* grp, Player* plr /* = NULL*/)
                 plrg->GetLfgDungeons()->clear();
                 plrg->SetLfgRoles(ROLE_NONE);
                 if (!grp->isLFGGroup())
-                    plr->SetLfgState(LFG_STATE_NONE);
+                    plrg->SetLfgState(LFG_STATE_NONE);
             }
             break;
         default:
@@ -1242,7 +1237,7 @@ void LFGMgr::UpdateRoleCheck(Group* grp, Player* plr /* = NULL*/)
             plrg->GetLfgDungeons()->clear();
             if (grp->isLFGGroup())
                 plrg->SetLfgRoles(ROLE_NONE);
-            plr->SetLfgState(LFG_STATE_NONE);
+            plrg->SetLfgState(LFG_STATE_NONE);
             break;
         }
     }
@@ -1608,7 +1603,10 @@ void LFGMgr::UpdateProposal(uint32 proposalId, uint32 lowGuid, bool accept)
 
         // Teleport Player
         for (LfgPlayerList::const_iterator it = players.begin(); it != players.end(); ++it)
+        {
+            (*it)->CastSpell(*it, LFG_SPELL_DUNGEON_COOLDOWN, false);
             TeleportPlayer(*it, false);
+        }
 
         for (LfgProposalPlayerMap::const_iterator it = pProposal->players.begin(); it != pProposal->players.end(); ++it)
             delete it->second;
@@ -1813,6 +1811,7 @@ void LFGMgr::TeleportPlayer(Player* plr, bool out)
     sLog.outError("DEBUG:LFGMgr::TeleportPlayer: [" UI64FMTD "] is being teleported %s", plr->GetGUID(), out ? "out" : "in");
     if (out)
     {
+        plr->RemoveAurasDueToSpell(LFG_SPELL_LUCK_OF_THE_DRAW);
         plr->TeleportToBGEntryPoint();
         return;
     }
@@ -1837,8 +1836,11 @@ void LFGMgr::TeleportPlayer(Player* plr, bool out)
                 if (!plr->GetMap()->IsDungeon() && !plr->GetMap()->IsRaid())
                     plr->SetBattlegroundEntryPoint();
                 plr->RemoveAurasByType(SPELL_AURA_MOUNTED);
-                // TODO: Teleport to group
-                plr->TeleportTo(at->target_mapId, at->target_X, at->target_Y, at->target_Z, at->target_Orientation);
+                // TODO: Teleport to group 
+                if (plr->TeleportTo(at->target_mapId, at->target_X, at->target_Y, at->target_Z, at->target_Orientation))
+                    plr->CastSpell(plr, LFG_SPELL_LUCK_OF_THE_DRAW, false);
+                else
+                    sLog.outError("LfgMgr::TeleportPlayer: Failed to teleport [" UI64FMTD "] to map %u: ", plr->GetGUID(), at->target_mapId);
             }
 }
 

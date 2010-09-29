@@ -321,7 +321,8 @@ bool Group::AddMember(const uint64 &guid, const char* name)
     Player *player = sObjectMgr.GetPlayer(guid);
     if (player)
     {
-        sLFGMgr.Leave(player);
+        if (player->isUsingLfg())
+            sLFGMgr.Leave(player);
         if (!IsLeader(player->GetGUID()) && !isBGGroup())
         {
             // reset the new member's instances, unless he is currently in one of them
@@ -369,7 +370,8 @@ uint32 Group::RemoveMember(const uint64 &guid, const RemoveMethod &method)
     sScriptMgr.OnGroupRemoveMember(this, guid, method);
 
     // remove member and change leader (if need) only if strong more 2 members _before_ member remove
-    if (GetMembersCount() > (isBGGroup() ? 1u : 2u))           // in BG group case allow 1 members group
+    // BG or LFG groups allow 1 member group
+    if (GetMembersCount() > ((isBGGroup() || isLFGGroup()) ? 1u : 2u))
     {
         bool leaderChanged = _removeMember(guid);
 

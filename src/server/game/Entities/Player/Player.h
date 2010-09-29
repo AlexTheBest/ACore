@@ -1376,7 +1376,7 @@ class Player : public Unit, public GridObject<Player>
                 SetUInt32Value(PLAYER_QUEST_LOG_1_1 + MAX_QUEST_OFFSET * slot2 + i, temp1);
             }
         }
-        uint32 GetReqKillOrCastCurrentCount(uint32 quest_id, int32 entry);
+        uint16 GetReqKillOrCastCurrentCount(uint32 quest_id, int32 entry);
         void AreaExploredOrEventHappens(uint32 questId);
         void GroupEventHappens(uint32 questId, WorldObject const* pEventObject);
         void ItemAddedQuestCheck(uint32 entry, uint32 count);
@@ -1400,8 +1400,8 @@ class Player : public Unit, public GridObject<Player>
         void SendCanTakeQuestResponse(uint32 msg);
         void SendQuestConfirmAccept(Quest const* pQuest, Player* pReceiver);
         void SendPushToPartyResponse(Player *pPlayer, uint32 msg);
-        void SendQuestUpdateAddItem(Quest const* pQuest, uint32 item_idx, uint32 count);
-        void SendQuestUpdateAddCreatureOrGo(Quest const* pQuest, uint64 guid, uint32 creatureOrGO_idx, uint32 old_count, uint32 add_count);
+        void SendQuestUpdateAddItem(Quest const* pQuest, uint32 item_idx, uint16 count);
+        void SendQuestUpdateAddCreatureOrGo(Quest const* pQuest, uint64 guid, uint32 creatureOrGO_idx, uint16 old_count, uint16 add_count);
 
         uint64 GetDivider() { return m_divider; }
         void SetDivider(uint64 guid) { m_divider = guid; }
@@ -1669,7 +1669,7 @@ class Player : public Unit, public GridObject<Player>
             m_cinematic = cine;
         }
 
-        ActionButton* addActionButton(uint8 button, uint32 action, uint8 type, uint8 spec = 0);
+        ActionButton* addActionButton(uint8 button, uint32 action, uint8 type);
         void removeActionButton(uint8 button);
         ActionButton const* GetActionButton(uint8 button);
         void SendInitialActionButtons() const { SendActionButtons(1); }
@@ -2526,7 +2526,7 @@ class Player : public Unit, public GridObject<Player>
 
         uint32 m_Glyphs[MAX_TALENT_SPECS][MAX_GLYPH_SLOT_INDEX];
 
-        ActionButtonList m_actionButtons[MAX_TALENT_SPECS];
+        ActionButtonList m_actionButtons;
 
         float m_auraBaseMod[BASEMOD_END][MOD_END];
         int16 m_baseRatingValue[MAX_COMBAT_RATING];

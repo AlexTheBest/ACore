@@ -160,6 +160,9 @@ class WorldSession
         void SendSetPhaseShift(uint32 phaseShift);
         void SendQueryTimeResponse();
 
+        void SendAuthResponse(uint8 code, bool shortForm, uint32 queuePos = 0);
+        void SendClientCacheVersion(uint32 version);
+
         AccountTypes GetSecurity() const { return _security; }
         uint32 GetAccountId() const { return _accountId; }
         Player* GetPlayer() const { return _player; }
@@ -856,7 +859,7 @@ class WorldSession
         LocaleConstant m_sessionDbLocaleIndex;
         uint32 m_latency;
         AccountData m_accountData[NUM_ACCOUNT_DATA_TYPES];
-        uint32 m_Tutorials[8];
+        uint32 m_Tutorials[MAX_CHARACTER_TUTORIAL_VALUES];
         bool   m_TutorialsChanged;
         AddonsList m_addonsList;
         uint32 recruiterId;

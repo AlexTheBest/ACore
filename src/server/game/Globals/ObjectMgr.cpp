@@ -442,7 +442,7 @@ void ObjectMgr::LoadCreatureLocales()
 
         CreatureLocale& data = mCreatureLocaleMap[entry];
 
-        for (uint8 i = 1; i < MAX_LOCALE; ++i)
+        for (uint8 i = 1; i < TOTAL_LOCALES; ++i)
         {
             LocaleConstant locale = (LocaleConstant) i;
             std::string str = fields[1 + 2 * (i - 1)].GetString();
@@ -483,7 +483,7 @@ void ObjectMgr::LoadGossipMenuItemsLocales()
 
         GossipMenuItemsLocale& data = mGossipMenuItemsLocaleMap[MAKE_PAIR32(menuId,id)];
 
-        for (uint8 i = 1; i < MAX_LOCALE; ++i)
+        for (uint8 i = 1; i < TOTAL_LOCALES; ++i)
         {
             LocaleConstant locale = (LocaleConstant) i;
             std::string str = fields[2 + 2 * (i - 1)].GetString();
@@ -518,7 +518,7 @@ void ObjectMgr::LoadPointOfInterestLocales()
 
         PointOfInterestLocale& data = mPointOfInterestLocaleMap[entry];
 
-        for (uint8 i = 1; i < MAX_LOCALE; ++i)
+        for (uint8 i = 1; i < TOTAL_LOCALES; ++i)
         {
             std::string str = fields[i].GetString();
             AddLocaleString(str, LocaleConstant(i), data.IconName);
@@ -1954,7 +1954,7 @@ void ObjectMgr::LoadItemLocales()
 
         ItemLocale& data = mItemLocaleMap[entry];
 
-        for (uint8 i = 1; i < MAX_LOCALE; ++i)
+        for (uint8 i = 1; i < TOTAL_LOCALES; ++i)
         {
             LocaleConstant locale = (LocaleConstant) i;
             std::string str = fields[1 + 2 * (i - 1)].GetString();
@@ -2450,7 +2450,7 @@ void ObjectMgr::LoadItemSetNameLocales()
 
         ItemSetNameLocale& data = mItemSetNameLocaleMap[entry];
 
-        for (uint8 i = 1; i < MAX_LOCALE; ++i)
+        for (uint8 i = 1; i < TOTAL_LOCALES; ++i)
         {
             std::string str = fields[i].GetString();
             AddLocaleString(str, LocaleConstant(i), data.Name);
@@ -3517,8 +3517,6 @@ void ObjectMgr::LoadGuilds()
             continue;
         }
 
-        newGuild->m_TabListMap.resize(newGuild->GetPurchasedTabs());
-
         AddGuild(newGuild);
 
         if (maxid < newGuild->GetId())
@@ -3539,7 +3537,7 @@ void ObjectMgr::LoadGuilds()
     QueryResult guildBankEventResult = CharacterDatabase.Query("SELECT LogGuid, EventType, PlayerGuid, ItemOrMoney, ItemStackCount, DestTabId, TimeStamp, guildid, TabId FROM guild_bank_eventlog ORDER BY TimeStamp DESC,LogGuid DESC");
 
     //                                                               0      1        2        3        4
-    QueryResult guildBankTabResult = CharacterDatabase.Query("SELECT TabId, TabName, TabIcon, TabText, guildid FROM guild_bank_tab ORDER BY TabId");
+    QueryResult guildBankTabResult = CharacterDatabase.Query("SELECT TabId, TabName, TabIcon, TabText, guildid FROM guild_bank_tab");
 
     PreparedStatement* guildBankItemStmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_GUILD_BANK_ITEMS);
     PreparedQueryResult guildBankItemResult = CharacterDatabase.Query(guildBankItemStmt);
@@ -3571,7 +3569,7 @@ void ObjectMgr::LoadGuildEvents(std::vector<Guild*>& GuildVector, QueryResult& r
             Field *fields = result->Fetch();
             uint32 guildid = fields[6].GetUInt32();
             if (guildid >= GuildVector.size() || GuildVector[guildid] == NULL)
-                return;
+                continue;
 
             if (!GuildVector[guildid]->m_GuildEventLogNextGuid)
                 GuildVector[guildid]->m_GuildEventLogNextGuid = fields[0].GetUInt32();
@@ -3602,7 +3600,7 @@ void ObjectMgr::LoadGuildBankEvents(std::vector<Guild*>& GuildVector, QueryResul
             uint32 logGuid = fields[0].GetUInt32();
             uint32 guildid = fields[7].GetUInt32();
             if (guildid >= GuildVector.size() || GuildVector[guildid] == NULL)
-                return;
+                continue;
 
             uint8 TabId = fields[8].GetUInt8();
 
@@ -3668,10 +3666,11 @@ void ObjectMgr::LoadGuildBanks(std::vector<Guild*>& GuildVector, QueryResult& re
         do
         {
             Field *fields = result->Fetch();
-            uint32 TabId = fields[0].GetUInt32();
+            uint8 TabId = fields[0].GetUInt8();
             uint32 guildid = fields[4].GetUInt32();
+
             if (guildid >= GuildVector.size() || GuildVector[guildid] == NULL)
-                return;
+                continue;
 
             if (TabId < GuildVector[guildid]->GetPurchasedTabs())
             {
@@ -3698,7 +3697,7 @@ void ObjectMgr::LoadGuildBanks(std::vector<Guild*>& GuildVector, QueryResult& re
             uint32 ItemId = fields[14].GetUInt32();
             uint32 guildid = fields[15].GetUInt32();
             if (guildid >= GuildVector.size() || GuildVector[guildid] == NULL)
-                return;
+                continue;
 
             if (TabId >= GuildVector[guildid]->GetPurchasedTabs())
             {
@@ -4319,7 +4318,7 @@ void ObjectMgr::LoadQuests()
                 if (!qinfo->ReqCreatureOrGOId[j])
                 {
                     bool found = false;
-                    for (uint8 k = 0; k < 3; ++k)
+                    for (uint8 k = 0; k < MAX_SPELL_EFFECTS; ++k)
                     {
                         if ((spellInfo->Effect[k] == SPELL_EFFECT_QUEST_COMPLETE && uint32(spellInfo->EffectMiscValue[k]) == qinfo->QuestId) ||
                             spellInfo->Effect[k] == SPELL_EFFECT_SEND_EVENT)
@@ -4592,7 +4591,7 @@ void ObjectMgr::LoadQuests()
         if (!spellInfo)
             continue;
 
-        for (uint8 j = 0; j < 3; ++j)
+        for (uint8 j = 0; j < MAX_SPELL_EFFECTS; ++j)
         {
             if (spellInfo->Effect[j] != SPELL_EFFECT_QUEST_COMPLETE)
                 continue;
@@ -4649,7 +4648,7 @@ void ObjectMgr::LoadQuestLocales()
 
         QuestLocale& data = mQuestLocaleMap[entry];
 
-        for (uint8 i = 1; i < MAX_LOCALE; ++i)
+        for (uint8 i = 1; i < TOTAL_LOCALES; ++i)
         {
             LocaleConstant locale = (LocaleConstant) i;
             std::string str = fields[1 + 11 * (i - 1)].GetString();
@@ -5088,7 +5087,7 @@ void ObjectMgr::LoadEventScripts()
         SpellEntry const * spell = sSpellStore.LookupEntry(i);
         if (spell)
         {
-            for (uint8 j=0; j<3; ++j)
+            for (uint8 j = 0; j < MAX_SPELL_EFFECTS; ++j)
             {
                 if (spell->Effect[j] == SPELL_EFFECT_SEND_EVENT)
                 {
@@ -5327,7 +5326,7 @@ void ObjectMgr::LoadPageTextLocales()
 
         PageTextLocale& data = mPageTextLocaleMap[entry];
 
-        for (uint8 i = 1; i < MAX_LOCALE; ++i)
+        for (uint8 i = 1; i < TOTAL_LOCALES; ++i)
         {
             std::string str = fields[i].GetString();
             AddLocaleString(str, LocaleConstant(i), data.Text);
@@ -5418,7 +5417,7 @@ void ObjectMgr::LoadGossipText()
 
         GossipText& gText = mGossipText[Text_ID];
 
-        for (int i=0; i< 8; i++)
+        for (int i = 0; i < MAX_GOSSIP_TEXT_OPTIONS; i++)
         {
             gText.Options[i].Text_0           = fields[cic++].GetString();
             gText.Options[i].Text_1           = fields[cic++].GetString();
@@ -5426,7 +5425,7 @@ void ObjectMgr::LoadGossipText()
             gText.Options[i].Language         = fields[cic++].GetUInt32();
             gText.Options[i].Probability      = fields[cic++].GetFloat();
 
-            for (uint8 j=0; j < 3; ++j)
+            for (uint8 j=0; j < MAX_GOSSIP_TEXT_EMOTES; ++j)
             {
                 gText.Options[i].Emotes[j]._Delay  = fields[cic++].GetUInt32();
                 gText.Options[i].Emotes[j]._Emote  = fields[cic++].GetUInt32();
@@ -5467,10 +5466,10 @@ void ObjectMgr::LoadNpcTextLocales()
 
         NpcTextLocale& data = mNpcTextLocaleMap[entry];
 
-        for (uint8 i = 1; i < MAX_LOCALE; ++i)
+        for (uint8 i = 1; i < TOTAL_LOCALES; ++i)
         {
             LocaleConstant locale = (LocaleConstant) i;
-            for (uint8 j = 0; j < 8; ++j)
+            for (uint8 j = 0; j < MAX_LOCALES; ++j)
             {
                 std::string str0 = fields[1 + 8 * 2 * (i - 1) + 2 * j].GetString();
                 AddLocaleString(str0, locale, data.Text_0[j]);
@@ -6528,15 +6527,15 @@ void ObjectMgr::LoadGameObjectLocales()
 
         GameObjectLocale& data = mGameObjectLocaleMap[entry];
 
-        for (uint8 i = 1; i < MAX_LOCALE; ++i)
+        for (uint8 i = 1; i < TOTAL_LOCALES; ++i)
         {
             std::string str = fields[i].GetString();
             AddLocaleString(str, LocaleConstant(i), data.Name);
         }
 
-        for (uint8 i = 1; i < MAX_LOCALE; ++i)
+        for (uint8 i = 1; i < TOTAL_LOCALES; ++i)
         {
-            std::string str = fields[i + (MAX_LOCALE - 1)].GetString();
+            std::string str = fields[i + (TOTAL_LOCALES - 1)].GetString();
             AddLocaleString(str, LocaleConstant(i), data.CastBarCaption);
         }
 
@@ -7980,7 +7979,7 @@ bool ObjectMgr::LoadTrinityStrings(char const* table, int32 min_value, int32 max
         data.Content.resize(1);
         ++count;
 
-        for (uint8 i = 0; i < MAX_LOCALE; ++i)
+        for (uint8 i = 0; i < TOTAL_LOCALES; ++i)
         {
             std::string str = fields[i + 1].GetString();
             AddLocaleString(str, LocaleConstant(i), data.Content);

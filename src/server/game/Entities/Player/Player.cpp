@@ -6259,8 +6259,8 @@ void Player::SendActionButtons(uint32 state) const
     {
         for (uint8 button = 0; button < MAX_ACTION_BUTTONS; ++button)
         {
-            ActionButtonList::const_iterator itr = m_actionButtons[m_activeSpec].find(button);
-            if (itr != m_actionButtons[m_activeSpec].end() && itr->second.uState != ACTIONBUTTON_DELETED)
+            ActionButtonList::const_iterator itr = m_actionButtons.find(button);
+            if (itr != m_actionButtons.end() && itr->second.uState != ACTIONBUTTON_DELETED)
                 data << uint32(itr->second.packedData);
             else
                 data << uint32(0);
@@ -6314,13 +6314,13 @@ bool Player::IsActionButtonDataValid(uint8 button, uint32 action, uint8 type)
     return true;
 }
 
-ActionButton* Player::addActionButton(uint8 button, uint32 action, uint8 type, uint8 spec /*= 0*/)
+ActionButton* Player::addActionButton(uint8 button, uint32 action, uint8 type)
 {
     if (!IsActionButtonDataValid(button, action, type))
         return NULL;
 
     // it create new button (NEW state) if need or return existed
-    ActionButton& ab = m_actionButtons[spec][button];
+    ActionButton& ab = m_actionButtons[button];
 
     // set data and update to CHANGED if not NEW
     ab.SetActionAndType(action,ActionButtonType(type));
@@ -6331,12 +6331,12 @@ ActionButton* Player::addActionButton(uint8 button, uint32 action, uint8 type, u
 
 void Player::removeActionButton(uint8 button)
 {
-    ActionButtonList::iterator buttonItr = m_actionButtons[m_activeSpec].find(button);
-    if (buttonItr == m_actionButtons[m_activeSpec].end() || buttonItr->second.uState == ACTIONBUTTON_DELETED)
+    ActionButtonList::iterator buttonItr = m_actionButtons.find(button);
+    if (buttonItr == m_actionButtons.end() || buttonItr->second.uState == ACTIONBUTTON_DELETED)
         return;
 
     if (buttonItr->second.uState == ACTIONBUTTON_NEW)
-        m_actionButtons[m_activeSpec].erase(buttonItr);     // new and not saved
+        m_actionButtons.erase(buttonItr);                   // new and not saved
     else
         buttonItr->second.uState = ACTIONBUTTON_DELETED;    // saved, will deleted at next save
 
@@ -6345,8 +6345,8 @@ void Player::removeActionButton(uint8 button)
 
 ActionButton const* Player::GetActionButton(uint8 button)
 {
-    ActionButtonList::iterator buttonItr = m_actionButtons[m_activeSpec].find(button);
-    if (buttonItr == m_actionButtons[m_activeSpec].end() || buttonItr->second.uState == ACTIONBUTTON_DELETED)
+    ActionButtonList::iterator buttonItr = m_actionButtons.find(button);
+    if (buttonItr == m_actionButtons.end() || buttonItr->second.uState == ACTIONBUTTON_DELETED)
         return NULL;
 
     return &buttonItr->second;
@@ -7813,7 +7813,7 @@ void Player::UpdateEquipSpellsAtFormChange()
         if (!eff)
             continue;
 
-        for (uint32 y=0; y<8; ++y)
+        for (uint32 y = 0; y < MAX_ITEM_SET_SPELLS; ++y)
         {
             SpellEntry const* spellInfo = eff->spells[y];
             if (!spellInfo)
@@ -7866,7 +7866,7 @@ void Player::CastItemCombatSpell(Unit *target, WeaponAttackType attType, uint32 
     if (procVictim & PROC_FLAG_TAKEN_ANY_DAMAGE)
     //if (damageInfo->procVictim & PROC_FLAG_TAKEN_ANY_DAMAGE)
     {
-        for (uint8 i = 0; i < 5; ++i)
+        for (uint8 i = 0; i < MAX_ITEM_SPELLS; ++i)
         {
             _Spell const& spellData = proto->Spells[i];
 
@@ -7924,7 +7924,7 @@ void Player::CastItemCombatSpell(Unit *target, WeaponAttackType attType, uint32 
         uint32 enchant_id = item->GetEnchantmentId(EnchantmentSlot(e_slot));
         SpellItemEnchantmentEntry const *pEnchant = sSpellItemEnchantmentStore.LookupEntry(enchant_id);
         if (!pEnchant) continue;
-        for (uint8 s = 0; s < 3; ++s)
+        for (uint8 s = 0; s < MAX_ITEM_ENCHANTMENT_EFFECTS; ++s)
         {
             if (pEnchant->type[s] != ITEM_ENCHANTMENT_TYPE_COMBAT_SPELL)
                 continue;
@@ -8044,7 +8044,7 @@ void Player::CastItemUseSpell(Item *item,SpellCastTargets const& targets,uint8 c
         SpellItemEnchantmentEntry const *pEnchant = sSpellItemEnchantmentStore.LookupEntry(enchant_id);
         if (!pEnchant)
             continue;
-        for (uint8 s = 0; s < 3; ++s)
+        for (uint8 s = 0; s < MAX_ITEM_ENCHANTMENT_EFFECTS; ++s)
         {
             if (pEnchant->type[s] != ITEM_ENCHANTMENT_TYPE_USE_SPELL)
                 continue;
@@ -13123,7 +13123,7 @@ void Player::ApplyEnchantment(Item *item, EnchantmentSlot slot, bool apply, bool
 
     if (!item->IsBroken())
     {
-        for (int s = 0; s < 3; ++s)
+        for (int s = 0; s < MAX_ITEM_ENCHANTMENT_EFFECTS; ++s)
         {
             uint32 enchant_display_type = pEnchant->type[s];
             uint32 enchant_amount = pEnchant->amount[s];
@@ -13157,7 +13157,7 @@ void Player::ApplyEnchantment(Item *item, EnchantmentSlot slot, bool apply, bool
                                 if (item_rand)
                                 {
                                     // Search enchant_amount
-                                    for (int k = 0; k < 3; ++k)
+                                    for (int k = 0; k < MAX_ITEM_ENCHANTMENT_EFFECTS; ++k)
                                     {
                                         if (item_rand->enchant_id[k] == enchant_id)
                                         {
@@ -13183,7 +13183,7 @@ void Player::ApplyEnchantment(Item *item, EnchantmentSlot slot, bool apply, bool
                         ItemRandomSuffixEntry const *item_rand = sItemRandomSuffixStore.LookupEntry(abs(item->GetItemRandomPropertyId()));
                         if (item_rand)
                         {
-                            for (int k = 0; k < 3; ++k)
+                            for (int k = 0; k < MAX_ITEM_ENCHANTMENT_EFFECTS; ++k)
                             {
                                 if (item_rand->enchant_id[k] == enchant_id)
                                 {
@@ -13203,7 +13203,7 @@ void Player::ApplyEnchantment(Item *item, EnchantmentSlot slot, bool apply, bool
                         ItemRandomSuffixEntry const *item_rand_suffix = sItemRandomSuffixStore.LookupEntry(abs(item->GetItemRandomPropertyId()));
                         if (item_rand_suffix)
                         {
-                            for (int k = 0; k < 3; ++k)
+                            for (int k = 0; k < MAX_ITEM_ENCHANTMENT_EFFECTS; ++k)
                             {
                                 if (item_rand_suffix->enchant_id[k] == enchant_id)
                                 {
@@ -15119,7 +15119,7 @@ void Player::SetQuestStatus(uint32 quest_id, QuestStatus status)
 }
 
 // not used in Trinity, but used in scripting code
-uint32 Player::GetReqKillOrCastCurrentCount(uint32 quest_id, int32 entry)
+uint16 Player::GetReqKillOrCastCurrentCount(uint32 quest_id, int32 entry)
 {
     Quest const* qInfo = sObjectMgr.GetQuestTemplate(quest_id);
     if (!qInfo)
@@ -15222,10 +15222,10 @@ void Player::ItemAddedQuestCheck(uint32 entry, uint32 count)
             if (reqitem == entry)
             {
                 uint32 reqitemcount = qInfo->ReqItemCount[j];
-                uint32 curitemcount = q_status.m_itemcount[j];
+                uint16 curitemcount = q_status.m_itemcount[j];
                 if (curitemcount < reqitemcount)
                 {
-                    uint32 additemcount = curitemcount + count <= reqitemcount ? count : reqitemcount - curitemcount;
+                    uint16 additemcount = curitemcount + count <= reqitemcount ? count : reqitemcount - curitemcount;
                     q_status.m_itemcount[j] += additemcount;
                     if (q_status.uState != QUEST_NEW) q_status.uState = QUEST_CHANGED;
 
@@ -15261,15 +15261,15 @@ void Player::ItemRemovedQuestCheck(uint32 entry, uint32 count)
                 QuestStatusData& q_status = mQuestStatus[questid];
 
                 uint32 reqitemcount = qInfo->ReqItemCount[j];
-                uint32 curitemcount;
+                uint16 curitemcount;
                 if (q_status.m_status != QUEST_STATUS_COMPLETE)
                     curitemcount = q_status.m_itemcount[j];
                 else
                     curitemcount = GetItemCount(entry,true);
                 if (curitemcount < reqitemcount + count)
                 {
-                    uint32 remitemcount = curitemcount <= reqitemcount ? count : count + reqitemcount - curitemcount;
-                    q_status.m_itemcount[j] = curitemcount - remitemcount;
+                    uint16 remitemcount = curitemcount <= reqitemcount ? count : count + reqitemcount - curitemcount;
+                    q_status.m_itemcount[j] = (curitemcount <= remitemcount) ? 0 : curitemcount - remitemcount;
                     if (q_status.uState != QUEST_NEW)
                         q_status.uState = QUEST_CHANGED;
 
@@ -15294,7 +15294,7 @@ void Player::KilledMonster(CreatureInfo const* cInfo, uint64 guid)
 
 void Player::KilledMonsterCredit(uint32 entry, uint64 guid)
 {
-    uint32 addkillcount = 1;
+    uint16 addkillcount = 1;
     uint32 real_entry = entry;
     if (guid)
     {
@@ -15336,7 +15336,7 @@ void Player::KilledMonsterCredit(uint32 entry, uint64 guid)
                     if (reqkill == real_entry)
                     {
                         uint32 reqkillcount = qInfo->ReqCreatureOrGOCount[j];
-                        uint32 curkillcount = q_status.m_creatureOrGOcount[j];
+                        uint16 curkillcount = q_status.m_creatureOrGOcount[j];
                         if (curkillcount < reqkillcount)
                         {
                             q_status.m_creatureOrGOcount[j] = curkillcount + addkillcount;
@@ -15361,7 +15361,7 @@ void Player::CastedCreatureOrGO(uint32 entry, uint64 guid, uint32 spell_id)
 {
     bool isCreature = IS_CRE_OR_VEH_GUID(guid);
 
-    uint32 addCastCount = 1;
+    uint16 addCastCount = 1;
     for (uint8 i = 0; i < MAX_QUEST_LOG_SIZE; ++i)
     {
         uint32 questid = GetQuestSlotQuestId(i);
@@ -15415,7 +15415,7 @@ void Player::CastedCreatureOrGO(uint32 entry, uint64 guid, uint32 spell_id)
                         continue;
 
                     uint32 reqCastCount = qInfo->ReqCreatureOrGOCount[j];
-                    uint32 curCastCount = q_status.m_creatureOrGOcount[j];
+                    uint16 curCastCount = q_status.m_creatureOrGOcount[j];
                     if (curCastCount < reqCastCount)
                     {
                         q_status.m_creatureOrGOcount[j] = curCastCount + addCastCount;
@@ -15438,7 +15438,7 @@ void Player::CastedCreatureOrGO(uint32 entry, uint64 guid, uint32 spell_id)
 
 void Player::TalkedToCreature(uint32 entry, uint64 guid)
 {
-    uint32 addTalkCount = 1;
+    uint16 addTalkCount = 1;
     for (uint8 i = 0; i < MAX_QUEST_LOG_SIZE; ++i)
     {
         uint32 questid = GetQuestSlotQuestId(i);
@@ -15472,7 +15472,7 @@ void Player::TalkedToCreature(uint32 entry, uint64 guid)
                     if (reqTarget == entry)
                     {
                         uint32 reqTalkCount = qInfo->ReqCreatureOrGOCount[j];
-                        uint32 curTalkCount = q_status.m_creatureOrGOcount[j];
+                        uint16 curTalkCount = q_status.m_creatureOrGOcount[j];
                         if (curTalkCount < reqTalkCount)
                         {
                             q_status.m_creatureOrGOcount[j] = curTalkCount + addTalkCount;
@@ -15740,7 +15740,7 @@ void Player::SendPushToPartyResponse(Player *pPlayer, uint32 msg)
     }
 }
 
-void Player::SendQuestUpdateAddItem(Quest const* /*pQuest*/, uint32 /*item_idx*/, uint32 /*count*/)
+void Player::SendQuestUpdateAddItem(Quest const* /*pQuest*/, uint32 /*item_idx*/, uint16 /*count*/)
 {
     WorldPacket data(SMSG_QUESTUPDATE_ADD_ITEM, 0);
     sLog.outDebug("WORLD: Sent SMSG_QUESTUPDATE_ADD_ITEM");
@@ -15749,7 +15749,7 @@ void Player::SendQuestUpdateAddItem(Quest const* /*pQuest*/, uint32 /*item_idx*/
     GetSession()->SendPacket(&data);
 }
 
-void Player::SendQuestUpdateAddCreatureOrGo(Quest const* pQuest, uint64 guid, uint32 creatureOrGO_idx, uint32 old_count, uint32 add_count)
+void Player::SendQuestUpdateAddCreatureOrGo(Quest const* pQuest, uint64 guid, uint32 creatureOrGO_idx, uint16 old_count, uint16 add_count)
 {
     ASSERT(old_count + add_count < 65536 && "mob/GO count store in 16 bits 2^16 = 65536 (0..65536)");
 
@@ -16656,8 +16656,7 @@ bool Player::isAllowedToLoot(const Creature* creature)
 
 void Player::_LoadActions(PreparedQueryResult result)
 {
-    m_actionButtons[0].clear();
-    m_actionButtons[1].clear();
+    m_actionButtons.clear();
 
     if (result)
     {
@@ -16667,22 +16666,17 @@ void Player::_LoadActions(PreparedQueryResult result)
             uint8 button = fields[0].GetUInt8();
             uint32 action = fields[1].GetUInt32();
             uint8 type = fields[2].GetUInt8();
-            uint8 spec = fields[3].GetUInt8();
 
-            if (spec >= MAX_TALENT_SPECS)
-                continue;
-
-            if (ActionButton* ab = addActionButton(button, action, type, spec))
+            if (ActionButton* ab = addActionButton(button, action, type))
                 ab->uState = ACTIONBUTTON_UNCHANGED;
             else
             {
                 sLog.outError("  ...at loading, and will deleted in DB also");
 
                 // Will deleted in DB at next save (it can create data until save but marked as deleted)
-                m_actionButtons[spec][button].uState = ACTIONBUTTON_DELETED;
+                m_actionButtons[button].uState = ACTIONBUTTON_DELETED;
             }
-        }
-        while (result->NextRow());
+        } while (result->NextRow());
     }
 }
 
@@ -16920,7 +16914,7 @@ void Player::_LoadInventory(PreparedQueryResult result, uint32 timediff)
                 else
                 {
                     Field* fields2 = result2->Fetch();
-                    std::string strGUID = fields[2].GetString();
+                    std::string strGUID = fields2[0].GetString();
                     Tokens GUIDlist = StrSplit(strGUID, " ");
                     AllowedLooterSet looters;
                     for (Tokens::iterator itr = GUIDlist.begin(); itr != GUIDlist.end(); ++itr)
@@ -17171,13 +17165,13 @@ void Player::_LoadQuestStatus(PreparedQueryResult result)
                 // find or create
                 QuestStatusData& questStatusData = mQuestStatus[quest_id];
 
-                uint32 qstatus = fields[1].GetUInt32();
+                uint8 qstatus = fields[1].GetUInt8();
                 if (qstatus < MAX_QUEST_STATUS)
                     questStatusData.m_status = QuestStatus(qstatus);
                 else
                 {
                     questStatusData.m_status = QUEST_STATUS_NONE;
-                    sLog.outError("Player %s have invalid quest %d status (%d), replaced by QUEST_STATUS_NONE(0).",GetName(),quest_id,qstatus);
+                    sLog.outError("Player %s have invalid quest %d status (%u), replaced by QUEST_STATUS_NONE(0).",GetName(),quest_id,qstatus);
                 }
 
                 questStatusData.m_rewarded = (fields[2].GetUInt8() > 0);
@@ -17197,14 +17191,14 @@ void Player::_LoadQuestStatus(PreparedQueryResult result)
                 else
                     quest_time = 0;
 
-                questStatusData.m_creatureOrGOcount[0] = fields[5].GetUInt32();
-                questStatusData.m_creatureOrGOcount[1] = fields[6].GetUInt32();
-                questStatusData.m_creatureOrGOcount[2] = fields[7].GetUInt32();
-                questStatusData.m_creatureOrGOcount[3] = fields[8].GetUInt32();
-                questStatusData.m_itemcount[0] = fields[9].GetUInt32();
-                questStatusData.m_itemcount[1] = fields[10].GetUInt32();
-                questStatusData.m_itemcount[2] = fields[11].GetUInt32();
-                questStatusData.m_itemcount[3] = fields[12].GetUInt32();
+                questStatusData.m_creatureOrGOcount[0] = fields[5].GetUInt16();
+                questStatusData.m_creatureOrGOcount[1] = fields[6].GetUInt16();
+                questStatusData.m_creatureOrGOcount[2] = fields[7].GetUInt16();
+                questStatusData.m_creatureOrGOcount[3] = fields[8].GetUInt16();
+                questStatusData.m_itemcount[0] = fields[9].GetUInt16();
+                questStatusData.m_itemcount[1] = fields[10].GetUInt16();
+                questStatusData.m_itemcount[2] = fields[11].GetUInt16();
+                questStatusData.m_itemcount[3] = fields[12].GetUInt16();
 
                 questStatusData.uState = QUEST_UNCHANGED;
 
@@ -17964,32 +17958,29 @@ void Player::SaveGoldToDB(SQLTransaction& trans)
 
 void Player::_SaveActions(SQLTransaction& trans)
 {
-    for (uint8 i = 0; i < MAX_TALENT_SPECS; ++i)
+    for (ActionButtonList::iterator itr = m_actionButtons.begin(); itr != m_actionButtons.end();)
     {
-        for (ActionButtonList::iterator itr = m_actionButtons[i].begin(); itr != m_actionButtons[i].end();)
+        switch (itr->second.uState)
         {
-            switch (itr->second.uState)
-            {
-                case ACTIONBUTTON_NEW:
-                    trans->PAppend("INSERT INTO character_action (guid,spec,button,action,type) VALUES ('%u', '%u', '%u', '%u', '%u')",
-                        GetGUIDLow(), i, (uint32)itr->first, (uint32)itr->second.GetAction(), (uint32)itr->second.GetType());
-                    itr->second.uState = ACTIONBUTTON_UNCHANGED;
-                    ++itr;
-                    break;
-                case ACTIONBUTTON_CHANGED:
-                    trans->PAppend("UPDATE character_action SET action = '%u', type = '%u' WHERE guid = '%u' AND button = '%u' AND spec = '%u'",
-                        (uint32)itr->second.GetAction(), (uint32)itr->second.GetType(), GetGUIDLow(), (uint32)itr->first, i);
-                    itr->second.uState = ACTIONBUTTON_UNCHANGED;
-                    ++itr;
-                    break;
-                case ACTIONBUTTON_DELETED:
-                    trans->PAppend("DELETE FROM character_action WHERE guid = '%u' and button = '%u' and spec = '%u'", GetGUIDLow(), (uint32)itr->first, i);
-                    m_actionButtons[i].erase(itr++);
-                    break;
-                default:
-                    ++itr;
-                    break;
-            }
+            case ACTIONBUTTON_NEW:
+                trans->PAppend("INSERT INTO character_action (guid,spec,button,action,type) VALUES ('%u', '%u', '%u', '%u', '%u')",
+                    GetGUIDLow(), m_activeSpec, (uint32)itr->first, (uint32)itr->second.GetAction(), (uint32)itr->second.GetType());
+                itr->second.uState = ACTIONBUTTON_UNCHANGED;
+                ++itr;
+                break;
+            case ACTIONBUTTON_CHANGED:
+                trans->PAppend("UPDATE character_action SET action = '%u', type = '%u' WHERE guid = '%u' AND button = '%u' AND spec = '%u'",
+                    (uint32)itr->second.GetAction(), (uint32)itr->second.GetType(), GetGUIDLow(), (uint32)itr->first, m_activeSpec);
+                itr->second.uState = ACTIONBUTTON_UNCHANGED;
+                ++itr;
+                break;
+            case ACTIONBUTTON_DELETED:
+                trans->PAppend("DELETE FROM character_action WHERE guid = '%u' and button = '%u' and spec = '%u'", GetGUIDLow(), (uint32)itr->first, m_activeSpec);
+                m_actionButtons.erase(itr++);
+                break;
+            default:
+                ++itr;
+                break;
         }
     }
 }
@@ -18685,7 +18676,7 @@ void Player::RemovePet(Pet* pet, PetSaveMode mode, bool returnreagent)
 
         if (spellInfo)
         {
-            for (uint32 i = 0; i < 7; ++i)
+            for (uint32 i = 0; i < MAX_SPELL_REAGENTS; ++i)
             {
                 if (spellInfo->Reagent[i] > 0)
                 {
@@ -19159,34 +19150,7 @@ void Player::RemoveSpellMods(Spell * spell)
 {
     if (!spell)
         return;
-    std::set <Aura *> checkedSpells;
-
-    AuraEffectList const & auraList = GetAuraEffectsByType(SPELL_AURA_ABILITY_IGNORE_AURASTATE);
-    for (AuraEffectList::const_iterator itr = auraList.begin(); itr != auraList.end();)
-    {
-        AuraEffect * aurEff = *itr;
-        Aura * aura = aurEff->GetBase();
-        ++itr;
-        if (!aura->GetCharges())
-            continue;
-
-        SpellEntry const * spellInfo = aura->GetSpellProto();
-
-        if (spellInfo->SpellFamilyName != spell->m_spellInfo->SpellFamilyName ||
-            checkedSpells.find(aura) != checkedSpells.end())
-            continue;
-
-        if (spell->m_spellInfo->SpellFamilyFlags & spellInfo->EffectSpellClassMask[aurEff->GetEffIndex()]
-        // this is for fingers of frost, look at spell::finish part, a charge will be taken by the triggering spell
-            && aura->GetDuration() != aura->GetMaxDuration())
-        {
-            checkedSpells.insert(aura);
-            spell->m_appliedMods.erase(aura);
-            if (aura->DropCharge())
-                itr = auraList.begin();
-        }
-    }
-
+    
     if (spell->m_appliedMods.empty())
         return;
 
@@ -19791,7 +19755,7 @@ inline bool Player::_StoreOrEquipNewItem(uint32 vendorslot, uint32 item, uint8 c
         if (iece->reqarenapoints)
             ModifyArenaPoints(- int32(iece->reqarenapoints * count));
 
-        for (uint8 i = 0; i < 5; ++i)
+        for (uint8 i = 0; i < MAX_ITEM_EXTENDED_COST_REQUIREMENTS; ++i)
         {
             if (iece->reqitem[i])
                 DestroyItemCount(iece->reqitem[i], (iece->reqitemcount[i] * count), true);
@@ -19918,7 +19882,7 @@ bool Player::BuyItemFromVendorSlot(uint64 vendorguid, uint32 vendorslot, uint32 
         }
 
         // item base price
-        for (uint8 i = 0; i < 5; ++i)
+        for (uint8 i = 0; i < MAX_ITEM_EXTENDED_COST_REQUIREMENTS; ++i)
         {
             if (iece->reqitem[i] && !HasItemCount(iece->reqitem[i], (iece->reqitemcount[i] * count)))
             {
@@ -20095,7 +20059,7 @@ void Player::AddSpellAndCategoryCooldowns(SpellEntry const* spellInfo, uint32 it
     {
         if (ItemPrototype const* proto = ObjectMgr::GetItemPrototype(itemId))
         {
-            for (uint8 idx = 0; idx < 5; ++idx)
+            for (uint8 idx = 0; idx < MAX_ITEM_SPELLS; ++idx)
             {
                 if (uint32(proto->Spells[idx].SpellId) == spellInfo->Id)
                 {
@@ -20207,7 +20171,7 @@ void Player::UpdatePotionCooldown(Spell* spell)
     {
         // spell/item pair let set proper cooldown (except not existed charged spell cooldown spellmods for potions)
         if (ItemPrototype const* proto = ObjectMgr::GetItemPrototype(m_lastPotionId))
-            for (uint8 idx = 0; idx < 5; ++idx)
+            for (uint8 idx = 0; idx < MAX_ITEM_SPELLS; ++idx)
                 if (proto->Spells[idx].SpellId && proto->Spells[idx].SpellTrigger == ITEM_SPELLTRIGGER_ON_USE)
                     if (SpellEntry const* spellInfo = sSpellStore.LookupEntry(proto->Spells[idx].SpellId))
                         SendCooldownEvent(spellInfo,m_lastPotionId);
@@ -21302,7 +21266,7 @@ void Player::learnQuestRewardedSpells(Quest const* quest)
 
     // check learned spells state
     bool found = false;
-    for (uint8 i = 0; i < 3; ++i)
+    for (uint8 i = 0; i < MAX_SPELL_EFFECTS; ++i)
     {
         if (spellInfo->Effect[i] == SPELL_EFFECT_LEARN_SPELL && !HasSpell(spellInfo->EffectTriggerSpell[i]))
         {
@@ -23556,7 +23520,7 @@ void Player::BuildPlayerTalentsInfoData(WorldPacket *data)
             // find class talent tabs (all players have 3 talent tabs)
             uint32 const* talentTabIds = GetTalentTabPages(getClass());
 
-            for (uint8 i = 0; i < 3; ++i)
+            for (uint8 i = 0; i < MAX_TALENT_TABS; ++i)
             {
                 uint32 talentTabId = talentTabIds[i];
 
@@ -23976,7 +23940,7 @@ void Player::UpdateSpecCount(uint8 count)
     if (count > curCount)
     {
         _SaveActions(trans); // make sure the button list is cleaned up
-        for (ActionButtonList::iterator itr = m_actionButtons[m_activeSpec].begin(); itr != m_actionButtons[m_activeSpec].end(); ++itr)
+        for (ActionButtonList::iterator itr = m_actionButtons.begin(); itr != m_actionButtons.end(); ++itr)
             trans->PAppend("INSERT INTO character_action (guid,button,action,type,spec) VALUES ('%u', '%u', '%u', '%u', '%u')",
             GetGUIDLow(), uint32(itr->first), uint32(itr->second.GetAction()), uint32(itr->second.GetType()), 1);
 
@@ -24123,6 +24087,14 @@ void Player::ActivateSpec(uint8 spec)
     m_usedTalentCount = spentTalents;
     InitTalentForLevel();
 
+    {
+        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_PLAYER_ACTIONS_SPEC);
+        stmt->setUInt32(0, GetGUIDLow());
+        stmt->setUInt8(1, m_activeSpec);
+        if (PreparedQueryResult result = CharacterDatabase.Query(stmt))
+            _LoadActions(result);
+    }
+
     ResummonPetTemporaryUnSummonedIfAny();
     if (Pet* pPet = GetPet())
         pPet->InitTalentForLevel();  // not processed with aura removal because pet was not active
@@ -24219,7 +24191,7 @@ void Player::SendRefundInfo(Item *item)
     data << uint32(item->GetPaidMoney());               // money cost
     data << uint32(iece->reqhonorpoints);               // honor point cost
     data << uint32(iece->reqarenapoints);               // arena point cost
-    for (uint8 i = 0; i < 5; ++i)                       // item cost data
+    for (uint8 i = 0; i < MAX_ITEM_EXTENDED_COST_REQUIREMENTS; ++i)                       // item cost data
     {
         data << uint32(iece->reqitem[i]);
         data << uint32(iece->reqitemcount[i]);
@@ -24285,7 +24257,7 @@ void Player::RefundItem(Item *item)
     }
 
     bool store_error = false;
-    for (uint8 i = 0; i < 5; ++i)
+    for (uint8 i = 0; i < MAX_ITEM_EXTENDED_COST_REQUIREMENTS; ++i)
     {
         uint32 count = iece->reqitemcount[i];
         uint32 itemid = iece->reqitem[i];
@@ -24317,7 +24289,7 @@ void Player::RefundItem(Item *item)
     data << uint32(item->GetPaidMoney());               // money cost
     data << uint32(iece->reqhonorpoints);               // honor point cost
     data << uint32(iece->reqarenapoints);               // arena point cost
-    for (uint8 i = 0; i < 5; ++i)                       // item cost data
+    for (uint8 i = 0; i < MAX_ITEM_EXTENDED_COST_REQUIREMENTS; ++i) // item cost data
     {
         data << iece->reqitem[i];
         data << (iece->reqitemcount[i]);
@@ -24331,7 +24303,7 @@ void Player::RefundItem(Item *item)
     DestroyItem(item->GetBagSlot(), item->GetSlot(), true);
 
     // Grant back extendedcost items
-    for (uint8 i = 0; i < 5; ++i)
+    for (uint8 i = 0; i < MAX_ITEM_EXTENDED_COST_REQUIREMENTS; ++i)
     {
         uint32 count = iece->reqitemcount[i];
         uint32 itemid = iece->reqitem[i];

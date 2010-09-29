@@ -643,6 +643,7 @@ INSERT INTO `command` VALUES
 ('reload creature_template','3','Syntax: .reload creature_template $entry\r\nReload the specified creature''s template.'),
 ('reload trinity_string',3,'Syntax: .reload trinity_string\nReload trinity_string table.'),
 ('reload waypoint_scripts',3,'Syntax: .reload waypoint_scripts\nReload waypoint_scripts table.'),
+('reload creature_text',3,'Syntax: .reload creature_text\r\nReload creature_text table.'),
 ('repairitems',2,'Syntax: .repairitems\r\n\r\nRepair all selected player''s items.'),
 ('reset',3,'Syntax: .reset $subcommand\nType .reset to see the list of possible subcommands or .help reset $subcommand to see info on subcommands'),
 ('reset achievements',3,'Syntax: .reset achievements [$playername]\r\n\r\nReset achievements data for selected or named (online or offline) character. Achievements for persistance progress data like completed quests/etc re-filled at reset. Achievements for events like kills/casts/etc will lost.'),
@@ -18411,12 +18412,12 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 15600, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   1,   0,   0), -- Hand of Justice
 ( 16086, 0x04,  11, 0x00000000, 0x00040000, 0x00000000, 0x00030000, 0x00000000,   0,   0,   0), -- Improved Fire Nova Totem (Rank 1)
 ( 16544, 0x04,  11, 0x00000000, 0x00040000, 0x00000000, 0x00030000, 0x00000000,   0,   0,   0), -- Improved Fire Nova Totem (Rank 2)
-( 16176, 0x00,  11, 0x000001C0, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Ancestral Healing (Rank 1)
+( 16176, 0x00,  11, 0x000001C0, 0x00000000, 0x00000010, 0x00000000, 0x00000002,   0,   0,   0), -- Ancestral Healing (Rank 1)
 ( 16180, 0x00,  11, 0x000001C0, 0x00000000, 0x00000010, 0x00000000, 0x00000002,   0, 100,   0), -- Improved Water Shield (Rank 1)
 ( 16196, 0x00,  11, 0x000001C0, 0x00000000, 0x00000010, 0x00000000, 0x00000002,   0, 100,   0), -- Improved Water Shield (Rank 2)
 ( 16198, 0x00,  11, 0x000001C0, 0x00000000, 0x00000010, 0x00000000, 0x00000002,   0, 100,   0), -- Improved Water Shield (Rank 3)
-( 16235, 0x00,  11, 0x000001C0, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Ancestral Healing (Rank 2)
-( 16240, 0x00,  11, 0x000001C0, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Ancestral Healing (Rank 3)
+( 16235, 0x00,  11, 0x000001C0, 0x00000000, 0x00000010, 0x00000000, 0x00000002,   0,   0,   0), -- Ancestral Healing (Rank 2)
+( 16240, 0x00,  11, 0x000001C0, 0x00000000, 0x00000010, 0x00000000, 0x00000002,   0,   0,   0), -- Ancestral Healing (Rank 3)
 ( 16256, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Flurry (Rank 1)
 ( 16257, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00010000,   0,   0,   0), -- Flurry (Rank 1)
 ( 16277, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00010000,   0,   0,   0), -- Flurry (Rank 2)
@@ -18435,7 +18436,6 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 16624, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000040,   0,   0,   0), -- Thorium Shield Spike
 ( 16850, 0x00,   7, 0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Celestial Focus (Rank 1)
 ( 16864, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   2,   0,   0), -- Omen of Clarity
-( 16880, 0x48,   7, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Nature's Grace
 ( 16923, 0x00,   7, 0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Celestial Focus (Rank 2)
 ( 16924, 0x00,   7, 0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Celestial Focus (Rank 3)
 ( 16952, 0x00,   7, 0x00039000, 0x00000400, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Blood Frenzy (Rank 1)
@@ -18814,6 +18814,7 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 44472, 0x00,   3, 0x20E21277, 0x00019048, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Burnout (Rank 5)
 ( 44543, 0x00,   3, 0x00100220, 0x00001000, 0x00000000, 0x00010000, 0x00000000,   0,   7,   0), -- Fingers of Frost (Rank 1)
 ( 44545, 0x00,   3, 0x00100220, 0x00001000, 0x00000000, 0x00010000, 0x00000000,   0,  15,   0), -- Fingers of Frost (Rank 2)
+( 74396, 0x54,   3, 0x28E212F7, 0x00119048, 0x00000000, 0x00010000, 0x00000003,   0,   0,   0), -- Fingers of Frost (buff)
 ( 44546, 0x00,   3, 0x00100220, 0x00001000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Brain Freeze (Rank 1)
 ( 44548, 0x00,   3, 0x00100220, 0x00001000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Brain Freeze (Rank 2)
 ( 44549, 0x00,   3, 0x00100220, 0x00001000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Brain Freeze (Rank 3)
@@ -19163,8 +19164,9 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 60826, 0x00,  15, 0x01400000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Sigil of Haunted Dreams
 ( 61188, 0x00,   5, 0x00000004, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Chaotic Mind
 ( 61324, 0x00,  10, 0x00000000, 0x00020000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Justice
-( 61345, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Nature's Grace
-( 61346, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Nature's Grace
+( 16880, 0x48,   7, 0x00000067, 0x03800002, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Nature's Grace
+( 61345, 0x48,   7, 0x00000067, 0x03800002, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Nature's Grace
+( 61346, 0x48,   7, 0x00000067, 0x03800002, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Nature's Grace
 ( 61356, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,  90), -- Invigorating Earthsiege Diamond Passive
 ( 61618, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Tentacles
 ( 61848, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000010,   0,   0,   0), -- Aspect of the Dragonhawk
@@ -19268,6 +19270,9 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 56636, 0x00,   4, 0x00000020, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Taste for Blood (Rank 1)
 ( 56637, 0x00,   4, 0x00000020, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Taste for Blood (Rank 2)
 ( 56638, 0x00,   4, 0x00000020, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Taste for Blood (Rank 3)
+( 60503, 0x01,   4, 0x00000004, 0x00000000, 0x00000000, 0x00000010, 0x00000000,   0,   0,   0), -- Taste for Blood (proc)
+( 68051, 0x01,   4, 0x00000004, 0x00000000, 0x00000000, 0x00000010, 0x00000000,   0,   0,   0), -- Overpower Ready! (proc)
+( 52437, 0x01,   4, 0x20000000, 0x00000000, 0x00000000, 0x00000010, 0x00000000,   0,   0,   0), -- Sudden Death (proc)
 ( 50421, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Scent of Blood
 ( 53386, 0x30,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Rune of Cinderglacier
 ( 56375, 0x00,   3, 0x01000000, 0x00000000, 0x00000000, 0x00010000, 0x00000000,   0,   0,   0), -- Glyphs of Polymorph
@@ -19353,6 +19358,7 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 71564, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Nevermelting Ice Crystal
  (71545, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,  50,   0), -- Tiny Abomination in a Jar (Heroic)
 ( 71406, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,  50,   0), -- Tiny Abomination in a Jar
+( 71903, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,  20,   0), -- Item - Shadowmourne Legendary
 ( 75474, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Charred Twilight Scale (Heroic)
 ( 75465, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Charred Twilight Scale
 ( 75457, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Sharpened Twilight Scale (Heroic)
@@ -26859,6 +26865,7 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 (  8213, 'spell_item_savory_deviate_delight'),
 ( 14537, 'spell_item_six_demon_bag'),
 ( 59640, 'spell_item_underbelly_elixir'),
+( 71905, 'spell_item_shadowmourne'),
 -- warrior
 ( 12975, 'spell_warr_last_stand'),
 -- paladin
@@ -26893,6 +26900,7 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 39610, 'spell_sha_mana_tide_totem'),
 ( -1535, 'spell_sha_fire_nova'),
 -- mage
+(-11113, 'spell_mage_blast_wave'),
 ( 11958, 'spell_mage_cold_snap'),
 ( 31687, 'spell_mage_summon_water_elemental'),
 ( 32826, 'spell_mage_polymorph_visual'),
@@ -27373,7 +27381,7 @@ INSERT INTO `trinity_string` (`entry`,`content_default`,`content_loc1`,`content_
 (514, '%d - |cffffffff|Hcreature_entry:%d|h[%s]|h|r ', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (515, '%d - |cffffffff|Hcreature:%d|h[%s X:%f Y:%f Z:%f MapId:%d]|h|r ', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (516, '%d - |cffffffff|Hgameobject_entry:%d|h[%s]|h|r ', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(517, '%d - |cffffffff|Hgameobject:%d|h[%s X:%f Y:%f Z:%f MapId:%d]|h|r ', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(517, '%d (Entry: %d) - |cffffffff|Hgameobject:%d|h[%s X:%f Y:%f Z:%f MapId:%d]|h|r ', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (518, '%d - |cffffffff|Hitemset:%d|h[%s %s]|h|r ', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (519, '|cffffffff|Htele:%s|h[%s]|h|r ', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (520, '%d - |cffffffff|Hspell:%d|h[%s]|h|r ', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),

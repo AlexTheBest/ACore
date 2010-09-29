@@ -470,6 +470,7 @@ ChatCommand * ChatHandler::getCommandTable()
         { "autobroadcast",               SEC_ADMINISTRATOR, true,  &ChatHandler::HandleReloadAutobroadcastCommand,           "", NULL },
         { "command",                     SEC_ADMINISTRATOR, true,  &ChatHandler::HandleReloadCommandCommand,                 "", NULL },
         { "conditions",                  SEC_ADMINISTRATOR, true,  &ChatHandler::HandleReloadConditions,                     "", NULL },
+        { "creature_text",               SEC_ADMINISTRATOR, true,  &ChatHandler::HandleReloadCreatureText,                   "", NULL },
         { "creature_ai_scripts",         SEC_ADMINISTRATOR, true,  &ChatHandler::HandleReloadEventAIScriptsCommand,          "", NULL },
         { "creature_ai_summons",         SEC_ADMINISTRATOR, true,  &ChatHandler::HandleReloadEventAISummonsCommand,          "", NULL },
         { "creature_ai_texts",           SEC_ADMINISTRATOR, true,  &ChatHandler::HandleReloadEventAITextsCommand,            "", NULL },
@@ -1060,9 +1061,9 @@ bool ChatHandler::ExecuteCommandInTable(ChatCommand *table, const char* text, co
                 {
                     Player* p = m_session->GetPlayer();
                     uint64 sel_guid = p->GetSelection();
-                    sLog.outCommand(m_session->GetAccountId(),"Command: %s [Player: %s (Account: %u) X: %f Y: %f Z: %f Map: %u Selected: %s (GUID: %u)]",
+                    sLog.outCommand(m_session->GetAccountId(),"Command: %s [Player: %s (Account: %u) X: %f Y: %f Z: %f Map: %u Selected %s: %s (GUID: %u)]",
                         fullcmd.c_str(),p->GetName(),m_session->GetAccountId(),p->GetPositionX(),p->GetPositionY(),p->GetPositionZ(),p->GetMapId(),
-                        GetLogNameForGuid(sel_guid),GUID_LOPART(sel_guid));
+                        GetLogNameForGuid(sel_guid), (p->GetSelectedUnit()) ? p->GetSelectedUnit()->GetName() : "", GUID_LOPART(sel_guid));
 
                     if ((sIRC.logmask & 2) != 0)
                     {
@@ -1072,7 +1073,8 @@ bool ChatHandler::ExecuteCommandInTable(ChatCommand *table, const char* text, co
                         ss << sIRC.iLog.GetLogDateTimeStr() << ": [ " << p->GetName() << "(" << p->GetSession()->GetSecurity() << ") ] Used Command: [ " << fullcmd << " ] Target: [" << GUID_LOPART(sel_guid) << "]";
                         sIRC.Send_IRC_Channel(logchan,ss.str().c_str(), true, "LOG");
                     }
-                }
+
+               }
             }
         }
         // some commands have custom error messages. Don't send the default one in these cases.
@@ -1637,7 +1639,7 @@ valid examples:
                                 return false;
                             }
 
-                            for (uint8 i=0; i<MAX_LOCALE; ++i)
+                            for (uint8 i = 0; i < TOTAL_LOCALES; ++i)
                             {
                                 uint32 skillLineNameLength = strlen(skillLine->name[i]);
                                 if (skillLineNameLength > 0 && strncmp(skillLine->name[i], buffer, skillLineNameLength) == 0)
@@ -1650,7 +1652,7 @@ valid examples:
                             }
                         }
                         bool foundName = false;
-                        for (uint8 i=0; i<MAX_LOCALE; ++i)
+                        for (uint8 i = 0; i < TOTAL_LOCALES; ++i)
                         {
                             if (*linkedSpell->SpellName[i] && strcmp(linkedSpell->SpellName[i], buffer) == 0)
                             {
@@ -1709,7 +1711,7 @@ valid examples:
                             ItemLocale const *il = sObjectMgr.GetItemLocale(linkedItem->ItemId);
 
                             bool foundName = false;
-                            for (uint8 dbIndex = LOCALE_koKR; dbIndex < MAX_LOCALE; ++dbIndex)
+                            for (uint8 dbIndex = LOCALE_koKR; dbIndex < TOTAL_LOCALES; ++dbIndex)
                             {
                                 if (il == NULL || dbIndex >= il->Name.size())
                                     // using strange database/client combinations can lead to this case
@@ -1739,7 +1741,7 @@ valid examples:
                     else if (linkedAchievement)
                     {
                         bool foundName = false;
-                        for (uint8 i=0; i<MAX_LOCALE; ++i)
+                        for (uint8 i = 0; i < TOTAL_LOCALES; ++i)
                         {
                             if (*linkedAchievement->name[i] && strcmp(linkedAchievement->name[i], buffer) == 0)
                             {
