@@ -207,6 +207,8 @@ bool WorldSession::Anti__CheatOccurred(uint32 CurTime,const char* Reason,float S
     if (GetPlayer()->m_anti_alarmcount > sWorld.GetMvAnticheatAlarmCount())
     {
         Anti__ReportCheat(Reason,Speed,Op,Val1,Val2,MvInfo);
+        std::string channel = std::string("#") + sIRC._irc_chan[sIRC.anchn].c_str();
+        sIRC.Send_IRC_Channel(channel, "\00311 [Anticheat]: Cheater detected. Nickname:"+pname+" Cheat type: "+Reason, true);
         return true;
     }
     return false;
