@@ -39,11 +39,11 @@ public:
 						if(fields[2].GetUInt32() == 1)
 						{
 							std::stringstream folder;
-							folder << fields[1].GetCppString() << " >>";
+							folder << fields[1].GetString() << " >>";
 							player->ADD_GOSSIP_ITEM( 5, folder.str().c_str() , GOSSIP_SENDER_MAIN, fields[0].GetInt32());
 						}else{
 							std::stringstream teleport;
-							teleport << fields[1].GetCppString();
+							teleport << fields[1].GetString();
 							player->ADD_GOSSIP_ITEM( 3, teleport.str().c_str() , GOSSIP_SENDER_MAIN, fields[0].GetInt32());					
 						}
 					}
@@ -75,7 +75,7 @@ public:
 				int32 db_id 			= pFields[0].GetInt32(); // don't need
 				int32 db_folder 		= pFields[4].GetInt32();
 				int32 db_permission 		= pFields[2].GetInt32();			
-				std::string db_name 	= pFields[1].GetCppString();
+				std::string db_name 	= pFields[1].GetString();
 
 				if(db_folder)// we check if its a folder first
 				{

@@ -672,14 +672,14 @@ std::string IRCCmd::AcctIsBanned(std::string ACCT)
     QueryResult result = LoginDatabase.PQuery("SELECT banreason FROM ip_banned WHERE ip=(SELECT last_ip FROM account WHERE id = '%i')", acctid);
     if (result)
     {
-        banned = (*result)[0].GetCppString();
+        banned = (*result)[0].GetString();
         
         return "IP Banned. Reason:" + banned;
     }
     QueryResult result2 = LoginDatabase.PQuery("SELECT banreason FROM account_banned WHERE id='%i'", acctid);
     if (result2)
     {
-        banned = (*result2)[0].GetCppString();
+        banned = (*result2)[0].GetString();
         
         return "Account Banned. Reason:" + banned;
     }
@@ -745,7 +745,7 @@ std::string IRCCmd::GetAcctNameFromID(uint32 acctid)
     QueryResult result = LoginDatabase.PQuery("SELECT username FROM account WHERE id = '%d'", acctid);
     if (result)
     {
-        std::string name = (*result)[0].GetCppString();
+        std::string name = (*result)[0].GetString();
         
         return name;
     }
@@ -758,12 +758,12 @@ std::string IRCCmd::GetIPFromPlayer(std::string player)
     QueryResult result = CharacterDatabase.PQuery("SELECT account FROM characters WHERE name = '%s'", player.c_str());
     if (result)
     {
-        std::string acctid = (*result)[0].GetCppString();
+        std::string acctid = (*result)[0].GetString();
         
         QueryResult result2 = LoginDatabase.PQuery("SELECT last_ip FROM account WHERE id = '%s'", acctid.c_str());
         if (result2)
         {
-            std::string ip = (*result2)[0].GetCppString();
+            std::string ip = (*result2)[0].GetString();
             
             return ip;
         }       

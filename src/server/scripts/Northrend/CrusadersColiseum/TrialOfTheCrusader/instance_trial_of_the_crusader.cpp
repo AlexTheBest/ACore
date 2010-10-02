@@ -23,7 +23,7 @@ EndScriptData */
 
 #include "ScriptPCH.h"
 #include "trial_of_the_crusader.h"
-class instance_trial_of_the_crusader : public InstanceMapScript
+class instance_trial_of_the_crusader : public InstanceMapScript
 {
 public:
     instance_trial_of_the_crusader() : InstanceMapScript("instance_trial_of_the_crusader", 649) { }
@@ -327,8 +327,12 @@ public:
                             SetData(TYPE_BEASTS,DONE);
                             break;
                         case FAIL:
-                            SetData(TYPE_BEASTS,FAIL);
-                            break;
+                            //SetData(TYPE_BEASTS,FAIL);
+                            SetData(TYPE_BEASTS,NOT_STARTED);
+				--m_uiTrialCounter;
+                            if (Unit* pAnnouncer = instance->GetCreature(GetData64(NPC_BARRENT)))
+                                 pAnnouncer->SetFlag(UNIT_NPC_FLAGS, UNIT_NPC_FLAG_GOSSIP);
+                             break;
                     }
                     break;
                 case DATA_HEALTH_TWIN_SHARED:     m_uiDataDamageTwin = uiData; uiData = NOT_STARTED; break;

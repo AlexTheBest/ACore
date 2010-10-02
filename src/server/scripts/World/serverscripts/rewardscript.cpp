@@ -217,9 +217,9 @@ bool OnGossipHello(Player *player, Creature *_Creature)
 				Field* pFields = pResult->Fetch();
 				if(pFields[2].GetInt32() == player->getClass() or pFields[2].GetInt32() == 0 && pFields[7].GetInt32() == 0 or pFields[7].GetInt32() == player->GetTeam()){
 					std::stringstream menuItempoints;
-					menuItempoints << pFields[1].GetCppString() << "(" << pFields[4].GetInt32() << " Points)";
+					menuItempoints << pFields[1].GetString() << "(" << pFields[4].GetInt32() << " Points)";
 					std::stringstream menuItem;
-					menuItem << pFields[1].GetCppString() << " >>";
+					menuItem << pFields[1].GetString() << " >>";
 					if(pFields[5].GetInt32() == 1)
 					{
 						player->ADD_GOSSIP_ITEM( pFields[6].GetInt32(), menuItem.str().c_str(), GOSSIP_SENDER_MAIN, pFields[0].GetInt32());
@@ -376,9 +376,9 @@ bool OnGossipHello(Player *player, Creature *_Creature)
 			
 			//strings
 			std::string itemname;
-			itemname = pFields[1].GetCppString();
+			itemname = pFields[1].GetString();
 			std::string nametype;
-			nametype = pFields[7].GetCppString();
+			nametype = pFields[7].GetString();
 
 				if(db_id == action && folder == 1 )
 				{

@@ -1300,7 +1300,7 @@ void World::LoadConfigSettings(bool reload)
           for (uint64 i=0; i < result->GetRowCount(); i++)
           {
               //TODO: ELSEIF? STRCMP?
-              std::string command = fields[0].GetCppString();
+              std::string command = fields[0].GetString();
               uint32 gmlvl = fields[1].GetUInt32();
               if (command == "acct") sIRC.CACCT = gmlvl;
               if (command == "ban") sIRC.CBAN = gmlvl;

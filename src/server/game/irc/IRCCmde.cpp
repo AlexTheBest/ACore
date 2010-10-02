@@ -222,7 +222,7 @@ void IRCCmd::Ban_Player(_CDATA *CD)
             if (result)
             {
                 Field *fields = result->Fetch();
-                std::string id = fields[0].GetCppString();
+                std::string id = fields[0].GetString();
 
                 LoginDatabase.PExecute("DELETE FROM account_banned WHERE id = %s", id.c_str());
                 
@@ -403,7 +403,7 @@ void IRCCmd::Char_Player(_CDATA *CD)
                     Send_IRCA(CD->USER, "\0034[ERROR] : Quest Not Found!", true, "ERROR");
                     return;
                 }
-                QName = result->Fetch()->GetCppString();
+                QName = result->Fetch()->GetString();
                 
             }
             if (_PARAMS[2] == "add")
@@ -597,7 +597,7 @@ void IRCCmd::Help_IRC(_CDATA *CD)
                     for (uint64 i=0; i < result->GetRowCount(); i++)
                     {
                         Field *fields = result->Fetch();
-                        output += fields[0].GetCppString() + ", ";
+                        output += fields[0].GetString() + ", ";
                         result->NextRow();
                     }
                     
@@ -617,7 +617,7 @@ void IRCCmd::Help_IRC(_CDATA *CD)
                     }
                     if (result)
                     {
-                        std::string cmdhlp = fields[0].GetCppString();
+                        std::string cmdhlp = fields[0].GetString();
                         
                         Send_IRCA(CD->USER, cmdhlp, true, CD->TYPE.c_str());
                     }
@@ -637,7 +637,7 @@ void IRCCmd::Help_IRC(_CDATA *CD)
                     for (uint64 i=0; i < result->GetRowCount(); i++)
                     {
                         Field *fields = result->Fetch();
-                        output += fields[0].GetCppString() + ", ";
+                        output += fields[0].GetString() + ", ";
                         result->NextRow();
                     }
                     
@@ -656,7 +656,7 @@ void IRCCmd::Help_IRC(_CDATA *CD)
                         Send_IRCA(CD->USER, "You Do Not Have Access To That Command, So No Help Is Available.", true, CD->TYPE.c_str());
                         return;
                     }
-                    std::string cmdhlp = fields[0].GetCppString();
+                    std::string cmdhlp = fields[0].GetString();
                     
                     Send_IRCA(CD->USER, cmdhlp, true, CD->TYPE.c_str());
                 }
@@ -681,10 +681,10 @@ void IRCCmd::Inchan_Server(_CDATA *CD)
     if (result)
     {
         Field *fields = result->Fetch();
-        std::string output = "\002Players In The [ "+fields[2].GetCppString()+" ] Channel:\017 ";
+        std::string output = "\002Players In The [ "+fields[2].GetString()+" ] Channel:\017 ";
         for (uint64 i=0; i < result->GetRowCount(); i++)
         {
-            output += fields[1].GetCppString() + ", ";
+            output += fields[1].GetString() + ", ";
             result->NextRow();
         }
         
@@ -812,12 +812,12 @@ void IRCCmd::Item_Player(_CDATA *CD)
                 plTarget->SendNewItem(item,count,true,false);
                 QueryResult result = WorldDatabase.PQuery("SELECT name FROM item_template WHERE entry = %d", itemId);
                 char* dbitemname = NULL;
-                if (result)
+               /* if (result) **BROKEN!!! NEEDS FIXING!!!!!!!!!!1
                 {
-                    dbitemname = (char*)result->Fetch()->GetString();
+                    dbitemname = result->Fetch()->GetString();
                 }
                 std::string iinfo = " \00313[" + _PARAMS[0] + "] : Has Been Given Item "+dbitemname+". From: "+CD->USER.c_str()+".";
-                Send_IRCA(ChanOrPM(CD), iinfo, true, CD->TYPE);
+                Send_IRCA(ChanOrPM(CD), iinfo, true, CD->TYPE); */
                 
         }
         if (noSpaceForCount > 0)
@@ -956,12 +956,12 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 Field *fields = result->Fetch();
 
                 uint32 id = fields[0].GetUInt32();
-                std::string usrname = fields[1].GetCppString();
+                std::string usrname = fields[1].GetString();
                 uint32 gm = fields[2].GetUInt32();
-                std::string lastip = fields[3].GetCppString();
-                std::string banreason = fields[4].GetCppString();
-                std::string banreasonip = fields[5].GetCppString();
-                std::string lastlogin = fields[6].GetCppString();
+                std::string lastip = fields[3].GetString();
+                std::string banreason = fields[4].GetString();
+                std::string banreasonip = fields[5].GetString();
+                std::string lastlogin = fields[6].GetString();
                 
 
                 QueryResult chars = CharacterDatabase.PQuery("SELECT guid, name, (SELECT SUM(totaltime) FROM characters WHERE account = %d) AS tottime FROM characters WHERE account = %u", id, id);
@@ -971,11 +971,11 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 {
                     characters = "";
                     Field *fields = chars->Fetch();
-                    totaccttime = SecToDay(fields[2].GetCppString());
+                    totaccttime = SecToDay(fields[2].GetString());
                     for (uint64 i=0; i < chars->GetRowCount(); i++)
                     {
-                        std::string guid = fields[0].GetCppString();
-                        std::string charname = fields[1].GetCppString();
+                        std::string guid = fields[0].GetString();
+                        std::string charname = fields[1].GetString();
                         characters.append(charname+"("+guid+"), ");
                         chars->NextRow();
                     }
@@ -1000,8 +1000,8 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 std::string accts = "\002Account Search Results:\x3\x31\x30 ";
                 for (uint64 i=0; i < result->GetRowCount(); i++)
                 {
-                    std::string acctid = fields[0].GetCppString();
-                    std::string acctname = fields[1].GetCppString();
+                    std::string acctid = fields[0].GetString();
+                    std::string acctname = fields[1].GetString();
                     accts.append(acctname+"("+acctid+")\xF | \x3\x31\x30\x2");
                     result->NextRow();
                 }
@@ -1031,25 +1031,25 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
             if (result)
             {
                 Field *fields = result->Fetch();
-                std::string pguid = fields[0].GetCppString();
-                std::string pacct = fields[1].GetCppString();
-                std::string pname = fields[2].GetCppString();
+                std::string pguid = fields[0].GetString();
+                std::string pacct = fields[1].GetString();
+                std::string pname = fields[2].GetString();
                 uint32 praceid = fields[3].GetUInt32();
                 uint32 pclassid = fields[4].GetUInt32();
                 std::string ponline = (fields[5].GetInt32() == 1 ? "\x3\x30\x33Online" : "\x3\x30\x34Offline\xF");
-                std::string plevel = fields[6].GetCppString();
+                std::string plevel = fields[6].GetString();
                 uint32 pguildid = fields[7].GetUInt32();
                 uint32 pguildrank = fields[8].GetUInt32();
-                std::string pxp = fields[9].GetCppString();
-                std::string pmaxxp = fields[10].GetCppString();
+                std::string pxp = fields[9].GetString();
+                std::string pmaxxp = fields[10].GetString();
                 unsigned int money = fields[11].GetInt32();
-                std::string hk = fields[12].GetCppString();
-                std::string totaltim = SecToDay(fields[13].GetCppString());
+                std::string hk = fields[12].GetString();
+                std::string totaltim = SecToDay(fields[13].GetString());
                 
                 std::string sqlquery = "SELECT `gmlevel` FROM `account_access` WHERE `id` = '" + pacct + "';";
                 QueryResult result = LoginDatabase.Query(sqlquery.c_str());
                 Field *fields2 = result->Fetch();
-                std::string pgmlvl = fields2[0].GetCppString();
+                std::string pgmlvl = fields2[0].GetString();
                 
                 std::string guildinfo = "";
                 if (pguildid != 0)
@@ -1104,9 +1104,9 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 std::string items = "\x2 Character Search Results:\x3\x31\x30 ";
                 for (uint64 i=0; i < result->GetRowCount(); i++)
                 {
-                    std::string guid = fields[0].GetCppString();
-                    std::string account = fields[1].GetCppString();
-                    std::string name = fields[2].GetCppString();
+                    std::string guid = fields[0].GetString();
+                    std::string account = fields[1].GetString();
+                    std::string name = fields[2].GetString();
                     MakeUpper(name);
                     items.append(name+"(Account:"+account+" - GUID:"+guid+")\xF | \x3\x31\x30\x2");
                     result->NextRow();
@@ -1131,7 +1131,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
 
                 uint32 entry = fields[0].GetUInt32();
                 uint32 modelid = fields[1].GetUInt32();
-                std::string name = fields[2].GetCppString();
+                std::string name = fields[2].GetString();
                 uint32 level = fields[3].GetUInt32();
                 uint32 faction = fields[4].GetUInt32();
                 uint32 armor = fields[5].GetUInt32();
@@ -1154,8 +1154,8 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 //Send_IRCA(ChanOrPM(CD), "", true, CD->TYPE);
                 for (uint64 i=0; i < result->GetRowCount(); i++)
                 {
-                    std::string CreatureID = fields[0].GetCppString();
-                    std::string Name = fields[1].GetCppString();
+                    std::string CreatureID = fields[0].GetString();
+                    std::string Name = fields[1].GetString();
                     items.append(Name+"("+CreatureID+")\xF | \x3\x31\x30\x2");
                     result->NextRow();
                 }
@@ -1221,7 +1221,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 uint32 entry = fields[0].GetUInt32();
                 uint32 type = fields[1].GetUInt32();
                 uint32 modelid = fields[2].GetUInt32();
-                std::string name = fields[3].GetCppString();
+                std::string name = fields[3].GetString();
                 uint32 faction = fields[4].GetUInt32();
                 uint32 spawns = fields[5].GetUInt32();
                 
@@ -1241,8 +1241,8 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 std::string gos = "\002Gameobject Search Results:\x3\x31\x30 ";
                 for (uint64 i=0; i < result->GetRowCount(); i++)
                 {
-                    std::string GOID = fields[0].GetCppString();
-                    std::string GoName = fields[1].GetCppString();
+                    std::string GOID = fields[0].GetString();
+                    std::string GoName = fields[1].GetString();
                     gos.append(GoName+"("+GOID+")\xF | \x3\x31\x30\x2");
                     result->NextRow();
                 }
@@ -1268,7 +1268,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 
 
                 uint32 ItemID = fields[0].GetUInt32();
-                std::string ItmName = fields[1].GetCppString();
+                std::string ItmName = fields[1].GetString();
                 uint32 DisplayID = fields[2].GetUInt32();
                 uint32 loots = 0;
                 loots = fields[3].GetUInt32();
@@ -1287,8 +1287,8 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 std::string items = "\002Item Search Results:\x3\x31\x30 ";
                 for (uint64 i=0; i < result->GetRowCount(); i++)
                 {
-                    std::string ItemID = fields[0].GetCppString();
-                    std::string ItemName = fields[1].GetCppString();
+                    std::string ItemID = fields[0].GetString();
+                    std::string ItemName = fields[1].GetString();
                     items.append(ItemName+"("+ItemID+")\xF | \x3\x31\x30\x2");
                     result->NextRow();
                 }
@@ -1315,7 +1315,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
 
                 Field *fields = result->Fetch();
                 uint32 entry = fields[0].GetUInt32();
-                std::string name = fields[1].GetCppString();
+                std::string name = fields[1].GetString();
                 
                 Send_IRCA(ChanOrPM(CD), MakeMsg("\x2Quest Name:\x3\x31\x30 %s \xF|\x2 QuestID:\x3\x31\x30 %d \xF|\x2 Completed:\x3\x31\x30 %d times", name.c_str(), entry, status), true, CD->TYPE);
             }
@@ -1332,8 +1332,8 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 //Send_IRCA(ChanOrPM(CD), "", true, CD->TYPE);
                 for (uint64 i=0; i < result->GetRowCount(); i++)
                 {
-                    std::string QuestID = fields[0].GetCppString();
-                    std::string QuestName = fields[1].GetCppString();
+                    std::string QuestID = fields[0].GetString();
+                    std::string QuestName = fields[1].GetString();
                     quests.append(QuestName+"("+QuestID+")\xF | \x3\x31\x30\x2");
                     result->NextRow();
                 }
@@ -1442,7 +1442,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 uint32 pos_z = fields[3].GetUInt32();
                 uint32 oriet = fields[4].GetUInt32();
                 uint32 map = fields[5].GetUInt32();
-                std::string telname = fields[6].GetCppString();
+                std::string telname = fields[6].GetString();
                 
 
                 Send_IRCA(ChanOrPM(CD), MakeMsg("\x2Tele Name:\x3\x31\x30 %s \xF|\x2 TeleID:\x3\x31\x30 %d \xF|\x2 Coordinates:\x3\x31\x30 [X: %d, Y: %d, Z: %d, MAP: %d, Orientation: %d]", telname.c_str(), teleid, pos_x, pos_y, pos_z, map, oriet), true, CD->TYPE);
@@ -1459,8 +1459,8 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 std::string teles = "\002Tele Location Search Results:\x3\x31\x30 ";
                 for (uint64 i=0; i < result->GetRowCount(); i++)
                 {
-                    std::string TeleID = fields[0].GetCppString();
-                    std::string TeleName = fields[1].GetCppString();
+                    std::string TeleID = fields[0].GetString();
+                    std::string TeleName = fields[1].GetString();
                     teles.append(TeleName+"("+TeleID+")\xF | \x3\x31\x30\x2");
                     result->NextRow();
                 }
@@ -1828,9 +1828,9 @@ void IRCCmd::Sysmsg_Server(_CDATA *CD)
             Field *fields = result->Fetch();
             for (uint64 i=0; i < result->GetRowCount(); i++)
             {
-                std::string id = fields[0].GetCppString();
-                std::string message = fields[1].GetCppString();
-                std::string addedby = fields[2].GetCppString();
+                std::string id = fields[0].GetString();
+                std::string message = fields[1].GetString();
+                std::string addedby = fields[2].GetString();
                 Send_IRCA(ChanOrPM(CD), MakeMsg("ID: %s - Added By: %s - Message: %s", id.c_str(), addedby.c_str(), message.c_str()), true, CD->TYPE);
                 result->NextRow();
             }
@@ -1899,7 +1899,7 @@ void IRCCmd::Tele_Player(_CDATA *CD)
                 for (uint64 i=0; i < result->GetRowCount(); i++)
                 {
                     Field *fields = result->Fetch();
-                    telename.append(fields[0].GetCppString());
+                    telename.append(fields[0].GetString());
                     result->NextRow();
                     telename.append(" <> ");
                 }
@@ -2113,7 +2113,7 @@ void IRCCmd::Top_Player(_CDATA *CD)
             {
                 uint32 account = fields[0].GetUInt32();
                 std::string PlName = GetAcctNameFromID(account);
-                std::string Time = SecToDay(fields[2].GetCppString());
+                std::string Time = SecToDay(fields[2].GetString());
                 uint32 rank = i+1;
                 tptime.append(MakeMsg("[%u]%s %s \xF| \x3\x31\x30\x2", rank, PlName.c_str(), Time.c_str()));
                 result->NextRow();
@@ -2133,8 +2133,8 @@ void IRCCmd::Top_Player(_CDATA *CD)
             std::string tptime = MakeMsg("\x2 Top%d Characters By Played Time:\x3\x31\x30 ", limitr);
             for (uint64 i=0; i < result->GetRowCount(); i++)
             {
-                std::string Name = fields[0].GetCppString();
-                std::string Time = SecToDay(fields[1].GetCppString());
+                std::string Name = fields[0].GetString();
+                std::string Time = SecToDay(fields[1].GetString());
                 uint32 rank = i+1;
                 tptime.append(MakeMsg("[%u]%s %s \xF| \x3\x31\x30\x2", rank, Name.c_str(), Time.c_str()));
                 result->NextRow();
@@ -2154,7 +2154,7 @@ void IRCCmd::Top_Player(_CDATA *CD)
             std::string tptime = MakeMsg("\x2 Top%d Characters By Money:\x3\x31\x30 ", limitr);
             for (uint64 i=0; i < result->GetRowCount(); i++)
             {
-                std::string Name = fields[0].GetCppString();
+                std::string Name = fields[0].GetString();
                 unsigned int money = fields[1].GetInt32();
 
                 uint32 rank = i+1;

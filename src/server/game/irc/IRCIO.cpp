@@ -268,6 +268,8 @@ void IRCClient::Handle_WoW_Channel(std::string Channel, Player *plr, int nAction
     // make sure that we are connected
     if (sIRC.Connected && (sIRC.BOTMASK & 1)!= 0)
     {
+	if(!plr)
+	  return;
         if (Channel_Valid(Channel))
         {
             std::string GMRank = "";
