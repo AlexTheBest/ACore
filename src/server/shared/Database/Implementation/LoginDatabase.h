@@ -26,11 +26,11 @@ class LoginDatabaseConnection : public MySQLConnection
 {
     public:
         //- Constructors for sync and async connections
-        LoginDatabaseConnection() : MySQLConnection() {}
-        LoginDatabaseConnection(ACE_Activation_Queue* q) : MySQLConnection(q) {}
+        LoginDatabaseConnection(MySQLConnectionInfo& connInfo) : MySQLConnection(connInfo) {}
+        LoginDatabaseConnection(ACE_Activation_Queue* q, MySQLConnectionInfo& connInfo) : MySQLConnection(q, connInfo) {}
 
         //- Loads databasetype specific prepared statements
-        bool Open(const MySQLConnectionInfo& connInfo);
+        bool Open();
 };
 
 typedef DatabaseWorkerPool<LoginDatabaseConnection> LoginDatabaseWorkerPool;

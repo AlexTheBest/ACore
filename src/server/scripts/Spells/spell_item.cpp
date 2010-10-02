@@ -647,7 +647,7 @@ public:
     class spell_item_shadowmourne_AuraScript : public AuraScript
     {
     public:
-        spell_item_shadowmourne_AuraScript() : AuraScript(), prevStackCount(0) { }
+        spell_item_shadowmourne_AuraScript() : AuraScript() { }
 
         bool Validate(SpellEntry const* /*spellEntry*/)
         {
@@ -697,8 +697,6 @@ public:
             OnEffectApply += AuraEffectApplyFn(spell_item_shadowmourne_AuraScript::OnStackChange, EFFECT_0, SPELL_AURA_MOD_STAT, AURA_EFFECT_HANDLE_REAL);
             OnEffectRemove += AuraEffectRemoveFn(spell_item_shadowmourne_AuraScript::OnRemove, EFFECT_0, SPELL_AURA_MOD_STAT, AURA_EFFECT_HANDLE_REAL);
         }
-
-        uint8 prevStackCount;
     };
 
     AuraScript* GetAuraScript() const

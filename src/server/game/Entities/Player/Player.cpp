@@ -616,6 +616,8 @@ Player::Player (WorldSession *session): Unit(), m_achievementMgr(this), m_reputa
     m_globalCooldowns.clear();
 
     m_ConditionErrorMsgId = 0;
+
+    isDebugAreaTriggers = false;
 }
 
 Player::~Player ()
@@ -14229,7 +14231,7 @@ bool Player::CanCompleteRepeatableQuest(Quest const *pQuest)
 bool Player::CanRewardQuest(Quest const *pQuest, bool msg)
 {
     // not auto complete quest and not completed quest (only cheating case, then ignore without message)
-    if (!pQuest->IsAutoComplete() && !(pQuest->GetFlags() & QUEST_FLAGS_AUTOCOMPLETE) && GetQuestStatus(pQuest->GetQuestId()) != QUEST_STATUS_COMPLETE)
+    if (!pQuest->IsDFQuest() && !pQuest->IsAutoComplete() && !(pQuest->GetFlags() & QUEST_FLAGS_AUTOCOMPLETE) && GetQuestStatus(pQuest->GetQuestId()) != QUEST_STATUS_COMPLETE)
         return false;
 
     // daily quest can't be rewarded (25 daily quest already completed)
@@ -14529,11 +14531,14 @@ void Player::RewardQuest(Quest const *pQuest, uint32 reward, Object* questGiver,
         CharacterDatabase.CommitTransaction(trans);
     }
 
-    if (pQuest->IsDaily())
+    if (pQuest->IsDaily() || pQuest->IsDFQuest())
     {
         SetDailyQuestStatus(quest_id);
-        GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_COMPLETE_DAILY_QUEST, quest_id);
-        GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_COMPLETE_DAILY_QUEST_DAILY, quest_id);
+        if (pQuest->IsDaily())
+        {
+            GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_COMPLETE_DAILY_QUEST, quest_id);
+            GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_COMPLETE_DAILY_QUEST_DAILY, quest_id);
+        }
     } else if (pQuest->IsWeekly())
         SetWeeklyQuestStatus(quest_id);
 
@@ -14975,8 +14980,16 @@ bool Player::SatisfyQuestPrevChain(Quest const* qInfo, bool msg)
 
 bool Player::SatisfyQuestDay(Quest const* qInfo, bool msg)
 {
-    if (!qInfo->IsDaily())
+    if (!qInfo->IsDaily() && !qInfo->IsDFQuest())
         return true;
+
+    if (qInfo->IsDFQuest())
+    {
+        if (!m_DFQuests.empty())
+            return false;
+
+        return true;
+    }
 
     bool have_slot = false;
     for (uint32 quest_daily_idx = 0; quest_daily_idx < PLAYER_MAX_DAILY_QUESTS; ++quest_daily_idx)
@@ -17256,6 +17269,8 @@ void Player::_LoadDailyQuestStatus(PreparedQueryResult result)
     for (uint32 quest_daily_idx = 0; quest_daily_idx < PLAYER_MAX_DAILY_QUESTS; ++quest_daily_idx)
         SetUInt32Value(PLAYER_FIELD_DAILY_QUESTS_1+quest_daily_idx,0);
 
+    m_DFQuests.clear();
+
     //QueryResult *result = CharacterDatabase.PQuery("SELECT quest,time FROM character_queststatus_daily WHERE guid = '%u'", GetGUIDLow());
 
     if (result)
@@ -17264,13 +17279,22 @@ void Player::_LoadDailyQuestStatus(PreparedQueryResult result)
 
         do
         {
+            Field* fields = result->Fetch();
+            if (Quest const* qQuest = sObjectMgr.GetQuestTemplate(fields[0].GetUInt32()))
+            {
+                if (qQuest->IsDFQuest())
+                {
+                    m_DFQuests.insert(qQuest->GetQuestId());
+                    m_lastDailyQuestTime = (time_t)fields[1].GetUInt64();
+                    continue;
+                }
+            }
+
             if (quest_daily_idx >= PLAYER_MAX_DAILY_QUESTS)  // max amount with exist data in query
             {
                 sLog.outError("Player (GUID: %u) have more 25 daily quest records in `charcter_queststatus_daily`",GetGUIDLow());
                 break;
             }
-
-            Field* fields = result->Fetch();
 
             uint32 quest_id = fields[0].GetUInt32();
 
@@ -18224,6 +18248,15 @@ void Player::_SaveDailyQuestStatus(SQLTransaction& trans)
         if (GetUInt32Value(PLAYER_FIELD_DAILY_QUESTS_1+quest_daily_idx))
             trans->PAppend("INSERT INTO character_queststatus_daily (guid,quest,time) VALUES ('%u', '%u','" UI64FMTD "')",
                 GetGUIDLow(), GetUInt32Value(PLAYER_FIELD_DAILY_QUESTS_1+quest_daily_idx),uint64(m_lastDailyQuestTime));
+
+    if (!m_DFQuests.empty())
+    {
+        for (DFQuestsDoneList::iterator itr = m_DFQuests.begin(); itr != m_DFQuests.end(); ++itr)
+        {
+            trans->PAppend("INSERT INTO character_queststatus_daily (guid,quest,time) VALUES ('%u', '%u','" UI64FMTD "')",
+            GetGUIDLow(),(*itr),uint64(m_lastDailyQuestTime)); 
+        }
+    }
 }
 
 void Player::_SaveWeeklyQuestStatus(SQLTransaction& trans)
@@ -21413,14 +21446,26 @@ void Player::SendAurasForTarget(Unit *target)
 
 void Player::SetDailyQuestStatus(uint32 quest_id)
 {
-    for (uint32 quest_daily_idx = 0; quest_daily_idx < PLAYER_MAX_DAILY_QUESTS; ++quest_daily_idx)
+    if (Quest const* qQuest = sObjectMgr.GetQuestTemplate(quest_id))
     {
-        if (!GetUInt32Value(PLAYER_FIELD_DAILY_QUESTS_1+quest_daily_idx))
+        if (!qQuest->IsDFQuest())
         {
-            SetUInt32Value(PLAYER_FIELD_DAILY_QUESTS_1+quest_daily_idx,quest_id);
-            m_lastDailyQuestTime = time(NULL);              // last daily quest time
+            for (uint32 quest_daily_idx = 0; quest_daily_idx < PLAYER_MAX_DAILY_QUESTS; ++quest_daily_idx)
+            {
+                if (!GetUInt32Value(PLAYER_FIELD_DAILY_QUESTS_1+quest_daily_idx))
+                {
+                    SetUInt32Value(PLAYER_FIELD_DAILY_QUESTS_1+quest_daily_idx,quest_id);
+                    m_lastDailyQuestTime = time(NULL);              // last daily quest time
+                    m_DailyQuestChanged = true;
+                    break;
+                }
+            }
+
+        } else
+        {
+            m_DFQuests.insert(quest_id);
+            m_lastDailyQuestTime = time(NULL); 
             m_DailyQuestChanged = true;
-            break;
         }
     }
 }
@@ -21436,6 +21481,8 @@ void Player::ResetDailyQuestStatus()
 {
     for (uint32 quest_daily_idx = 0; quest_daily_idx < PLAYER_MAX_DAILY_QUESTS; ++quest_daily_idx)
         SetUInt32Value(PLAYER_FIELD_DAILY_QUESTS_1+quest_daily_idx,0);
+
+    m_DFQuests.clear(); // Dungeon Finder Quests.
 
     // DB data deleted in caller
     m_DailyQuestChanged = false;

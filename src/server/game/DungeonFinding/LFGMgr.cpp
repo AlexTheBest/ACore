@@ -561,6 +561,7 @@ bool LFGMgr::RemoveFromQueue(uint64 guid)
 /// <param name="Player*">Player</param>
 void LFGMgr::Join(Player* plr)
 {
+    LfgDungeonSet* dungeons = NULL;
     Group* grp = plr->GetGroup();
 
     if (grp && grp->GetLeaderGUID() != plr->GetGUID())
@@ -573,8 +574,12 @@ void LFGMgr::Join(Player* plr)
     LfgQueueInfoMap::iterator itQueue = m_QueueInfoMap.find(guid);
     if (itQueue != m_QueueInfoMap.end())
     {
-        sLog.outError("LFGMgr::Join: [" UI64FMTD "] trying to join but is already in queue! Forcing leave before readding", guid);
+        time_t now = time_t(time(NULL));
+        time_t joinTime = itQueue->second->joinTime;
+        uint32 diff = uint32(now - joinTime);
+        sLog.outError("LFGMgr::Join: [" UI64FMTD "] trying to join but is already in queue! diff %u (" UI64FMTD " - " UI64FMTD ")", guid, diff, uint64(now), uint64(joinTime));
         Leave(plr, grp);
+        result = LFG_JOIN_INTERNAL_ERROR;
     }
     else if (plr->InBattleground() || plr->InArena() || plr->InBattlegroundQueue())
         result = LFG_JOIN_USING_BG_SYSTEM;
@@ -584,15 +589,18 @@ void LFGMgr::Join(Player* plr)
         result = LFG_JOIN_RANDOM_COOLDOWN;
     else
     {
-        // Check if all dungeons are valid
-        for (LfgDungeonSet::const_iterator it = plr->GetLfgDungeons()->begin(); it != plr->GetLfgDungeons()->end(); ++it)
-        {
-            if (!GetDungeonGroupType(*it))
+        dungeons = plr->GetLfgDungeons();
+        if (!dungeons || dungeons->size())
+            result = LFG_JOIN_NOT_MEET_REQS;
+        else // Check if all dungeons are valid
+            for (LfgDungeonSet::const_iterator it = dungeons->begin(); it != dungeons->end(); ++it)
             {
-                result = LFG_JOIN_DUNGEON_INVALID;
-                break;
+                if (!GetDungeonGroupType(*it))
+                {
+                    result = LFG_JOIN_DUNGEON_INVALID;
+                    break;
+                }
             }
-        }
     }
 
     // Group checks
@@ -633,7 +641,6 @@ void LFGMgr::Join(Player* plr)
         return;
     }
 
-    LfgDungeonSet* dungeons = NULL;
     if (grp)
     {
         Player* plrg = NULL;
@@ -666,19 +673,17 @@ void LFGMgr::Join(Player* plr)
             players.insert(plr);
             dungeons = GetDungeonsByRandom(*plr->GetLfgDungeons()->begin());
             playersLockMap = CheckCompatibleDungeons(dungeons, &players);
+            if (dungeons && !dungeons->size())
+            {
+                delete dungeons;
+                dungeons = NULL;
+            }
         }
         else
             dungeons = plr->GetLfgDungeons();
 
         if (!dungeons || !dungeons->size())
-        {
-            if (dungeons)
-            {
-                delete dungeons;
-                dungeons = NULL;
-            }
             plr->GetSession()->SendLfgJoinResult(LFG_JOIN_NOT_MEET_REQS, 0, playersLockMap);
-        }
         else
         {
             plr->GetSession()->SendLfgJoinResult(LFG_JOIN_OK, 0);
@@ -1869,11 +1874,6 @@ void LFGMgr::RewardDungeonDoneFor(const uint32 dungeonId, Player* player)
     if (!dungeon || dungeon->type != LFG_TYPE_RANDOM)
         return;
 
-    // Mark random dungeon as complete
-    uint8 index = player->isLfgDungeonDone(rDungeonId) ? 1 : 0;
-    if (!index)
-        player->SetLfgDungeonDone(rDungeonId);
-
     // Update achievements
     if (dungeon->difficulty == DUNGEON_DIFFICULTY_HEROIC)
         player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_USE_LFD_TO_GROUP_WITH_PLAYERS, 1);
@@ -1882,46 +1882,26 @@ void LFGMgr::RewardDungeonDoneFor(const uint32 dungeonId, Player* player)
     if (!reward)
         return;
 
+    uint8 index = 0;
     Quest const* qReward = sObjectMgr.GetQuestTemplate(reward->reward[index].questId);
     if (!qReward)
         return;
 
-    // Give rewards
-    player->GetSession()->SendLfgPlayerReward(dungeon->Entry(), group->GetLfgDungeonEntry(false), index, reward, qReward);
-
-    if (qReward->GetRewItemsCount() > 0)
+    // if we can take the quest, means that we haven't done this kind of "run", IE: First Heroic Random of Day.
+    if (player->CanRewardQuest(qReward,false))
+        player->RewardQuest(qReward,0,NULL,false);
+    else
     {
-        for (uint32 i = 0; i < QUEST_REWARDS_COUNT; ++i)
-        {
-            if (uint32 itemId = qReward->RewItemId[i])
-            {
-                ItemPosCountVec dest;
-                if (player->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, itemId, qReward->RewItemCount[i]) == EQUIP_ERR_OK)
-                {
-                    Item* item = player->StoreNewItem(dest, itemId, true, Item::GenerateItemRandomPropertyId(itemId));
-                    player->SendNewItem(item, qReward->RewItemCount[i], true, false);
-                }
-            }
-        }
+        index = 1;
+        qReward = sObjectMgr.GetQuestTemplate(reward->reward[index].questId);
+        if (!qReward)
+            return;
+        // we give reward without informing client (retail does this)
+        player->RewardQuest(qReward,0,NULL,false);
     }
 
-    // Not give XP in case already completed once repeatable quest
-    uint32 XP = uint32(qReward->XPValue(player) * sWorld.getRate(RATE_XP_QUEST));
-
-    XP += (MAXGROUPSIZE - group->GetMembersCount()) * reward->reward[index].variableXP;
-
-    // Give player extra money if GetRewOrReqMoney > 0 and get ReqMoney if negative
-    int32 moneyRew = qReward->GetRewOrReqMoney();
-
-    if (player->getLevel() < sWorld.getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
-        player->GiveXP(XP, NULL);
-    else
-        moneyRew += int32(qReward->GetRewMoneyMaxLevel() * sWorld.getRate(RATE_DROP_MONEY));
-
-    moneyRew += (MAXGROUPSIZE - group->GetMembersCount()) * reward->reward[index].variableMoney;
-
-    if (moneyRew)
-        player->ModifyMoney(moneyRew);
+    // Give rewards
+    player->GetSession()->SendLfgPlayerReward(dungeon->Entry(), group->GetLfgDungeonEntry(false), index, reward, qReward);
 }
 
 // --------------------------------------------------------------------------//
