@@ -675,6 +675,7 @@ sLog.outError("BattlegroundQueue:Players Join... %u", BGPlayerCounter);
         // do not allow to start bg with more than 2 players more on 1 faction
         if (abs((int32)(m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount() - m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount())) > 2)
             return false;
+sLog.outError("BattlegroundQueue:NO");
     }
     //allow 1v0 if debug bg
     if (sBattlegroundMgr.isTesting() && bg_template->isBattleground() && (m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount() || m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount()))
@@ -685,7 +686,7 @@ sLog.outError("BattlegroundQueue:Players Join... %u", BGPlayerCounter);
 	{
 		int32 Ali   = m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount();
 		int32 Horde = m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount();
-sLog.outError("BattlegroundQueue:Players Queued.. %u", (Ali + Horde));
+sLog.outError("BattlegroundQueue:Players Queued.. %u Out of %u", (Ali + Horde), (minPlayers * 2));
 		return (Ali + Horde) >= minPlayers * 2;
 	}else{
 		 return m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount() >= minPlayers && m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount() >= minPlayers;

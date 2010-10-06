@@ -183,7 +183,7 @@ public:
 				break;
 				
 				case 6000:
-					player->TeleportTo(0, -4011.49951, -1510.55432,170.09850, 4.919000f);
+					player->TeleportTo(1, 16226.96, 16291.38, 20.845345, 1.486500f);
 					player->CLOSE_GOSSIP_MENU();
 				break;
 				case 7000:

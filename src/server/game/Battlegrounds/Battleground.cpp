@@ -1257,6 +1257,14 @@ void Battleground::RemoveFromBGFreeSlotQueue()
 // returns the number how many players can join battleground to MaxPlayersPerTeam
 uint32 Battleground::GetFreeSlotsForTeam(uint32 Team) const
 {
+if(sBattlegroundMgr.isMixBg())
+{
+    //return free slot count to MaxPlayerPerTeam
+    if (GetStatus() == STATUS_WAIT_JOIN || GetStatus() == STATUS_IN_PROGRESS)
+        return (GetInvitedCount(Team) < GetMaxPlayersPerTeam()) ? GetMaxPlayersPerTeam() - GetInvitedCount(Team) : 0;
+
+    return 0;
+}else{
     //if BG is starting ... invite anyone
     if (GetStatus() == STATUS_WAIT_JOIN)
         return (GetInvitedCount(Team) < GetMaxPlayersPerTeam()) ? GetMaxPlayersPerTeam() - GetInvitedCount(Team) : 0;
@@ -1308,6 +1316,7 @@ uint32 Battleground::GetFreeSlotsForTeam(uint32 Team) const
         return diff < diff3 ? diff : diff3 ;
     }
     return 0;
+}
 }
 
 bool Battleground::HasFreeSlots() const
