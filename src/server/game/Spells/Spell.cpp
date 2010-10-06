@@ -543,10 +543,11 @@ Spell::~Spell()
     while(!m_loadedScripts.empty())
     {
         std::list<SpellScript *>::iterator itr = m_loadedScripts.begin();
-        (*itr)->Unload();
+        (*itr)->_Unload();
         delete (*itr);
         m_loadedScripts.erase(itr);
     }
+
     if (m_referencedFromCurrentSpell && m_selfContainer && *m_selfContainer == this)
     {
         // Clean the reference to avoid later crash.
@@ -4861,7 +4862,6 @@ SpellCastResult Spell::CheckCast(bool strict)
         }
         else if (m_caster == target)
         {
-
             if (m_caster->GetTypeId() == TYPEID_PLAYER) // Target - is player caster
             {
                 // Additional check for some spells
@@ -5008,141 +5008,6 @@ SpellCastResult Spell::CheckCast(bool strict)
         if (castResult != SPELL_CAST_OK)
             return castResult;
     }
-
-    /*//ImpliciteTargetA-B = 38, If fact there is 0 Spell with  ImpliciteTargetB=38
-    if (m_UniqueTargetInfo.empty())                          // skip second CheckCast apply (for delayed spells for example)
-    {
-        for (uint8 j = 0; j < MAX_SPELL_EFFECTS; ++j)
-        {
-            if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_UNIT_NEARBY_ENTRY ||
-                m_spellInfo->EffectImplicitTargetB[j] == TARGET_UNIT_NEARBY_ENTRY && m_spellInfo->EffectImplicitTargetA[j] != TARGET_UNIT_CASTER ||
-                m_spellInfo->EffectImplicitTargetA[j] == TARGET_DST_NEARBY_ENTRY ||
-                m_spellInfo->EffectImplicitTargetB[j] == TARGET_DST_NEARBY_ENTRY)
-            {
-                SpellScriptTarget::const_iterator lower = sSpellMgr.GetBeginSpellScriptTarget(m_spellInfo->Id);
-                SpellScriptTarget::const_iterator upper = sSpellMgr.GetEndSpellScriptTarget(m_spellInfo->Id);
-                if (lower == upper)
-                    sLog.outErrorDb("Spell (ID: %u) has effect EffectImplicitTargetA/EffectImplicitTargetB = TARGET_UNIT_NEARBY_ENTRY or TARGET_DST_NEARBY_ENTRY, but does not have record in `spell_script_target`",m_spellInfo->Id);
-
-                SpellRangeEntry const* srange = sSpellRangeStore.LookupEntry(m_spellInfo->rangeIndex);
-                float range = GetSpellMaxRange(srange);
-
-                Creature* creatureScriptTarget = NULL;
-                GameObject* goScriptTarget = NULL;
-
-                for (SpellScriptTarget::const_iterator i_spellST = bounds.first; i_spellST != bounds.second; ++i_spellST)
-                {
-                    switch(i_spellST->second.type)
-                    {
-                        case SPELL_TARGET_TYPE_GAMEOBJECT:
-                        {
-                            GameObject* p_GameObject = NULL;
-
-                            if (i_spellST->second.targetEntry)
-                            {
-                                CellPair p(Trinity::ComputeCellPair(m_caster->GetPositionX(), m_caster->GetPositionY()));
-                                Cell cell(p);
-                                cell.data.Part.reserved = ALL_DISTRICT;
-
-                                Trinity::NearestGameObjectEntryInObjectRangeCheck go_check(*m_caster,i_spellST->second.targetEntry,range);
-                                Trinity::GameObjectLastSearcher<Trinity::NearestGameObjectEntryInObjectRangeCheck> checker(m_caster, p_GameObject,go_check);
-
-                                TypeContainerVisitor<Trinity::GameObjectLastSearcher<Trinity::NearestGameObjectEntryInObjectRangeCheck>, GridTypeMapContainer > object_checker(checker);
-                                CellLock<GridReadGuard> cell_lock(cell, p);
-                                cell_lock->Visit(cell_lock, object_checker, *m_caster->GetMap());
-
-                                if (p_GameObject)
-                                {
-                                    // remember found target and range, next attempt will find more near target with another entry
-                                    creatureScriptTarget = NULL;
-                                    goScriptTarget = p_GameObject;
-                                    range = go_check.GetLastRange();
-                                }
-                            }
-                            else if (focusObject)           // Focus Object
-                            {
-                                float frange = m_caster->GetDistance(focusObject);
-                                if (range >= frange)
-                                {
-                                    creatureScriptTarget = NULL;
-                                    goScriptTarget = focusObject;
-                                    range = frange;
-                                }
-                            }
-                            break;
-                        }
-                        case SPELL_TARGET_TYPE_CREATURE:
-                        case SPELL_TARGET_TYPE_DEAD:
-                        default:
-                        {
-                            Creature *p_Creature = NULL;
-
-                            CellPair p(Trinity::ComputeCellPair(m_caster->GetPositionX(), m_caster->GetPositionY()));
-                            Cell cell(p);
-                            cell.data.Part.reserved = ALL_DISTRICT;
-                            cell.SetNoCreate();             // Really don't know what is that???
-
-                            Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck u_check(*m_caster,i_spellST->second.targetEntry,i_spellST->second.type != SPELL_TARGET_TYPE_DEAD,range);
-                            Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck> searcher(m_caster, p_Creature, u_check);
-
-                            TypeContainerVisitor<Trinity::CreatureLastSearcher<Trinity::NearestCreatureEntryWithLiveStateInObjectRangeCheck>, GridTypeMapContainer >  grid_creature_searcher(searcher);
-
-                            CellLock<GridReadGuard> cell_lock(cell, p);
-                            cell_lock->Visit(cell_lock, grid_creature_searcher, *m_caster->GetMap(), *m_caster, range);
-
-                            if (p_Creature)
-                            {
-                                creatureScriptTarget = p_Creature;
-                                goScriptTarget = NULL;
-                                range = u_check.GetLastRange();
-                            }
-                            break;
-                        }
-                    }
-                }
-
-                if (creatureScriptTarget)
-                {
-                    // store coordinates for TARGET_DST_NEARBY_ENTRY
-                    if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_DST_NEARBY_ENTRY ||
-                        m_spellInfo->EffectImplicitTargetB[j] == TARGET_DST_NEARBY_ENTRY)
-                    {
-                        m_targets.setDst(creatureScriptTarget->GetPositionX(),creatureScriptTarget->GetPositionY(),creatureScriptTarget->GetPositionZ());
-
-                        if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_DST_NEARBY_ENTRY && m_spellInfo->EffectImplicitTargetB[j] == 0 && m_spellInfo->Effect[j] != SPELL_EFFECT_PERSISTENT_AREA_AURA)
-                            AddUnitTarget(creatureScriptTarget, j);
-                    }
-                    // store explicit target for TARGET_UNIT_NEARBY_ENTRY
-                    else
-                        AddUnitTarget(creatureScriptTarget, j);
-                }
-                else if (goScriptTarget)
-                {
-                    // store coordinates for TARGET_DST_NEARBY_ENTRY
-                    if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_DST_NEARBY_ENTRY ||
-                        m_spellInfo->EffectImplicitTargetB[j] == TARGET_DST_NEARBY_ENTRY)
-                    {
-                        m_targets.setDst(goScriptTarget->GetPositionX(),goScriptTarget->GetPositionY(),goScriptTarget->GetPositionZ());
-
-                        if (m_spellInfo->EffectImplicitTargetA[j] == TARGET_DST_NEARBY_ENTRY && m_spellInfo->EffectImplicitTargetB[j] == 0 && m_spellInfo->Effect[j] != SPELL_EFFECT_PERSISTENT_AREA_AURA)
-                            AddGOTarget(goScriptTarget, j);
-                    }
-                    // store explicit target for TARGET_UNIT_NEARBY_ENTRY
-                    else
-                        AddGOTarget(goScriptTarget, j);
-                }
-                //Missing DB Entry or targets for this spellEffect.
-                else
-                {
-                    // not report target not existence for triggered spells
-                    if (m_triggeredByAuraSpell || m_IsTriggeredSpell)
-                        return SPELL_FAILED_DONT_REPORT;
-                    else
-                        return SPELL_FAILED_BAD_TARGETS;
-                }
-            }
-        }
-    }*/
 
     if (!m_IsTriggeredSpell)
     {
@@ -7359,6 +7224,7 @@ bool Spell::CallScriptEffectHandlers(SpellEffIndex effIndex)
     bool preventDefault = false;
     for(std::list<SpellScript *>::iterator scritr = m_loadedScripts.begin(); scritr != m_loadedScripts.end() ; ++scritr)
     {
+        (*scritr)->_PrepareScriptCall(SPELL_SCRIPT_HOOK_EFFECT);
         std::list<SpellScript::EffectHandler>::iterator effEndItr = (*scritr)->OnEffect.end(), effItr = (*scritr)->OnEffect.begin();
         for(; effItr != effEndItr ; ++effItr)
         {
@@ -7368,6 +7234,7 @@ bool Spell::CallScriptEffectHandlers(SpellEffIndex effIndex)
         }
         if (!preventDefault)
             preventDefault = (*scritr)->_IsDefaultEffectPrevented(effIndex);
+        (*scritr)->_FinishScriptCall();
     }
     return preventDefault;
 }
@@ -7376,11 +7243,13 @@ void Spell::CallScriptBeforeHitHandlers()
 {
     for(std::list<SpellScript *>::iterator scritr = m_loadedScripts.begin(); scritr != m_loadedScripts.end() ; ++scritr)
     {
+        (*scritr)->_PrepareScriptCall(SPELL_SCRIPT_HOOK_BEFORE_HIT);
         std::list<SpellScript::HitHandler>::iterator hookItrEnd = (*scritr)->BeforeHit.end(), hookItr = (*scritr)->BeforeHit.begin();
         for(; hookItr != hookItrEnd ; ++hookItr)
         {
             ((*scritr)->*(*hookItr))();
         }
+        (*scritr)->_FinishScriptCall();
     }
 }
 
@@ -7388,11 +7257,13 @@ void Spell::CallScriptOnHitHandlers()
 {
     for(std::list<SpellScript *>::iterator scritr = m_loadedScripts.begin(); scritr != m_loadedScripts.end() ; ++scritr)
     {
+        (*scritr)->_PrepareScriptCall(SPELL_SCRIPT_HOOK_HIT);
         std::list<SpellScript::HitHandler>::iterator hookItrEnd = (*scritr)->OnHit.end(), hookItr = (*scritr)->OnHit.begin();
         for(; hookItr != hookItrEnd ; ++hookItr)
         {
             ((*scritr)->*(*hookItr))();
         }
+        (*scritr)->_FinishScriptCall();
     }
 }
 
@@ -7400,10 +7271,12 @@ void Spell::CallScriptAfterHitHandlers()
 {
     for(std::list<SpellScript *>::iterator scritr = m_loadedScripts.begin(); scritr != m_loadedScripts.end() ; ++scritr)
     {
+        (*scritr)->_PrepareScriptCall(SPELL_SCRIPT_HOOK_AFTER_HIT);
         std::list<SpellScript::HitHandler>::iterator hookItrEnd = (*scritr)->AfterHit.end(), hookItr = (*scritr)->AfterHit.begin();
         for(; hookItr != hookItrEnd ; ++hookItr)
         {
             ((*scritr)->*(*hookItr))();
         }
+        (*scritr)->_FinishScriptCall();
     }
 }

@@ -98,18 +98,6 @@ bool Condition::Meets(Player * player, Unit* invoker)
             condMeets = (status == QUEST_STATUS_NONE);
             break;
         }
-        case CONDITION_AD_COMMISSION_AURA:
-        {
-            Unit::AuraApplicationMap const& auras = player->GetAppliedAuras();
-            for (Unit::AuraApplicationMap::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
-                if ((itr->second->GetBase()->GetSpellProto()->Attributes & (SPELL_ATTR_UNK4 | SPELL_ATTR_CASTABLE_WHILE_MOUNTED)) && itr->second->GetBase()->GetSpellProto()->SpellVisual[0] == 3580)
-                {
-                    condMeets = true;
-                    break;
-                }
-            condMeets = false;
-            break;
-        }
         case CONDITION_NO_AURA:
             condMeets = !player->HasAuraEffect(mConditionValue1, mConditionValue2);
             break;
@@ -168,6 +156,28 @@ bool Condition::Meets(Player * player, Unit* invoker)
         case CONDITION_NOITEM:
             condMeets = !player->HasItemCount(mConditionValue1, 1, mConditionValue2 ? true : false);
             break;
+        case CONDITION_LEVEL:
+            {
+                switch (mConditionValue2)
+                {
+                    case LVL_COND_EQ:
+                        condMeets = player->getLevel() == mConditionValue1;
+                        break;
+                    case LVL_COND_HIGH:
+                        condMeets = player->getLevel() > mConditionValue1;
+                        break;
+                    case LVL_COND_LOW:
+                        condMeets = player->getLevel() < mConditionValue1;
+                        break;
+                    case LVL_COND_HIGH_EQ:
+                        condMeets = player->getLevel() >= mConditionValue1;
+                        break;
+                    case LVL_COND_LOW_EQ:
+                        condMeets = player->getLevel() <= mConditionValue1;
+                        break;
+                }
+                break;
+            }
         default:
             condMeets = false;
             refId = 0;
@@ -1059,15 +1069,6 @@ bool ConditionMgr::isConditionTypeValid(Condition* cond)
                 sLog.outErrorDb("Quest condition has useless data in value2 (%u)!", cond->mConditionValue2);
             break;
         }
-        case CONDITION_AD_COMMISSION_AURA:
-        {
-            if (cond->mConditionValue1)
-                sLog.outErrorDb("Quest condition has useless data in value1 (%u)!", cond->mConditionValue1);
-
-            if (cond->mConditionValue2)
-                sLog.outErrorDb("Quest condition has useless data in value2 (%u)!", cond->mConditionValue2);
-            break;
-        }
         case CONDITION_NO_AURA:
         {
             if (!sSpellStore.LookupEntry(cond->mConditionValue1))
@@ -1262,6 +1263,15 @@ bool ConditionMgr::isConditionTypeValid(Condition* cond)
             }
             break;
         }
+        case CONDITION_LEVEL:
+            {
+                if (cond->mConditionValue2 >= LVL_COND_MAX)
+                {
+                    sLog.outErrorDb("Level condition has invalid option (%u), skipped", cond->mConditionValue2);
+                    return false;
+                }
+                break;
+            }
         case CONDITION_AREAID:
         case CONDITION_INSTANCE_DATA:
             break;

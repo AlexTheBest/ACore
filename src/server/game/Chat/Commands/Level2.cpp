@@ -3047,7 +3047,7 @@ bool ChatHandler::HandleWpShowCommand(const char* args)
             {
                 wpCreature->SetDisplayId(target->GetDisplayId());
                 wpCreature->SetFloatValue(OBJECT_FIELD_SCALE_X, 0.5);
-                wpCreature->SetLevel(point > MAX_LEVEL ? MAX_LEVEL : point);
+                wpCreature->SetLevel(point > STRONG_MAX_LEVEL ? STRONG_MAX_LEVEL : point);
             }
         }
         while (result->NextRow());

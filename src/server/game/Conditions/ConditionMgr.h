@@ -39,7 +39,7 @@ enum ConditionType
     CONDITION_SKILL                 = 7,                    // skill_id         skill_value +referenceID       true if has skill_value for skill_id
     CONDITION_QUESTREWARDED         = 8,                    // quest_id         0           +referenceID       true if quest_id was rewarded before
     CONDITION_QUESTTAKEN            = 9,                    // quest_id         0,          +referenceID       true while quest active
-    CONDITION_AD_COMMISSION_AURA    = 10,                   // 0                0,          +referenceID       true while one from AD commission aura active
+    CONDITION_UNUSED_1              = 10,                   // currently unused
     CONDITION_NO_AURA               = 11,                   // spell_id         effindex    +referenceID       true if does not have aura of spell_id with effect effindex
     CONDITION_ACTIVE_EVENT          = 12,                   // event_id         0           +referenceID       true if event is active
     CONDITION_INSTANCE_DATA         = 13,                   // entry            data        +referenceID       true if data is set in current instance
@@ -56,7 +56,18 @@ enum ConditionType
     CONDITION_ITEM_TARGET           = 24,                   // ItemRequiredTargetType,  TargetEntry,    0
     CONDITION_SPELL                 = 25,                   // spell_id         0           +referenceID       true if knows spell
     CONDITION_NOITEM                = 26,                   // item_id          bank        +referenceID       true if player does not have any of the item (if 'bank' is set it searches in bank slots too)
-    CONDITION_MAX                   = 27                    // MAX
+    CONDITION_LEVEL                 = 27,                   // level            opt         +referenceID       true if player's level is equal to param1 (param2 can modify the statement)
+    CONDITION_MAX                   = 28                    // MAX
+};
+
+enum LevelConditionType
+{
+    LVL_COND_EQ = 0,
+    LVL_COND_HIGH = 1,
+    LVL_COND_LOW = 2,
+    LVL_COND_HIGH_EQ = 3,
+    LVL_COND_LOW_EQ = 4,
+    LVL_COND_MAX = 5,
 };
 
 enum ConditionSourceType
