@@ -31,3 +31,6 @@ INSERT INTO `script_texts` (`npc_entry`, `entry`, `content_default`, `content_lo
 (0, -1850010, 'I am defeated. Nice battle !', 'I am defeated. Nice battle !',''),
 (0, -1850011, 'It seems that I\'ve underestimated your skills. Well done.', 'It seems that I\'ve underestimated your skills. Well done.',''),
 (0, -1850012, 'You\'ll probably have more luck next time.', '','');
+
+-- Vendors
+UPDATE creature_template SET ScriptName = 'npc_vendor_argent_tournament' WHERE entry IN (33553, 33554, 33556,33555,33557,33307,33310,33653,33650,33657);
