@@ -1,19 +1,19 @@
 /*
+ * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "ObjectMgr.h"
@@ -140,7 +140,14 @@ bool ArenaTeam::AddMember(const uint64& PlayerGuid)
     }
 
     plMMRating = sWorld.getIntConfig(CONFIG_ARENA_START_MATCHMAKER_RATING);
-    plPRating = sWorld.getIntConfig(CONFIG_ARENA_START_PERSONAL_RATING);
+    plPRating = 0;
+    
+    if (sWorld.getIntConfig(CONFIG_ARENA_START_PERSONAL_RATING) > 0)
+        plPRating = sWorld.getIntConfig(CONFIG_ARENA_START_PERSONAL_RATING);
+    else if (GetRating() >= 1000)
+        plPRating = 1000;
+
+    sWorld.getIntConfig(CONFIG_ARENA_START_PERSONAL_RATING);
 
     QueryResult result = CharacterDatabase.PQuery("SELECT matchmaker_rating FROM character_arena_stats WHERE guid='%u' AND slot='%u'", GUID_LOPART(PlayerGuid), GetSlot());
     if (result)
@@ -644,6 +651,7 @@ int32 ArenaTeam::GetRatingMod(uint32 own_rating, uint32 enemy_rating, bool won, 
 
 int32 ArenaTeam::GetPersonalRatingMod(int32 base_rating, uint32 own_rating, uint32 enemy_rating)
 {
+    // max (2 * team rating gain/loss), min 0 gain/loss
     float chance = GetChanceAgainst(own_rating, enemy_rating);
     chance *= 2.0f;
     return (int32)ceil(float(base_rating) * chance);
@@ -671,6 +679,7 @@ void ArenaTeam::FinishGame(int32 mod)
 int32 ArenaTeam::WonAgainst(uint32 againstRating)
 {
     // called when the team has won
+    // own team rating versus opponents matchmaker rating
     int32 mod = GetRatingMod(m_stats.rating, againstRating, true);
 
     // modify the team stats accordingly
@@ -685,6 +694,7 @@ int32 ArenaTeam::WonAgainst(uint32 againstRating)
 int32 ArenaTeam::LostAgainst(uint32 againstRating)
 {
     // called when the team has lost
+    // own team rating versus opponents matchmaker rating
     int32 mod = GetRatingMod(m_stats.rating, againstRating, false);
 
     // modify the team stats accordingly

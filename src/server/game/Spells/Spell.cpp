@@ -1,21 +1,19 @@
 /*
+ * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
- * Copyright (C) 2008-2010 Trinity <http://www.trinitycore.org/>
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License as published by the
+ * Free Software Foundation; either version 2 of the License, or (at your
+ * option) any later version.
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
+ * more details.
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * You should have received a copy of the GNU General Public License along
+ * with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include "Common.h"
@@ -851,22 +849,24 @@ void Spell::prepareDataForTriggerSystem(AuraEffect const * /*triggeredByAura*/)
     switch (m_spellInfo->DmgClass)
     {
         case SPELL_DAMAGE_CLASS_MELEE:
-            m_procAttacker = PROC_FLAG_SUCCESSFUL_MELEE_SPELL_HIT;
+            m_procAttacker = PROC_FLAG_DONE_SPELL_MELEE_DMG_CLASS;
             if (m_attackType == OFF_ATTACK)
-                m_procAttacker |= PROC_FLAG_SUCCESSFUL_OFFHAND_HIT;
-            m_procVictim   = PROC_FLAG_TAKEN_MELEE_SPELL_HIT;
+                m_procAttacker |= PROC_FLAG_DONE_OFFHAND_ATTACK;
+            else
+                m_procAttacker |= PROC_FLAG_DONE_MAINHAND_ATTACK;
+            m_procVictim   = PROC_FLAG_TAKEN_MELEE_AUTO_ATTACK;
             break;
         case SPELL_DAMAGE_CLASS_RANGED:
             // Auto attack
             if (m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_AUTOREPEAT_FLAG)
             {
-                m_procAttacker = PROC_FLAG_SUCCESSFUL_RANGED_HIT;
-                m_procVictim   = PROC_FLAG_TAKEN_RANGED_HIT;
+                m_procAttacker = PROC_FLAG_DONE_RANGED_AUTO_ATTACK;
+                m_procVictim   = PROC_FLAG_TAKEN_RANGED_AUTO_ATTACK;
             }
             else // Ranged spell attack
             {
-                m_procAttacker = PROC_FLAG_SUCCESSFUL_RANGED_SPELL_HIT;
-                m_procVictim   = PROC_FLAG_TAKEN_RANGED_SPELL_HIT;
+                m_procAttacker = PROC_FLAG_DONE_SPELL_RANGED_DMG_CLASS;
+                m_procVictim   = PROC_FLAG_TAKEN_SPELL_RANGED_DMG_CLASS;
             }
             break;
         default:
@@ -874,8 +874,8 @@ void Spell::prepareDataForTriggerSystem(AuraEffect const * /*triggeredByAura*/)
                 m_spellInfo->EquippedItemSubClassMask & (1<<ITEM_SUBCLASS_WEAPON_WAND)
                 && m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_AUTOREPEAT_FLAG) // Wands auto attack
             {
-                m_procAttacker = PROC_FLAG_SUCCESSFUL_RANGED_HIT;
-                m_procVictim   = PROC_FLAG_TAKEN_RANGED_HIT;
+                m_procAttacker = PROC_FLAG_DONE_RANGED_AUTO_ATTACK;
+                m_procVictim   = PROC_FLAG_TAKEN_RANGED_AUTO_ATTACK;
             }
             // For other spells trigger procflags are set in Spell::DoAllEffectOnTarget
             // Because spell positivity is dependant on target
@@ -888,7 +888,7 @@ void Spell::prepareDataForTriggerSystem(AuraEffect const * /*triggeredByAura*/)
         m_spellInfo->Id == 57879 ||                     // Snake Trap - done this way to avoid double proc
         m_spellInfo->SpellFamilyFlags[2] & 0x00024000)) // Explosive and Immolation Trap
 
-        m_procAttacker |= PROC_FLAG_ON_TRAP_ACTIVATION;
+        m_procAttacker |= PROC_FLAG_DONE_TRAP_ACTIVATION;
 
     /*
         Effects which are result of aura proc from triggered spell cannot proc
@@ -898,12 +898,12 @@ void Spell::prepareDataForTriggerSystem(AuraEffect const * /*triggeredByAura*/)
     // Hellfire Effect - trigger as DOT
     if (m_spellInfo->SpellFamilyName == SPELLFAMILY_WARLOCK && m_spellInfo->SpellFamilyFlags[0] & 0x00000040)
     {
-        m_procAttacker = PROC_FLAG_ON_DO_PERIODIC;
-        m_procVictim   = PROC_FLAG_ON_TAKE_PERIODIC;
+        m_procAttacker = PROC_FLAG_DONE_PERIODIC;
+        m_procVictim   = PROC_FLAG_TAKEN_PERIODIC;
     }
 
     // Ranged autorepeat attack is set as triggered spell - ignore it
-    if (!(m_procAttacker & PROC_FLAG_SUCCESSFUL_RANGED_HIT))
+    if (!(m_procAttacker & PROC_FLAG_DONE_RANGED_AUTO_ATTACK))
     {
         if (m_IsTriggeredSpell &&
             (m_spellInfo->AttributesEx2 & SPELL_ATTR_EX2_TRIGGERED_CAN_TRIGGER ||
@@ -1219,25 +1219,25 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
             case SPELL_DAMAGE_CLASS_MAGIC:
                 if (positive)
                 {
-                    procAttacker |= PROC_FLAG_SUCCESSFUL_POSITIVE_MAGIC_SPELL;
-                    procVictim   |= PROC_FLAG_TAKEN_POSITIVE_MAGIC_SPELL;
+                    procAttacker |= PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS;
+                    procVictim   |= PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_POS;
                 }
                 else
                 {
-                    procAttacker |= PROC_FLAG_SUCCESSFUL_NEGATIVE_MAGIC_SPELL;
-                    procVictim   |= PROC_FLAG_TAKEN_NEGATIVE_MAGIC_SPELL;
+                    procAttacker |= PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG;
+                    procVictim   |= PROC_FLAG_TAKEN_SPELL_MAGIC_DMG_CLASS_NEG;
                 }
             break;
             case SPELL_DAMAGE_CLASS_NONE:
                 if (positive)
                 {
-                    procAttacker |= PROC_FLAG_SUCCESSFUL_POSITIVE_SPELL_HIT;
-                    procVictim   |= PROC_FLAG_TAKEN_POSITIVE_SPELL;
+                    procAttacker |= PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_POS;
+                    procVictim   |= PROC_FLAG_TAKEN_SPELL_NONE_DMG_CLASS_POS;
                 }
                 else
                 {
-                    procAttacker |= PROC_FLAG_SUCCESSFUL_NEGATIVE_SPELL_HIT;
-                    procVictim   |= PROC_FLAG_TAKEN_NEGATIVE_SPELL_HIT;
+                    procAttacker |= PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG;
+                    procVictim   |= PROC_FLAG_TAKEN_SPELL_NONE_DMG_CLASS_NEG;
                 }
             break;
         }
@@ -1279,7 +1279,7 @@ void Spell::DoAllEffectOnTarget(TargetInfo *target)
         caster->SendSpellNonMeleeDamageLog(&damageInfo);
 
         procEx |= createProcExtendMask(&damageInfo, missInfo);
-        procVictim |= PROC_FLAG_TAKEN_ANY_DAMAGE;
+        procVictim |= PROC_FLAG_TAKEN_DAMAGE;
 
         // Do triggers for unit (reflect triggers passed on hit phase for correct drop charge)
         if (canEffectTrigger && missInfo != SPELL_MISS_REFLECT)
@@ -3510,15 +3510,15 @@ void Spell::_handle_immediate_phase()
             {
                 case SPELL_DAMAGE_CLASS_MAGIC:
                     if (positive)
-                        procAttacker |= PROC_FLAG_SUCCESSFUL_POSITIVE_MAGIC_SPELL;
+                        procAttacker |= PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_POS;
                     else
-                        procAttacker |= PROC_FLAG_SUCCESSFUL_NEGATIVE_MAGIC_SPELL;
+                        procAttacker |= PROC_FLAG_DONE_SPELL_MAGIC_DMG_CLASS_NEG;
                 break;
                 case SPELL_DAMAGE_CLASS_NONE:
                     if (positive)
-                        procAttacker |= PROC_FLAG_SUCCESSFUL_POSITIVE_SPELL_HIT;
+                        procAttacker |= PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_POS;
                     else
-                        procAttacker |= PROC_FLAG_SUCCESSFUL_NEGATIVE_SPELL_HIT;
+                        procAttacker |= PROC_FLAG_DONE_SPELL_NONE_DMG_CLASS_NEG;
                 break;
             }
         }
@@ -7247,7 +7247,7 @@ void Spell::CallScriptBeforeHitHandlers()
         std::list<SpellScript::HitHandler>::iterator hookItrEnd = (*scritr)->BeforeHit.end(), hookItr = (*scritr)->BeforeHit.begin();
         for(; hookItr != hookItrEnd ; ++hookItr)
         {
-            ((*scritr)->*(*hookItr))();
+            (*hookItr).Call(*scritr);
         }
         (*scritr)->_FinishScriptCall();
     }
@@ -7261,7 +7261,7 @@ void Spell::CallScriptOnHitHandlers()
         std::list<SpellScript::HitHandler>::iterator hookItrEnd = (*scritr)->OnHit.end(), hookItr = (*scritr)->OnHit.begin();
         for(; hookItr != hookItrEnd ; ++hookItr)
         {
-            ((*scritr)->*(*hookItr))();
+            (*hookItr).Call(*scritr);
         }
         (*scritr)->_FinishScriptCall();
     }
@@ -7275,7 +7275,7 @@ void Spell::CallScriptAfterHitHandlers()
         std::list<SpellScript::HitHandler>::iterator hookItrEnd = (*scritr)->AfterHit.end(), hookItr = (*scritr)->AfterHit.begin();
         for(; hookItr != hookItrEnd ; ++hookItr)
         {
-            ((*scritr)->*(*hookItr))();
+            (*hookItr).Call(*scritr);
         }
         (*scritr)->_FinishScriptCall();
     }

@@ -34,6 +34,7 @@ public:
 
     class spell_item_trigger_spell_SpellScript : public SpellScript
     {
+        PrepareSpellScript(spell_item_trigger_spell_SpellScript)
     private:
         uint32 _triggeredSpellId;
 
@@ -83,6 +84,7 @@ public:
 
     class spell_item_deviate_fish_SpellScript : public SpellScript
     {
+        PrepareSpellScript(spell_item_deviate_fish_SpellScript)
     public:
         bool Validate(SpellEntry const * /*spellEntry*/)
         {
@@ -118,9 +120,9 @@ public:
 // 67019 Flask of the North
 enum eFlaskOfTheNorthSpells
 {
-    SPELL_FLASK_OF_THE_NORTH_TRIGGERED1 = 67016,
-    SPELL_FLASK_OF_THE_NORTH_TRIGGERED2 = 67017,
-    SPELL_FLASK_OF_THE_NORTH_TRIGGERED3 = 67018,
+    SPELL_FLASK_OF_THE_NORTH_SP = 67016,
+    SPELL_FLASK_OF_THE_NORTH_AP = 67017,
+    SPELL_FLASK_OF_THE_NORTH_STR = 67018,
 };
 
 class spell_item_flask_of_the_north : public SpellScriptLoader
@@ -131,13 +133,14 @@ public:
     class spell_item_flask_of_the_north_SpellScript : public SpellScript
     {
     public:
+        PrepareSpellScript(spell_item_flask_of_the_north_SpellScript)
         bool Validate(SpellEntry const * /*spellEntry*/)
         {
-            if (!sSpellStore.LookupEntry(SPELL_FLASK_OF_THE_NORTH_TRIGGERED1))
+            if (!sSpellStore.LookupEntry(SPELL_FLASK_OF_THE_NORTH_SP))
                 return false;
-            if (!sSpellStore.LookupEntry(SPELL_FLASK_OF_THE_NORTH_TRIGGERED2))
+            if (!sSpellStore.LookupEntry(SPELL_FLASK_OF_THE_NORTH_AP))
                 return false;
-            if (!sSpellStore.LookupEntry(SPELL_FLASK_OF_THE_NORTH_TRIGGERED3))
+            if (!sSpellStore.LookupEntry(SPELL_FLASK_OF_THE_NORTH_STR))
                 return false;
             return true;
         }
@@ -148,8 +151,34 @@ public:
             if (pCaster->GetTypeId() != TYPEID_PLAYER)
                 return;
 
-            uint32 spellId = urand(SPELL_FLASK_OF_THE_NORTH_TRIGGERED1, SPELL_FLASK_OF_THE_NORTH_TRIGGERED3);
-            pCaster->CastSpell(pCaster, spellId, true, NULL);
+            std::vector<uint32> possibleSpells;
+            switch (pCaster->getClass())
+            {
+                case CLASS_WARLOCK:
+                case CLASS_MAGE:
+                case CLASS_PRIEST:
+                    possibleSpells.push_back(SPELL_FLASK_OF_THE_NORTH_SP);
+                    break;
+                case CLASS_DEATH_KNIGHT:
+                case CLASS_WARRIOR:
+                    possibleSpells.push_back(SPELL_FLASK_OF_THE_NORTH_STR);
+                    break;
+                case CLASS_ROGUE:
+                case CLASS_HUNTER:
+                    possibleSpells.push_back(SPELL_FLASK_OF_THE_NORTH_AP);
+                    break;
+                case CLASS_DRUID:
+                case CLASS_PALADIN:
+                    possibleSpells.push_back(SPELL_FLASK_OF_THE_NORTH_SP);
+                    possibleSpells.push_back(SPELL_FLASK_OF_THE_NORTH_STR);
+                    break;
+                case CLASS_SHAMAN:
+                    possibleSpells.push_back(SPELL_FLASK_OF_THE_NORTH_SP);
+                    possibleSpells.push_back(SPELL_FLASK_OF_THE_NORTH_AP);
+                    break;
+            }
+
+            pCaster->CastSpell(pCaster, possibleSpells[irand(0, (possibleSpells.size() - 1))], true, NULL);
         }
 
         void Register()
@@ -180,6 +209,7 @@ public:
     class spell_item_gnomish_death_ray_SpellScript : public SpellScript
     {
     public:
+        PrepareSpellScript(spell_item_gnomish_death_ray_SpellScript)
         bool Validate(SpellEntry const * /*spellEntry*/)
         {
             if (!sSpellStore.LookupEntry(SPELL_GNOMISH_DEATH_RAY_SELF))
@@ -232,6 +262,7 @@ public:
     class spell_item_make_a_wish_SpellScript : public SpellScript
     {
     public:
+        PrepareSpellScript(spell_item_make_a_wish_SpellScript)
         bool Validate(SpellEntry const * /*spellEntry*/)
         {
             if (!sSpellStore.LookupEntry(SPELL_MR_PINCHYS_BLESSING))
@@ -285,6 +316,7 @@ public:
 
     class spell_item_mingos_fortune_generator_SpellScript : public SpellScript
     {
+        PrepareSpellScript(spell_item_mingos_fortune_generator_SpellScript)
         void HandleDummy(SpellEffIndex effIndex)
         {
             // Selecting one from Bloodstained Fortune item
@@ -347,6 +379,7 @@ public:
     class spell_item_net_o_matic_SpellScript : public SpellScript
     {
     public:
+        PrepareSpellScript(spell_item_net_o_matic_SpellScript)
         bool Validate(SpellEntry const * /*spellEntry*/)
         {
             if (!sSpellStore.LookupEntry(SPELL_NET_O_MATIC_TRIGGERED1))
@@ -402,6 +435,7 @@ public:
     class spell_item_noggenfogger_elixir_SpellScript : public SpellScript
     {
     public:
+        PrepareSpellScript(spell_item_noggenfogger_elixir_SpellScript)
         bool Validate(SpellEntry const * /*spellEntry*/)
         {
             if (!sSpellStore.LookupEntry(SPELL_NOGGENFOGGER_ELIXIR_TRIGGERED1))
@@ -459,6 +493,7 @@ public:
     class spell_item_savory_deviate_delight_SpellScript : public SpellScript
     {
     public:
+        PrepareSpellScript(spell_item_savory_deviate_delight_SpellScript)
         bool Validate(SpellEntry const * /*spellEntry*/)
         {
             for (uint32 spellId = SPELL_FLIP_OUT_MALE; spellId <= SPELL_YAAARRRR_FEMALE; ++spellId)
@@ -516,6 +551,7 @@ public:
     class spell_item_six_demon_bag_SpellScript : public SpellScript
     {
     public:
+        PrepareSpellScript(spell_item_six_demon_bag_SpellScript)
         bool Validate(SpellEntry const * /*spellEntry*/)
         {
             if (!sSpellStore.LookupEntry(SPELL_FROSTBOLT))
@@ -594,6 +630,7 @@ public:
     class spell_item_underbelly_elixir_SpellScript : public SpellScript
     {
     public:
+        PrepareSpellScript(spell_item_underbelly_elixir_SpellScript)
         bool Validate(SpellEntry const * /*spellEntry*/)
         {
             if (!sSpellStore.LookupEntry(SPELL_UNDERBELLY_ELIXIR_TRIGGERED1))
@@ -647,6 +684,7 @@ public:
     class spell_item_shadowmourne_AuraScript : public AuraScript
     {
     public:
+        PrepareAuraScript(spell_item_shadowmourne_AuraScript)
         spell_item_shadowmourne_AuraScript() : AuraScript() { }
 
         bool Validate(SpellEntry const* /*spellEntry*/)
