@@ -3644,6 +3644,9 @@ void SpellMgr::LoadSpellCustomAttr()
         case 27820:                             // Mana Detonation
         //case 28062: case 39090:                 // Positive/Negative Charge
         //case 28085: case 39093:
+        case 69782: case 69796:                 // Ooze Flood
+        case 69798: case 69801:                 // Ooze Flood
+        case 69538: case 69553: case 69610:     // Ooze Combine
             mSpellCustomAttr[i] |= SPELL_ATTR_CU_EXCLUDE_SELF;
             count++;
             break;
@@ -3895,6 +3898,14 @@ void SpellMgr::LoadSpellCustomAttr()
             break;
         case 63675: // Improved Devouring Plague
             spellInfo->AttributesEx3 |= SPELL_ATTR_EX3_NO_DONE_BONUS;
+            count++;
+            break;
+        case 53241: // Marked for Death (Rank 1)
+        case 53243: // Marked for Death (Rank 2)
+        case 53244: // Marked for Death (Rank 3)
+        case 53245: // Marked for Death (Rank 4)
+        case 53246: // Marked for Death (Rank 5)
+            spellInfo->EffectSpellClassMask[0] = flag96(423937, 276955137, 2049);
             count++;
             break;
         default:

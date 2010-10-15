@@ -34,6 +34,8 @@ DELETE FROM `script_texts` WHERE entry BETWEEN -1999925 AND -1000000;
 INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`,`content_loc2`,`content_loc3`,`content_loc4`,`content_loc5`,`content_loc6`,`content_loc7`,`content_loc8`,`sound`,`type`,`language`,`emote`,`comment`) VALUES
    (0,-1000000,'<TrinityScript Text Entry Missing!>',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'DEFAULT_TEXT'),
    (0,-1000001,'%s goes into a killing frenzy!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'EMOTE_GENERIC_FRENZY_KILL'),
+   (0,-1000002,'%s goes into a frenzy!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'EMOTE_GENERIC_FRENZY'),
+   (0,-1000003,'%s becomes enraged!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'EMOTE_GENERIC_ENRAGED'),
    (0,-1000004,'goes into a berserker rage!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0,'EMOTE_GENERIC_BERSERK'),
    (0,-1000005,'UNUSED',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'REUSE ME'),
 
@@ -1885,7 +1887,14 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (29281,-1575016,'The sensation is... beyond my imagining. I am yours to command, my king.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Svala Sorrowgrave SAY_DIALOG_WITH_ARTHAS_2'),
    (29281,-1575017,'I will be happy to slaughter them in your name! Come, enemies of the Scourge! I will show you the might of the Lich King!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Svala Sorrowgrave SAY_DIALOG_WITH_ARTHAS_3'),
    (26668,-1575018,'I will vanquish your soul!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Svala Sorrowgrave SAY_AGGRO'),
+   (26668,-1575019,'You were a fool to challenge the power of the Lich King!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Svala Sorrowgrave SAY_SLAY_1'),
+   (26668,-1575020,'Your will is done, my king.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Svala Sorrowgrave SAY_SLAY_2'),
    (26668,-1575022,'Nooo! I did not come this far... to...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Svala Sorrowgrave SAY_DEATH'),
+   (26668,-1575023,'Your death approaches.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13850,1,0,0,'svala SAY_SACRIFICE_1'),
+   (26668,-1575024,'Go now to my master.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13851,1,0,0,'svala SAY_SACRIFICE_2'),
+   (26668,-1575025,'Your end is inevitable.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13852,1,0,0,'svala SAY_SACRIFICE_3'),
+   (26668,-1575026,'Yor-guul mak!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13853,1,0,0,'svala SAY_SACRIFICE_4'),
+   (26668,-1575027,'Any last words?',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13854,1,0,0,'svala SAY_SACRIFICE_5'),
    (26861,-1575028,'You invade my home and then dare to challenge me? I will tear the hearts from your chests and offer them as gifts to the death god! Rualg nja gaborr!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13609,1,0,0,'King Ymirom - SAY_AGGRO'),
    (26861,-1575029,'Your death is only the beginning!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13614,1,0,0,'King Ymirom - SAY_SLAY_1'),
    (26861,-1575030,'You have failed your people!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,13615,1,0,0,'King Ymirom - SAY_SLAY_2'),
@@ -2521,8 +2530,16 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (33350,-1603259,'Combat matrix enhanced. Behold wonderous rapidity!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,15630,1,0,0,'Mimiron SAY_YS_HELP'),
 
 -- Razorscale encounter
-   (33210,-1603260,'',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,15647,1,0,0,'Exp. Commander SAY_INTRO'),
-   (33210,-1603261,'',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,15648,1,0,0,'Exp. Commander SAY_GROUND'),
+
+   (33186,-1603268, 'Razorscale grounded permanently!', NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0, 'EMOTE_PERMA'),
+   (33186,-1603267, 'Razorscale takes a deep breath...', NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0, 'EMOTE_BREATH'),
+   (33287,-1603266, 'Harpoon Turret is ready for use!', NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,2,0,0, 'EMOTE_HARPOON'),
+   (33287,-1603265, 'Fires out! Let''s rebuild those turrets!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,1,0,0, 'SAY_TURRETS'),
+   (33287,-1603264, 'Ready to move out, keep those dwarves off of our backs!', NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,1,0,0, 'SAY_AGGRO_3'),
+   (33287,-1603263, 'Be on the lookout! Mole machines will be surfacing soon with those nasty Iron dwarves aboard!', NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,1,0,0, 'SAY_AGGRO_2'),
+   (33287,-1603262, 'Give us a moment to prepare to build the turrets.', NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,1,0,0, 'SAY_AGGRO_1'),
+   (33210,-1603260, 'Welcome, champions! All of our attempts at grounding her have failed. We could use a hand in bring her down with these harpoon guns.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,15647,0,0,0,'Exp. Commander SAY_INTRO'),
+   (33210,-1603261, 'Move! Quickly! She won''t remain grounded for long.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,15648,1,0,0,'Exp. Commander SAY_GROUND'),
 
 -- Thorim
    (33413,-1603270,'Interlopers! You mortals who dare to interfere with my sport will pay... Wait--you...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,15733,1,0,0,'Thorim SAY_AGGRO_1'),
@@ -2611,12 +2628,14 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
 /* Gal'darah */
    (29306,-1604000,'I''m gonna spill your guts, mon!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Gal''darah SAY_AGGRO'),
    (29306,-1604001,'What a rush!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Gal''darah SAY_SLAY_1'),
+   (29306,-1604002,'Who needs gods, when WE ARE GODS!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Gal''darah SAY_SLAY_2'),
    (29306,-1604003,'I told ya so!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Gal''darah SAY_SLAY_3'),
    (29306,-1604004,'Even the mighty... can fall.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Gal''darah SAY_DEATH'),
    (29306,-1604005,'Gut them! Impale them!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Gal''darah SAY_SUMMON_RHINO_1'),
    (29306,-1604006,'KILL THEM ALL!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Gal''darah SAY_SUMMON_RHINO_2'),
    (29306,-1604007,'Say hello to my BIG friend!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Gal''darah SAY_SUMMON_RHINO_3'),
    (29306,-1604008,'Ain''t gonna be nottin'' left after this!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Gal''darah SAY_TRANSFORM_1'),
+   (29306,-1604009,'You wanna see power? I''m gonna show you power!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Gal''darah SAY_TRANSFORM_2'),
 
 -- -1 608 000 VIOLET HOLD
 /* Cyanigosa */
@@ -2726,8 +2745,20 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (29310,-1619000,'These are sacred halls! Your intrusion will be met with death.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Jedoga Shadowseeker SAY_AGGRO'),
    (29310,-1619001,'Who among you is devoted?',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Jedoga Shadowseeker SAY_SACRIFICE_1_1'),
    (29310,-1619002,'You there! Step forward!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Jedoga Shadowseeker SAY_SACRIFICE_1_2'),
+   (29310,-1619003,'Yogg-Saron, grant me your power!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Jedoga Shadowseeker SAY_SACRIFICE_2_1'),
+   (29310,-1619004,'Master, a gift for you!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Jedoga Shadowseeker SAY_SACRIFICE_2_2'),
+   (29310,-1619005,'Glory to Yogg-Saron!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Jedoga Shadowseeker SAY_SLAY_1'),
+   (29310,-1619007,'Get up! You haven''t suffered enough.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Jedoga Shadowseeker SAY_SLAY_3'),
    (29310,-1619008,'Do not expect your sacrilege... to go unpunished.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Jedoga Shadowseeker SAY_DEATH'),
    (29310,-1619009,'The elements themselves will rise up against the civilized world! Only the faithful will be spared!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Jedoga Shadowseeker SAY_PREACHING_1'),
+   (29310,-1619010,'Immortality can be yours. But only if you pledge yourself fully to Yogg-Saron!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Jedoga Shadowseeker SAY_PREACHING_2'),
+   (29310,-1619011,'Here on the very borders of his domain. You will experience powers you would never have imagined!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Jedoga Shadowseeker SAY_PREACHING_3'),
+   (29310,-1619012,'You have traveled long and risked much to be here. Your devotion shall be rewarded.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Jedoga Shadowseeker SAY_PREACHING_4'),
+   (29310,-1619013,'The faithful shall be exalted! But there is more work to be done. We will press on until all of Azeroth lies beneath his shadow!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Jedoga Shadowseeker SAY_PREACHING_5'),   
+   (29309,-1619017,'Perhaps we will be allies soon.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Elder Nadox SAY_SLAY_3'),
+   (29309,-1619018,'Master, is my service complete?',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Elder Nadox SAY_DEATH'),
+   (29309,-1619019,'The young must not grow hungry...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Elder Nadox SAY_EGG_SAC_1'),
+   (29309,-1619020,'Shhhad ak kereeesshh chak-k-k!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Elder Nadox SAY_EGG_SAC_2'),
    (29308,-1619021,'I will feast on your remains.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'prince taldaram SAY_AGGRO'),
    (29308,-1619022,'I will drink no blood before it''s time.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'prince taldaram SAY_SLAY_1'),
    (29308,-1619023,'One final embrace.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'prince taldaram SAY_SLAY_2'),
@@ -2736,10 +2767,10 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (29308,-1619026,'Fresh, warm blood. It has been too long.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'prince taldaram SAY_FEED2'),
    (29308,-1619027,'Your heartbeat is music to my ears.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'prince taldaram SAY_VANISH1'),
    (29308,-1619028,'I am nowhere. I am everywhere. I am the watcher, unseen.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'prince taldaram SAY_VANISH2'),
-   (29309,-1619017,'Perhaps we will be allies soon.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Elder Nadox SAY_SLAY_3'),
-   (29309,-1619018,'Master, is my service complete?',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Elder Nadox SAY_DEATH'),
-   (29309,-1619019,'The young must not grow hungry...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Elder Nadox SAY_EGG_SAC_1'),
    (29311,-1619030,'Shgla''yos plahf mh''naus.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Herald Volazj SAY_AGGRO'),
+   (29311,-1619031,'Ywaq puul skshgn: on''ma yeh''glu zuq.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Herald Volazj SAY_SLAY_1'),
+   (29311,-1619032,'Ywaq ma phgwa''cul hnakf.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Herald Volazj SAY_SLAY_2'),
+   (29311,-1619033,'Ywaq maq oou; ywaq maq ssaggh. Ywaq ma shg''fhn.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Herald Volazj SAY_SLAY_3'),
    (29311,-1619034,'Iilth vwah, uhn''agth fhssh za.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,0,0,0,'Herald Volazj SAY_DEATH_1'),
 
 -- -1 631 000 ICECROWN CITADEL: RAID
@@ -2841,6 +2872,21 @@ INSERT INTO `script_texts` (`npc_entry`,`entry`,`content_default`,`content_loc1`
    (36626,-1631088,'Fun time over!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16905,1,0,0,'SAY_BERSERK'),
    (36626,-1631089,'Da ... Ddy...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16904,1,0,0,'SAY_DEATH'),
    (36678,-1631090,'Oh, Festergut. You were always my favorite. Next to Rotface. The good news is you left behind so much gas, I can practically taste it!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17124,1,0,0,'SAY_FESTERGUT_DEATH'),
+
+-- Rotface
+   (36678,-1631091,'Great news, everyone! The slime is flowing again!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17126,1,0,1,'SAY_ROTFACE_OOZE_FLOOD1'),
+   (36678,-1631092,'Good news, everyone! I''ve fixed the poison slime pipes!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17123,1,0,1,'SAY_ROTFACE_OOZE_FLOOD2'),
+   (36678,-1631093,'Terrible news, everyone, Rotface is dead! But great news everyone, he left behind plenty of ooze for me to use! Whaa...? I''m a poet, and I didn''t know it? Astounding!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,17146,1,0,0,'SAY_ROTFACE_DEATH'),
+   (36627,-1631094,'What? Precious? Noooooooooo!!!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16993,1,0,0,'SAY_PRECIOUS_DIES'),
+   (36627,-1631095,'WEEEEEE!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16986,1,0,0,'SAY_AGGRO'),
+   (36627,-1631096,'%s begins to cast Slime Spray!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,3,0,0,'EMOTE_SLIME_SPRAY'),
+   (36627,-1631097,'Icky sticky.',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16991,1,0,0,'SAY_SLIME_SPRAY'),
+   (36627,-1631098,'|TInterface\Icons\spell_shadow_unstableaffliction_2.blp:16|t%s begins to cast |cFFFF0000Unstable Ooze Explosion!|r',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,0,3,0,0,'EMOTE_UNSTABLE_EXPLOSION'),
+   (36627,-1631099,'I think I made an angry poo-poo. It gonna blow!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16992,1,0,0,'SAY_UNSTABLE_EXPLOSION'),
+   (36627,-1631100,'Daddy make toys out of you!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16988,1,0,0,'SAY_KILL_1'),
+   (36627,-1631101,'I brokes-ded it...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16987,1,0,0,'SAY_KILL_2'),
+   (36627,-1631102,'Sleepy Time!',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16990,1,0,0,'SAY_BERSERK'),
+   (36627,-1631103,'Bad news daddy...',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,16989,1,0,0,'SAY_DEATH'),
 
 -- -1 632 000 ICECROWN CITADEL: FROZEN HALLS: FORGE OF SOULS
 -- Bronjham

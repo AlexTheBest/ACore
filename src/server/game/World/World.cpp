@@ -439,8 +439,11 @@ void World::LoadConfigSettings(bool reload)
         sLog.outError("Rate.RunicPower.Loss (%f) must be > 0. Using 1 instead.",rate_values[RATE_POWER_RUNICPOWER_LOSS]);
         rate_values[RATE_POWER_RUNICPOWER_LOSS] = 1;
     }
-    rate_values[RATE_POWER_FOCUS] = sConfig.GetFloatDefault("Rate.Focus", 1.0f);
-    rate_values[RATE_SKILL_DISCOVERY] = sConfig.GetFloatDefault("Rate.Skill.Discovery", 1.0f);
+    rate_values[RATE_POWER_FOCUS]  = sConfig.GetFloatDefault("Rate.Focus", 1.0f);
+    rate_values[RATE_POWER_ENERGY] = sConfig.GetFloatDefault("Rate.Energy", 1.0f);
+
+    rate_values[RATE_SKILL_DISCOVERY]      = sConfig.GetFloatDefault("Rate.Skill.Discovery", 1.0f);
+
     rate_values[RATE_DROP_ITEM_POOR]       = sConfig.GetFloatDefault("Rate.Drop.Item.Poor", 1.0f);
     rate_values[RATE_DROP_ITEM_NORMAL]     = sConfig.GetFloatDefault("Rate.Drop.Item.Normal", 1.0f);
     rate_values[RATE_DROP_ITEM_UNCOMMON]   = sConfig.GetFloatDefault("Rate.Drop.Item.Uncommon", 1.0f);
@@ -1163,17 +1166,20 @@ void World::LoadConfigSettings(bool reload)
     }
 
     m_bool_configs[CONFIG_VMAP_INDOOR_CHECK] = sConfig.GetBoolDefault("vmap.enableIndoorCheck", 0);
+    bool enableIndoor = sConfig.GetBoolDefault("vmap.enableIndoorCheck", true);
     bool enableLOS = sConfig.GetBoolDefault("vmap.enableLOS", true);
     bool enableHeight = sConfig.GetBoolDefault("vmap.enableHeight", true);
-    std::string ignoreMapIds = sConfig.GetStringDefault("vmap.ignoreMapIds", "");
+    bool enablePetLOS = sConfig.GetBoolDefault("vmap.petLOS", true);
     std::string ignoreSpellIds = sConfig.GetStringDefault("vmap.ignoreSpellIds", "");
+
+    if (!enableHeight)
+        sLog.outError("VMap height checking disabled! Creatures movements and other various things WILL be broken! Expect no support.");
+
     VMAP::VMapFactory::createOrGetVMapManager()->setEnableLineOfSightCalc(enableLOS);
     VMAP::VMapFactory::createOrGetVMapManager()->setEnableHeightCalc(enableHeight);
-    VMAP::VMapFactory::createOrGetVMapManager()->preventMapsFromBeingUsed(ignoreMapIds.c_str());
     VMAP::VMapFactory::preventSpellsFromBeingTestedForLoS(ignoreSpellIds.c_str());
-    sLog.outString("WORLD: VMap support included. LineOfSight:%i, getHeight:%i",enableLOS, enableHeight);
+    sLog.outString("WORLD: VMap support included. LineOfSight:%i, getHeight:%i, indoorCheck:%i PetLOS:%i", enableLOS, enableHeight, enableIndoor, enablePetLOS);
     sLog.outString("WORLD: VMap data directory is: %svmaps",m_dataPath.c_str());
-    sLog.outString("WORLD: VMap config keys are: vmap.enableLOS, vmap.enableHeight, vmap.ignoreMapIds, vmap.ignoreSpellIds");
 
     m_int_configs[CONFIG_MAX_WHO] = sConfig.GetIntDefault("MaxWhoListReturns", 49);
     m_bool_configs[CONFIG_PET_LOS] = sConfig.GetBoolDefault("vmap.petLOS", true);
