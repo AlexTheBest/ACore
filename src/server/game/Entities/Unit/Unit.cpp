@@ -315,6 +315,32 @@ void Unit::SendMonsterMoveWithSpeed(float x, float y, float z, uint32 transitTim
     SendMonsterMove(x, y, z, transitTime, player);
 }
 
+void Unit::SetFacing(float ori, WorldObject* obj)
+{
+    SetOrientation(obj ? GetAngle(obj) : ori);
+
+    WorldPacket data(SMSG_MONSTER_MOVE, (1+12+4+1+(obj ? 8 : 4)+4+4+4+12+GetPackGUID().size()));
+    data.append(GetPackGUID());
+    data << uint8(0);//unk
+    data << GetPositionX() << GetPositionY() << GetPositionZ();
+    data << getMSTime();
+    if (obj)
+    {
+        data << uint8(SPLINETYPE_FACING_TARGET);
+        data << uint64(obj->GetGUID());
+    }
+    else
+    {
+        data << uint8(SPLINETYPE_FACING_ANGLE);
+        data << ori;
+    }
+    data << uint32(SPLINEFLAG_NONE);
+    data << uint32(0);//move time 0
+    data << uint32(1);//one point
+    data << GetPositionX() << GetPositionY() << GetPositionZ();
+    SendMessageToSet(&data, true);
+}
+
 void Unit::SendMonsterStop(bool on_death)
 {
     WorldPacket data(SMSG_MONSTER_MOVE, (17 + GetPackGUID().size()));
@@ -4377,6 +4403,19 @@ bool Unit::HasAuraEffect(uint32 spellId, uint8 effIndex, uint64 caster) const
     return false;
 }
 
+uint32 Unit::GetAuraCount(uint32 spellId) const
+{
+    uint32 count = 0;
+    for (AuraApplicationMap::const_iterator itr = m_appliedAuras.lower_bound(spellId); itr != m_appliedAuras.upper_bound(spellId); ++itr)
+    {
+        if (!itr->second->GetBase()->GetStackAmount())
+            count++;
+        else
+            count += (uint32)itr->second->GetBase()->GetStackAmount();
+    }
+    return count;
+}
+
 bool Unit::HasAura(uint32 spellId, uint64 caster, uint8 reqEffMask) const
 {
     if (GetAuraApplication(spellId, caster, reqEffMask))
@@ -5699,6 +5738,16 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                 {
                     triggered_spell_id = 71203;
                     target = triggeredByAura->GetCaster();
+                    break;
+                }
+                // Gaseous Bloat (Professor Putricide add)
+                case 70215:
+                case 72858:
+                case 72859:
+                case 72860:
+                {
+                    target = getVictim();
+                    triggered_spell_id = 70701;
                     break;
                 }
             }
@@ -10450,7 +10499,7 @@ uint32 Unit::SpellDamageBonus(Unit *pVictim, SpellEntry const *spellProto, uint3
             if (bonus->ap_dot_bonus > 0)
             {
                 WeaponAttackType attType = (IsRangedWeaponSpell(spellProto) && spellProto->DmgClass != SPELL_DAMAGE_CLASS_MELEE) ? RANGED_ATTACK : BASE_ATTACK;
-                float APbonus = attType == BASE_ATTACK ? pVictim->GetTotalAuraModifier(SPELL_AURA_MELEE_ATTACK_POWER_ATTACKER_BONUS) : pVictim->GetTotalAuraModifier(SPELL_AURA_RANGED_ATTACK_POWER_ATTACKER_BONUS);
+                float APbonus = (float) pVictim->GetTotalAuraModifier(attType == BASE_ATTACK ? SPELL_AURA_MELEE_ATTACK_POWER_ATTACKER_BONUS : SPELL_AURA_RANGED_ATTACK_POWER_ATTACKER_BONUS);
                 APbonus += GetTotalAttackPowerValue(attType);
                 DoneTotal += int32(bonus->ap_dot_bonus * stack * ApCoeffMod * APbonus);
             }
@@ -10461,7 +10510,7 @@ uint32 Unit::SpellDamageBonus(Unit *pVictim, SpellEntry const *spellProto, uint3
             if (bonus->ap_bonus > 0)
             {
                 WeaponAttackType attType = (IsRangedWeaponSpell(spellProto) && spellProto->DmgClass != SPELL_DAMAGE_CLASS_MELEE) ? RANGED_ATTACK : BASE_ATTACK;
-                float APbonus = attType == BASE_ATTACK ? pVictim->GetTotalAuraModifier(SPELL_AURA_MELEE_ATTACK_POWER_ATTACKER_BONUS) : pVictim->GetTotalAuraModifier(SPELL_AURA_RANGED_ATTACK_POWER_ATTACKER_BONUS);
+                float APbonus = (float) pVictim->GetTotalAuraModifier(attType == BASE_ATTACK ? SPELL_AURA_MELEE_ATTACK_POWER_ATTACKER_BONUS : SPELL_AURA_RANGED_ATTACK_POWER_ATTACKER_BONUS);
                 APbonus += GetTotalAttackPowerValue(attType);
                 DoneTotal += int32(bonus->ap_bonus * stack * ApCoeffMod * APbonus);
             }
@@ -11710,9 +11759,6 @@ void Unit::Mount(uint32 mount, uint32 VehicleId, uint32 creatureEntry)
             {
                 GetVehicleKit()->Reset();
 
-                // mounts can also have accessories
-                GetVehicleKit()->InstallAllAccessories(creatureEntry);
-
                 // Send others that we now have a vehicle
                 WorldPacket data(SMSG_PLAYER_VEHICLE_DATA, GetPackGUID().size()+4);
                 data.appendPackGUID(GetGUID());
@@ -11721,6 +11767,9 @@ void Unit::Mount(uint32 mount, uint32 VehicleId, uint32 creatureEntry)
 
                 data.Initialize(SMSG_ON_CANCEL_EXPECTED_RIDE_VEHICLE_AURA, 0);
                 plr->GetSession()->SendPacket(&data);
+
+                // mounts can also have accessories
+                GetVehicleKit()->InstallAllAccessories(creatureEntry);
             }
         }
     }
@@ -13757,7 +13806,7 @@ void CharmInfo::LoadPetActionBar(const std::string& data)
 {
     InitPetActionBar();
 
-    Tokens tokens = StrSplit(data, " ");
+    Tokens tokens(data, ' ');
 
     if (tokens.size() != (ACTION_BAR_INDEX_END-ACTION_BAR_INDEX_START)*2)
         return;                                             // non critical, will reset to default
@@ -13767,9 +13816,9 @@ void CharmInfo::LoadPetActionBar(const std::string& data)
     for (iter = tokens.begin(), index = ACTION_BAR_INDEX_START; index < ACTION_BAR_INDEX_END; ++iter, ++index)
     {
         // use unsigned cast to avoid sign negative format use at long-> ActiveStates (int) conversion
-        ActiveStates type  = ActiveStates(atol(iter->c_str()));
+        ActiveStates type  = ActiveStates(atol(*iter));
         ++iter;
-        uint32 action = uint32(atol(iter->c_str()));
+        uint32 action = uint32(atol(*iter));
 
         PetActionBar[index].SetActionAndType(action, type);
 

@@ -1317,6 +1317,20 @@ void AuraEffect::PeriodicTick(Unit * target, Unit * caster) const
                         }
                     }
                 }
+                if (GetSpellProto()->SpellFamilyName == SPELLFAMILY_GENERIC)
+                {
+                    switch (GetId())
+                    {
+                        case 70911: // Unbound Plague
+                        case 72854: // Unbound Plague
+                        case 72855: // Unbound Plague
+                        case 72856: // Unbound Plague
+                            damage *= uint32(pow(1.25f, int32(m_tickNumber)));
+                            break;
+                        default:
+                            break;
+                    }
+                }
             }
             else
                 damage = uint32(target->CountPctFromMaxHealth(damage));
@@ -5852,6 +5866,10 @@ void AuraEffect::HandleAuraDummy(AuraApplication const * aurApp, uint8 mode, boo
                             break;
                         case 68839: // Corrupt Soul
                             target->CastSpell(target, 68846, true, NULL, this, GetCasterGUID());
+                            break;
+                        case 58600: // Restricted Flight Area
+                            if (aurApp->GetRemoveMode() == AURA_REMOVE_BY_EXPIRE)
+                                target->CastSpell(target, 58601, true);
                             break;
                     }
                     break;

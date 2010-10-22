@@ -18156,6 +18156,8 @@ INSERT INTO `spell_linked_spell` (`spell_trigger`,`spell_effect`,`type`,`comment
 ( 67623,-67620, 1, 'Remove Paralytic Toxin when hit by Burning Bite'),
 (-66683, 68667, 0, 'Icehowl - Surge of Adrenaline'),
 (-67661, 68667, 0, 'Icehowl - Surge of Adrenaline'),
+-- Forge of Souls
+(-68839, 68846, 0, 'Bronjahm: Corrupt Soul Summon'),
 -- Icecrown Citadel
 (-69674, 69706, 0, 'Rotface: Mutated Infection Summon'),
 (-71224, 69706, 0, 'Rotface: Mutated Infection Summon'),
@@ -19034,9 +19036,9 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 53292, 0x00,   9, 0x00000800, 0x00000001, 0x00000200, 0x00000000, 0x00000002,   0,   0,   0), -- Hunting Party (Rank 3)
 ( 53375, 0x00,  10, 0x00000000, 0x00002000, 0x00000000, 0x00000400, 0x00000000,   0,   0,   6), -- Sanctified Wrath (Rank 1)
 ( 53376, 0x00,  10, 0x00000000, 0x00002000, 0x00000000, 0x00000400, 0x00000000,   0,   0,   6), -- Sanctified Wrath (Rank 2)
-( 53380, 0x00,  10, 0x00800000, 0x00020000, 0x00000000, 0x00000000, 0x00040002,   0,   0,   0), -- Righteous Vengeance (Rank 1)
-( 53381, 0x00,  10, 0x00800000, 0x00020000, 0x00000000, 0x00000000, 0x00040002,   0,   0,   0), -- Righteous Vengeance (Rank 2)
-( 53382, 0x00,  10, 0x00800000, 0x00020000, 0x00000000, 0x00000000, 0x00040002,   0,   0,   0), -- Righteous Vengeance (Rank 3)
+( 53380, 0x00,  10, 0x00800000, 0x00028000, 0x00000000, 0x00000000, 0x00040002,   0,   0,   0), -- Righteous Vengeance (Rank 1)
+( 53381, 0x00,  10, 0x00800000, 0x00028000, 0x00000000, 0x00000000, 0x00040002,   0,   0,   0), -- Righteous Vengeance (Rank 2)
+( 53382, 0x00,  10, 0x00800000, 0x00028000, 0x00000000, 0x00000000, 0x00040002,   0,   0,   0), -- Righteous Vengeance (Rank 3)
 ( 53397, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Invigoration (Rank 1)
 ( 53486, 0x00,  10, 0x00800000, 0x00028000, 0x00000000, 0x00000000, 0x00040002,   0,   0,   0), -- The Art of War (Rank 1)
 ( 53488, 0x00,  10, 0x00800000, 0x00028000, 0x00000000, 0x00000000, 0x00040002,   0,   0,   0), -- The Art of War (Rank 2)
@@ -19363,9 +19365,13 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 72419, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  60), -- Item - Icecrown Reputation Ring Healer Trigger
 ( 71404, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,  45), -- Item - Icecrown Dungeon Melee Trinket
 ( 71564, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Nevermelting Ice Crystal
- (71545, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,  50,   0), -- Tiny Abomination in a Jar (Heroic)
+( 71545, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,  50,   0), -- Tiny Abomination in a Jar (Heroic)
 ( 71406, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,  50,   0), -- Tiny Abomination in a Jar
 ( 71903, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,  20,   0), -- Item - Shadowmourne Legendary
+( 70215, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000004, 0x00000000,   0, 100,   0), -- Gaseous Bloat
+( 72858, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000004, 0x00000000,   0, 100,   0), -- Gaseous Bloat
+( 72859, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000004, 0x00000000,   0, 100,   0), -- Gaseous Bloat
+( 72860, 0x00,   0, 0x00000000, 0x00000000, 0x00000000 ,0x00000004, 0x00000000,   0, 100,   0), -- Gaseous Bloat
 ( 75474, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Charred Twilight Scale (Heroic)
 ( 75465, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Charred Twilight Scale
 ( 75457, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Sharpened Twilight Scale (Heroic)
@@ -26615,28 +26621,20 @@ INSERT INTO `spelldifficulty_dbc` VALUES
 (3039, 52524, 59365, 0, 0), -- SPELL_BLINDING_WEBS / H_SPELL_BLINDING_WEBS
 (3040, 52469, 59364, 0, 0), -- SPELL_INFECTED_BITE / H_SPELL_INFECTED_BITE
 (3041, 52493, 59366, 0, 0), -- SPELL_POSION_SPRAY / H_SPELL_POSION_SPRAY
-(3042, 66538, 67676, 0, 0), -- SPELL_HOLY_FIRE / SPELL_HOLY_FIRE_H
-(3043, 66536, 67674, 0, 0), -- SPELL_SMITE / SPELL_SMITE_H
-(3044, 66537, 67675, 0, 0), -- SPELL_RENEW / SPELL_RENEW_H
-(3045, 66537, 67675, 0, 0), -- SPELL_RENEW / SPELL_RENEW_H
-(3046, 66620, 67679, 0, 0), -- SPELL_OLD_WOUNDS / SPELL_OLD_WOUNDS_H
-(3047, 66552, 67677, 0, 0), -- SPELL_WAKING_NIGHTMARE / SPELL_WAKING_NIGHTMARE_H
-(3048, 66619, 67678, 0, 0), -- SPELL_SHADOWS_PAST / SPELL_SHADOWS_PAST_H
+(3042, 62796, 63815, 0, 0), -- SPELL_FIREBALL_10 / SPELL_FIREBALL_25
+(3043, 64709, 64734, 0, 0), -- SPELL_FLAME_GROUND_10 / SPELL_FLAME_GROUND_25
+(3044, 63317, 64021, 0, 0), -- SPELL_FLAMEBREATH_10 / SPELL_FLAMEBREATH_25
+(3045, 62680, 63472, 0, 0), -- SPELL_FLAME_JETS_10 / SPELL_FLAME_JETS_25
+(3046, 62546, 63474, 0, 0), -- SPELL_SCORCH_10 / SPELL_SCORCH_25
+(3047, 62717, 63477, 0, 0), -- SPELL_SLAG_POT_10 / SPELL_SLAG_POT_25
+(3048, 62836, 63536, 0, 0), -- SPELL_SLAG_IMBUED_10 / SPELL_SLAG_IMBUED_25
 (3049, 67881, 67718, 0, 0), -- SPELL_ICY_TOUCH / SPELL_ICY_TOUCH_H
 (3050, 67881, 67718, 0, 0), -- SPELL_ICY_TOUCH / SPELL_ICY_TOUCH_H
 (3051, 67883, 67725, 0, 0), -- SPELL_OBLITERATE / SPELL_OBLITERATE_H
 (3052, 67875, 67808, 0, 0), -- SPELL_DEATH_BITE / SPELL_DEATH_BITE_H
-(3053, 67749, 67880, 0, 0), -- SPELL_LEAP / SPELL_LEAP_H
+(3053, 62548, 63476, 0, 0), -- SPELL_GROUND_10 / SPELL_GROUND_25
 (3054, 68783, 68784, 0, 0), -- SPELL_MORTAL_STRIKE / SPELL_MORTAL_STRIKE_H
-(3055, 66042, 68310, 0, 0), -- SPELL_FIREBALL / SPELL_FIREBALL_H
-(3056, 66042, 68310, 0, 0), -- SPELL_FIREBALL / SPELL_FIREBALL_H
-(3057, 66043, 68311, 0, 0), -- SPELL_POLYMORPH / SPELL_POLYMORPH_H
-(3058, 66044, 68312, 0, 0), -- SPELL_BLAST_WAVE / SPELL_BLAST_WAVE_H
-(3059, 67529, 68319, 0, 0), -- SPELL_CHAIN_LIGHTNING / SPELL_CHAIN_LIGHTNING_H
-(3060, 67528, 68318, 0, 0), -- SPELL_HEALING_WAVE / SPELL_HEALING_WAVE_H
-(3061, 67528, 68318, 0, 0), -- SPELL_HEALING_WAVE / SPELL_HEALING_WAVE_H
 (3062, 65868, 67988, 0, 0), -- SPELL_SHOOT / SPELL_SHOOT_H
-(3063, 67709, 68317, 0, 0), -- SPELL_EVISCERATE / SPELL_EVISCERATE_H
 (3064, 48849, 59422, 0, 0), -- SPELL_FEARSOME_ROAR / H_SPELL_FEARSOME_ROAR
 (3065, 49527, 59972, 0, 0), -- SPELL_CURSE_OF_LIFE / H_SPELL_CURSE_OF_LIFE
 (3066, 49528, 59973, 0, 0), -- SPELL_SHADOW_VOLLEY / H_SPELL_SHADOW_VOLLEY
@@ -26646,29 +26644,6 @@ INSERT INTO `spelldifficulty_dbc` VALUES
 (3070, 49548, 59969, 0, 0), -- SPELL_POISON_CLOUD / H_SPELL_POISON_CLOUD
 (3071, 59803, 49381, 0, 0), -- SPELL_CONSUME / H_SPELL_CONSUME
 (3072, 49555, 59807, 0, 0), -- SPELL_CORPSE_EXPLODE / H_SPELL_CORPSE_EXPLODE
-(3073, 68793, 69050, 0, 0), -- SPELL_MAGIC_S_BANE / H_SPELL_MAGIC_S_BANE
-(3074, 68858, 69047, 0, 0), -- SPELL_CONSUME_SOUL / H_SPELL_CONSUME_SOUL
-(3075, 68982, 70322, 0, 0), -- SPELL_PHANTOM_BLAST / H_SPELL_PHANTOM_BLAST
-(3076, 68895, 70212, 0, 0), -- SPELL_SPITE / H_SPELL_SPITE
-(3077, 69148, 70210, 0, 0), -- SPELL_WAIL_OF_SOULS / H_SPELL_WAIL_OF_SOULS
-(3078, 69060, 70209, 0, 0), -- SPELL_FROST_NOVA / H_SPELL_FROST_NOVA
-(3079, 69080, 70206, 0, 0), -- SPELL_BONE_VOLLEY / H_SPELL_BONE_VOLLEY
-(3080, 69069, 70207, 0, 0), -- SPELL_SHIELD_OF_BONES / H_SPELL_SHIELD_OF_BONES
-(3081, 69068, 70208, 0, 0), -- SPELL_SHADOW_BOLT / H_SPELL_SHADOW_BOLT
-(3082, 69068, 70208, 0, 0), -- SPELL_SHADOW_BOLT / H_SPELL_SHADOW_BOLT
-(3083, 69066, 70213, 0, 0), -- SPELL_DRAIN_LIFE / H_SPELL_DRAIN_LIFE
-(3084, 69564, 70205, 0, 0), -- SPELL_SHADOW_MEND / H_SPELL_SHADOW_MEND
-(3085, 69088, 70211, 0, 0), -- SPELL_SOUL_STRIKE / H_SPELL_SOUL_STRIKE
-(3086, 68774, 70334, 0, 0), -- SPELL_FORGE_BLADE / H_SPELL_FORGE_BLADE
-(3087, 68785, 70335, 0, 0), -- SPELL_FORGE_MACE / H_SPELL_FORGE_MACE
-(3088, 70381, 72930, 0, 0), -- SPELL_DEEP_FREEZE / H_SPELL_DEEP_FREEZE
-(3089, 68778, 70333, 0, 0), -- SPELL_CHILLING_WAVE / H_SPELL_CHILLING_WAVE
-(3090, 68989, 70434, 0, 0), -- SPELL_POISON_NOVA / H_SPELL_POISON_NOVA
-(3091, 69024, 70436, 0, 0), -- SPELL_TOXIC_WASTE / H_SPELL_TOXIC_WASTE
-(3092, 69155, 69627, 0, 0), -- SPELL_FORCEFUL_SMASH / H_SPELL_FORCEFUL_SMASH
-(3093, 69167, 69629, 0, 0), -- SPELL_DARK_MIGHT / H_SPELL_DARK_MIGHT
-(3094, 69233, 69646, 0, 0), -- SPELL_ICY_BLAST / H_SPELL_ICY_BLAST
-(3095, 69238, 69628, 0, 0), -- SPELL_ICY_BLAST_2 / H_SPELL_ICY_BLAST_2
 (3096, 55626, 58993, 0, 0), -- SPELL_MOJO_WAVE / H_SPELL_MOJO_WAVE
 (3097, 55627, 58994, 0, 0), -- SPELL_MOJO_PUDDLE / H_SPELL_MOJO_PUDDLE
 (3098, 55250, 59824, 0, 0), -- SPELL_WHIRLING_SLASH / H_SPELL_WHIRLING_SLASH
@@ -26811,6 +26786,13 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 72752, 'spell_pvp_trinket_wotf_shared_cd'),
 ( 72757, 'spell_pvp_trinket_wotf_shared_cd'),
 -- instances
+-- Forge of Souls
+( 68793, 'spell_bronjahm_magic_bane'),
+( 69050, 'spell_bronjahm_magic_bane'),
+( 68861, 'spell_bronjahm_consume_soul'),
+( 69008, 'spell_bronjahm_soulstorm_channel'),
+( 68870, 'spell_bronjahm_soulstorm_visual'),
+-- Icecrown Citadel
 ( 69057, 'spell_marrowgar_bone_spike_graveyard'),
 ( 69140, 'spell_marrowgar_coldflame'),
 ( 72705, 'spell_marrowgar_coldflame'),
@@ -26856,6 +26838,39 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 69839, 'spell_rotface_unstable_ooze_explosion_init'),
 ( 69832, 'spell_rotface_unstable_ooze_explosion'),
 ( 71441, 'spell_rotface_unstable_ooze_explosion_suicide'),
+( 70701, 'spell_putricide_expunged_gas'),
+( 70343, 'spell_putricide_slime_puddle'),
+( 70351, 'spell_putricide_unstable_experiment'),
+( 71966, 'spell_putricide_unstable_experiment'),
+( 71967, 'spell_putricide_unstable_experiment'),
+( 71968, 'spell_putricide_unstable_experiment'),
+( 71412, 'spell_putricide_ooze_summon'),
+( 71415, 'spell_putricide_ooze_summon'),
+( 70672, 'spell_putricide_gaseous_bloat'),
+( 72455, 'spell_putricide_gaseous_bloat'),
+( 72832, 'spell_putricide_gaseous_bloat'),
+( 72833, 'spell_putricide_gaseous_bloat'),
+( 70459, 'spell_putricide_ooze_eruption_searcher'),
+( 71255, 'spell_putricide_choking_gas_bomb'),
+( 70920, 'spell_putricide_unbound_plague'),
+( 70360, 'spell_putricide_eat_ooze'),
+( 72527, 'spell_putricide_eat_ooze'),
+( 72451, 'spell_putricide_mutated_plague'),
+( 72463, 'spell_putricide_mutated_plague'),
+( 72671, 'spell_putricide_mutated_plague'),
+( 72672, 'spell_putricide_mutated_plague'),
+( 70308, 'spell_putricide_mutation_init'),
+( 70311, 'spell_putricide_mutated_transformation'),
+( 71503, 'spell_putricide_mutated_transformation'),
+( 70405, 'spell_putricide_mutated_transformation_dismiss'),
+( 72508, 'spell_putricide_mutated_transformation_dismiss'),
+( 72509, 'spell_putricide_mutated_transformation_dismiss'),
+( 72510, 'spell_putricide_mutated_transformation_dismiss'),
+( 70539, 'spell_putricide_regurgitated_ooze'),
+( 72457, 'spell_putricide_regurgitated_ooze'),
+( 72875, 'spell_putricide_regurgitated_ooze'),
+( 72876, 'spell_putricide_regurgitated_ooze'),
+-- Ulduar
 ( 62717, 'spell_ignis_slag_pot'),
 ( 63477, 'spell_ignis_slag_pot'),
 -- quest

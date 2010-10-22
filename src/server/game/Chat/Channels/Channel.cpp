@@ -28,10 +28,8 @@ Channel::Channel(const std::string& name, uint32 channel_id, uint32 Team)
  : m_announce(true), m_moderate(false), m_name(name), m_password(""), m_flags(0), m_channelId(channel_id), m_ownerGUID(0), m_Team(Team)
 {
     // set special flags if built-in channel
-    ChatChannelsEntry const* ch = GetChannelEntryFor(channel_id);
-    if (ch)                                                  // it's built-in channel
+    if (ChatChannelsEntry const* ch = sChatChannelsStore.LookupEntry(channel_id)) // check whether it's a built-in channel
     {
-        channel_id = ch->ChannelID;                         // built-in channel
         m_announce = false;                                 // no join/leave announces
 
         m_flags |= CHANNEL_FLAG_GENERAL;                    // for all built-in channels
@@ -50,6 +48,7 @@ Channel::Channel(const std::string& name, uint32 channel_id, uint32 Team)
     }
     else                                                    // it's custom channel
     {
+        channel_id = 0;
         m_flags |= CHANNEL_FLAG_CUSTOM;
         //load not built in channel if saved
         std::string _name(name);
@@ -68,11 +67,11 @@ Channel::Channel(const std::string& name, uint32 channel_id, uint32 Team)
 
             if (db_BannedList)
             {
-                Tokens tokens = StrSplit(db_BannedList, " ");
+                Tokens tokens(db_BannedList, ' ');
                 Tokens::iterator iter;
                 for (iter = tokens.begin(); iter != tokens.end(); ++iter)
                 {
-                    uint64 banned_guid = atol((*iter).c_str());
+                    uint64 banned_guid = atol(*iter);
                     if (banned_guid)
                     {
                         sLog.outDebug("Channel(%s) loaded banned guid:" UI64FMTD "",name.c_str(), banned_guid);
@@ -855,7 +854,7 @@ void Channel::MakeYouLeft(WorldPacket *data)
 {
     MakeNotifyPacket(data, CHAT_YOU_LEFT_NOTICE);
     *data << uint32(GetChannelId());
-    *data << uint8(0);                                      // can be 0x00 and 0x01
+    *data << uint8(IsConstant());
 }
 
 // done 0x04
@@ -1093,7 +1092,11 @@ void Channel::JoinNotify(uint64 guid)
     data << uint8(GetFlags());
     data << uint32(GetNumPlayers());
     data << GetName();
-    SendToAll(&data);
+
+    if (IsConstant())
+        SendToAllButOne(&data, guid);
+    else
+        SendToAll(&data);
 }
 
 void Channel::LeaveNotify(uint64 guid)
@@ -1103,6 +1106,10 @@ void Channel::LeaveNotify(uint64 guid)
     data << uint8(GetFlags());
     data << uint32(GetNumPlayers());
     data << GetName();
-    SendToAll(&data);
+
+    if (IsConstant())
+        SendToAllButOne(&data, guid);
+    else
+        SendToAll(&data);
 }
 
