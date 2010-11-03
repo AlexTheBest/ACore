@@ -712,9 +712,6 @@ void IRCCmd::Info_Server(_CDATA *CD)
     
     Send_IRCA(ChanOrPM(CD), "\x2 Number Of Players Online:\x3\x31\x30 " + (std::string)clientsNum + "\xF |\x2 Max Since Last Restart:\x3\x31\x30 "+(std::string)maxClientsNum+"\xF |\x2 UpTime:\x3\x31\x30 "+str, true, CD->TYPE);
     Send_IRCA(ChanOrPM(CD), "\x2 Server:\x3\x31\x30 " +svnrev+ "\xF |\x2 Update Time:\x3\x31\x30 "+(std::string)ircupdt, true, CD->TYPE);
-    Send_IRCA(ChanOrPM(CD), MakeMsg("\x2 Server Rates - [Monster XP:\x3\x31\x30 %d\xF\x2][Quest XP:\x3\x31\x30 %d\xF\x2][Money Drop Rate:\x3\x31\x30 %d\xF\x2]", int(rxk), int(rxq), int(rdm)), true, CD->TYPE);
-    Send_IRCA(ChanOrPM(CD), "\x2 MotD:\x3\x31\x30 "+(std::string)sWorld.GetMotd(), true, CD->TYPE);
-
 }
 
 void IRCCmd::Item_Player(_CDATA *CD)
@@ -1051,16 +1048,6 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 Field *fields2 = result->Fetch();
                 std::string pgmlvl = fields2[0].GetString();
                 
-                std::string guildinfo = "";
-                if (pguildid != 0)
-                {
-                    Guild* guild = sObjectMgr.GetGuildById(pguildid);
-                    if (guild)
-                    {
-                        guildinfo = " " + guild->GetRankName(pguildrank) + " Of " + guild->GetName();
-                    }
-                }
-                else guildinfo = " None";
                 ChrRacesEntry const* prace = sChrRacesStore.LookupEntry(praceid);
                 ChrClassesEntry const* pclass = sChrClassesStore.LookupEntry(pclassid);
 
@@ -1086,7 +1073,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                     }
                 }
                 std::string pinfo  = "\x2 About Player:\x3\x31\x30 " +pname+ "\xF |\x2 GM Level:\x3\x31\x30 " +pgmlvl+ "\xF |\x2 AcctID:\x3\x31\x30 " +pacct+ "\xF |\x2 CharID:\x3\x31\x30 " +pguid+ " \xF |\x2 Played Time:\x2\x3\x31\x30 " +totaltim.c_str()+" \xF |\x2 Latency:\x2\x3\x31\x30 "+templatency;
-                std::string pinfo2 = "\x2 Race:\x2\x3\x31\x30 " + (std::string)prace->name[sWorld.GetDefaultDbcLocale()] + "\xF |\x2 Class:\x2\x3\x31\x30 " + (std::string)pclass->name[sWorld.GetDefaultDbcLocale()] + "\xF |\x2 Level:\x2\x3\x31\x30 " + plevel + "\xF |\x2 Money:\x2 " + tempgold + "\xF |\x2 Guild Info:\x2\x3\x31\x30 "+guildinfo+"\xF |\x2 Status:\x2 " + ponline;
+                std::string pinfo2 = "\x2 Race:\x2\x3\x31\x30 " + (std::string)prace->name[sWorld.GetDefaultDbcLocale()] + "\xF |\x2 Class:\x2\x3\x31\x30 " + (std::string)pclass->name[sWorld.GetDefaultDbcLocale()] + "\xF |\x2 Level:\x2\x3\x31\x30 " + plevel + "\xF |\x2 Money:\x2 " + tempgold + "\xF |\x2 Status:\x2 " + ponline;
                 //        pinfo3 = " :" + " \x2Honor Kills:\x2\x3\x31\x30 " + hk;
                 Send_IRCA(ChanOrPM(CD),pinfo , true, CD->TYPE);
                 Send_IRCA(ChanOrPM(CD),pinfo2 , true, CD->TYPE);

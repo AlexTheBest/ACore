@@ -194,7 +194,7 @@ bool OnGossipHello(Player *player, Creature *_Creature)
 	/******* PROFESSION *******/
 	void GiveProfessionSkill(Player *player, Creature *_Creature, int32 db_skillid, int32 db_skilllevel)
 	{
-		player->UpdateSkill(db_skillid, db_skilllevel, db_skilllevel);
+		player->UpdateSkill(db_skillid, db_skilllevel);
 	}
 
 	/******* LEVEL *******/
