@@ -2736,6 +2736,7 @@ CREATE TABLE `gameobject_template` (
   `data21` int(10) unsigned NOT NULL DEFAULT '0',
   `data22` int(10) unsigned NOT NULL DEFAULT '0',
   `data23` int(10) unsigned NOT NULL DEFAULT '0',
+  `AIName` char(64) NOT NULL DEFAULT '',
   `ScriptName` varchar(64) NOT NULL DEFAULT '',
   `WDBVerified` smallint(5) signed DEFAULT '1',
   PRIMARY KEY (`entry`),
@@ -16934,7 +16935,7 @@ INSERT INTO `spell_bonus_data` (`entry`,`direct_bonus`,`dot_bonus`,`ap_bonus`,`a
 (2136, 0.4286, -1, -1, -1, 'Mage - Fire Blast'),
 (543, 0.1, -1, -1, -1, 'Mage - Fire Ward'),
 (2120, 0.2357, 0.122, -1, -1, 'Mage - Flamestrike'),
-(116, 0.8143, -1, -1, -1, 'Mage - Frost Bolt'),
+(116, 0.857, -1, -1, -1, 'Mage - Frostbolt'),
 (122, 0.193, -1, -1, -1, 'Mage - Frost Nova'),
 (6143, 0.1, -1, -1, -1, 'Mage - Frost Ward'),
 (44614, 0.8571, -1, -1, -1, 'Mage - Frostfire Bolt'),
@@ -17148,7 +17149,8 @@ INSERT INTO `spell_bonus_data` (`entry`,`direct_bonus`,`dot_bonus`,`ap_bonus`,`a
 (60203, 0, -1, -1, -1, 'Darkmoon Card: Death'),
 (60488, 0, -1, -1, -1, 'Extract of Necromatic Power'),
 (45429, 0, -1, -1, -1, 'Shattered Sun Pendant of Acumen - Arcane Bolt'),
-(56161, 0, 0, 0, 0, 'Priest - Glyph of Prayer of Healing');
+(56161, 0, 0, 0, 0, 'Priest - Glyph of Prayer of Healing'),
+(46579, 0, 0, 0, 0, 'Deathfrost - Enchantment');
 /*!40000 ALTER TABLE `spell_bonus_data` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -26792,6 +26794,8 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 68861, 'spell_bronjahm_consume_soul'),
 ( 69008, 'spell_bronjahm_soulstorm_channel'),
 ( 68870, 'spell_bronjahm_soulstorm_visual'),
+-- Pit of Saron
+( 69172, 'spell_tyrannus_overlord_brand'),
 -- Icecrown Citadel
 ( 69057, 'spell_marrowgar_bone_spike_graveyard'),
 ( 69140, 'spell_marrowgar_coldflame'),
@@ -26870,6 +26874,20 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 72457, 'spell_putricide_regurgitated_ooze'),
 ( 72875, 'spell_putricide_regurgitated_ooze'),
 ( 72876, 'spell_putricide_regurgitated_ooze'),
+( 71598, 'spell_creature_permanent_feign_death'),
+( 71806, 'spell_taldaram_glittering_sparks'),
+( 71718, 'spell_taldaram_summon_flame_ball'),
+( 72040, 'spell_taldaram_summon_flame_ball'),
+( 55891, 'spell_taldaram_flame_ball_visual'),
+( 55947, 'spell_taldaram_flame_ball_visual'),
+( 71756, 'spell_taldaram_ball_of_inferno_flame'),
+( 72782, 'spell_taldaram_ball_of_inferno_flame'),
+( 72783, 'spell_taldaram_ball_of_inferno_flame'),
+( 72784, 'spell_taldaram_ball_of_inferno_flame'),
+( 72080, 'spell_valanar_kinetic_bomb'),
+( 72087, 'spell_valanar_kinetic_bomb_knockback'),
+( 73001, 'spell_blood_council_shadow_prison'),
+( 72999, 'spell_blood_council_shadow_prison_damage'),
 -- Ulduar
 ( 62717, 'spell_ignis_slag_pot'),
 ( 63477, 'spell_ignis_slag_pot'),

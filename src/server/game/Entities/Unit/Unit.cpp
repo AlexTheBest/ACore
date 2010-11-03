@@ -545,11 +545,11 @@ void Unit::DealDamageMods(Unit *pVictim, uint32 &damage, uint32* absorb)
 
 uint32 Unit::DealDamage(Unit *pVictim, uint32 damage, CleanDamage const* cleanDamage, DamageEffectType damagetype, SpellSchoolMask damageSchoolMask, SpellEntry const *spellProto, bool durabilityLoss)
 {
-    if (pVictim->GetTypeId() == TYPEID_UNIT && pVictim->ToCreature()->IsAIEnabled)
-        pVictim->ToCreature()->AI()->DamageTaken(this, damage);
+    if (pVictim->IsAIEnabled)
+        pVictim->GetAI()->DamageTaken(this, damage);
 
-    if (GetTypeId() == TYPEID_UNIT && this->ToCreature()->IsAIEnabled)
-        this->ToCreature()->AI()->DamageDealt(pVictim, damage);
+    if (IsAIEnabled)
+        GetAI()->DamageDealt(pVictim, damage, damagetype);
 
     if (damagetype != NODAMAGE)
     {
@@ -7930,6 +7930,13 @@ bool Unit::HandleAuraProc(Unit * pVictim, uint32 damage, Aura * triggeredByAura,
                     RemoveAuraFromStack(71564);
                     *handled = true;
                     break;
+                case 71756:
+                case 72782:
+                case 72783:
+                case 72784:
+                    RemoveAuraFromStack(dummySpell->Id);
+                    *handled = true;
+                    break;
             }
             break;
         case SPELLFAMILY_PALADIN:
@@ -9885,8 +9892,11 @@ int32 Unit::DealHeal(Unit *pVictim, uint32 addhealth)
 {
     int32 gain = 0;
 
-    if (pVictim->GetTypeId() == TYPEID_UNIT && pVictim->ToCreature()->IsAIEnabled)
-        pVictim->ToCreature()->AI()->HealReceived(this, addhealth);
+    if (pVictim->IsAIEnabled)
+        pVictim->GetAI()->HealReceived(this, addhealth);
+
+    if (IsAIEnabled)
+        GetAI()->HealDone(pVictim, addhealth);
 
     if (addhealth)
         gain = pVictim->ModifyHealth(int32(addhealth));
@@ -13564,6 +13574,10 @@ void Unit::CleanupsBeforeDelete(bool finalCleanup)
     DeleteThreatList();
     getHostileRefManager().setOnlineOfflineState(false);
     GetMotionMaster()->Clear(false);                    // remove different non-standard movement generators.
+
+    if (Creature* thisCreature = ToCreature())
+        if (GetTransport())
+            GetTransport()->RemovePassenger(thisCreature);
 }
 
 void Unit::UpdateCharmAI()

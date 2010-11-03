@@ -186,8 +186,6 @@ void WorldSession::HandleGroupInviteOpcode(WorldPacket & recv_data)
     data << uint32(0);                                      // unk
     player->GetSession()->SendPacket(&data);
 
-    SendLfgUpdatePlayer(LFG_UPDATETYPE_REMOVED_FROM_QUEUE);
-    SendLfgUpdateParty(LFG_UPDATETYPE_REMOVED_FROM_QUEUE);
     SendPartyResult(PARTY_OP_INVITE, membername, ERR_PARTY_RESULT_OK);
 }
 
@@ -230,14 +228,6 @@ void WorldSession::HandleGroupAcceptOpcode(WorldPacket & /*recv_data*/)
     if (!group->AddMember(GetPlayer()->GetGUID(), GetPlayer()->GetName()))
         return;
 
-    SendLfgUpdatePlayer(LFG_UPDATETYPE_REMOVED_FROM_QUEUE);
-    for (GroupReference *itr = group->GetFirstMember(); itr != NULL; itr = itr->next())
-        if (Player *plrg = itr->getSource())
-        {
-            plrg->GetSession()->SendLfgUpdatePlayer(LFG_UPDATETYPE_CLEAR_LOCK_LIST);
-            plrg->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_CLEAR_LOCK_LIST);
-        }
-
     group->BroadcastGroupUpdate();
 }
 
@@ -246,18 +236,18 @@ void WorldSession::HandleGroupDeclineOpcode(WorldPacket & /*recv_data*/)
     Group  *group  = GetPlayer()->GetGroupInvite();
     if (!group) return;
 
-    // remember leader if online
-    Player *leader = sObjectMgr.GetPlayer(group->GetLeaderGUID());
-
     // uninvite, group can be deleted
     GetPlayer()->UninviteFromGroup();
 
+    // remember leader if online
+    Player *leader = sObjectMgr.GetPlayer(group->GetLeaderGUID());
     if (!leader || !leader->GetSession())
         return;
 
     // report
-    WorldPacket data(SMSG_GROUP_DECLINE, 10);             // guess size
-    data << GetPlayer()->GetName();
+    std::string name = std::string(GetPlayer()->GetName());
+    WorldPacket data(SMSG_GROUP_DECLINE, name.length());
+    data << name.c_str();
     leader->GetSession()->SendPacket(&data);
 }
 
