@@ -486,7 +486,7 @@ m_caster(Caster), m_spellValue(new SpellValue(m_spellInfo))
 
     m_spellState = SPELL_STATE_NULL;
 
-    m_IsTriggeredSpell = triggered;
+    m_IsTriggeredSpell = bool(triggered || (info->AttributesEx4 & SPELL_ATTR_EX4_TRIGGERED));
     m_CastItem = NULL;
 
     unitTarget = NULL;
@@ -1895,7 +1895,7 @@ WorldObject* Spell::SearchNearbyTarget(float range, SpellTargets TargetType, Spe
             ConditionList conditions = sConditionMgr.GetConditionsForNotGroupedEntry(CONDITION_SOURCE_TYPE_SPELL_SCRIPT_TARGET, m_spellInfo->Id);
             if (conditions.empty())
             {
-                sLog.outDebug("Spell (ID: %u) (caster Entry: %u) does not have record in `conditions` for spell script target (ConditionSourceType 14)", m_spellInfo->Id, m_caster->GetEntry());
+                sLog.outDebug("Spell (ID: %u) (caster Entry: %u) does not have record in `conditions` for spell script target (ConditionSourceType 13)", m_spellInfo->Id, m_caster->GetEntry());
                 if (IsPositiveSpell(m_spellInfo->Id))
                     return SearchNearbyTarget(range, SPELL_TARGETS_ALLY, effIndex);
                 else
@@ -2216,7 +2216,7 @@ void Spell::SelectEffectTargets(uint32 i, uint32 cur)
             dist = (float)target->GetSpellRadiusForTarget(target, sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[i]));
             if (dist < objSize)
                 dist = objSize;
-            else if (cur == TARGET_DEST_CASTER_RANDOM)
+            else if (cur == TARGET_DEST_TARGET_RANDOM)
                 dist = objSize + (dist - objSize) * (float)rand_norm();
 
             switch(cur)
@@ -2892,15 +2892,16 @@ void Spell::prepare(SpellCastTargets const* targets, AuraEffect const * triggere
             return;
         }
     }
-    if (m_caster->ToPlayer())
+    if (Player* plrCaster = m_caster->GetCharmerOrOwnerPlayerOrPlayerItself())
     {
         //check for special spell conditions
         ConditionList conditions = sConditionMgr.GetConditionsForNotGroupedEntry(CONDITION_SOURCE_TYPE_SPELL, m_spellInfo->Id);
         if (!conditions.empty())
         {
-            if (!sConditionMgr.IsPlayerMeetToConditions(m_caster->ToPlayer(), conditions))
+            if (!sConditionMgr.IsPlayerMeetToConditions(plrCaster, conditions))
             {
-                SendCastResult(SPELL_FAILED_DONT_REPORT);
+                //SendCastResult(SPELL_FAILED_DONT_REPORT);
+                SendCastResult(plrCaster, m_spellInfo, m_cast_count, SPELL_FAILED_DONT_REPORT);
                 finish(false);
                 return;
             }
@@ -2961,7 +2962,7 @@ void Spell::prepare(SpellCastTargets const* targets, AuraEffect const * triggere
     m_caster->m_Events.AddEvent(Event, m_caster->m_Events.CalculateTime(1));
 
     //Prevent casting at cast another spell (ServerSide check)
-    if (m_caster->IsNonMeleeSpellCasted(false, true, true) && m_cast_count)
+    if (!m_IsTriggeredSpell && m_caster->IsNonMeleeSpellCasted(false, true, true) && m_cast_count)
     {
         SendCastResult(SPELL_FAILED_SPELL_IN_PROGRESS);
         finish(false);
@@ -5036,20 +5037,24 @@ SpellCastResult Spell::CheckCast(bool strict)
             return SPELL_FAILED_NOT_MOUNTED;
     }
 
+    SpellCastResult castResult = SPELL_CAST_OK;
+
     // always (except passive spells) check items (focus object can be required for any type casts)
     if (!IsPassiveSpell(m_spellInfo->Id))
     {
-        SpellCastResult castResult = CheckItems();
+        castResult = CheckItems();
         if (castResult != SPELL_CAST_OK)
             return castResult;
     }
 
+    // Triggered spells also have range check
+    // TODO: determine if there is some flag to enable/disable the check
+    castResult = CheckRange(strict);
+    if (castResult != SPELL_CAST_OK)
+        return castResult;
+
     if (!m_IsTriggeredSpell)
     {
-        SpellCastResult castResult = CheckRange(strict);
-        if (castResult != SPELL_CAST_OK)
-            return castResult;
-
         castResult = CheckPower();
         if (castResult != SPELL_CAST_OK)
             return castResult;
@@ -5842,22 +5847,22 @@ SpellCastResult Spell::CheckRange(bool strict)
         {
             // Because of lag, we can not check too strictly here.
             if (!m_caster->IsWithinMeleeRange(target, max_range))
-                return SPELL_FAILED_OUT_OF_RANGE;
+                return !m_IsTriggeredSpell ? SPELL_FAILED_OUT_OF_RANGE : SPELL_FAILED_DONT_REPORT;
         }
         else if (!m_caster->IsWithinCombatRange(target, max_range))
-            return SPELL_FAILED_OUT_OF_RANGE;               //0x5A;
+            return !m_IsTriggeredSpell ? SPELL_FAILED_OUT_OF_RANGE : SPELL_FAILED_DONT_REPORT; //0x5A;
 
         if (range_type == SPELL_RANGE_RANGED)
         {
             if (m_caster->IsWithinMeleeRange(target))
-                return SPELL_FAILED_TOO_CLOSE;
+                return !m_IsTriggeredSpell ? SPELL_FAILED_TOO_CLOSE : SPELL_FAILED_DONT_REPORT;
         }
         else if (min_range && m_caster->IsWithinCombatRange(target, min_range)) // skip this check if min_range = 0
-            return SPELL_FAILED_TOO_CLOSE;
+            return !m_IsTriggeredSpell ? SPELL_FAILED_TOO_CLOSE : SPELL_FAILED_DONT_REPORT;
 
         if (m_caster->GetTypeId() == TYPEID_PLAYER &&
             (m_spellInfo->FacingCasterFlags & SPELL_FACING_FLAG_INFRONT) && !m_caster->HasInArc(static_cast<float>(M_PI), target))
-            return SPELL_FAILED_UNIT_NOT_INFRONT;
+            return !m_IsTriggeredSpell ? SPELL_FAILED_UNIT_NOT_INFRONT : SPELL_FAILED_DONT_REPORT;
     }
 
     if (m_targets.HasDst() && !m_targets.HasTraj())

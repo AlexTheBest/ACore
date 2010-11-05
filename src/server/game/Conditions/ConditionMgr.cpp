@@ -27,6 +27,7 @@
 #include "InstanceScript.h"
 #include "ConditionMgr.h"
 #include "ScriptMgr.h"
+#include "ScriptedCreature.h"
 
 // Checks if player meets the condition
 // Can have CONDITION_SOURCE_TYPE_NONE && !mReferenceId if called from a special event (ie: eventAI)
@@ -88,6 +89,12 @@ bool Condition::Meets(Player * player, Unit* invoker)
         {
             QuestStatus status = player->GetQuestStatus(mConditionValue1);
             condMeets = (status == QUEST_STATUS_INCOMPLETE);
+            break;
+        }
+        case CONDITION_QUEST_COMPLETE:
+        {
+            QuestStatus status = player->GetQuestStatus(mConditionValue1);
+            condMeets = (status == QUEST_STATUS_COMPLETE && !player->GetQuestRewardStatus(mConditionValue1));
             break;
         }
         case CONDITION_QUEST_NONE:
@@ -179,6 +186,16 @@ bool Condition::Meets(Player * player, Unit* invoker)
         case CONDITION_DRUNKENSTATE:
             {
                 condMeets = (uint32)Player::GetDrunkenstateByValue(player->GetDrunkValue()) >= mConditionValue1;
+                break;
+            }
+        case CONDITION_NEAR_CREATURE:
+            {
+                condMeets = GetClosestCreatureWithEntry(player, mConditionValue1, (float)mConditionValue2) ? true : false;
+                break;
+            }
+        case CONDITION_NEAR_GAMEOBJECT:
+            {
+                condMeets = GetClosestGameObjectWithEntry(player, mConditionValue1, (float)mConditionValue2) ? true : false;
                 break;
             }
         default:
@@ -307,6 +324,22 @@ ConditionList ConditionMgr::GetConditionsForNotGroupedEntry(ConditionSourceType 
         }
     }
     return spellCond;
+}
+
+ConditionList ConditionMgr::GetConditionsForVehicleSpell(uint32 creatureID, uint32 spellID)
+{
+    ConditionList cond;
+    VehicleSpellConditionMap::const_iterator itr = m_VehicleSpellConditions.find(creatureID);
+    if (itr != m_VehicleSpellConditions.end())
+    {
+        ConditionTypeMap::const_iterator i = (*itr).second.find(spellID);
+        if (i != (*itr).second.end())
+        {
+            cond = (*i).second;
+            sLog.outDebug("GetConditionsForVehicleSpell: found conditions for Vehicle entry %u spell %u", creatureID, spellID);
+        }
+    }
+    return cond;
 }
 
 void ConditionMgr::LoadConditions(bool isReload)
@@ -482,6 +515,24 @@ void ConditionMgr::LoadConditions(bool isReload)
                 case CONDITION_SOURCE_TYPE_GOSSIP_MENU_OPTION:
                     bIsDone = addToGossipMenuItems(cond);
                     break;
+                case CONDITION_SOURCE_TYPE_VEHICLE_SPELL:
+                    {
+                        //if no list for vehicle create one
+                        if (m_VehicleSpellConditions.find(cond->mSourceGroup) == m_VehicleSpellConditions.end())
+                        {
+                            ConditionTypeMap cmap;
+                            m_VehicleSpellConditions[cond->mSourceGroup] = cmap;
+                        }
+                        //if no list for vehicle's spell create one
+                        if (m_VehicleSpellConditions[cond->mSourceGroup].find(cond->mSourceEntry) == m_VehicleSpellConditions[cond->mSourceGroup].end())
+                        {
+                            ConditionList clist;
+                            m_VehicleSpellConditions[cond->mSourceGroup][cond->mSourceEntry] = clist;
+                        }
+                        m_VehicleSpellConditions[cond->mSourceGroup][cond->mSourceEntry].push_back(cond);
+                        bIsDone = true;
+                        break;
+                    }
                 default:
                     break;
             }
@@ -944,6 +995,21 @@ bool ConditionMgr::isSourceTypeValid(Condition* cond)
                 }
             }
             break;
+        case CONDITION_SOURCE_TYPE_VEHICLE_SPELL:
+            {
+                if (!sCreatureStorage.LookupEntry<CreatureInfo>(cond->mSourceGroup))
+                {
+                    sLog.outErrorDb("SourceEntry %u in `condition` table, does not exist in `creature_template`, ignoring.", cond->mSourceGroup);
+                    return false;
+                }
+                SpellEntry const* spellProto = sSpellStore.LookupEntry(cond->mSourceEntry);
+                if (!spellProto)
+                {
+                    sLog.outErrorDb("SourceEntry %u in `condition` table, does not exist in `spell.dbc`, ignoring.", cond->mSourceEntry);
+                    return false;
+                }
+                break;
+            }
         case CONDITION_SOURCE_TYPE_GOSSIP_MENU:
         case CONDITION_SOURCE_TYPE_GOSSIP_MENU_OPTION:
         case CONDITION_SOURCE_TYPE_NONE:
@@ -1067,6 +1133,7 @@ bool ConditionMgr::isConditionTypeValid(Condition* cond)
         case CONDITION_QUESTREWARDED:
         case CONDITION_QUESTTAKEN:
         case CONDITION_QUEST_NONE:
+        case CONDITION_QUEST_COMPLETE:
         {
             Quest const *Quest = sObjectMgr.GetQuestTemplate(cond->mConditionValue1);
             if (!Quest)
@@ -1288,6 +1355,24 @@ bool ConditionMgr::isConditionTypeValid(Condition* cond)
                 }
                 break;
             }
+        case CONDITION_NEAR_CREATURE:
+        {
+            if (!sCreatureStorage.LookupEntry<CreatureInfo>(cond->mConditionValue1))
+            {
+                sLog.outErrorDb("NearCreature condition has non existing creature template entry (%u), skipped", cond->mConditionValue1);
+                return false;
+            }
+            break;
+        }
+        case CONDITION_NEAR_GAMEOBJECT:
+        {
+            if (!sGOStorage.LookupEntry<GameObjectInfo>(cond->mConditionValue1))
+            {
+                sLog.outErrorDb("NearGameObject condition has non existing gameobject template entry (%u), skipped", cond->mConditionValue1);
+                return false;
+            }
+            break;
+        }
         case CONDITION_AREAID:
         case CONDITION_INSTANCE_DATA:
             break;
@@ -1320,6 +1405,20 @@ void ConditionMgr::Clean()
     }
 
     m_ConditionMap.clear();
+
+    
+    for (VehicleSpellConditionMap::iterator itr = m_VehicleSpellConditions.begin(); itr != m_VehicleSpellConditions.end(); ++itr)
+    {
+        for (ConditionTypeMap::iterator it = itr->second.begin(); it != itr->second.end(); ++it)
+        {
+            for (ConditionList::const_iterator i = it->second.begin(); i != it->second.end(); ++i)
+                delete *i;
+            it->second.clear();
+        }
+        itr->second.clear();
+    }
+
+    m_VehicleSpellConditions.clear();
 
     // this is a BIG hack, feel free to fix it if you can figure out the ConditionMgr ;)
     for (std::list<Condition*>::const_iterator itr = m_AllocatedMemory.begin(); itr != m_AllocatedMemory.end(); ++itr)

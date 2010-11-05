@@ -32,7 +32,6 @@
 #include "InstanceSaveMgr.h"
 #include "MapInstanced.h"
 #include "Util.h"
-#include "LFGMgr.h"
 
 Group::Group()
 {
@@ -271,16 +270,19 @@ bool Group::AddLeaderInvite(Player *player)
 
 uint32 Group::RemoveInvite(Player *player)
 {
-    m_invitees.erase(player);
-
-    player->SetGroupInvite(NULL);
+    if (player)
+    {
+        m_invitees.erase(player);
+        player->SetGroupInvite(NULL);
+    }
     return GetMembersCount();
 }
 
 void Group::RemoveAllInvites()
 {
     for (InvitesList::iterator itr=m_invitees.begin(); itr != m_invitees.end(); ++itr)
-        (*itr)->SetGroupInvite(NULL);
+        if (*itr)
+            (*itr)->SetGroupInvite(NULL);
 
     m_invitees.clear();
 }
@@ -289,7 +291,7 @@ Player* Group::GetInvited(const uint64& guid) const
 {
     for (InvitesList::const_iterator itr = m_invitees.begin(); itr != m_invitees.end(); ++itr)
     {
-        if ((*itr)->GetGUID() == guid)
+        if ((*itr) && (*itr)->GetGUID() == guid)
             return (*itr);
     }
     return NULL;
@@ -299,7 +301,7 @@ Player* Group::GetInvited(const std::string& name) const
 {
     for (InvitesList::const_iterator itr = m_invitees.begin(); itr != m_invitees.end(); ++itr)
     {
-        if ((*itr)->GetName() == name)
+        if ((*itr) && (*itr)->GetName() == name)
             return (*itr);
     }
     return NULL;
@@ -307,9 +309,6 @@ Player* Group::GetInvited(const std::string& name) const
 
 bool Group::AddMember(const uint64 &guid, const char* name)
 {
-    if (isLfgQueued())
-        sLFGMgr.Leave(NULL, this);
-
     if (!_addMember(guid, name))
         return false;
 
@@ -319,8 +318,6 @@ bool Group::AddMember(const uint64 &guid, const char* name)
     Player *player = sObjectMgr.GetPlayer(guid);
     if (player)
     {
-        if (player->isUsingLfg())
-            sLFGMgr.Leave(player);
         if (!IsLeader(player->GetGUID()) && !isBGGroup())
         {
             // reset the new member's instances, unless he is currently in one of them
@@ -360,16 +357,10 @@ uint32 Group::RemoveMember(const uint64 &guid, const RemoveMethod &method)
 {
     BroadcastGroupUpdate();
 
-    if (isLfgQueued())
-        sLFGMgr.Leave(NULL, this);
-    else if (isLFGGroup() && !isLfgDungeonComplete())
-        sLFGMgr.OfferContinue(this);
-
     sScriptMgr.OnGroupRemoveMember(this, guid, method);
 
-    // remove member and change leader (if need) only if strong more 2 members _before_ member remove
-    // BG or LFG groups allow 1 member group
-    if (GetMembersCount() > ((isBGGroup() || isLFGGroup()) ? 1u : 2u))
+    // remove member and change leader (if need) only if strong more 2 members _before_ member remove (BG allow 1 member group)
+    if (GetMembersCount() > (isBGGroup() ? 1u : 2u))
     {
         bool leaderChanged = _removeMember(guid);
 
@@ -387,15 +378,9 @@ uint32 Group::RemoveMember(const uint64 &guid, const RemoveMethod &method)
                 player->GetSession()->SendPacket(&data);
             }
 
-            player->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_LEADER);
-            if (isLFGGroup() && player->GetMap()->IsDungeon())
-                player->TeleportToBGEntryPoint();
-
             //we already removed player from group and in player->GetGroup() is his original group!
             if (Group* group = player->GetGroup())
-            {
                 group->SendUpdate();
-            }
             else
             {
                 data.Initialize(SMSG_GROUP_LIST, 1+1+1+1+8+4+4+8);
@@ -461,11 +446,6 @@ void Group::Disband(bool hideDestroy /* = false */)
                 player->SetOriginalGroup(NULL);
             else
                 player->SetGroup(NULL);
-
-            if (isLFGGroup() && player->GetMap()->IsDungeon())
-                player->TeleportToBGEntryPoint();
-            player->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_GROUP_DISBAND);
-            player->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_LEADER);
         }
 
         // quest related GO state dependent from raid membership
@@ -1298,8 +1278,6 @@ bool Group::_removeMember(const uint64 &guid)
                 player->SetOriginalGroup(NULL);
             else
                 player->SetGroup(NULL);
-
-            player->GetSession()->SendLfgUpdateParty(LFG_UPDATETYPE_LEADER);
         }
     }
 

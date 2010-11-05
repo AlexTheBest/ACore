@@ -72,6 +72,7 @@
 #include "ScriptMgr.h"
 #include "WeatherMgr.h"
 #include "CreatureTextMgr.h"
+#include "SmartAI.h"
 
 volatile bool World::m_stopEvent = false;
 uint8 World::m_ExitCode = SHUTDOWN_EXIT_CODE;
@@ -1754,6 +1755,9 @@ void World::SetInitialWorldSettings()
     sLog.outString("Loading Waypoints...");
     sWaypointMgr->Load();
 
+    sLog.outString("Loading SmartAI Waypoints...");
+    sSmartWaypointMgr.LoadFromDB();
+
     sLog.outString("Loading Creature Formations...");
     formation_mgr.LoadCreatureFormations();
 
@@ -1824,6 +1828,9 @@ void World::SetInitialWorldSettings()
     sLog.outString("Validating spell scripts...");
     sObjectMgr.ValidateSpellScripts();
 
+    sLog.outString("Loading SmartAI scripts...");
+    sSmartScriptMgr.LoadSmartAIFromDB();
+
     ///- Initialize game time and timers
     sLog.outDebug("DEBUG:: Initialize game time and timers");
     m_gameTime = time(NULL);
@@ -1851,7 +1858,7 @@ void World::SetInitialWorldSettings()
     m_timers[WUPDATE_AUCTIONS].SetInterval(MINUTE*IN_MILLISECONDS);
     m_timers[WUPDATE_UPTIME].SetInterval(m_int_configs[CONFIG_UPTIME_UPDATE]*MINUTE*IN_MILLISECONDS);
                                                             //Update "uptime" table based on configuration entry in minutes.
-    m_timers[WUPDATE_CORPSES].SetInterval(3 * HOUR * IN_MILLISECONDS);
+    m_timers[WUPDATE_CORPSES].SetInterval(20 * MINUTE * IN_MILLISECONDS);
                                                             //erase corpses every 20 minutes
     m_timers[WUPDATE_CLEANDB].SetInterval(m_int_configs[CONFIG_LOGDB_CLEARINTERVAL]*MINUTE*IN_MILLISECONDS);
                                                             // clean logs table every 14 days by default
@@ -1902,11 +1909,11 @@ void World::SetInitialWorldSettings()
     sLog.outString("Starting Outdoor PvP System");
     sOutdoorPvPMgr.InitOutdoorPvP();
 
-    sLog.outString("Loading Transport NPCs...");
-    sMapMgr.LoadTransportNPCs();
-
     sLog.outString("Loading Transports...");
     sMapMgr.LoadTransports();
+
+    sLog.outString("Loading Transport NPCs...");
+    sMapMgr.LoadTransportNPCs();
 
     sLog.outString("Deleting expired bans...");
     LoginDatabase.Execute("DELETE FROM ip_banned WHERE unbandate <= UNIX_TIMESTAMP() AND unbandate<>bandate");
@@ -2764,18 +2771,15 @@ void World::SendAutoBroadcast()
     uint32 abcenter = sWorld.getIntConfig(CONFIG_AUTOBROADCAST_CENTER);
 
     if (abcenter == 0)
-    {
         sWorld.SendWorldText(LANG_AUTO_BROADCAST, msg.c_str());
-        sLog.outString("AutoBroadcast: '%s'",msg.c_str());
-    }
+
     else if (abcenter == 1)
     {
         WorldPacket data(SMSG_NOTIFICATION, (msg.size()+1));
         data << msg;
         sWorld.SendGlobalMessage(&data);
-
-        sLog.outString("AutoBroadcast: '%s'",msg.c_str());
     }
+
     else if (abcenter == 2)
     {
         sWorld.SendWorldText(LANG_AUTO_BROADCAST, msg.c_str());
@@ -2784,8 +2788,8 @@ void World::SendAutoBroadcast()
         data << msg;
         sWorld.SendGlobalMessage(&data);
 
-        sLog.outString("AutoBroadcast: '%s'",msg.c_str());
     }
+    sLog.outDebug("AutoBroadcast: '%s'",msg.c_str());
 }
 
 void World::SendRNDBroadcastIRC()

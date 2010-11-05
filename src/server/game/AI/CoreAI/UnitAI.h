@@ -66,6 +66,20 @@ class UnitAI
         Unit* SelectTarget(SelectAggroTarget targetType, uint32 position = 0, float dist = 0.0f, bool playerOnly = false, int32 aura = 0);
         void SelectTargetList(std::list<Unit*> &targetList, uint32 num, SelectAggroTarget targetType, float dist = 0.0f, bool playerOnly = false, int32 aura = 0);
 
+        // Called at any Damage to any victim (before damage apply)
+        virtual void DamageDealt(Unit* /*victim*/, uint32& /*damage*/, DamageEffectType /*damageType*/) { }
+
+        // Called at any Damage from any attacker (before damage apply)
+        // Note: it for recalculation damage or special reaction at damage
+        // for attack reaction use AttackedBy called for not DOT damage in Unit::DealDamage also
+        virtual void DamageTaken(Unit* /*attacker*/, uint32& /*damage*/) {}
+
+        // Called when the creature receives heal
+        virtual void HealReceived(Unit* /*done_by*/, uint32& /*addhealth*/) {}
+
+        // Called when the unit heals
+        virtual void HealDone(Unit* /*done_to*/, uint32& /*addhealth*/) {}
+
         // Select the targets satifying the predicate.
         // predicate shall extend std::unary_function<Unit *, bool>
         template<class PREDICATE> Unit* SelectTarget(SelectAggroTarget targetType, uint32 position, PREDICATE predicate)
@@ -137,6 +151,14 @@ class UnitAI
 
         static AISpellInfoType *AISpellInfo;
         static void FillAISpellInfo();
+
+        virtual void sGossipHello(Player* /*player*/) {}
+        virtual void sGossipSelect(Player* /*player*/, uint32 /*sender*/, uint32 /*action*/) {}
+        virtual void sGossipSelectCode(Player* /*player*/, uint32 /*sender*/, uint32 /*action*/, const char* /*code*/) {}
+        virtual void sQuestAccept(Player* /*player*/, Quest const* /*quest*/) {}
+        virtual void sQuestSelect(Player* /*player*/, Quest const* /*quest*/) {}
+        virtual void sQuestComplete(Player* /*player*/, Quest const* /*quest*/) {}
+        virtual void sQuestReward(Player* /*player*/, Quest const* /*quest*/, uint32 /*opt*/) {}
 };
 
 class PlayerAI : public UnitAI

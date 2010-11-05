@@ -850,6 +850,14 @@ UPDATE `creature_template` SET `ScriptName`='npc_big_ooze' WHERE `entry`=36899;
 UPDATE `creature_template` SET `ScriptName`='npc_precious_icc' WHERE `entry`=37217;
 UPDATE `creature_template` SET `ScriptName`='boss_professor_putricide' WHERE `entry`=36678;
 UPDATE `creature_template` SET `ScriptName`='npc_volatile_ooze' WHERE `entry`=37697;
+UPDATE `creature_template` SET `ScriptName`='boss_blood_council_controller' WHERE `entry`=38008;
+UPDATE `creature_template` SET `ScriptName`='boss_prince_keleseth_icc' WHERE `entry`=37972;
+UPDATE `creature_template` SET `ScriptName`='boss_prince_taldaram_icc' WHERE `entry`=37973;
+UPDATE `creature_template` SET `ScriptName`='boss_prince_valanar_icc' WHERE `entry`=37970;
+UPDATE `creature_template` SET `ScriptName`='npc_blood_queen_lana_thel' WHERE `entry`=38004;
+UPDATE `creature_template` SET `ScriptName`='npc_kinetic_bomb' WHERE `entry`=38454;
+UPDATE `creature_template` SET `ScriptName`='npc_dark_nucleus' WHERE `entry`=38369;
+UPDATE `creature_template` SET `ScriptName`='npc_ball_of_flame' WHERE `entry` IN (38332,38451);
 
 /* IRONFORGE */
 UPDATE `creature_template` SET `ScriptName`='npc_royal_historian_archesonus' WHERE `entry`=8879;
@@ -1403,7 +1411,7 @@ UPDATE `creature_template` SET `ScriptName`='npc_cairne_bloodhoof' WHERE `entry`
 
 /* TRIAL OF THE CHAMPION */
 UPDATE `instance_template` SET `script`='instance_trial_of_the_champion' WHERE `map`=650;
-UPDATE `creature_template` SET `ScriptName`='generic_vehicleAI_toc5' WHERE `entry` IN (35637,35633,35768,34658,35636,35638,35635,35640,35641,35634,33298,33416,33297,33414,33301,33408,33300,33409,33418);
+UPDATE `creature_template` SET `ScriptName` = 'generic_vehicleAI_toc5' WHERE `entry` IN (33217,33323,33320,33316,33317,33324,33318,33319,33321,33322);
 UPDATE `creature_template` SET `ScriptName`='boss_warrior_toc5' WHERE `entry` IN (34705,35572);
 UPDATE `creature_template` SET `ScriptName`='boss_mage_toc5' WHERE `entry` IN (34702,35569);
 UPDATE `creature_template` SET `ScriptName`='boss_shaman_toc5' WHERE `entry` IN (35571,34701);

@@ -46,6 +46,8 @@ void AddSC_quest_spell_scripts();
 void AddSC_item_spell_scripts();
 void AddSC_example_spell_scripts();
 
+void AddSC_SmartSCripts();
+
 #ifdef SCRIPTS
 //world
 void AddSC_areatrigger_scripts();
@@ -61,6 +63,7 @@ void AddSC_npc_innkeeper();
 void AddSC_npcs_special();
 void AddSC_npc_taxi();
 void AddSC_achievement_scripts();
+void AddSC_dungeon_finder();
 
 //eastern kingdoms
 void AddSC_alterac_valley();                 //Alterac Valley
@@ -455,6 +458,7 @@ void AddSC_boss_deathbringer_saurfang();
 void AddSC_boss_festergut();
 void AddSC_boss_rotface();
 void AddSC_boss_professor_putricide();
+void AddSC_boss_blood_prince_council();
 void AddSC_icecrown_citadel_teleport();
 void AddSC_instance_icecrown_citadel();
 
@@ -572,6 +576,7 @@ void AddScripts()
 {
     AddExampleScripts();
     AddSpellScripts();
+    AddSC_SmartSCripts();
 #ifdef SCRIPTS
     AddWorldScripts();
     AddEasternKingdomsScripts();
@@ -627,6 +632,7 @@ void AddWorldScripts()
     AddSC_npc_taxi();
     AddSC_achievement_scripts();
     AddSC_chat_log();
+    AddSC_dungeon_finder();
     AddSC_rewardscript();		//serverscripts
     AddSC_telestone();
     AddSC_televotescript();
@@ -1122,6 +1128,7 @@ void AddNorthrendScripts()
     AddSC_boss_festergut();
     AddSC_boss_rotface();
     AddSC_boss_professor_putricide();
+    AddSC_boss_blood_prince_council();
     AddSC_icecrown_citadel_teleport();
     AddSC_instance_icecrown_citadel();
 

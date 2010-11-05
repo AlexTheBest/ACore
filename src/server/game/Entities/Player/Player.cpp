@@ -14578,8 +14578,10 @@ void Player::RewardQuest(Quest const *pQuest, uint32 reward, Object* questGiver,
     }
 
     // honor reward
-    if (pQuest->GetRewHonorableKills())
-        RewardHonor(NULL, 0, Trinity::Honor::hk_honor_at_level(getLevel(), pQuest->GetRewHonorableKills()));
+    if (pQuest->GetRewHonorAddition())
+        RewardHonor(NULL, 0, pQuest->GetRewHonorAddition());
+    if (pQuest->GetRewHonorMultiplier())
+        RewardHonor(NULL, 0, Trinity::Honor::hk_honor_at_level(getLevel(), pQuest->GetRewHonorMultiplier()));
 
     // title reward
     if (pQuest->GetCharTitleId())
@@ -15755,7 +15757,7 @@ void Player::SendQuestReward(Quest const *pQuest, uint32 XP, Object * questGiver
         data << uint32(pQuest->GetRewOrReqMoney() + int32(pQuest->GetRewMoneyMaxLevel() * sWorld.getRate(RATE_DROP_MONEY)));
     }
 
-    data << 10 * Trinity::Honor::hk_honor_at_level(getLevel(), pQuest->GetRewHonorableKills());
+    data << 10 * Trinity::Honor::hk_honor_at_level(getLevel(), pQuest->GetRewHonorMultiplier());
     data << uint32(pQuest->GetBonusTalents());              // bonus talents
     data << uint32(pQuest->GetRewArenaPoints());
     GetSession()->SendPacket(&data);
@@ -19078,6 +19080,12 @@ void Player::VehicleSpellInitialize()
         if (!spellInfo)
             continue;
 
+        ConditionList conditions = sConditionMgr.GetConditionsForVehicleSpell(veh->ToCreature()->GetEntry(), spellId);
+        if (!sConditionMgr.IsPlayerMeetToConditions(this, conditions))
+        {
+            sLog.outDebug("VehicleSpellInitialize: conditions not met for Vehicle entry %u spell %u", veh->ToCreature()->GetEntry(), spellId);
+            continue;
+        }
         if (IsPassiveSpell(spellId))
         {
             veh->CastSpell(veh, spellId, true);
