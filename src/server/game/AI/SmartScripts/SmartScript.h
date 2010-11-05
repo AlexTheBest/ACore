@@ -193,6 +193,8 @@ class SmartScript
 
         SmartAIEventList mEvents;
         SmartAIEventList mInstallEvents;
+        SmartAIEventList mTimedActionList;
+        bool mResumeActionList;
         Creature* me;
         uint64 meOrigGUID;
         GameObject* go;
@@ -212,6 +214,7 @@ class SmartScript
         uint64 mTextGUID;
         Creature* talker;
         bool mUseTextTimer;
+        Unit* mLastInvoker;
 
         SMARTAI_TEMPLATE mTemplate;
         void InstallEvents();

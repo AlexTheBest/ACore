@@ -51,6 +51,8 @@ SmartScript::SmartScript()
     mTemplate = SMARTAI_TEMPLATE_BASIC;
     meOrigGUID = 0;
     goOrigGUID = 0;
+    mResumeActionList = true;
+    mLastInvoker = NULL;
 }
 
 void SmartScript::OnReset()
@@ -59,19 +61,36 @@ void SmartScript::OnReset()
     ResetBaseObject();
     for (SmartAIEventList::iterator i = mEvents.begin(); i != mEvents.end(); ++i)
     {
-        if ((*i).GetEventType() == SMART_EVENT_UPDATE_OOC || (*i).GetEventType() == SMART_EVENT_UPDATE)
-            RecalcTimer((*i), (*i).event.minMaxRepeat.min, (*i).event.minMaxRepeat.max);
+        InitTimer((*i));
         (*i).runOnce = false;
     }
     ProcessEventsFor(SMART_EVENT_RESET);
+    mLastInvoker = NULL;
 }
 
 void SmartScript::ProcessEventsFor(SMART_EVENT e, Unit* unit, uint32 var0, uint32 var1, bool bvar, const SpellEntry* spell, GameObject* gob)
 {
+    if (e == SMART_EVENT_AGGRO)
+    {
+        if (!mResumeActionList)
+            mTimedActionList.clear();//clear action list if it is not resumable
+        else
+        {
+            for (SmartAIEventList::iterator itr = mTimedActionList.begin(); itr != mTimedActionList.end(); ++itr)
+            {
+                if (itr->enableTimed)
+                {
+                    InitTimer((*itr));//re-init the currently enabled timer, so it restarts the timer when resumed
+                    break;
+                }
+            }
+        }
+    }
     for (SmartAIEventList::iterator i = mEvents.begin(); i != mEvents.end(); ++i)
     {
         if ((*i).GetEventType() == SMART_EVENT_LINK)//special handling
             continue;
+        
         if ((*i).GetEventType() == e/* && (!(*i).event.event_phase_mask || IsInPhase((*i).event.event_phase_mask)) && !((*i).event.event_flags & SMART_EVENT_FLAG_NOT_REPEATABLE && (*i).runOnce)*/)
             ProcessEvent(*i, unit, var0, var1, bvar, spell, gob);
     }
@@ -87,6 +106,9 @@ void SmartScript::ProcessAction(SmartScriptHolder &e, Unit* unit, uint32 var0, u
             return;
     }
     e.runOnce = true;//used for repeat check
+
+    if (unit)
+        mLastInvoker = unit;
 
     if (e.link && e.link != e.event_id)
     {
@@ -989,6 +1011,57 @@ void SmartScript::ProcessAction(SmartScriptHolder &e, Unit* unit, uint32 var0, u
                 }
                 break;
             }
+        case SMART_ACTION_CALL_TIMED_ACTIONLIST:
+            {
+                mTimedActionList.clear();
+                mTimedActionList = sSmartScriptMgr.GetScript(e.action.timedActionList.id, SMART_SCRIPT_TYPE_TIMED_ACTIONLIST);
+                if (mTimedActionList.empty())
+                    return;
+                for (SmartAIEventList::iterator i = mTimedActionList.begin(); i != mTimedActionList.end(); ++i)
+                {
+                    if (i == mTimedActionList.begin())
+                    {
+                        i->enableTimed = true;//enable processing only for the first action
+                    }
+                    else i->enableTimed = false;
+                    
+                    //i->event.type = SMART_EVENT_UPDATE_IC;//default value
+                    if (e.action.timedActionList.timerType == 1)
+                        i->event.type = SMART_EVENT_UPDATE_IC;
+                    else if (e.action.timedActionList.timerType > 1)
+                        i->event.type = SMART_EVENT_UPDATE;
+                    mResumeActionList = e.action.timedActionList.dontResume ? false : true;
+                    InitTimer((*i));
+                }
+                break;
+            }
+        case SMART_ACTION_SET_NPC_FLAG:
+            {
+                ObjectList* targets = GetTargets(e, unit);
+                if (!targets) return;
+                for (ObjectList::const_iterator itr = targets->begin(); itr != targets->end(); itr++)
+                    if (IsUnit((*itr)))
+                        (*itr)->ToUnit()->SetUInt32Value(UNIT_NPC_FLAGS, e.action.unitFlag.flag);
+                break;
+            }
+        case SMART_ACTION_ADD_NPC_FLAG:
+            {
+                ObjectList* targets = GetTargets(e, unit);
+                if (!targets) return;
+                for (ObjectList::const_iterator itr = targets->begin(); itr != targets->end(); itr++)
+                    if (IsUnit((*itr)))
+                        (*itr)->ToUnit()->SetFlag(UNIT_NPC_FLAGS, e.action.unitFlag.flag);
+                break;
+            }
+        case SMART_ACTION_REMOVE_NPC_FLAG:
+            {
+                ObjectList* targets = GetTargets(e, unit);
+                if (!targets) return;
+                for (ObjectList::const_iterator itr = targets->begin(); itr != targets->end(); itr++)
+                    if (IsUnit((*itr)))
+                        (*itr)->ToUnit()->RemoveFlag(UNIT_NPC_FLAGS, e.action.unitFlag.flag);
+                break;
+            }
         default:
             sLog.outErrorDb("SmartScript::ProcessAction: Unhandled Action type %u", e.GetActionType());
             break;
@@ -1103,6 +1176,11 @@ SmartScriptHolder SmartScript::CreateEvent(SMART_EVENT e, uint32 event_flags, ui
 
 ObjectList* SmartScript::GetTargets(SmartScriptHolder e, Unit* invoker)
 {
+    Unit* trigger = NULL;
+    if (invoker)
+        trigger = invoker;
+    else if (mLastInvoker)
+        trigger = mLastInvoker;
     ObjectList* l = new ObjectList();
     switch (e.GetTargetType())
     {
@@ -1136,22 +1214,20 @@ ObjectList* SmartScript::GetTargets(SmartScriptHolder e, Unit* invoker)
             break;
         case SMART_TARGET_NONE:
         case SMART_TARGET_ACTION_INVOKER:
-            if (invoker)
-            {
-                l->push_back(invoker);
-            }
+            if (trigger)
+                l->push_back(trigger);
             break;
         case SMART_TARGET_ACTION_INVOKER_VEHICLE:
-            if (invoker && invoker->GetVehicle() && invoker->GetVehicle()->GetBase())
+            if (trigger && trigger->GetVehicle() && trigger->GetVehicle()->GetBase())
             {
-                l->push_back(invoker->GetVehicle()->GetBase());
+                l->push_back(trigger->GetVehicle()->GetBase());
             }
             break;
         case SMART_TARGET_INVOKER_PARTY:
-            if (invoker)
+            if (trigger)
             {
-                l->push_back(invoker);
-                if (Player* plr = invoker->ToPlayer())
+                l->push_back(trigger);
+                if (Player* plr = trigger->ToPlayer())
                 {
                     if (Group *pGroup = plr->GetGroup())
                     {
@@ -1235,12 +1311,12 @@ ObjectList* SmartScript::GetTargets(SmartScriptHolder e, Unit* invoker)
                     target = HashMapHolder<Creature>::Find(guid);
                 } else 
                 {
-                    if (!invoker)
+                    if (!trigger && !GetBaseObject())
                     {
-                        sLog.outError("SMART_TARGET_CREATURE_GUID can not be used without invoker and without entry");
+                        sLog.outErrorDb("SMART_TARGET_CREATURE_GUID can not be used without invoker and without entry");
                         return NULL;
                     }
-                    target = FindCreatureNear(invoker, e.target.unitGUID.guid);
+                    target = FindCreatureNear(trigger?trigger:GetBaseObject(), e.target.unitGUID.guid);
                 }
                 if (target)
                 {
@@ -1257,12 +1333,12 @@ ObjectList* SmartScript::GetTargets(SmartScriptHolder e, Unit* invoker)
                     target = HashMapHolder<GameObject>::Find(guid);
                 } else 
                 {
-                    if (!invoker)
+                    if (!trigger && !GetBaseObject())
                     {
-                        sLog.outError("SMART_TARGET_GAMEOBJECT_GUID can not be used without invoker and without entry");
+                        sLog.outErrorDb("SMART_TARGET_GAMEOBJECT_GUID can not be used without invoker and without entry");
                         return NULL;
                     }
-                    target = FindGameObjectNear(invoker, e.target.goGUID.guid);
+                    target = FindGameObjectNear(trigger?trigger:GetBaseObject(), e.target.goGUID.guid);
                 }
                 if (target)
                 {
@@ -1409,19 +1485,13 @@ void SmartScript::ProcessEvent(SmartScriptHolder &e, Unit* unit, uint32 var0, ui
             }
         case SMART_EVENT_RANGE:
             {
-                if (!GetBaseObject()) return;
-                ObjectList* targets = GetTargets(e, unit);
-                if (!targets) return;
-                for (ObjectList::const_iterator itr = targets->begin(); itr != targets->end(); itr++)
+                if (!me || !me->isInCombat() || !me->getVictim())
+                    return;
+
+                if (me->IsInRange(me->getVictim(),(float)e.event.minMaxRepeat.min,(float)e.event.minMaxRepeat.max))
                 {
-                    if (!IsUnit((*itr)))
-                        continue;
-                    if (GetBaseObject()->IsInMap((*itr)))
-                    if (GetBaseObject()->IsInRange((*itr),(float)e.event.minMaxRepeat.min,(float)e.event.minMaxRepeat.max))
-                    {
-                        ProcessAction(e, (*itr)->ToUnit());
-                        RecalcTimer(e, e.event.minMaxRepeat.repeatMin, e.event.minMaxRepeat.repeatMax);
-                    }
+                    ProcessAction(e, me->getVictim());
+                    RecalcTimer(e, e.event.minMaxRepeat.repeatMin, e.event.minMaxRepeat.repeatMax);
                 }
                 break;
             }
@@ -1698,7 +1768,8 @@ void SmartScript::ProcessEvent(SmartScriptHolder &e, Unit* unit, uint32 var0, ui
             }
         case SMART_EVENT_GOSSIP_SELECT:
             {
-                if ((e.event.gossip.sender != var0 || e.event.gossip.action != var1))
+                sLog.outString("SmartScript: Gossip Select:  menu %u action %u", var0, var1);//little help for scripters
+                if (e.event.gossip.sender != var0 || e.event.gossip.action != var1)
                     return;
                 ProcessAction(e, unit, var0, var1);
                 break;
@@ -1738,6 +1809,11 @@ void SmartScript::UpdateTimer(SmartScriptHolder &e, const uint32 diff)
         return;
     if (e.event.event_phase_mask && !IsInPhase(e.event.event_phase_mask))
         return;
+    
+    if (e.GetEventType() == SMART_EVENT_UPDATE_IC && (!me || !me->isInCombat()))
+        return;
+    if (e.GetEventType() == SMART_EVENT_UPDATE_OOC && (me && me->isInCombat()))//can be used with me=NULL (go script)
+        return;
     if (e.timer < diff)
     {
         e.active = true;//activate events with cooldown
@@ -1757,8 +1833,23 @@ void SmartScript::UpdateTimer(SmartScriptHolder &e, const uint32 diff)
             case SMART_EVENT_FRIENDLY_MISSING_BUFF:        
             case SMART_EVENT_HAS_AURA:
             case SMART_EVENT_TARGET_BUFFED:
+            {
                 ProcessEvent(e);
+                if (e.GetScriptType() == SMART_SCRIPT_TYPE_TIMED_ACTIONLIST)
+                {
+                    e.enableTimed = false;//disable event if it is in an ActionList and was processed once
+                    for (SmartAIEventList::iterator i = mTimedActionList.begin(); i != mTimedActionList.end(); ++i)
+                    {
+                        //find the first event which is not the current one and enable it
+                        if (i->event_id > e.event_id)
+                        {
+                            i->enableTimed = true;
+                            break;
+                        }
+                    }
+                }
                 break;
+            }
         }
     } else e.timer -= diff;
 }
@@ -1796,6 +1887,21 @@ void SmartScript::OnUpdate(const uint32 diff)
              UpdateTimer((*i), diff);
         }
     }
+    bool needCleanup = true;
+    if (!mTimedActionList.empty())
+    {
+        for (SmartAIEventList::iterator i = mTimedActionList.begin(); i != mTimedActionList.end(); ++i)
+        {
+            if ((*i).enableTimed)
+            {
+                UpdateTimer((*i), diff);
+                needCleanup = false;
+            }
+        }
+    }
+    if (needCleanup)
+        mTimedActionList.clear();
+
     if (!mRemIDs.empty())
     {
         for (std::list<uint32>::iterator i = mRemIDs.begin(); i != mRemIDs.end(); ++i)
@@ -1823,9 +1929,9 @@ void SmartScript::FillScript(SmartAIEventList e, WorldObject* obj, AreaTriggerEn
     if (e.empty())
     {
         if (obj)
-            sLog.outErrorDb("SmartScript: EventMap for Entry %u is empty but is using SmartScript.", obj->GetEntry());
+            sLog.outDebug("SmartScript: EventMap for Entry %u is empty but is using SmartScript.", obj->GetEntry());
         if (at)
-            sLog.outErrorDb("SmartScript: EventMap for AreaTrigger %u is empty but is using SmartScript.", at->id);
+            sLog.outDebug("SmartScript: EventMap for AreaTrigger %u is empty but is using SmartScript.", at->id);
         return;
     }
     for (SmartAIEventList::iterator i = e.begin(); i != e.end(); ++i)
