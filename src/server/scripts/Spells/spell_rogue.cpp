@@ -22,6 +22,7 @@
  */
 
 #include "ScriptPCH.h"
+#include "SpellAuraEffects.h"
 
 enum RogueSpells
 {
