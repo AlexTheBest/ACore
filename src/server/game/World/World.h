@@ -164,6 +164,7 @@ enum WorldBoolConfigs
     CONFIG_CHATLOG_BGROUND,
     CONFIG_DUNGEON_FINDER_ENABLE,
     CONFIG_AUTOBROADCAST,
+    CONFIG_ALLOW_TICKETS,
     BOOL_CONFIG_VALUE_COUNT
 };
 
@@ -720,11 +721,6 @@ class World
         static float GetMaxVisibleDistanceOnContinents()    { return m_MaxVisibleDistanceOnContinents; }
         static float GetMaxVisibleDistanceInInstances()     { return m_MaxVisibleDistanceInInstances;  }
         static float GetMaxVisibleDistanceInBGArenas()      { return m_MaxVisibleDistanceInBGArenas;   }
-        static float GetMaxVisibleDistanceForObject()       { return m_MaxVisibleDistanceForObject;    }
-
-        static float GetMaxVisibleDistanceInFlight()        { return m_MaxVisibleDistanceInFlight;     }
-        static float GetVisibleUnitGreyDistance()           { return m_VisibleUnitGreyDistance;        }
-        static float GetVisibleObjectGreyDistance()         { return m_VisibleObjectGreyDistance;      }
 
         static int32 GetVisibilityNotifyPeriodOnContinents(){ return m_visibility_notify_periodOnContinents; }
         static int32 GetVisibilityNotifyPeriodInInstances() { return m_visibility_notify_periodInInstances;  }
@@ -841,11 +837,6 @@ class World
         static float m_MaxVisibleDistanceOnContinents;
         static float m_MaxVisibleDistanceInInstances;
         static float m_MaxVisibleDistanceInBGArenas;
-        static float m_MaxVisibleDistanceForObject;
-
-        static float m_MaxVisibleDistanceInFlight;
-        static float m_VisibleUnitGreyDistance;
-        static float m_VisibleObjectGreyDistance;
 
         static int32 m_visibility_notify_periodOnContinents;
         static int32 m_visibility_notify_periodInInstances;

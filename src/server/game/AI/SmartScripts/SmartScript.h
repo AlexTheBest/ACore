@@ -225,7 +225,7 @@ class SmartScript
             {
                 for (SmartAIEventList::iterator i = mStoredEvents.begin(); i != mStoredEvents.end(); ++i)
                 {
-                    if (i->event_id = id)
+                    if (i->event_id == id)
                     {
                         mStoredEvents.erase(i);
                         return;
@@ -250,6 +250,8 @@ class SmartScript
             SmartScriptHolder s;
             return s;
         }
+        //TIMED_ACTIONLIST (script type 9 aka script9)
+        void SetScript9(SmartScriptHolder &e, uint32 entry);
 };
 
 #endif

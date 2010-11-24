@@ -452,7 +452,7 @@ public:
                             for (Map::PlayerList::const_iterator itr = players.begin(); itr != players.end(); ++itr)
                             {
                                 if (Player* pPlayer = itr->getSource())
-                                    pPlayer->KilledMonsterCredit(20156,me->GetGUID());
+                                    pPlayer->KilledMonsterCredit(20156, 0);
                             }
                         }
 
@@ -462,7 +462,7 @@ public:
                     break;
                 case 108:
                     //last waypoint, just set Thrall invisible, respawn is turned off
-                    me->SetVisibility(VISIBILITY_OFF);
+                    me->SetVisible(false);
                     break;
             }
         }

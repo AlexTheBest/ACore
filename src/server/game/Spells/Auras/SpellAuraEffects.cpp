@@ -70,9 +70,9 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         // 14 SPELL_AURA_MOD_DAMAGE_TAKEN implemented in Unit::MeleeDamageBonus and Unit::SpellDamageBonus
     &AuraEffect::HandleNoImmediateEffect,                         // 15 SPELL_AURA_DAMAGE_SHIELD    implemented in Unit::DoAttackDamage
     &AuraEffect::HandleModStealth,                                // 16 SPELL_AURA_MOD_STEALTH
-    &AuraEffect::HandleNoImmediateEffect,                         // 17 SPELL_AURA_MOD_DETECT implement in GameObject::canDetectTrap and Unit::canDetectStealthOf
-    &AuraEffect::HandleInvisibility,                              // 18 SPELL_AURA_MOD_INVISIBILITY
-    &AuraEffect::HandleInvisibilityDetect,                        // 19 SPELL_AURA_MOD_INVISIBILITY_DETECTION
+    &AuraEffect::HandleModStealthDetect,                          // 17 SPELL_AURA_MOD_DETECT
+    &AuraEffect::HandleModInvisibility,                           // 18 SPELL_AURA_MOD_INVISIBILITY
+    &AuraEffect::HandleModInvisibilityDetect,                     // 19 SPELL_AURA_MOD_INVISIBILITY_DETECTION
     &AuraEffect::HandleNoImmediateEffect,                         // 20 SPELL_AURA_OBS_MOD_HEALTH implemented in AuraEffect::PeriodicTick
     &AuraEffect::HandleNoImmediateEffect,                         // 21 SPELL_AURA_OBS_MOD_POWER implemented in AuraEffect::PeriodicTick
     &AuraEffect::HandleAuraModResistance,                         // 22 SPELL_AURA_MOD_RESISTANCE
@@ -207,7 +207,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleAuraTrackStealthed,                        //151 SPELL_AURA_TRACK_STEALTHED
     &AuraEffect::HandleNoImmediateEffect,                         //152 SPELL_AURA_MOD_DETECTED_RANGE implemented in Creature::GetAttackDistance
     &AuraEffect::HandleNoImmediateEffect,                         //153 SPELL_AURA_SPLIT_DAMAGE_FLAT
-    &AuraEffect::HandleNoImmediateEffect,                         //154 SPELL_AURA_MOD_STEALTH_LEVEL
+    &AuraEffect::HandleModStealthLevel,                           //154 SPELL_AURA_MOD_STEALTH_LEVEL
     &AuraEffect::HandleNoImmediateEffect,                         //155 SPELL_AURA_MOD_WATER_BREATHING
     &AuraEffect::HandleNoImmediateEffect,                         //156 SPELL_AURA_MOD_REPUTATION_GAIN
     &AuraEffect::HandleNULL,                                      //157 SPELL_AURA_PET_DAMAGE_MULTI
@@ -349,7 +349,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNULL,                                      //293 auras which probably add set of abilities to their target based on it's miscvalue
     &AuraEffect::HandleNoImmediateEffect,                         //294 SPELL_AURA_PREVENT_REGENERATE_POWER implemented in Player::Regenerate(Powers power)
     &AuraEffect::HandleNULL,                                      //295 0 spells in 3.3.5
-    &AuraEffect::HandleNULL,                                      //296 6 spells, something vehicle or character display related
+    &AuraEffect::HandleAuraSetVehicle,                            //296 SPELL_AURA_SET_VEHICLE_ID sets vehicle on target
     &AuraEffect::HandleNULL,                                      //297 Spirit Burst spells
     &AuraEffect::HandleNULL,                                      //298 70569 - Strangulating, maybe prevents talk or cast
     &AuraEffect::HandleNULL,                                      //299 unused
@@ -357,7 +357,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleNoImmediateEffect,                         //301 SPELL_AURA_SCHOOL_HEAL_ABSORB implemented in Unit::CalcHealAbsorb
     &AuraEffect::HandleNULL,                                      //302 0 spells in 3.3.5
     &AuraEffect::HandleNoImmediateEffect,                         //303 SPELL_AURA_MOD_DAMAGE_DONE_VERSUS_AURASTATE implemented in Unit::SpellDamageBonus, Unit::MeleeDamageBonus
-    &AuraEffect::HandleUnused,                                    //304 clientside
+    &AuraEffect::HandleAuraModFakeInebriation,                    //304 SPELL_AURA_MOD_DRUNK
     &AuraEffect::HandleAuraModIncreaseSpeed,                      //305 SPELL_AURA_MOD_MINIMUM_SPEED
     &AuraEffect::HandleNULL,                                      //306 0 spells in 3.3.5
     &AuraEffect::HandleNULL,                                      //307 0 spells in 3.3.5
@@ -2430,7 +2430,13 @@ void AuraEffect::TriggerSpell(Unit * target, Unit * caster) const
         sLog.outDebug("AuraEffect::TriggerSpell: Spell %u Trigger %u",GetId(), triggeredSpellInfo->Id);
     }
     else if (target->GetTypeId() != TYPEID_UNIT || !sScriptMgr.OnDummyEffect(caster, GetId(), SpellEffIndex(GetEffIndex()), triggerTarget->ToCreature()))
-        sLog.outError("AuraEffect::TriggerSpell: Spell %u have 0 in EffectTriggered[%d], not handled custom case?",GetId(),GetEffIndex());
+    {
+        if (Creature* c = triggerTarget->ToCreature())
+        {
+            c->AI()->sOnDummyEffect(caster, GetId(), SpellEffIndex(GetEffIndex()));
+        }
+        sLog.outError("AuraEffect::TriggerSpell: Spell %u has value 0 in EffectTriggered[%d] and is therefor not handled. Define as custom case?",GetId(),GetEffIndex());
+    }
 }
 
 void AuraEffect::TriggerSpellWithValue(Unit * target, Unit * caster) const
@@ -2451,7 +2457,7 @@ void AuraEffect::TriggerSpellWithValue(Unit * target, Unit * caster) const
         triggerCaster->CastCustomSpell(triggerTarget, triggerSpellId, &basepoints0, 0, 0, true, 0, this);
     }
     else
-        sLog.outError("AuraEffect::TriggerSpellWithValue: Spell %u have 0 in EffectTriggered[%d], not handled custom case?",GetId(),GetEffIndex());
+        sLog.outError("AuraEffect::TriggerSpellWithValue: Spell %u has value 0 in EffectTriggered[%d] and is therefor not handled. Define as custom case?",GetId(),GetEffIndex());
 }
 
 bool AuraEffect::IsAffectedOnSpell(SpellEntry const *spell) const
@@ -2725,40 +2731,40 @@ void AuraEffect::HandleShapeshiftBoosts(Unit * target, bool apply) const
 /***       VISIBILITY & PHASES      ***/
 /**************************************/
 
-void AuraEffect::HandleInvisibilityDetect(AuraApplication const * aurApp, uint8 mode, bool apply) const
+void AuraEffect::HandleModInvisibilityDetect(AuraApplication const * aurApp, uint8 mode, bool apply) const
 {
     if (!(mode & AURA_EFFECT_HANDLE_REAL))
         return;
 
     Unit * target = aurApp->GetTarget();
+    InvisibilityType type = InvisibilityType(GetMiscValue());
 
     if (apply)
     {
-        target->m_detectInvisibilityMask |= (1 << GetMiscValue());
+        target->m_invisibilityDetect.AddFlag(type);
+        target->m_invisibilityDetect.AddValue(type, GetAmount());
     }
     else
     {
-        // recalculate value at modifier remove (current aura already removed)
-        target->m_detectInvisibilityMask = 0;
-        Unit::AuraEffectList const& auras = target->GetAuraEffectsByType(SPELL_AURA_MOD_INVISIBILITY_DETECTION);
-        for (Unit::AuraEffectList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
-            target->m_detectInvisibilityMask |= (1 << GetMiscValue());
+        if (!target->HasAuraType(SPELL_AURA_MOD_INVISIBILITY_DETECT))
+            target->m_invisibilityDetect.DelFlag(type);
+
+        target->m_invisibilityDetect.AddValue(type, -GetAmount());
     }
-    if (target->GetTypeId() == TYPEID_PLAYER)
-        target->UpdateObjectVisibility();
+
+    target->UpdateObjectVisibility();
 }
 
-void AuraEffect::HandleInvisibility(AuraApplication const * aurApp, uint8 mode, bool apply) const
+void AuraEffect::HandleModInvisibility(AuraApplication const * aurApp, uint8 mode, bool apply) const
 {
     if (!(mode & AURA_EFFECT_HANDLE_SEND_FOR_CLIENT_MASK))
         return;
 
     Unit * target = aurApp->GetTarget();
+    InvisibilityType type = InvisibilityType(GetMiscValue());
 
     if (apply)
     {
-        target->m_invisibilityMask |= (1 << GetMiscValue());
-
         if (mode & AURA_EFFECT_HANDLE_REAL)
         {
             // drop flag at invisibiliy in bg
@@ -2769,23 +2775,49 @@ void AuraEffect::HandleInvisibility(AuraApplication const * aurApp, uint8 mode, 
         if (target->GetTypeId() == TYPEID_PLAYER)
             target->SetFlag(PLAYER_FIELD_BYTES2,PLAYER_FIELD_BYTE2_INVISIBILITY_GLOW);
 
-        target->UpdateObjectVisibility();
+        target->m_invisibility.AddFlag(type);
+        target->m_invisibility.AddValue(type, GetAmount());
     }
     else
     {
-        // recalculate value at modifier remove (current aura already removed)
-        target->m_invisibilityMask = 0;
-        Unit::AuraEffectList const& auras = target->GetAuraEffectsByType(SPELL_AURA_MOD_INVISIBILITY);
-        for (Unit::AuraEffectList::const_iterator itr = auras.begin(); itr != auras.end(); ++itr)
-            target->m_invisibilityMask |= (1 << GetMiscValue());
+        if (!target->HasAuraType(SPELL_AURA_MOD_INVISIBILITY))
+        {
+            // if not have different invisibility auras.
+            // remove glow vision
+            if (target->GetTypeId() == TYPEID_PLAYER)
+                target->RemoveFlag(PLAYER_FIELD_BYTES2,PLAYER_FIELD_BYTE2_INVISIBILITY_GLOW);
 
-        // if not have different invisibility auras.
-        // remove glow vision
-        if (!target->m_invisibilityMask && target->GetTypeId() == TYPEID_PLAYER)
-            target->RemoveFlag(PLAYER_FIELD_BYTES2,PLAYER_FIELD_BYTE2_INVISIBILITY_GLOW);
+            target->m_invisibility.DelFlag(type);
+        }
 
-        target->UpdateObjectVisibility();
+        target->m_invisibility.AddValue(type, -GetAmount());
     }
+
+    target->UpdateObjectVisibility();
+}
+
+void AuraEffect::HandleModStealthDetect(AuraApplication const * aurApp, uint8 mode, bool apply) const
+{
+    if (!(mode & AURA_EFFECT_HANDLE_REAL))
+        return;
+
+    Unit * target = aurApp->GetTarget();
+    StealthType type = StealthType(GetMiscValue());
+
+    if (apply)
+    {
+        target->m_stealthDetect.AddFlag(type);
+        target->m_stealthDetect.AddValue(type, GetAmount());
+    }
+    else
+    {
+        if (!target->HasAuraType(SPELL_AURA_MOD_STEALTH_DETECT))
+            target->m_stealthDetect.DelFlag(type);
+
+        target->m_stealthDetect.AddValue(type, -GetAmount());
+    }
+
+    target->UpdateObjectVisibility();
 }
 
 void AuraEffect::HandleModStealth(AuraApplication const * aurApp, uint8 mode, bool apply) const
@@ -2794,6 +2826,7 @@ void AuraEffect::HandleModStealth(AuraApplication const * aurApp, uint8 mode, bo
         return;
 
     Unit * target = aurApp->GetTarget();
+    StealthType type = StealthType(GetMiscValue());
 
     if (apply)
     {
@@ -2803,23 +2836,44 @@ void AuraEffect::HandleModStealth(AuraApplication const * aurApp, uint8 mode, bo
             target->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_IMMUNE_OR_LOST_SELECTION);
         }
 
+        target->m_stealth.AddFlag( type);
+        target->m_stealth.AddValue(type, GetAmount());
+
         target->SetStandFlags(UNIT_STAND_FLAGS_CREEP);
         if (target->GetTypeId() == TYPEID_PLAYER)
             target->SetFlag(PLAYER_FIELD_BYTES2, 0x2000);
-
-        // apply only if not in GM invisibility (and overwrite invisibility state)
-        if (target->GetVisibility() != VISIBILITY_OFF)
-            target->SetVisibility(VISIBILITY_GROUP_STEALTH);
     }
-    else if (!target->HasAuraType(SPELL_AURA_MOD_STEALTH)) // if last SPELL_AURA_MOD_STEALTH
+    else
     {
-        target->RemoveStandFlags(UNIT_STAND_FLAGS_CREEP);
-        if (target->GetTypeId() == TYPEID_PLAYER)
-            target->RemoveFlag(PLAYER_FIELD_BYTES2, 0x2000);
+        target->m_stealth.AddValue(type, -GetAmount());
 
-        if (target->GetVisibility() != VISIBILITY_OFF)
-            target->SetVisibility(VISIBILITY_ON);
+        if (!target->HasAuraType(SPELL_AURA_MOD_STEALTH)) // if last SPELL_AURA_MOD_STEALTH
+        {
+            target->m_stealth.DelFlag(type);
+
+            target->RemoveStandFlags(UNIT_STAND_FLAGS_CREEP);
+            if (target->GetTypeId() == TYPEID_PLAYER)
+                target->RemoveFlag(PLAYER_FIELD_BYTES2, 0x2000);
+        }
     }
+
+    target->UpdateObjectVisibility();
+}
+
+void AuraEffect::HandleModStealthLevel(AuraApplication const * aurApp, uint8 mode, bool apply) const
+{
+    if (!(mode & AURA_EFFECT_HANDLE_REAL))
+        return;
+
+    Unit * target = aurApp->GetTarget();
+    StealthType type = StealthType(GetMiscValue());
+
+    if (apply)
+        target->m_stealth.AddValue(type, GetAmount());
+    else
+        target->m_stealth.AddValue(type, -GetAmount());
+
+    target->UpdateObjectVisibility();
 }
 
 void AuraEffect::HandleSpiritOfRedemption(AuraApplication const * aurApp, uint8 mode, bool apply) const
@@ -2863,12 +2917,19 @@ void AuraEffect::HandleAuraGhost(AuraApplication const * aurApp, uint8 mode, boo
         return;
 
     if (apply)
+    {
         target->SetFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST);
+        target->m_serverSideVisibility.SetValue(SERVERSIDE_VISIBILITY_GHOST, GHOST_VISIBILITY_GHOST);
+        target->m_serverSideVisibilityDetect.SetValue(SERVERSIDE_VISIBILITY_GHOST, GHOST_VISIBILITY_GHOST);
+    }
     else
     {
         if (target->HasAuraType(SPELL_AURA_GHOST))
             return;
+
         target->RemoveFlag(PLAYER_FLAGS, PLAYER_FLAGS_GHOST);
+        target->m_serverSideVisibility.SetValue(SERVERSIDE_VISIBILITY_GHOST, GHOST_VISIBILITY_ALIVE);
+        target->m_serverSideVisibilityDetect.SetValue(SERVERSIDE_VISIBILITY_GHOST, GHOST_VISIBILITY_ALIVE);
     }
 }
 
@@ -2909,8 +2970,8 @@ void AuraEffect::HandlePhase(AuraApplication const * aurApp, uint8 mode, bool ap
         target->SetPhaseMask(PHASEMASK_NORMAL, false);
 
     // need triggering visibility update base at phase update of not GM invisible (other GMs anyway see in any phases)
-    if (target->GetVisibility() != VISIBILITY_OFF)
-        target->SetVisibility(target->GetVisibility());
+    if (!target->IsVisible())
+        target->UpdateObjectVisibility();
 }
 
 /**********************/
@@ -2927,6 +2988,7 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const * aurApp, uint8 m
     uint32 modelid = 0;
     Powers PowerType = POWER_MANA;
     ShapeshiftForm form = ShapeshiftForm(GetMiscValue());
+
     switch(form)
     {
         case FORM_CAT:
@@ -3210,7 +3272,7 @@ void AuraEffect::HandleAuraTransform(AuraApplication const * aurApp, uint8 mode,
             if (!ci)
             {
                 target->SetDisplayId(16358);              // pig pink ^_^
-                sLog.outError("Auras: unknown creature id = %d (only need its modelid) Form Spell Aura Transform in Spell ID = %d", GetMiscValue(), GetId());
+                sLog.outError("Auras: unknown creature id = %d (only need its modelid) From Spell Aura Transform in Spell ID = %d", GetMiscValue(), GetId());
             }
             else
             {
@@ -3355,9 +3417,9 @@ void AuraEffect::HandleFeignDeath(AuraApplication const * aurApp, uint8 mode, bo
         */
 
         UnitList targets;
-        Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(target, target, target->GetMap()->GetVisibilityDistance());
+        Trinity::AnyUnfriendlyUnitInObjectRangeCheck u_check(target, target, target->GetMap()->GetVisibilityRange());
         Trinity::UnitListSearcher<Trinity::AnyUnfriendlyUnitInObjectRangeCheck> searcher(target, targets, u_check);
-        target->VisitNearbyObject(target->GetMap()->GetVisibilityDistance(), searcher);
+        target->VisitNearbyObject(target->GetMap()->GetVisibilityRange(), searcher);
         for (UnitList::iterator iter = targets.begin(); iter != targets.end(); ++iter)
         {
             if (!(*iter)->hasUnitState(UNIT_STAT_CASTING))
@@ -3641,11 +3703,11 @@ void AuraEffect::HandleAuraModStalked(AuraApplication const * aurApp, uint8 mode
     else
     {
         // do not remove unit flag if there are more than this auraEffect of that kind on unit on unit
-        if (target->HasAuraType(GetAuraType()))
-            return;
-
-        target->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_TRACK_UNIT);
+        if (!target->HasAuraType(GetAuraType()))
+            target->RemoveFlag(UNIT_DYNAMIC_FLAGS, UNIT_DYNFLAG_TRACK_UNIT);
     }
+
+    target->UpdateObjectVisibility();
 }
 
 void AuraEffect::HandleAuraUntrackable(AuraApplication const * aurApp, uint8 mode, bool apply) const
@@ -3716,7 +3778,7 @@ void AuraEffect::HandleAuraMounted(AuraApplication const * aurApp, uint8 mode, b
         CreatureInfo const* ci = sObjectMgr.GetCreatureTemplate(GetMiscValue());
         if (!ci)
         {
-            sLog.outErrorDb("AuraMounted: `creature_template`='%u' not found in database (only need it modelid)",GetMiscValue());
+            sLog.outErrorDb("AuraMounted: `creature_template`='%u' not found in database (only need its modelid)",GetMiscValue());
             return;
         }
 
@@ -4068,7 +4130,7 @@ void AuraEffect::HandleModPossessPet(AuraApplication const * aurApp, uint8 mode,
     {
         pet->RemoveCharmedBy(caster);
 
-        if (!pet->IsWithinDistInMap(caster, pet->GetMap()->GetVisibilityDistance()))
+        if (!pet->IsWithinDistInMap(caster, pet->GetMap()->GetVisibilityRange()))
             pet->Remove(PET_SAVE_NOT_IN_SLOT, true);
         else
         {
@@ -4614,7 +4676,7 @@ void AuraEffect::HandleAuraModStat(AuraApplication const * aurApp, uint8 mode, b
 
     if (GetMiscValue() < -2 || GetMiscValue() > 4)
     {
-        sLog.outError("WARNING: Spell %u effect %u have unsupported misc value (%i) for SPELL_AURA_MOD_STAT ",GetId(),GetEffIndex(),GetMiscValue());
+        sLog.outError("WARNING: Spell %u effect %u has an unsupported misc value (%i) for SPELL_AURA_MOD_STAT ",GetId(),GetEffIndex(),GetMiscValue());
         return;
     }
 
@@ -4778,7 +4840,7 @@ void AuraEffect::HandleAuraModResistenceOfStatPercent(AuraApplication const * au
     {
         // support required adding replace UpdateArmor by loop by UpdateResistence at intellect update
         // and include in UpdateResistence same code as in UpdateArmor for aura mod apply.
-        sLog.outError("Aura SPELL_AURA_MOD_RESISTANCE_OF_STAT_PERCENT(182) need adding support for non-armor resistances!");
+        sLog.outError("Aura SPELL_AURA_MOD_RESISTANCE_OF_STAT_PERCENT(182) does not work for non-armor type resistances!");
         return;
     }
 
@@ -6426,4 +6488,76 @@ void AuraEffect::HandleAuraOpenStable(AuraApplication const * aurApp, uint8 mode
         target->ToPlayer()->GetSession()->SendStablePet(target->GetGUID());
 
      // client auto close stable dialog at !apply aura
+}
+
+void AuraEffect::HandleAuraModFakeInebriation(AuraApplication const * aurApp, uint8 mode, bool apply) const
+{
+    if (!(mode & AURA_EFFECT_HANDLE_REAL))
+        return;
+
+    Unit* target = aurApp->GetTarget();
+
+    if (apply)
+    {
+        target->m_invisibilityDetect.AddFlag( INVISIBILITY_DRUNK);
+        target->m_invisibilityDetect.AddValue(INVISIBILITY_DRUNK, GetAmount());
+
+        if (target->GetTypeId() == TYPEID_PLAYER)
+        {
+            int32 oldval = target->ToPlayer()->GetInt32Value(PLAYER_FAKE_INEBRIATION);
+            target->ToPlayer()->SetInt32Value(PLAYER_FAKE_INEBRIATION, oldval + GetAmount());
+        }
+    }
+    else
+    {
+        bool removeDetect = !target->HasAuraType(SPELL_AURA_MOD_FAKE_INEBRIATE);
+
+        target->m_invisibilityDetect.AddValue(INVISIBILITY_DRUNK, -GetAmount());
+
+        if (target->GetTypeId() == TYPEID_PLAYER)
+        {
+            int32 oldval = target->ToPlayer()->GetInt32Value(PLAYER_FAKE_INEBRIATION);
+            target->ToPlayer()->SetInt32Value(PLAYER_FAKE_INEBRIATION, oldval - GetAmount());
+
+            if (removeDetect)
+                removeDetect = !target->ToPlayer()->GetDrunkValue();
+        }
+
+        if (removeDetect)
+            target->m_invisibilityDetect.DelFlag(INVISIBILITY_DRUNK);
+    }
+
+    target->UpdateObjectVisibility();
+}
+
+void AuraEffect::HandleAuraSetVehicle(AuraApplication const * aurApp, uint8 mode, bool apply) const
+{
+    if (!(mode & AURA_EFFECT_HANDLE_REAL))
+        return;
+
+    Unit * target = aurApp->GetTarget();
+
+    if (target->GetTypeId() != TYPEID_PLAYER || !target->IsInWorld())
+        return;
+
+    uint32 vehicleId = GetMiscValue();
+
+    if (apply)
+    {
+        if (!target->CreateVehicleKit(vehicleId))
+            return;
+    }
+    else if (target->GetVehicleKit())
+        target->RemoveVehicleKit();
+
+    WorldPacket data(SMSG_PLAYER_VEHICLE_DATA, target->GetPackGUID().size()+4);
+    data.appendPackGUID(target->GetGUID());
+    data << uint32(apply ? vehicleId : 0);
+    target->SendMessageToSet(&data, true);
+
+    if (apply)
+    {
+        data.Initialize(SMSG_ON_CANCEL_EXPECTED_RIDE_VEHICLE_AURA, 0);
+        target->ToPlayer()->GetSession()->SendPacket(&data);
+    }
 }

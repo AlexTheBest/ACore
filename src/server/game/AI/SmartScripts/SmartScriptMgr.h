@@ -149,9 +149,10 @@ enum SMART_EVENT
     SMART_EVENT_GOSSIP_SELECT            = 62,      //1             // menuID, actionID
     SMART_EVENT_JUST_CREATED             = 63,      //1             // none
     SMART_EVENT_GOSSIP_HELLO             = 64,      //1             // none
-    SMART_EVENT_FOLLOW_COPMLETE          = 65,      //1             // none
+    SMART_EVENT_FOLLOW_COMPLETED          = 65,      //1             // none
+    SMART_EVENT_DUMMY_EFFECT             = 66,      //1             // spellId, effectIndex
 
-    SMART_EVENT_END                      = 66,
+    SMART_EVENT_END                      = 67,
 };
 
 struct SmartEvent
@@ -326,6 +327,12 @@ struct SmartEvent
 
         struct
         {
+            uint32 spell;
+            uint32 effIndex;
+        } dummy;
+
+        struct
+        {
             uint32 param1;
             uint32 param2;
             uint32 param3;
@@ -384,7 +391,7 @@ enum SMART_ACTION
     SMART_ACTION_DIE                                = 37,     // No Params
     SMART_ACTION_SET_IN_COMBAT_WITH_ZONE            = 38,     // No Params
     SMART_ACTION_CALL_FOR_HELP                      = 39,     // Radius
-    SMART_ACTION_SET_SHEATH                         = 40,     // Sheath (0-passive,1-melee,2-ranged)
+    SMART_ACTION_SET_SHEATH                         = 40,     // Sheath (0-unarmed,1-melee,2-ranged)
     SMART_ACTION_FORCE_DESPAWN                      = 41,     // timer
     SMART_ACTION_SET_INVINCIBILITY_HP_LEVEL         = 42,     // MinHpValue(+pct, -flat)
     SMART_ACTION_MOUNT_TO_ENTRY_OR_MODEL            = 43,     // Creature_template entry(param1) OR ModelId (param2) (or 0 for both to unmount)
@@ -397,7 +404,7 @@ enum SMART_ACTION
     SMART_ACTION_ATTACK_START                       = 49,     // 
     SMART_ACTION_SUMMON_GO                          = 50,     // GameObjectID, DespawnTime in ms, 
     SMART_ACTION_KILL_UNIT                          = 51,     // 
-    SMART_ACTION_WP_LOAD                            = 52,     // pathID
+    SMART_ACTION_ACTIVATE_TAXI                      = 52,     // TaxiID
     SMART_ACTION_WP_START                           = 53,     // run/walk, pathID, canRepeat, quest, despawntime, reactState
     SMART_ACTION_WP_PAUSE                           = 54,     // time
     SMART_ACTION_WP_STOP                            = 55,     // despawnTime, quest, fail?
@@ -417,7 +424,7 @@ enum SMART_ACTION
     SMART_ACTION_PLAYMOVIE                          = 68,     // entry
     SMART_ACTION_MOVE_TO_POS                        = 69,     // xyz
     SMART_ACTION_RESPAWN_TARGET                     = 70,     // 
-    SMART_ACTION_EQUIP                              = 71,     // entry slot1,slot2,slot3
+    SMART_ACTION_EQUIP                              = 71,     // entry, slotmask slot1,slot2,slot3   ,only slots with mask set will be sent to client, bits are 1,2,4, leaving mask 0 is defaulted to mask 7 (send all), slots1-3 are only used if no entry is set
     SMART_ACTION_CLOSE_GOSSIP                       = 72,     // none
     SMART_ACTION_TRIGGER_TIMED_EVENT                = 73,     // id(>1)
     SMART_ACTION_REMOVE_TIMED_EVENT                 = 74,     // id(>1)
@@ -430,8 +437,14 @@ enum SMART_ACTION
     SMART_ACTION_SET_NPC_FLAG                       = 81,     // Flags
     SMART_ACTION_ADD_NPC_FLAG                       = 82,     // Flags
     SMART_ACTION_REMOVE_NPC_FLAG                    = 83,     // Flags
-    
-    SMART_ACTION_END                                = 84,
+    SMART_ACTION_SIMPLE_TALK                        = 84,     // groupID, can be used to make players say groupID, Text_over event is not triggered, whisper can not be used (Target units will say the text)
+    SMART_ACTION_INVOKER_CAST                       = 85,     // spellID, castFlags,   if avaliable, last used invoker will cast spellId with castFlags on targets
+    SMART_ACTION_CROSS_CAST                         = 86,     // spellID, castFlags, CasterTargetType, CasterTarget param1, CasterTarget param2, CasterTarget param3, ( + the origonal target fields as Destination target),   CasterTargets will cast spellID on all Targets (use with caution if targeting multiple * multiple units)
+    SMART_ACTION_CALL_RANDOM_TIMED_ACTIONLIST       = 87,     // script9 ids 1-9
+    SMART_ACTION_CALL_RANDOM_RANGE_TIMED_ACTIONLIST = 88,     // script9 id min, max
+    SMART_ACTION_RANDOM_MOVE                        = 89,     // maxDist
+ 
+    SMART_ACTION_END                                = 90,
 };
 
 struct SmartAction
@@ -493,6 +506,10 @@ struct SmartAction
         {
             uint32 spell;
             uint32 flags;
+            uint32 targetType;
+            uint32 targetParam1;
+            uint32 targetParam2;
+            uint32 targetParam3;
         } cast;
 
         struct
@@ -666,7 +683,7 @@ struct SmartAction
         struct
         {
             uint32 id;
-        } wpLoad;
+        } taxi;
         
 
         struct
@@ -757,6 +774,7 @@ struct SmartAction
         struct
         {
             uint32 entry;
+            uint32 mask;
             uint32 slot1;
             uint32 slot2;
             uint32 slot3;
@@ -778,6 +796,16 @@ struct SmartAction
             uint32 dontResume;
             uint32 timerType;
         } timedActionList;
+
+        struct
+        {
+            uint32 entry1;
+            uint32 entry2;
+            uint32 entry3;
+            uint32 entry4;
+            uint32 entry5;
+            uint32 entry6;
+        } randTimedActionList;
 
         struct
         {
@@ -827,7 +855,9 @@ enum SMARTAI_TARGETS
     SMART_TARGET_CLOSEST_GAMEOBJECT             = 20,   // entry(0any)
     SMART_TARGET_CLOSEST_PLAYER                 = 21,   // none
     SMART_TARGET_ACTION_INVOKER_VEHICLE         = 22,   // Unit's vehicle who caused this Event to occur
-    SMART_TARGET_END                            = 23,
+    SMART_TARGET_OWNER_OR_SUMMONER              = 23,   // Unit's owner or summoner
+    SMART_TARGET_THREAT_LIST                    = 24,   // All units on creature's threat list
+    SMART_TARGET_END                            = 25,
 };
 
 struct SmartTarget
@@ -1038,6 +1068,8 @@ const uint32 SmartAIEventMask[SMART_EVENT_END][2] =
     {SMART_EVENT_GOSSIP_SELECT,             SMART_SCRIPT_TYPE_MASK_CREATURE + SMART_SCRIPT_TYPE_MASK_GAMEOBJECT },
     {SMART_EVENT_JUST_CREATED,              SMART_SCRIPT_TYPE_MASK_CREATURE + SMART_SCRIPT_TYPE_MASK_GAMEOBJECT },
     {SMART_EVENT_GOSSIP_HELLO,              SMART_SCRIPT_TYPE_MASK_CREATURE + SMART_SCRIPT_TYPE_MASK_GAMEOBJECT },
+    {SMART_EVENT_FOLLOW_COMPLETED,           SMART_SCRIPT_TYPE_MASK_CREATURE },
+    {SMART_EVENT_DUMMY_EFFECT,              SMART_SCRIPT_TYPE_MASK_CREATURE },
 
 };
 
@@ -1241,16 +1273,16 @@ class SmartAIMgr
             }
             return true;
         }
-        inline bool IsConditionValid(SmartScriptHolder e, uint32 t, uint32 v1, uint32 v2, uint32 v3)
+        /*inline bool IsConditionValid(SmartScriptHolder e, int32 t, int32 v1, int32 v2, int32 v3)
         {
             bool error = false;
             if (t > 0 && v1 >= 0 && v2 >= 0 && v3 >= 0)
             {
                 Condition cond;
                 cond.mConditionType = ConditionType(t);
-                cond.mConditionValue1 = v1;
-                cond.mConditionValue2 = v2;
-                cond.mConditionValue3 = v3;
+                cond.mConditionValue1 = uint32(v1);
+                cond.mConditionValue2 = uint32(v2);
+                cond.mConditionValue3 = uint32(v3);
                 if (!sConditionMgr.isConditionTypeValid(&cond))
                     error = true;
             }
@@ -1260,7 +1292,7 @@ class SmartAIMgr
                 return false;
             }
             return true;
-        }
+        }*/
         inline bool IsEmoteValid(SmartScriptHolder e, uint32 entry)
         {
             if (!sEmotesTextStore.LookupEntry(entry))

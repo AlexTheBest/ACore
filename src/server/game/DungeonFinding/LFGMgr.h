@@ -42,6 +42,7 @@ enum LFGenum
 
 enum LfgType
 {
+    LFG_TYPE_NONE    = 0,                                   // Internal use only
     LFG_TYPE_DUNGEON = 1,
     LFG_TYPE_RAID    = 2,
     LFG_TYPE_QUEST   = 3,
@@ -274,7 +275,6 @@ class LFGMgr
     private:
         void Cleaner();
         void AddGuidToNewQueue(uint64 guid);
-        void AddToQueue(uint64 guid, LfgRolesMap* roles, LfgDungeonSet* dungeons);
 
         bool RemoveFromQueue(uint64 guid);
         void RemoveProposal(LfgProposalMap::iterator itProposal, LfgUpdateType type);
@@ -294,7 +294,7 @@ class LFGMgr
         LfgLockStatusMap* GetGroupLockStatusDungeons(PlayerSet* pPlayers, LfgDungeonSet* dungeons, bool useEntry = true);
         LfgDungeonSet* GetDungeonsByRandom(uint32 randomdungeon);
         LfgDungeonSet* GetAllDungeons();
-        uint8 GetDungeonGroupType(uint32 dungeon);
+        LfgType GetDungeonType(uint32 dungeon);
 
         LfgRewardMap m_RewardMap;                           // Stores rewards for random dungeons
         std::map<uint32, uint32> m_EncountersByAchievement; // Stores dungeon ids associated with achievements (for rewards)

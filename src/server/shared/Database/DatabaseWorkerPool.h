@@ -254,17 +254,18 @@ class DatabaseWorkerPool
 
         void CommitTransaction(SQLTransaction transaction)
         {
-            #ifdef SQLQUERY_LOG
-            if (transaction->GetSize() == 0)
+            if (sLog.GetSQLDriverQueryLogging())
             {
-                sLog.outSQLDriver("Transaction contains 0 queries. Not executing.");
-                return;
+                if (transaction->GetSize() == 0)
+                {
+                    sLog.outSQLDriver("Transaction contains 0 queries. Not executing.");
+                    return;
+                }
+                if (transaction->GetSize() == 1)
+                {
+                    sLog.outSQLDriver("Warning: Transaction only holds 1 query, consider removing Transaction context in code.");
+                }
             }
-            if (transaction->GetSize() == 1)
-            {
-                sLog.outSQLDriver("Warning: Transaction only holds 1 query, consider removing Transaction context in code.");
-            }
-            #endif
             Enqueue(new TransactionTask(transaction));
         }
 
@@ -277,6 +278,13 @@ class DatabaseWorkerPool
         {
             PreparedStatementTask* task = new PreparedStatementTask(stmt);
             Enqueue(task);
+        }
+		
+        void DirectExecute(PreparedStatement* stmt)
+        {
+            T* t = GetFreeConnection();
+            t->Execute(stmt);
+            t->Unlock();
         }
 
         void escape_string(std::string& str)

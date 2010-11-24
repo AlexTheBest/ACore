@@ -270,8 +270,9 @@ public:
                     return false;
                 else
                 {
-                    //This should be sent to the player as red text.
-                    pPlayer->Say("You have created enough ghouls. Return to Gothik the Harvester at Death's Breach.",LANG_UNIVERSAL);
+                    // This should be sent to the player as red text.
+                    // TODO: Text should be moved to DB
+                    pPlayer->Say("You have created enough ghouls. Return to Gothik the Harvester at Death's Breach.", LANG_UNIVERSAL);
                     return true;
                 }
             }
@@ -341,7 +342,7 @@ public:
         pGo->SummonGameObject(GO_HIGH_QUALITY_FUR, pGo->GetPositionX(), pGo->GetPositionY(), pGo->GetPositionZ(), 0, 0, 0, 0, 0, 1000);
         if (TempSummon* summon = pPlayer->SummonCreature(NPC_NESINGWARY_TRAPPER, x, y, z, pGo->GetOrientation(), TEMPSUMMON_DEAD_DESPAWN, 1000))
         {
-            summon->SetVisibility(VISIBILITY_OFF);
+            summon->SetVisible(false);
             summon->SetReactState(REACT_PASSIVE);
             summon->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_OOC_NOT_ATTACKABLE);
         }
@@ -484,6 +485,32 @@ public:
     }
 };
 
+enum eCapturedFrog
+{
+    QUEST_THE_PERFECT_SPIES      = 25444,
+    NPC_VANIRAS_SENTRY_TOTEM     = 40187
+};
+
+class item_captured_frog : public ItemScript
+{
+public:
+    item_captured_frog() : ItemScript("item_captured_frog") { }
+
+    bool OnUse(Player* pPlayer, Item* pItem, SpellCastTargets const& /*targets*/)
+    {
+        if (pPlayer->GetQuestStatus(QUEST_THE_PERFECT_SPIES) == QUEST_STATUS_INCOMPLETE)
+        {
+            if (pPlayer->FindNearestCreature(NPC_VANIRAS_SENTRY_TOTEM, 10.0f))
+                return false;
+            else
+                pPlayer->SendEquipError(EQUIP_ERR_OUT_OF_RANGE, pItem, NULL);
+        }
+        else
+            pPlayer->SendEquipError(EQUIP_ERR_CANT_DO_RIGHT_NOW, pItem, NULL);
+        return true;
+    }
+};
+
 void AddSC_item_scripts()
 {
     new item_only_for_flight;
@@ -499,4 +526,5 @@ void AddSC_item_scripts()
     new item_petrov_cluster_bombs;
     new item_dehta_trap_smasher;
     new item_trident_of_nazjan;
+    new item_captured_frog();
 }
