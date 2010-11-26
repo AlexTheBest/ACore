@@ -38,6 +38,7 @@ public:
             { "activelist",     SEC_GAMEMASTER,     true,  &HandleEventActiveListCommand,     "", NULL },
             { "start",          SEC_GAMEMASTER,     true,  &HandleEventStartCommand,          "", NULL },
             { "stop",           SEC_GAMEMASTER,     true,  &HandleEventStopCommand,           "", NULL },
+            { "mixbg",           SEC_GAMEMASTER,     true,  &HandleEventMixBgCommand,           "", NULL },
             { "",               SEC_GAMEMASTER,     true,  &HandleEventInfoCommand,           "", NULL },
             { NULL,             0,                  false, NULL,                              "", NULL }
         };
@@ -167,6 +168,12 @@ public:
         sGameEventMgr.StartEvent(event_id,true);
         return true;
     }
+
+	static bool HandleEventMixBgCommand(ChatHandler* handler, const char* args)
+	{
+ 	   sBattlegroundMgr.ToggleMixBg();  
+ 	   return true;
+	}
 
     static bool HandleEventStopCommand(ChatHandler* handler, const char* args)
     {

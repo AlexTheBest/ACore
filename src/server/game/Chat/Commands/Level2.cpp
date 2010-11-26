@@ -534,12 +534,6 @@ bool ChatHandler::HandleCharacterChangeFactionCommand(const char * args)
     return true;
 }
 
-bool ChatHandler::HandleEventMixBgCommand(const char* args)
-{
-    sBattlegroundMgr.ToggleMixBg();  
-    return true;
-}
-
 bool ChatHandler::HandleCharacterChangeRaceCommand(const char * args)
 {
     Player* target;
@@ -1013,7 +1007,7 @@ bool ChatHandler::HandlePetTpCommand(const char *args)
     return true;
 }
 
-
+/*
 bool ChatHandler::HandleWintergraspStatusCommand(const char* args)
 {
     OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr.GetOutdoorPvPToZoneId(4197);
@@ -1158,7 +1152,7 @@ bool ChatHandler::HandleWintergraspSwitchTeamCommand(const char* args)
     PSendSysMessage(LANG_BG_WG_SWITCH_FACTION, GetTrinityString(pvpWG->getDefenderTeam() == TEAM_ALLIANCE ? LANG_BG_AB_ALLY : LANG_BG_AB_HORDE));
     return true;
 }
-
+*/
 bool ChatHandler::HandleLookupTitleCommand(const char* args)
 {
     if (!*args)

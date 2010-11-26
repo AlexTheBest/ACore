@@ -42,7 +42,7 @@ void _RespawnCreatureIfNeeded(Creature *cr, uint32 entry)
         cr->SetOriginalEntry(entry);
         if (entry != cr->GetEntry() || !cr->isAlive())
             cr->Respawn(true);
-        cr->SetVisibility(VISIBILITY_ON);
+        cr->SetVisible(true);
     }
 }
 
@@ -921,42 +921,42 @@ bool OutdoorPvPWG::UpdateCreatureInfo(Creature *creature)
                 if (!creature->isAlive())
                     creature->Respawn(true);
                 creature->setFaction(WintergraspFaction[getDefenderTeam()]);
-                creature->SetVisibility(VISIBILITY_ON);
+                creature->SetVisible(true);
             }
             else
             {
                 if (creature->IsVehicle() && creature->GetVehicleKit())
                     creature->GetVehicleKit()->RemoveAllPassengers();
-                creature->SetVisibility(VISIBILITY_OFF);
+                creature->SetVisible(false);
                 creature->setFaction(35);
             }
             return false;
         case CREATURE_OTHER:
             if (isWarTime())
             {
-                creature->SetVisibility(VISIBILITY_OFF);
+                creature->SetVisible(false);
                 creature->setFaction(35);
             }
             else
             {
                 creature->RestoreFaction();
-                creature->SetVisibility(VISIBILITY_ON);
+                creature->SetVisible(true);
             }
             return false;
         case CREATURE_SPIRIT_GUIDE:
             if (isWarTime())
             {
-                creature->SetVisibility(VISIBILITY_ON);
+                creature->SetVisible(true);
                 //creature->setDeathState(ALIVE);
             }
             else
             {
-                creature->SetVisibility(VISIBILITY_OFF);
+                creature->SetVisible(false);
                 //creature->setDeathState(DEAD);
             }
             return false;
         case CREATURE_SPIRIT_HEALER:
-            creature->SetVisibility(isWarTime() ? VISIBILITY_OFF : VISIBILITY_ON);
+            creature->SetVisible(isWarTime() ? false : true);
             return false;
         case CREATURE_ENGINEER:
             return false;
@@ -1829,6 +1829,7 @@ OPvPCapturePointWG *OutdoorPvPWG::GetWorkshopByGOGuid(uint32 lowguid) const
 /*########################################################
  * Copy of Battleground system to make Spirit Guides Work
  *#######################################################*/
+
 void OutdoorPvPWG::SendAreaSpiritHealerQueryOpcode(Player *pl, const uint64& guid)
 {
     WorldPacket data(SMSG_AREA_SPIRIT_HEALER_TIME, 12);
@@ -1975,7 +1976,7 @@ void OPvPCapturePointWG::ChangeTeam(TeamId oldTeam)
         }
     }
     else if (m_engineer)
-        m_engineer->SetVisibility(VISIBILITY_OFF);
+        m_engineer->SetVisible(false);
 
     sLog.outDebug("Wintergrasp workshop now belongs to %u.", (uint32)m_buildingState->GetTeam());
 }
@@ -1997,5 +1998,5 @@ class OutdoorPvP_wintergrasp : public OutdoorPvPScript
 
 void AddSC_outdoorpvp_wg()
 {
-    new OutdoorPvP_wintergrasp();
+   new OutdoorPvP_wintergrasp();
 }

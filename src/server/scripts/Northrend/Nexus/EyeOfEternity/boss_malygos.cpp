@@ -596,7 +596,7 @@ public:
                     itr->getSource()->CastSpell(itr->getSource(), SPELL_VORTEX, true, NULL, NULL, me->GetGUID());
                     //if(Creature *pVortex = me->SummonCreature(NPC_VORTEX, OtherLoc[1].x, OtherLoc[1].y, OtherLoc[1].z, OtherLoc[1].o, TEMPSUMMON_TIMED_DESPAWN, 11000))
                     //{                    
-                    //    pVortex->SetVisibility(VISIBILITY_OFF);    
+                    //    pVortex->SetVisible(false);    
                     //    pVortex->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
                     //}
                 }        
@@ -608,7 +608,7 @@ public:
                     return;
                 if(Creature *pVortex = me->SummonCreature(NPC_VORTEX, VortexLoc[phase-1].x, VortexLoc[phase-1].y, VORTEX_Z, 0, TEMPSUMMON_TIMED_DESPAWN, 10000))
                 {
-                    pVortex->SetVisibility(VISIBILITY_OFF);
+                    pVortex->SetVisible(false);
                     pVortex->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_DISABLE_MOVE);
                     Map::PlayerList const &lPlayers = pMap->GetPlayers();
                     for(Map::PlayerList::const_iterator itr = lPlayers.begin(); itr != lPlayers.end(); ++itr)
@@ -1335,7 +1335,7 @@ public:
                         pTemp->SetFlying(true);
                         pTemp->SetUnitMovementFlags(MOVEMENTFLAG_SPLINE_ELEVATION);
                         pTemp->SetFacingToObject(me);
-                        pTemp->SetVisibility(VISIBILITY_OFF);
+                        pTemp->SetVisible(false);
                         m_AlexstraszaGUID = pTemp->GetGUID();
                     }
                     m_uiSubPhase = 0;
@@ -1354,8 +1354,8 @@ public:
                     switch(m_uiSpeechCount)
                     {
                         case 1:
-                            //me->SetVisibility(VISIBILITY_OFF);
-                            pAlexstrasza->SetVisibility(VISIBILITY_ON);
+                            //me->SetVisible(false);
+                            pAlexstrasza->SetVisible(true);
                             pAlexstrasza->SetFacingToObject(me->getVictim());
                             break;
                         case 4:
