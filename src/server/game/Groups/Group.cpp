@@ -354,11 +354,15 @@ bool Group::AddMember(const uint64 &guid, const char* name)
     return true;
 }
 
-uint32 Group::RemoveMember(const uint64 &guid, const RemoveMethod &method)
+uint32 Group::RemoveMember(const uint64 &guid, const RemoveMethod &method /* = GROUP_REMOVEMETHOD_DEFAULT */, uint64 kicker /* = 0 */, const char* reason /* = NULL */)
 {
     BroadcastGroupUpdate();
 
-    sScriptMgr.OnGroupRemoveMember(this, guid, method);
+    sScriptMgr.OnGroupRemoveMember(this, guid, method, kicker, reason);
+
+    // Lfg group vote kick handled in scripts
+    if (isLFGGroup() && method == GROUP_REMOVEMETHOD_KICK)
+        return m_memberSlots.size();
 
     // remove member and change leader (if need) only if strong more 2 members _before_ member remove (BG allow 1 member group)
     if (GetMembersCount() > (isBGGroup() ? 1u : 2u))
@@ -1587,6 +1591,10 @@ void Group::UpdateLooterGuid(WorldObject* pLootedObject, bool ifneed)
 
 GroupJoinBattlegroundResult Group::CanJoinBattlegroundQueue(Battleground const* bgOrTemplate, BattlegroundQueueTypeId bgQueueTypeId, uint32 MinPlayerCount, uint32 /*MaxPlayerCount*/, bool isRated, uint32 arenaSlot)
 {
+    // check if this group is LFG group
+    if (isLFGGroup())
+        return ERR_LFG_CANT_USE_BATTLEGROUND;
+
     BattlemasterListEntry const* bgEntry = sBattlemasterListStore.LookupEntry(bgOrTemplate->GetTypeID());
     if (!bgEntry)
         return ERR_GROUP_JOIN_BATTLEGROUND_FAIL;            // shouldn't happen
@@ -1645,6 +1653,9 @@ GroupJoinBattlegroundResult Group::CanJoinBattlegroundQueue(Battleground const* 
         // check if member can join any more battleground queues
         if (!member->HasFreeBattlegroundQueueId())
             return ERR_BATTLEGROUND_TOO_MANY_QUEUES;        // not blizz-like
+        // check if someone in party is using dungeon system
+        if (member->isUsingLfg())
+            return ERR_LFG_CANT_USE_BATTLEGROUND;
     }
 
     // only check for MinPlayerCount since MinPlayerCount == MaxPlayerCount for arenas...
