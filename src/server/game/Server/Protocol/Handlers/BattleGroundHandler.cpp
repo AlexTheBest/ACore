@@ -33,6 +33,7 @@
 #include "Object.h"
 #include "Opcodes.h"
 #include "DisableMgr.h"
+#include "Group.h"
 
 #include "OutdoorPvPWG.h"
 #include "OutdoorPvPMgr.h"

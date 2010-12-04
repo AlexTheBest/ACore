@@ -35,6 +35,7 @@
 #include "InstanceSaveMgr.h"
 #include "Util.h"
 #include "../../irc/IRCClient.h"
+#include "Group.h"
 
 #ifdef _DEBUG_VMAPS
 #include "VMapFactory.h"

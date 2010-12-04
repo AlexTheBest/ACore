@@ -346,7 +346,7 @@ pAuraEffectHandler AuraEffectHandler[TOTAL_AURAS]=
     &AuraEffect::HandleAuraModCritPct,                            //290 SPELL_AURA_MOD_CRIT_PCT
     &AuraEffect::HandleNoImmediateEffect,                         //291 SPELL_AURA_MOD_XP_QUEST_PCT  implemented in Player::RewardQuest
     &AuraEffect::HandleAuraOpenStable,                            //292 SPELL_AURA_OPEN_STABLE
-    &AuraEffect::HandleNULL,                                      //293 auras which probably add set of abilities to their target based on it's miscvalue
+    &AuraEffect::HandleAuraOverrideSpells,                        //293 auras which probably add set of abilities to their target based on it's miscvalue
     &AuraEffect::HandleNoImmediateEffect,                         //294 SPELL_AURA_PREVENT_REGENERATE_POWER implemented in Player::Regenerate(Powers power)
     &AuraEffect::HandleNULL,                                      //295 0 spells in 3.3.5
     &AuraEffect::HandleAuraSetVehicle,                            //296 SPELL_AURA_SET_VEHICLE_ID sets vehicle on target
@@ -483,8 +483,7 @@ int32 AuraEffect::CalculateAmount(Unit * caster)
                         DoneActualBenefit += caster->SpellBaseDamageBonus(GetSpellSchoolMask(m_spellProto)) * 0.8068f;
                         // Glyph of Ice Barrier: its weird having a SPELLMOD_ALL_EFFECTS here but its blizzards doing :)
                         // Glyph of Ice Barrier is only applied at the spell damage bonus because it was already applied to the base value in CalculateSpellDamage
-                        if (Player* modOwner = caster->GetSpellModOwner())
-                            modOwner->ApplySpellMod(GetSpellProto()->Id, SPELLMOD_ALL_EFFECTS, DoneActualBenefit);
+                        DoneActualBenefit = caster->ApplyEffectModifiers(GetSpellProto(), m_effIndex, (int32)DoneActualBenefit);
                     }
                     // Fire Ward
                     else if(GetSpellProto()->SpellFamilyFlags[0] & 0x8 && GetSpellProto()->SpellFamilyFlags[2] & 0x8)
@@ -513,32 +512,51 @@ int32 AuraEffect::CalculateAmount(Unit * caster)
                     {
                         //+80.68% from sp bonus
                         float bonus = 0.8068f;
-                        AuraEffect const* pAurEff;
 
                         // Borrowed Time
-                        pAurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_PRIEST, 2899, 1);
-                        if (pAurEff)
+                        if (AuraEffect const* pAurEff = caster->GetAuraEffect(SPELL_AURA_DUMMY, SPELLFAMILY_PRIEST, 2899, 1))
                             bonus += (float)pAurEff->GetAmount() / 100.0f;
+
+                        DoneActualBenefit += caster->SpellBaseHealingBonus(GetSpellSchoolMask(m_spellProto)) * bonus;
+                        // Improved PW: Shield: its weird having a SPELLMOD_ALL_EFFECTS here but its blizzards doing :)
+                        // Improved PW: Shield is only applied at the spell healing bonus because it was already applied to the base value in CalculateSpellDamage
+                        DoneActualBenefit = caster->ApplyEffectModifiers(GetSpellProto(), m_effIndex, (int32)DoneActualBenefit);
+                        DoneActualBenefit *= caster->CalculateLevelPenalty(GetSpellProto());
+
+                        amount += (int32)DoneActualBenefit;
 
                         // Twin Disciplines
-                        pAurEff = caster->GetAuraEffect(SPELL_AURA_ADD_PCT_MODIFIER, SPELLFAMILY_PRIEST, 0x400000, 0, 0, caster->GetGUID());
-                        if (pAurEff)
-                            bonus += (float)pAurEff->GetAmount() / 100.0f;
+                        if (AuraEffect const* pAurEff = caster->GetAuraEffect(SPELL_AURA_ADD_PCT_MODIFIER, SPELLFAMILY_PRIEST, 0x400000, 0, 0, caster->GetGUID()))
+                            amount *= (100.0f + pAurEff->GetAmount()) / 100.0f;
 
-                        // Focused Power
-                        pAurEff = caster->GetAuraEffect(SPELL_AURA_MOD_HEALING_DONE_PERCENT, SPELLFAMILY_PRIEST, 2210, 2);
-                        if (pAurEff)
-                            bonus += (float)pAurEff->GetAmount() / 100.0f;
+                        // Focused Power                       
+                        amount *= caster->GetTotalAuraMultiplier(SPELL_AURA_MOD_HEALING_DONE_PERCENT);
 
-                        DoneActualBenefit = caster->SpellBaseHealingBonus(GetSpellSchoolMask(GetSpellProto())) * bonus;
+                        return amount;
                     }
                     break;
                 case SPELLFAMILY_PALADIN:
                     // Sacred Shield
                     if (m_spellProto->SpellFamilyFlags[1] & 0x80000)
                     {
-                        // 0.75 from sp bonus
-                        DoneActualBenefit = caster->SpellBaseHealingBonus(GetSpellSchoolMask(m_spellProto)) * 0.75f;
+                        //+75.00% from sp bonus
+                        float bonus = 0.75f;
+
+                        DoneActualBenefit += caster->SpellBaseHealingBonus(GetSpellSchoolMask(m_spellProto)) * bonus;
+                        // Divine Guardian is only applied at the spell healing bonus because it was already applied to the base value in CalculateSpellDamage
+                        DoneActualBenefit = caster->ApplyEffectModifiers(GetSpellProto(), m_effIndex, (int32)DoneActualBenefit);
+                        DoneActualBenefit *= caster->CalculateLevelPenalty(GetSpellProto());
+
+                        amount += (int32)DoneActualBenefit;
+                        
+                        // Arena - Dampening
+                        if (AuraEffect const* pAurEff = caster->GetAuraEffect(74410, 0))
+                            amount *= (100.0f + pAurEff->GetAmount()) / 100.0f;
+                        // Battleground - Dampening
+                        else if (AuraEffect const* pAurEff = caster->GetAuraEffect(74411, 0))
+                            amount *= (100.0f + pAurEff->GetAmount()) / 100.0f;
+
+                        return amount;
                     }
                     break;
                 default:
@@ -6538,6 +6556,36 @@ void AuraEffect::HandleAuraModFakeInebriation(AuraApplication const * aurApp, ui
     }
 
     target->UpdateObjectVisibility();
+}
+
+void AuraEffect::HandleAuraOverrideSpells(AuraApplication const * aurApp, uint8 mode, bool apply) const
+{
+    if (!(mode & AURA_EFFECT_HANDLE_REAL))
+        return;
+
+    Player * target = aurApp->GetTarget()->ToPlayer();
+
+    if (!target || !target->IsInWorld())
+        return;
+
+    uint32 overrideId = uint32(GetMiscValue());
+
+    if (apply)
+    {
+        target->SetUInt32Value(PLAYER_FIELD_BYTES2, overrideId);
+        if (OverrideSpellDataEntry const* overrideSpells = sOverrideSpellDataStore.LookupEntry(overrideId))
+            for (uint8 i = 0; i < MAX_OVERRIDE_SPELL; ++i)
+                if (uint32 spellId = overrideSpells->spellId[i])
+                    target->AddTemporarySpell(spellId);
+    }
+    else
+    {
+        target->SetUInt32Value(PLAYER_FIELD_BYTES2, 0);
+        if (OverrideSpellDataEntry const* overrideSpells = sOverrideSpellDataStore.LookupEntry(overrideId))
+            for (uint8 i = 0; i < MAX_OVERRIDE_SPELL; ++i)
+                if (uint32 spellId = overrideSpells->spellId[i])
+                    target->RemoveTemporarySpell(spellId);
+    }
 }
 
 void AuraEffect::HandleAuraSetVehicle(AuraApplication const * aurApp, uint8 mode, bool apply) const

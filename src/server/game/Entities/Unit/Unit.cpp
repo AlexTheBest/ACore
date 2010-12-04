@@ -5759,6 +5759,13 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                     triggered_spell_id = 70701;
                     break;
                 }
+                case 70871:
+                {
+                    target = this;
+                    triggered_spell_id = 70872;
+                    basepoints0 = int32(damage) * triggerAmount / 100;
+                    break;
+                }
             }
             break;
         }
@@ -15195,6 +15202,15 @@ void Unit::Kill(Unit *pVictim, bool durabilityLoss)
         // Call creature just died function
         if (creature->IsAIEnabled)
             creature->AI()->JustDied(this);
+		
+        if (creature->ToTempSummon())
+        {
+            if (Unit* pSummoner = creature->ToTempSummon()->GetSummoner())
+            {
+                if (pSummoner->ToCreature() && pSummoner->ToCreature()->IsAIEnabled)
+                    pSummoner->ToCreature()->AI()->SummonedCreatureDies(creature, this);
+            }
+        }
 
         // Dungeon specific stuff, only applies to players killing creatures
         if (creature->GetInstanceId())

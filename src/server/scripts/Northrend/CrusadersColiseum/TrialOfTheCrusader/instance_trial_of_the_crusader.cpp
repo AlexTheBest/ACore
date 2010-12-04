@@ -25,6 +25,7 @@ EndScriptData */
 
 #include "ScriptPCH.h"
 #include "trial_of_the_crusader.h"
+
 class instance_trial_of_the_crusader : public InstanceMapScript
 {
 public:

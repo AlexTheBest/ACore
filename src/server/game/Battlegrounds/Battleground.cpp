@@ -141,6 +141,7 @@ Battleground::Battleground()
     m_IsArena           = false;
     m_Winner            = 2;
     m_StartTime         = 0;
+    m_ResetStatTimer    = 0;
     m_Events            = 0;
     m_IsRated           = false;
     m_BuffChange        = false;
@@ -379,6 +380,14 @@ void Battleground::Update(uint32 diff)
     {
         ModifyStartDelayTime(diff);
 
+        if (m_ResetStatTimer <= 5000)
+        {
+            m_ResetStatTimer = 0;
+            for (BattlegroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
+                if (Player *plr = sObjectMgr.GetPlayer(itr->first))
+                    plr->ResetAllPowers();
+        }
+
         if (!(m_Events & BG_STARTING_EVENT_1))
         {
             m_Events |= BG_STARTING_EVENT_1;
@@ -434,6 +443,7 @@ void Battleground::Update(uint32 diff)
                         plr->GetSession()->SendPacket(&status);
 
                         plr->RemoveAurasDueToSpell(SPELL_ARENA_PREPARATION);
+                        plr->ResetAllPowers();
                         // remove auras with duration lower than 30s
                         Unit::AuraApplicationMap & auraMap = plr->GetAppliedAuras();
                         for (Unit::AuraApplicationMap::iterator iter = auraMap.begin(); iter != auraMap.end();)
@@ -455,12 +465,14 @@ void Battleground::Update(uint32 diff)
             }
             else
             {
-
                 PlaySoundToAll(SOUND_BG_START);
 
                 for (BattlegroundPlayerMap::const_iterator itr = GetPlayers().begin(); itr != GetPlayers().end(); ++itr)
                     if (Player* plr = sObjectMgr.GetPlayer(itr->first))
+                    {
                         plr->RemoveAurasDueToSpell(SPELL_PREPARATION);
+                        plr->ResetAllPowers();
+                    }
                 //Announce BG starting
                 if (sWorld.getBoolConfig(CONFIG_BATTLEGROUND_QUEUE_ANNOUNCER_ENABLE))
                 {
@@ -493,8 +505,9 @@ void Battleground::Update(uint32 diff)
         }
     }
 
-    //update start time
+    // Update start time and reset stats timer
     m_StartTime += diff;
+    m_ResetStatTimer += diff;
 }
 
 void Battleground::SetTeamStartLoc(uint32 TeamID, float X, float Y, float Z, float O)
@@ -726,21 +739,32 @@ void Battleground::EndBattleground(uint32 winner)
         loser_arena_team = sObjectMgr.GetArenaTeamById(GetArenaTeamIdForTeam(GetOtherTeam(winner)));
         if (winner_arena_team && loser_arena_team && winner_arena_team != loser_arena_team)
         {
-            loser_team_rating = loser_arena_team->GetRating();
-            loser_matchmaker_rating = GetArenaMatchmakerRating(GetOtherTeam(winner));
-            winner_team_rating = winner_arena_team->GetRating();
-            winner_matchmaker_rating = GetArenaMatchmakerRating(winner);
-            winner_change = winner_arena_team->WonAgainst(loser_matchmaker_rating);
-            loser_change = loser_arena_team->LostAgainst(winner_matchmaker_rating);
-            sLog.outDebug("--- Winner rating: %u, Loser rating: %u, Winner MMR: %u, Loser MMR: %u, Winner change: %u, Losser change: %u ---", winner_team_rating, loser_team_rating,
-                winner_matchmaker_rating, loser_matchmaker_rating, winner_change, loser_change);
-            SetArenaTeamRatingChangeForTeam(winner, winner_change);
-            SetArenaTeamRatingChangeForTeam(GetOtherTeam(winner), loser_change);
-            sLog.outArena("Arena match Type: %u for Team1Id: %u - Team2Id: %u ended. WinnerTeamId: %u. Winner rating: +%d, Loser rating: %d", m_ArenaType, m_ArenaTeamIds[BG_TEAM_ALLIANCE], m_ArenaTeamIds[BG_TEAM_HORDE], winner_arena_team->GetId(), winner_change, loser_change);
-            if (sWorld.getBoolConfig(CONFIG_ARENA_LOG_EXTENDED_INFO))
-                for (Battleground::BattlegroundScoreMap::const_iterator itr = GetPlayerScoresBegin(); itr != GetPlayerScoresEnd(); itr++)
-                    if (Player* player = sObjectMgr.GetPlayer(itr->first))
-                        sLog.outArena("Statistics for %s (GUID: " UI64FMTD ", Team: %d, IP: %s): %u damage, %u healing, %u killing blows", player->GetName(), itr->first, player->GetArenaTeamId(m_ArenaType == 5 ? 2 : m_ArenaType == 3), player->GetSession()->GetRemoteAddress().c_str(), itr->second->DamageDone, itr->second->HealingDone, itr->second->KillingBlows);
+            if (winner != WINNER_NONE)
+            {
+                loser_team_rating = loser_arena_team->GetRating();
+                loser_matchmaker_rating = GetArenaMatchmakerRating(GetOtherTeam(winner));
+                winner_team_rating = winner_arena_team->GetRating();
+                winner_matchmaker_rating = GetArenaMatchmakerRating(winner);
+                winner_change = winner_arena_team->WonAgainst(loser_matchmaker_rating);
+                loser_change = loser_arena_team->LostAgainst(winner_matchmaker_rating);
+                sLog.outDebug("--- Winner rating: %u, Loser rating: %u, Winner MMR: %u, Loser MMR: %u, Winner change: %u, Losser change: %u ---", winner_team_rating, loser_team_rating,
+                    winner_matchmaker_rating, loser_matchmaker_rating, winner_change, loser_change);
+                SetArenaTeamRatingChangeForTeam(winner, winner_change);
+                SetArenaTeamRatingChangeForTeam(GetOtherTeam(winner), loser_change);
+                sLog.outArena("Arena match Type: %u for Team1Id: %u - Team2Id: %u ended. WinnerTeamId: %u. Winner rating: +%d, Loser rating: %d", m_ArenaType, m_ArenaTeamIds[BG_TEAM_ALLIANCE], m_ArenaTeamIds[BG_TEAM_HORDE], winner_arena_team->GetId(), winner_change, loser_change);
+                if (sWorld.getBoolConfig(CONFIG_ARENA_LOG_EXTENDED_INFO))
+                    for (Battleground::BattlegroundScoreMap::const_iterator itr = GetPlayerScoresBegin(); itr != GetPlayerScoresEnd(); itr++)
+                        if (Player* player = sObjectMgr.GetPlayer(itr->first))
+                            sLog.outArena("Statistics for %s (GUID: " UI64FMTD ", Team: %d, IP: %s): %u damage, %u healing, %u killing blows", player->GetName(), itr->first, player->GetArenaTeamId(m_ArenaType == 5 ? 2 : m_ArenaType == 3), player->GetSession()->GetRemoteAddress().c_str(), itr->second->DamageDone, itr->second->HealingDone, itr->second->KillingBlows);
+            }
+            // Deduct 16 points from each teams arena-rating if there are no winners after 45+2 minutes
+            else
+            {
+                SetArenaTeamRatingChangeForTeam(ALLIANCE, ARENA_TIMELIMIT_POINTS_LOSS);
+                SetArenaTeamRatingChangeForTeam(HORDE, ARENA_TIMELIMIT_POINTS_LOSS);
+                winner_arena_team->FinishGame(ARENA_TIMELIMIT_POINTS_LOSS);
+                loser_arena_team->FinishGame(ARENA_TIMELIMIT_POINTS_LOSS);
+            }
         }
         else
         {
@@ -837,8 +861,7 @@ void Battleground::EndBattleground(uint32 winner)
         }
 
 
-        plr->SetFullHealth();
-        plr->SetPower(POWER_MANA, plr->GetMaxPower(POWER_MANA));
+        plr->ResetAllPowers();
         plr->CombatStopWithPets(true);
 
         BlockMovement(plr);
@@ -1131,9 +1154,7 @@ void Battleground::AddPlayer(Player *plr)
         if (GetStatus() == STATUS_WAIT_JOIN)                 // not started yet
         {
             plr->CastSpell(plr, SPELL_ARENA_PREPARATION, true);
-
-            plr->SetFullHealth();
-            plr->SetPower(POWER_MANA, plr->GetMaxPower(POWER_MANA));
+            plr->ResetAllPowers();
         }
         WorldPacket teammate;
         teammate.Initialize(SMSG_ARENA_OPPONENT_UPDATE, 8);
@@ -1868,6 +1889,11 @@ int32 Battleground::GetObjectType(uint64 guid)
 
 void Battleground::HandleKillUnit(Creature * /*creature*/, Player * /*killer*/)
 {
+}
+
+void Battleground::CheckArenaAfterTimerConditions()
+{
+    EndBattleground(WINNER_NONE);
 }
 
 void Battleground::CheckArenaWinConditions()
