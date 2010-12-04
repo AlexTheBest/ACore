@@ -172,7 +172,7 @@ bool OnGossipHello(Player *player, Creature *_Creature)
 		count -= noSpaceForCount;	 
 		if( count > 0 ) // can't add any
 		{
-			QueryResult result = WorldDatabase.PQuery("SELECT entry FROM mangos.item_template WHERE itemset = '%u' AND itemlevel LIKE \"\%u\%\"", itemsetid, itemlevel);
+			QueryResult result = WorldDatabase.PQuery("SELECT entry FROM item_template WHERE itemset = '%u' AND itemlevel LIKE \"\%u\%\"", itemsetid, itemlevel);
 			do
 			{
 				Field *fields = result->Fetch();
