@@ -9,13 +9,6 @@
 # implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
 if( WITH_SQL )
-<<<<<<< HEAD:sql/CMakeLists.txt
-  add_subdirectory(TriniChat2)
-  add_subdirectory(updates)
-  add_subdirectory(scripts)
-  add_subdirectory(base)
-  add_subdirectory(create)
-=======
   install(
     DIRECTORY
       updates
@@ -25,5 +18,4 @@ if( WITH_SQL )
     DESTINATION
       shared/trinity/sql
   )
->>>>>>> 961c6678d57779cbc4caa3ea71ad0f4f1143fa20:sql/CMakeLists.txt
 endif()
