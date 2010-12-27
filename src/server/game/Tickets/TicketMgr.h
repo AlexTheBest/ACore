@@ -132,12 +132,12 @@ public:
     uint64 GenerateGMTicketId();
     bool GetStatus() const { return status; }
     void SetStatus(bool newStatus) { status = newStatus; }
-    uint64 GetOpenTicketCount() { return m_openTickets; }
+    uint64 GetOpenTicketCount() const { return m_openTickets; }
     uint64 GetNextSurveyID() { return ++m_GMSurveyID; }
 
     void Initialize()
     {
-        SetStatus(sWorld.getBoolConfig(CONFIG_ALLOW_TICKETS));
+        SetStatus(sWorld->getBoolConfig(CONFIG_ALLOW_TICKETS));
     }
 
     GM_Ticket *GetOldestOpenGMTicket()
@@ -149,7 +149,7 @@ public:
         return NULL;
     }
 
-    time_t GetLastChange() { return lastChange; }
+    time_t GetLastChange() const { return lastChange; }
     void UpdateLastChange() { lastChange = time(NULL); }
 
     GmTicketList m_GMTicketList;
@@ -163,6 +163,6 @@ protected:
     time_t lastChange;
 };
 
-#define sTicketMgr (*ACE_Singleton<TicketMgr, ACE_Null_Mutex>::instance())
+#define sTicketMgr ACE_Singleton<TicketMgr, ACE_Null_Mutex>::instance()
 
 #endif // _TICKETMGR_H

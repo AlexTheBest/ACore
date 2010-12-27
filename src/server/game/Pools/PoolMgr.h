@@ -58,7 +58,7 @@ class ActivePoolData
         template<typename T>
         void RemoveObject(uint32 db_guid_or_pool_id, uint32 pool_id);
 
-        ActivePoolObjects GetActiveQuests() { return mActiveQuests; } // a copy of the set
+        ActivePoolObjects GetActiveQuests() const { return mActiveQuests; } // a copy of the set
     private:
         ActivePoolObjects mSpawnedCreatures;
         ActivePoolObjects mSpawnedGameobjects;
@@ -161,7 +161,7 @@ class PoolMgr
         ActivePoolData mSpawnedData;
 };
 
-#define sPoolMgr (*ACE_Singleton<PoolMgr, ACE_Null_Mutex>::instance())
+#define sPoolMgr ACE_Singleton<PoolMgr, ACE_Null_Mutex>::instance()
 
 // Method that tell if the creature is part of a pool and return the pool id if yes
 template<>

@@ -70,7 +70,6 @@ class CreatureAI : public UnitAI
 
         bool UpdateVictim();
         bool UpdateVictimWithGaze();
-        bool UpdateCombatState();
 
         void SetGazeOn(Unit *target);
 
@@ -88,6 +87,9 @@ class CreatureAI : public UnitAI
 
         // Called if IsVisible(Unit *who) is true at each *who move, reaction at visibility zone enter
         void MoveInLineOfSight_Safe(Unit *who);
+
+        // Called in Creature::Update when deathstate = DEAD. Inherited classes may maniuplate the ability to respawn based on scripted events.
+        virtual bool CanRespawn() { return true; }
 
         // Called for reaction at stopping attack at no attackers or targets
         virtual void EnterEvadeMode();

@@ -45,7 +45,7 @@ int32 ReputationMgr::GetReputation(uint32 faction_id) const
 
     if (!factionEntry)
     {
-        sLog.outError("ReputationMgr::GetReputation: Can't get reputation of %s for unknown faction (faction id) #%u.",m_player->GetName(), faction_id);
+        sLog->outError("ReputationMgr::GetReputation: Can't get reputation of %s for unknown faction (faction id) #%u.",m_player->GetName(), faction_id);
         return 0;
     }
 
@@ -255,10 +255,10 @@ void ReputationMgr::Initialize()
 
 bool ReputationMgr::SetReputation(FactionEntry const* factionEntry, int32 standing, bool incremental)
 {
-    sScriptMgr.OnPlayerReputationChange(m_player, factionEntry->ID, standing, incremental);
+    sScriptMgr->OnPlayerReputationChange(m_player, factionEntry->ID, standing, incremental);
     bool res = false;
     // if spillover definition exists in DB, override DBC
-    if (const RepSpilloverTemplate *repTemplate = sObjectMgr.GetRepSpilloverTemplate(factionEntry->ID))
+    if (const RepSpilloverTemplate *repTemplate = sObjectMgr->GetRepSpilloverTemplate(factionEntry->ID))
     {
         for (uint32 i = 0; i < MAX_SPILLOVER_FACTIONS; ++i)
         {
@@ -333,7 +333,7 @@ bool ReputationMgr::SetOneFactionReputation(FactionEntry const* factionEntry, in
         if (incremental)
         {
             // int32 *= float cause one point loss?
-            standing = int32(floor((float)standing * sWorld.getRate(RATE_REPUTATION_GAIN) + 0.5));
+            standing = int32(floor((float)standing * sWorld->getRate(RATE_REPUTATION_GAIN) + 0.5));
             standing += itr->second.Standing + BaseRep;
         }
 
@@ -424,7 +424,7 @@ void ReputationMgr::SetAtWar(RepListID repListID, bool on)
     SetAtWar(&itr->second,on);
 }
 
-void ReputationMgr::SetAtWar(FactionState* faction, bool atWar)
+void ReputationMgr::SetAtWar(FactionState* faction, bool atWar) const
 {
     // not allow declare war to own faction
     if (atWar && (faction->Flags & FACTION_FLAG_PEACE_FORCED))
@@ -452,7 +452,7 @@ void ReputationMgr::SetInactive(RepListID repListID, bool on)
     SetInactive(&itr->second,on);
 }
 
-void ReputationMgr::SetInactive(FactionState* faction, bool inactive)
+void ReputationMgr::SetInactive(FactionState* faction, bool inactive) const
 {
     // always invisible or hidden faction can't be inactive
     if (inactive && ((faction->Flags & (FACTION_FLAG_INVISIBLE_FORCED|FACTION_FLAG_HIDDEN)) || !(faction->Flags & FACTION_FLAG_VISIBLE)))

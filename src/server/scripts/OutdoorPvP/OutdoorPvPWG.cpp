@@ -24,6 +24,7 @@
 #include "World.h"
 #include "Chat.h"
 #include "MapManager.h"
+#include "Group.h"
 
 void _LoadTeamPair(TeamPairMap &pairMap, const TeamPair *pair)
 {

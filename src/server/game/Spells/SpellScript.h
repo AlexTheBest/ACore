@@ -57,6 +57,7 @@ class _SpellScript
     protected:
         virtual bool _Validate(SpellEntry const * entry);
     public:
+        virtual ~_SpellScript() {}
         virtual void _Register();
         virtual void _Unload();
         virtual void _Init(const std::string * scriptname, uint32 spellId);
@@ -444,7 +445,7 @@ class AuraScript : public _SpellScript
         Unit* GetCaster() const;
         // returns object on which aura was casted, target for non-area auras, area aura source for area auras
         WorldObject * GetOwner() const;
-        // returns owner if it's unit, NULL otherwise
+        // returns owner if it's unit or unit derived object, NULL otherwise (only for persistent area auras NULL is returned)
         Unit * GetUnitOwner() const;
         // returns owner if it's dynobj, NULL otherwise
         DynamicObject * GetDynobjOwner() const;

@@ -128,7 +128,7 @@ class PlayerSocial
         // Misc
         bool HasFriend(uint32 friend_guid);
         bool HasIgnore(uint32 ignore_guid);
-        uint32 GetPlayerGUID() { return m_playerGUID; }
+        uint32 GetPlayerGUID() const { return m_playerGUID; }
         void SetPlayerGUID(uint32 guid) { m_playerGUID = guid; }
         uint32 GetNumberOfSocialsWithFlag(SocialFlag flag);
     private:
@@ -156,6 +156,6 @@ class SocialMgr
         SocialMap m_socialMap;
 };
 
-#define sSocialMgr (*ACE_Singleton<SocialMgr, ACE_Null_Mutex>::instance())
+#define sSocialMgr ACE_Singleton<SocialMgr, ACE_Null_Mutex>::instance()
 #endif
 

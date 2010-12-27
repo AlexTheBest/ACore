@@ -193,7 +193,7 @@ public:
 
             if (LiveTriggerGUID.size() < POS_LIVE || DeadTriggerGUID.size() < POS_DEAD)
             {
-                sLog.outError("Script Gothik: cannot summon triggers!");
+                sLog->outError("Script Gothik: cannot summon triggers!");
                 EnterEvadeMode();
                 return;
             }
@@ -384,7 +384,7 @@ public:
 
         void UpdateAI(const uint32 diff)
         {
-            if (!UpdateCombatState() || !CheckInRoom())
+            if (!UpdateVictim() || !CheckInRoom())
                 return;
 
             events.Update(diff);
@@ -396,7 +396,7 @@ public:
                     instance->SetData(DATA_GOTHIK_GATE, GO_STATE_ACTIVE);
             }
 
-            if (me->hasUnitState(UNIT_STAT_CASTING))
+            if (me->HasUnitState(UNIT_STAT_CASTING))
                 return;
 
             while (uint32 eventId = events.ExecuteEvent())

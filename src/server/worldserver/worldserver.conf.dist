@@ -119,10 +119,10 @@ CharacterDatabase.SynchThreads = 2
 
 #
 #    MaxPingTime
-#        Description: Time (in seconds) between database pings.
-#        Default:     1800 - (30 minutes)
+#        Description: Time (in minutes) between database pings.
+#        Default:     30
 
-MaxPingTime = 1800
+MaxPingTime = 30
 
 #
 #    WorldServerPort
@@ -204,13 +204,6 @@ MaxOverspeedPings = 2
 #                     0 - (disable, Do not unload grids)
 
 GridUnload = 1
-
-#
-#    SocketSelectTime
-#        Description: Time (in milliseconds) for socket selection.
-#        Default:     10000 - (10 seconds)
-
-SocketSelectTime = 10000
 
 #
 #    SocketTimeOutTime
@@ -390,16 +383,6 @@ CleanCharacterDB = 0
 
 ###################################################################################################
 # SERVER LOGGING
-#
-#    LogSQL
-#        Description: Enable logging of SQL queries triggered by in game commands from in game
-#                     All commands are written to a file: YYYY-MM-DD_logSQL.sql
-#                     A new file will be created every day at 00:00:00.
-#        Default:     1 - (Enabled)
-#                     0 - (Disabled)
-
-LogSQL = 1
-
 #
 #    PidFile
 #        Description: World daemon PID file
@@ -1371,7 +1354,7 @@ DungeonFinder.Enable = 0
 
 #
 #   DBC.EnforceItemAttributes
-#        Description: Disallow overriding item attributes stored in DBC files with values from the 
+#        Description: Disallow overriding item attributes stored in DBC files with values from the
 #                     database.
 #        Default:     1 - (Enabled, Enforce DBC values)
 #                     0 - (Disabled, Use database values)
@@ -1641,6 +1624,7 @@ ListenRange.TextEmote = 40
 #        Default:     300
 
 ListenRange.Yell = 300
+
 #
 ###################################################################################################
 
@@ -1748,7 +1732,7 @@ AllowPlayerCommands = 1
 #
 #    PreserveCustomChannels
 #        Description: Store custom chat channel settings like password, automatic ownership handout
-#                     or ban list in the database. Needs to be enabled to save custom 
+#                     or ban list in the database. Needs to be enabled to save custom
 #                     world/trade/etc. channels that have automatic ownership handout disabled.
 #                     (.channel set ownership $channel off)
 #        Default:     0 - (Disabled, Blizzlike, Channel settings are lost if last person left)
@@ -1927,7 +1911,7 @@ Visibility.Distance.BGArenas = 180
 
 Visibility.Notify.Period.OnContinents = 1000
 Visibility.Notify.Period.InInstances  = 1000
-Visibility.Notify.Period.InBGArenas = 1000
+Visibility.Notify.Period.InBGArenas   = 1000
 
 #
 ###################################################################################################
@@ -2084,7 +2068,7 @@ Rate.Mining.Amount = 1
 #        Description: Mining rates.
 #        Default:     Chance to to mine a deposit again.
 
-Rate.Mining.Next   = 1
+Rate.Mining.Next = 1
 
 #
 #    Rate.Talent
@@ -2527,14 +2511,6 @@ Ra.Port = 3443
 #        Default:     3
 
 Ra.MinLevel = 3
-
-#
-#    Ra.Secure
-#        Description: Kick clients on invalid authentication.
-#        Default:     1 - (Enabled)
-#                     0 - (Disabled)
-
-Ra.Secure = 1
 
 #
 #    SOAP.Enable

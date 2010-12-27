@@ -701,8 +701,7 @@ public:
         void OnStackChange(AuraEffect const* /*aurEff*/, AuraApplication const* aurApp, AuraEffectHandleModes /*mode*/)
         {
             Unit* target = aurApp->GetTarget();
-            if (!target)
-                return;
+
             switch (GetStackAmount())
             {
                 case 1:
@@ -722,8 +721,7 @@ public:
         void OnRemove(AuraEffect const* /*aurEff*/, AuraApplication const* aurApp, AuraEffectHandleModes /*mode*/)
         {
             Unit* target = aurApp->GetTarget();
-            if (!target)
-                return;
+
             if (aurApp->GetRemoveMode() == AURA_REMOVE_BY_STACK)
                 return;
             target->RemoveAurasDueToSpell(SPELL_SHADOWMOURNE_VISUAL_LOW);
@@ -741,6 +739,61 @@ public:
     {
         return new spell_item_shadowmourne_AuraScript();
     }
+};
+
+enum AirRifleSpells
+{
+    SPELL_AIR_RIFLE_HOLD_VISUAL = 65582,
+    SPELL_AIR_RIFLE_SHOOT       = 67532,
+    SPELL_AIR_RIFLE_SHOOT_SELF  = 65577,
+};
+
+class spell_item_red_rider_air_rifle : public SpellScriptLoader
+{
+    public:
+	    spell_item_red_rider_air_rifle() : SpellScriptLoader("spell_item_red_rider_air_rifle") { }
+
+        class spell_item_red_rider_air_rifle_SpellScript : public SpellScript
+        {
+            PrepareSpellScript(spell_item_red_rider_air_rifle_SpellScript);
+
+            bool Validate(SpellEntry const* /*spell*/)
+            {
+                if (!sSpellStore.LookupEntry(SPELL_AIR_RIFLE_HOLD_VISUAL))
+                    return false;
+                if (!sSpellStore.LookupEntry(SPELL_AIR_RIFLE_SHOOT))
+                    return false;
+                if (!sSpellStore.LookupEntry(SPELL_AIR_RIFLE_SHOOT_SELF))
+                    return false;
+                return true;
+            }
+
+            void HandleScript(SpellEffIndex effIndex)
+            {
+                PreventHitDefaultEffect(effIndex);
+                if (!GetHitUnit())
+                    return;
+
+                GetCaster()->CastSpell(GetCaster(), SPELL_AIR_RIFLE_HOLD_VISUAL, true);
+                // needed because this spell shares GCD with its triggered spells (which must not be cast with triggered flag)
+                if (Player* player = GetCaster()->ToPlayer())
+                    player->RemoveGlobalCooldown(GetSpellInfo());
+                if (urand(0, 4))
+                    GetCaster()->CastSpell(GetHitUnit(), SPELL_AIR_RIFLE_SHOOT, false);
+                else
+                    GetCaster()->CastSpell(GetCaster(), SPELL_AIR_RIFLE_SHOOT_SELF, false);
+            }
+
+            void Register()
+            {
+                OnEffect += SpellEffectFn(spell_item_red_rider_air_rifle_SpellScript::HandleScript, EFFECT_0, SPELL_EFFECT_SCRIPT_EFFECT);
+            }
+        };
+
+        SpellScript* GetSpellScript() const
+        {
+            return new spell_item_red_rider_air_rifle_SpellScript();
+        }
 };
 
 enum eGenericData
@@ -773,4 +826,5 @@ void AddSC_item_spell_scripts()
     new spell_item_six_demon_bag();
     new spell_item_underbelly_elixir();
     new spell_item_shadowmourne();
+    new spell_item_red_rider_air_rifle();
 }

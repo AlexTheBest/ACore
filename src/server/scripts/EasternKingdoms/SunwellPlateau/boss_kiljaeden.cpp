@@ -425,7 +425,7 @@ public:
         {
             me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
             me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
-            me->addUnitState(UNIT_STAT_STUNNED);
+            me->AddUnitState(UNIT_STAT_STUNNED);
 
             ScriptedAI::InitializeAI();
         }
@@ -662,7 +662,7 @@ public:
             for (uint8 i = 0; i < 4; ++i)
             {
                 float x,y,z;
-                Unit *pTarget;
+                Unit *pTarget = NULL;
                 for (uint8 z = 0; z < 6; ++z)
                 {
                     pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true);
@@ -724,8 +724,9 @@ public:
                             if (Speeches[speechCount].timer < SpeechTimer)
                             {
                                 SpeechTimer = 0;
-                                if (Creature* pSpeechCreature = Unit::GetCreature(*me, pInstance->GetData64(Speeches[speechCount].pCreature)))
-                                    DoScriptText(Speeches[speechCount].textid, pSpeechCreature);
+                                if (pInstance)
+                                    if (Creature* pSpeechCreature = Unit::GetCreature(*me, pInstance->GetData64(Speeches[speechCount].pCreature)))
+                                        DoScriptText(Speeches[speechCount].textid, pSpeechCreature);
                                 if (speechCount == 12)
                                     if (Creature* pAnveena =  Unit::GetCreature(*me, pInstance->GetData64(DATA_ANVEENA)))
                                         pAnveena->CastSpell(me, SPELL_SACRIFICE_OF_ANVEENA, false);
@@ -747,7 +748,7 @@ public:
                         case TIMER_LEGION_LIGHTNING:
                             if (!me->IsNonMeleeSpellCasted(false))
                             {
-                                Unit* pRandomPlayer;
+                                Unit* pRandomPlayer = NULL;
 
                                 me->RemoveAurasDueToSpell(SPELL_SOUL_FLAY);
                                 for (uint8 z = 0; z < 6; ++z)
@@ -760,7 +761,7 @@ public:
                                 if (pRandomPlayer)
                                     DoCast(pRandomPlayer, SPELL_LEGION_LIGHTNING, false);
                                 else
-                                    sLog.outError("try to cast SPELL_LEGION_LIGHTNING on invalid target");
+                                    sLog->outError("try to cast SPELL_LEGION_LIGHTNING on invalid target");
 
                                 Timer[TIMER_LEGION_LIGHTNING] = (Phase == PHASE_SACRIFICE) ? 18000 : 30000; // 18 seconds in PHASE_SACRIFICE
                                 Timer[TIMER_SOUL_FLAY] = 2500;
@@ -826,23 +827,24 @@ public:
                             }
                             break;
                         case TIMER_ORBS_EMPOWER: //Phase 3
-                            if (Creature* pKalec = Unit::GetCreature(*me, pInstance->GetData64(DATA_KALECGOS_KJ)))
-                            {
-                                switch (Phase)
+                            if (pInstance)
+                                if (Creature* pKalec = Unit::GetCreature(*me, pInstance->GetData64(DATA_KALECGOS_KJ)))
                                 {
+                                    switch (Phase)
+                                    {
                                     case PHASE_SACRIFICE:
                                         CAST_AI(boss_kalecgos_kj::boss_kalecgos_kjAI, pKalec->AI())->EmpowerOrb(true);
                                         break;
                                     default:
                                         CAST_AI(boss_kalecgos_kj::boss_kalecgos_kjAI, pKalec->AI())->EmpowerOrb(false);
                                         break;
+                                    }
                                 }
-                            }
                             OrbActivated = true;
                             TimerIsDeactivated[TIMER_ORBS_EMPOWER] = true;
                             break;
                         case TIMER_ARMAGEDDON: //Phase 4
-                            Unit *pTarget;
+                            Unit *pTarget = NULL;
                             for (uint8 z = 0; z < 6; ++z)
                             {
                                 pTarget = SelectTarget(SELECT_TARGET_RANDOM, 0, 100, true);
@@ -1422,7 +1424,7 @@ public:
                     DoMeleeAttackIfReady();
                     break;
                 }
-                sLog.outDebug("Sinister-Timer");
+                sLog->outDebug("Sinister-Timer");
                 for (uint8 i = 0; i < 3; ++i)
                     uiTimer[i] -= diff;
             }

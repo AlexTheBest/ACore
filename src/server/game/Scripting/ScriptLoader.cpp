@@ -81,7 +81,6 @@ void AddSC_npc_innkeeper();
 void AddSC_npcs_special();
 void AddSC_npc_taxi();
 void AddSC_achievement_scripts();
-void AddSC_dungeon_finder();
 
 //eastern kingdoms
 void AddSC_alterac_valley();                 //Alterac Valley
@@ -426,6 +425,7 @@ void AddSC_boss_razorscale();
 void AddSC_boss_xt002();
 void AddSC_boss_kologarn();
 void AddSC_boss_assembly_of_iron();
+void AddSC_boss_general_vezax();
 void AddSC_ulduar_teleporter();
 void AddSC_instance_ulduar();
 void AddSC_boss_keleseth();              //Utgarde Keep
@@ -1117,6 +1117,7 @@ void AddNorthrendScripts()
     AddSC_boss_ignis();
     AddSC_boss_razorscale();
     AddSC_boss_xt002();
+    AddSC_boss_general_vezax();
     AddSC_boss_assembly_of_iron();
     AddSC_boss_kologarn();
     AddSC_ulduar_teleporter();

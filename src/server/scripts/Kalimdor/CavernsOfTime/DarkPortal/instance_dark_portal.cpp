@@ -73,7 +73,10 @@ public:
 
     struct instance_dark_portal_InstanceMapScript : public InstanceScript
     {
-        instance_dark_portal_InstanceMapScript(Map* pMap) : InstanceScript(pMap) {Initialize();};
+        instance_dark_portal_InstanceMapScript(Map* pMap) : InstanceScript(pMap)
+        {
+            Initialize();
+        }
 
         uint32 m_auiEncounter[MAX_ENCOUNTER];
 
@@ -114,9 +117,10 @@ public:
             DoUpdateWorldState(WORLD_STATE_BM_RIFT, 0);
         }
 
-        bool IsEncounterInProgress()
+        bool IsEncounterInProgress() const
         {
-            if (GetData(TYPE_MEDIVH) == IN_PROGRESS)
+            //if (GetData(TYPE_MEDIVH) == IN_PROGRESS)
+            if (m_auiEncounter[0] == IN_PROGRESS)   // compile fix, GetData is not const
                 return true;
 
             return false;
@@ -130,10 +134,10 @@ public:
             pPlayer->SendUpdateWorldState(WORLD_STATE_BM,0);
         }
 
-        void OnCreatureCreate(Creature* pCreature, bool /*add*/)
+        void OnCreatureCreate(Creature* creature)
         {
-            if (pCreature->GetEntry() == C_MEDIVH)
-                MedivhGUID = pCreature->GetGUID();
+            if (creature->GetEntry() == C_MEDIVH)
+                MedivhGUID = creature->GetGUID();
         }
 
         //what other conditions to check?
@@ -190,7 +194,7 @@ public:
                 {
                     if (data == IN_PROGRESS)
                     {
-                        sLog.outDebug("TSCR: Instance Dark Portal: Starting event.");
+                        sLog->outDebug("TSCR: Instance Dark Portal: Starting event.");
                         InitWorldState();
                         m_auiEncounter[1] = IN_PROGRESS;
                         NextPortal_Timer = 15000;
@@ -199,7 +203,7 @@ public:
                     if (data == DONE)
                     {
                         //this may be completed further out in the post-event
-                        sLog.outDebug("TSCR: Instance Dark Portal: Event completed.");
+                        sLog->outDebug("TSCR: Instance Dark Portal: Event completed.");
                         Map::PlayerList const& players = instance->GetPlayers();
 
                         if (!players.isEmpty())
@@ -264,7 +268,7 @@ public:
             if (entry == RIFT_BOSS)
                 entry = RandRiftBoss();
 
-            sLog.outDebug("TSCR: Instance Dark Portal: Summoning rift boss entry %u.",entry);
+            sLog->outDebug("TSCR: Instance Dark Portal: Summoning rift boss entry %u.",entry);
 
             Position pos;
             me->GetRandomNearPosition(pos, 10.0f);
@@ -272,10 +276,10 @@ public:
             //normalize Z-level if we can, if rift is not at ground level.
             pos.m_positionZ = std::max(me->GetMap()->GetHeight(pos.m_positionX, pos.m_positionY, MAX_HEIGHT), me->GetMap()->GetWaterLevel(pos.m_positionX, pos.m_positionY));
 
-            if (Creature *summon = me->SummonCreature(entry, pos, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 600000))
+            if (Creature* summon = me->SummonCreature(entry, pos, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 600000))
                 return summon;
 
-            sLog.outDebug("TSCR: Instance Dark Portal: What just happened there? No boss, no loot, no fun...");
+            sLog->outDebug("TSCR: Instance Dark Portal: What just happened there? No boss, no loot, no fun...");
             return NULL;
         }
 
@@ -288,11 +292,11 @@ public:
                 if (tmp >= CurrentRiftId)
                     ++tmp;
 
-                sLog.outDebug("TSCR: Instance Dark Portal: Creating Time Rift at locationId %i (old locationId was %u).",tmp,CurrentRiftId);
+                sLog->outDebug("TSCR: Instance Dark Portal: Creating Time Rift at locationId %i (old locationId was %u).",tmp,CurrentRiftId);
 
                 CurrentRiftId = tmp;
 
-                Creature *pTemp = pMedivh->SummonCreature(C_TIME_RIFT,
+                Creature* pTemp = pMedivh->SummonCreature(C_TIME_RIFT,
                     PortalLocation[tmp][0],PortalLocation[tmp][1],PortalLocation[tmp][2],PortalLocation[tmp][3],
                     TEMPSUMMON_CORPSE_DESPAWN,0);
                 if (pTemp)
@@ -300,7 +304,7 @@ public:
                     pTemp->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
                     pTemp->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
 
-                    if (Creature *pBoss = SummonedPortalBoss(pTemp))
+                    if (Creature* pBoss = SummonedPortalBoss(pTemp))
                     {
                         if (pBoss->GetEntry() == C_AEONUS)
                             pBoss->AddThreat(pMedivh,0.0f);

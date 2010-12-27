@@ -45,9 +45,6 @@ struct Realm
 class RealmList
 {
     public:
-        // Null_Mutex is safe because the singleton initialized before the acceptor initialized(another place where the singleton called)
-        static RealmList* instance() { return ACE_Singleton<RealmList, ACE_Null_Mutex>::instance(); }
-
         typedef std::map<std::string, Realm> RealmMap;
 
         RealmList();
@@ -65,13 +62,13 @@ class RealmList
     private:
         void UpdateRealms(bool init);
         void UpdateRealm(uint32 ID, const std::string& name, const std::string& address, uint32 port, uint8 icon, uint8 color, uint8 timezone, AccountTypes allowedSecurityLevel, float popu, uint32 build);
-    private:
+
         RealmMap m_realms;                                  ///< Internal map of realms
         uint32   m_UpdateInterval;
         time_t   m_NextUpdateTime;
 };
 
-#define sRealmList RealmList::instance()
+#define sRealmList ACE_Singleton<RealmList, ACE_Null_Mutex>::instance()
 
 #endif
 /// @}

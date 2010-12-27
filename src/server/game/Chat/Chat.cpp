@@ -454,7 +454,7 @@ ChatCommand * ChatHandler::getCommandTable()
         {
             // count total number of top-level commands
             size_t total = getCommandTableSize(commandTable);
-            std::vector<ChatCommand*> const& dynamic = sScriptMgr.GetChatCommands();
+            std::vector<ChatCommand*> const& dynamic = sScriptMgr->GetChatCommands();
             for (std::vector<ChatCommand*>::const_iterator it = dynamic.begin(); it != dynamic.end(); ++it)
                 total += getCommandTableSize(*it);
             total += 1; // ending zero
@@ -504,7 +504,7 @@ bool ChatHandler::HasLowerSecurity(Player* target, uint64 guid, bool strong)
     if (target)
         target_session = target->GetSession();
     else if (guid)
-        target_account = sObjectMgr.GetPlayerAccountIdByGUID(guid);
+        target_account = sObjectMgr->GetPlayerAccountIdByGUID(guid);
 
     if (!target_session && !target_account)
     {
@@ -525,13 +525,13 @@ bool ChatHandler::HasLowerSecurityAccount(WorldSession* target, uint32 target_ac
         return false;
 
     // ignore only for non-players for non strong checks (when allow apply command at least to same sec level)
-    if (m_session->GetSecurity() > SEC_PLAYER && !strong && !sWorld.getBoolConfig(CONFIG_GM_LOWER_SECURITY))
+    if (m_session->GetSecurity() > SEC_PLAYER && !strong && !sWorld->getBoolConfig(CONFIG_GM_LOWER_SECURITY))
         return false;
 
     if (target)
         target_sec = target->GetSecurity();
     else if (target_account)
-        target_sec = sAccountMgr.GetSecurity(target_account);
+        target_sec = sAccountMgr->GetSecurity(target_account);
     else
         return true;                                        // caller must report error for (target == NULL && target_account == 0)
 
@@ -600,7 +600,7 @@ void ChatHandler::SendGlobalSysMessage(const char *str)
     while (char* line = LineFromMessage(pos))
     {
         FillSystemMessageData(&data, line);
-        sWorld.SendGlobalMessage(&data);
+        sWorld->SendGlobalMessage(&data);
     }
 
     free(buf);
@@ -618,7 +618,7 @@ void ChatHandler::SendGlobalGMSysMessage(const char *str)
     while (char* line = LineFromMessage(pos))
     {
         FillSystemMessageData(&data, line);
-        sWorld.SendGlobalGMMessage(&data);
+        sWorld->SendGlobalGMMessage(&data);
      }
     free(buf);
 }
@@ -718,7 +718,7 @@ bool ChatHandler::ExecuteCommandInTable(ChatCommand *table, const char* text, co
                 {
                     Player* p = m_session->GetPlayer();
                     uint64 sel_guid = p->GetSelection();
-                    sLog.outCommand(m_session->GetAccountId(),"Command: %s [Player: %s (Account: %u) X: %f Y: %f Z: %f Map: %u Selected %s: %s (GUID: %u)]",
+                    sLog->outCommand(m_session->GetAccountId(),"Command: %s [Player: %s (Account: %u) X: %f Y: %f Z: %f Map: %u Selected %s: %s (GUID: %u)]",
                         fullcmd.c_str(),p->GetName(),m_session->GetAccountId(),p->GetPositionX(),p->GetPositionY(),p->GetPositionZ(),p->GetMapId(),
                         GetLogNameForGuid(sel_guid), (p->GetSelectedUnit()) ? p->GetSelectedUnit()->GetName() : "", GUID_LOPART(sel_guid));
 
@@ -780,12 +780,12 @@ bool ChatHandler::SetDataForCommandInTable(ChatCommand *table, const char* text,
         // expected subcommand by full name DB content
         else if (*text)
         {
-            sLog.outErrorDb("Table `command` have unexpected subcommand '%s' in command '%s', skip.",text,fullcommand.c_str());
+            sLog->outErrorDb("Table `command` have unexpected subcommand '%s' in command '%s', skip.",text,fullcommand.c_str());
             return false;
         }
 
         if (table[i].SecurityLevel != security)
-            sLog.outDetail("Table `command` overwrite for command '%s' default security (%u) by %u",fullcommand.c_str(),table[i].SecurityLevel,security);
+            sLog->outDetail("Table `command` overwrite for command '%s' default security (%u) by %u",fullcommand.c_str(),table[i].SecurityLevel,security);
 
         table[i].SecurityLevel = security;
         table[i].Help          = help;
@@ -796,9 +796,9 @@ bool ChatHandler::SetDataForCommandInTable(ChatCommand *table, const char* text,
     if (!cmd.empty())
     {
         if (table == getCommandTable())
-            sLog.outErrorDb("Table `command` have not existed command '%s', skip.",cmd.c_str());
+            sLog->outErrorDb("Table `command` have not existed command '%s', skip.",cmd.c_str());
         else
-            sLog.outErrorDb("Table `command` have not existed subcommand '%s' in command '%s', skip.",cmd.c_str(),fullcommand.c_str());
+            sLog->outErrorDb("Table `command` have not existed subcommand '%s' in command '%s', skip.",cmd.c_str(),fullcommand.c_str());
     }
 
     return false;
@@ -811,7 +811,7 @@ int ChatHandler::ParseCommands(const char* text)
 
     std::string fullcmd = text;
 
-    if (m_session && m_session->GetSecurity() <= SEC_PLAYER && sWorld.getBoolConfig(CONFIG_ALLOW_PLAYER_COMMANDS) == 0)
+    if (m_session && m_session->GetSecurity() <= SEC_PLAYER && sWorld->getBoolConfig(CONFIG_ALLOW_PLAYER_COMMANDS) == 0)
        return 0;
 
     /// chat case (.command or !command format)
@@ -868,7 +868,7 @@ valid examples:
     const char* validSequenceIterator = validSequence;
 
     // more simple checks
-    if (sWorld.getIntConfig(CONFIG_CHAT_STRICT_LINK_CHECKING_SEVERITY) < 3)
+    if (sWorld->getIntConfig(CONFIG_CHAT_STRICT_LINK_CHECKING_SEVERITY) < 3)
     {
         const std::string validCommands = "cHhr|";
 
@@ -887,7 +887,7 @@ valid examples:
 
             ++message;
             // validate sequence
-            if (sWorld.getIntConfig(CONFIG_CHAT_STRICT_LINK_CHECKING_SEVERITY) == 2)
+            if (sWorld->getIntConfig(CONFIG_CHAT_STRICT_LINK_CHECKING_SEVERITY) == 2)
             {
                 if (commandChar == *validSequenceIterator)
                 {
@@ -931,7 +931,7 @@ valid examples:
         else if (reader.get() != '|')
         {
 #ifdef TRINITY_DEBUG
-            sLog.outBasic("ChatHandler::isValidChatMessage sequence aborted unexpectedly");
+            sLog->outBasic("ChatHandler::isValidChatMessage sequence aborted unexpectedly");
 #endif
             return false;
         }
@@ -940,7 +940,7 @@ valid examples:
         if (reader.peek() == '\0')
         {
 #ifdef TRINITY_DEBUG
-            sLog.outBasic("ChatHandler::isValidChatMessage pipe followed by \\0");
+            sLog->outBasic("ChatHandler::isValidChatMessage pipe followed by \\0");
 #endif
             return false;
         }
@@ -965,7 +965,7 @@ valid examples:
             else
             {
 #ifdef TRINITY_DEBUG
-                sLog.outBasic("ChatHandler::isValidChatMessage invalid sequence, expected %c but got %c", *validSequenceIterator, commandChar);
+                sLog->outBasic("ChatHandler::isValidChatMessage invalid sequence, expected %c but got %c", *validSequenceIterator, commandChar);
 #endif
                 return false;
             }
@@ -974,7 +974,7 @@ valid examples:
         {
             // no escaped pipes in sequences
 #ifdef TRINITY_DEBUG
-            sLog.outBasic("ChatHandler::isValidChatMessage got escaped pipe in sequence");
+            sLog->outBasic("ChatHandler::isValidChatMessage got escaped pipe in sequence");
 #endif
             return false;
         }
@@ -991,7 +991,7 @@ valid examples:
                     if (!c)
                     {
 #ifdef TRINITY_DEBUG
-                        sLog.outBasic("ChatHandler::isValidChatMessage got \\0 while reading color in |c command");
+                        sLog->outBasic("ChatHandler::isValidChatMessage got \\0 while reading color in |c command");
 #endif
                         return false;
                     }
@@ -1009,7 +1009,7 @@ valid examples:
                         continue;
                     }
 #ifdef TRINITY_DEBUG
-                    sLog.outBasic("ChatHandler::isValidChatMessage got non hex char '%c' while reading color", c);
+                    sLog->outBasic("ChatHandler::isValidChatMessage got non hex char '%c' while reading color", c);
 #endif
                     return false;
                 }
@@ -1023,11 +1023,11 @@ valid examples:
                     // read item entry
                     reader.getline(buffer, 256, ':');
 
-                    linkedItem= sObjectMgr.GetItemPrototype(atoi(buffer));
+                    linkedItem= ObjectMgr::GetItemPrototype(atoi(buffer));
                     if (!linkedItem)
                     {
 #ifdef TRINITY_DEBUG
-                        sLog.outBasic("ChatHandler::isValidChatMessage got invalid itemID %u in |item command", atoi(buffer));
+                        sLog->outBasic("ChatHandler::isValidChatMessage got invalid itemID %u in |item command", atoi(buffer));
 #endif
                         return false;
                     }
@@ -1035,7 +1035,7 @@ valid examples:
                     if (color != ItemQualityColors[linkedItem->Quality])
                     {
 #ifdef TRINITY_DEBUG
-                        sLog.outBasic("ChatHandler::isValidChatMessage linked item has color %u, but user claims %u", ItemQualityColors[linkedItem->Quality],
+                        sLog->outBasic("ChatHandler::isValidChatMessage linked item has color %u, but user claims %u", ItemQualityColors[linkedItem->Quality],
                                 color);
 #endif
                         return false;
@@ -1048,8 +1048,8 @@ valid examples:
 
                     int32 propertyId = 0;
                     bool negativeNumber = false;
-                    char c;
-                    for (uint8 i=0; i<randomPropertyPosition; ++i)
+                    char c = '\0';
+                    for (uint8 i = 0; i < randomPropertyPosition; ++i)
                     {
                         propertyId = 0;
                         negativeNumber = false;
@@ -1065,6 +1065,7 @@ valid examples:
                                 return false;
                         }
                     }
+
                     if (negativeNumber)
                         propertyId *= -1;
 
@@ -1082,7 +1083,7 @@ valid examples:
                     }
 
                     // ignore other integers
-                    while ((c >='0' && c <= '9') || c == ':')
+                    while ((c >= '0' && c <= '9') || c == ':')
                     {
                         reader.ignore(1);
                         c = reader.peek();
@@ -1102,12 +1103,12 @@ valid examples:
                         c = reader.peek();
                     }
 
-                    linkedQuest = sObjectMgr.GetQuestTemplate(questid);
+                    linkedQuest = sObjectMgr->GetQuestTemplate(questid);
 
                     if (!linkedQuest)
                     {
 #ifdef TRINITY_DEBUG
-                        sLog.outBasic("ChatHandler::isValidChatMessage Questtemplate %u not found", questid);
+                        sLog->outBasic("ChatHandler::isValidChatMessage Questtemplate %u not found", questid);
 #endif
                         return false;
                     }
@@ -1247,7 +1248,7 @@ valid examples:
                 else
                 {
 #ifdef TRINITY_DEBUG
-                    sLog.outBasic("ChatHandler::isValidChatMessage user sent unsupported link type '%s'", buffer);
+                    sLog->outBasic("ChatHandler::isValidChatMessage user sent unsupported link type '%s'", buffer);
 #endif
                     return false;
                 }
@@ -1260,7 +1261,7 @@ valid examples:
                     if (reader.get() != '[')
                     {
 #ifdef TRINITY_DEBUG
-                        sLog.outBasic("ChatHandler::isValidChatMessage link caption doesn't start with '['");
+                        sLog->outBasic("ChatHandler::isValidChatMessage link caption doesn't start with '['");
 #endif
                         return false;
                     }
@@ -1270,10 +1271,10 @@ valid examples:
                     if (linkedSpell)
                     {
                         // spells with that flag have a prefix of "$PROFESSION: "
-                        if (linkedSpell->Attributes & SPELL_ATTR_TRADESPELL)
+                        if (linkedSpell->Attributes & SPELL_ATTR0_TRADESPELL)
                         {
                             // lookup skillid
-                            SkillLineAbilityMapBounds bounds = sSpellMgr.GetSkillLineAbilityMapBounds(linkedSpell->Id);
+                            SkillLineAbilityMapBounds bounds = sSpellMgr->GetSkillLineAbilityMapBounds(linkedSpell->Id);
                             if (bounds.first == bounds.second)
                             {
                                 return false;
@@ -1320,12 +1321,12 @@ valid examples:
                     {
                         if (linkedQuest->GetTitle() != buffer)
                         {
-                            QuestLocale const *ql = sObjectMgr.GetQuestLocale(linkedQuest->GetQuestId());
+                            QuestLocale const *ql = sObjectMgr->GetQuestLocale(linkedQuest->GetQuestId());
 
                             if (!ql)
                             {
 #ifdef TRINITY_DEBUG
-                                sLog.outBasic("ChatHandler::isValidChatMessage default questname didn't match and there is no locale");
+                                sLog->outBasic("ChatHandler::isValidChatMessage default questname didn't match and there is no locale");
 #endif
                                 return false;
                             }
@@ -1342,7 +1343,7 @@ valid examples:
                             if (!foundName)
                             {
 #ifdef TRINITY_DEBUG
-                                sLog.outBasic("ChatHandler::isValidChatMessage no quest locale title matched");
+                                sLog->outBasic("ChatHandler::isValidChatMessage no quest locale title matched");
 #endif
                                 return false;
                             }
@@ -1361,7 +1362,7 @@ valid examples:
 
                         if (expectedName != buffer)
                         {
-                            ItemLocale const *il = sObjectMgr.GetItemLocale(linkedItem->ItemId);
+                            ItemLocale const *il = sObjectMgr->GetItemLocale(linkedItem->ItemId);
 
                             bool foundName = false;
                             for (uint8 dbIndex = LOCALE_koKR; dbIndex < TOTAL_LOCALES; ++dbIndex)
@@ -1385,7 +1386,7 @@ valid examples:
                             if (!foundName)
                             {
 #ifdef TRINITY_DEBUG
-                                sLog.outBasic("ChatHandler::isValidChatMessage linked item name wasn't found in any localization");
+                                sLog->outBasic("ChatHandler::isValidChatMessage linked item name wasn't found in any localization");
 #endif
                                 return false;
                             }
@@ -1417,7 +1418,7 @@ valid examples:
                 break;
             default:
 #ifdef TRINITY_DEBUG
-                sLog.outBasic("ChatHandler::isValidChatMessage got invalid command |%c", commandChar);
+                sLog->outBasic("ChatHandler::isValidChatMessage got invalid command |%c", commandChar);
 #endif
                 return false;
         }
@@ -1426,7 +1427,7 @@ valid examples:
     // check if every opened sequence was also closed properly
 #ifdef TRINITY_DEBUG
     if (validSequence != validSequenceIterator)
-        sLog.outBasic("ChatHandler::isValidChatMessage EOF in active sequence");
+        sLog->outBasic("ChatHandler::isValidChatMessage EOF in active sequence");
 #endif
     return validSequence == validSequenceIterator;
 }
@@ -1617,7 +1618,7 @@ Player * ChatHandler::getSelectedPlayer()
     if (guid == 0)
         return m_session->GetPlayer();
 
-    return sObjectMgr.GetPlayer(guid);
+    return sObjectMgr->GetPlayer(guid);
 }
 
 Unit* ChatHandler::getSelectedUnit()
@@ -1820,7 +1821,7 @@ GameObject* ChatHandler::GetObjectGlobalyWithGuidOrNearWithDbGuid(uint32 lowguid
 
     GameObject* obj = pl->GetMap()->GetGameObject(MAKE_NEW_GUID(lowguid, entry, HIGHGUID_GAMEOBJECT));
 
-    if (!obj && sObjectMgr.GetGOData(lowguid))                   // guid is DB guid of object
+    if (!obj && sObjectMgr->GetGOData(lowguid))                   // guid is DB guid of object
     {
         // search near player then
         CellPair p(Trinity::ComputeCellPair(pl->GetPositionX(), pl->GetPositionY()));
@@ -1920,9 +1921,9 @@ GameTele const* ChatHandler::extractGameTeleFromLink(char* text)
     // id case (explicit or from shift link)
     if (cId[0] >= '0' || cId[0] >= '9')
         if (uint32 id = atoi(cId))
-            return sObjectMgr.GetGameTele(id);
+            return sObjectMgr->GetGameTele(id);
 
-    return sObjectMgr.GetGameTele(cId);
+    return sObjectMgr->GetGameTele(cId);
 }
 
 enum GuidLinkType
@@ -1959,10 +1960,10 @@ uint64 ChatHandler::extractGuidFromLink(char* text)
             if (!normalizePlayerName(name))
                 return 0;
 
-            if (Player* player = sObjectMgr.GetPlayer(name.c_str()))
+            if (Player* player = sObjectMgr->GetPlayer(name.c_str()))
                 return player->GetGUID();
 
-            if (uint64 guid = sObjectMgr.GetPlayerGUIDByName(name))
+            if (uint64 guid = sObjectMgr->GetPlayerGUIDByName(name))
                 return guid;
 
             return 0;
@@ -1971,7 +1972,7 @@ uint64 ChatHandler::extractGuidFromLink(char* text)
         {
             uint32 lowguid = (uint32)atol(idS);
 
-            if (CreatureData const* data = sObjectMgr.GetCreatureData(lowguid))
+            if (CreatureData const* data = sObjectMgr->GetCreatureData(lowguid))
                 return MAKE_NEW_GUID(lowguid,data->id,HIGHGUID_UNIT);
             else
                 return 0;
@@ -1980,7 +1981,7 @@ uint64 ChatHandler::extractGuidFromLink(char* text)
         {
             uint32 lowguid = (uint32)atol(idS);
 
-            if (GameObjectData const* data = sObjectMgr.GetGOData(lowguid))
+            if (GameObjectData const* data = sObjectMgr->GetGOData(lowguid))
                 return MAKE_NEW_GUID(lowguid,data->id,HIGHGUID_GAMEOBJECT);
             else
                 return 0;
@@ -2017,14 +2018,14 @@ bool ChatHandler::extractPlayerTarget(char* args, Player** player, uint64* playe
             return false;
         }
 
-        Player* pl = sObjectMgr.GetPlayer(name.c_str());
+        Player* pl = sObjectMgr->GetPlayer(name.c_str());
 
         // if allowed player pointer
         if (player)
             *player = pl;
 
         // if need guid value from DB (in name case for check player existence)
-        uint64 guid = !pl && (player_guid || player_name) ? sObjectMgr.GetPlayerGUIDByName(name) : 0;
+        uint64 guid = !pl && (player_guid || player_name) ? sObjectMgr->GetPlayerGUIDByName(name) : 0;
 
         // if allowed player guid (if no then only online players allowed)
         if (player_guid)
@@ -2110,7 +2111,7 @@ int ChatHandler::GetSessionDbLocaleIndex() const
 
 const char *CliHandler::GetTrinityString(int32 entry) const
 {
-    return sObjectMgr.GetTrinityStringForDBCLocale(entry);
+    return sObjectMgr->GetTrinityStringForDBCLocale(entry);
 }
 
 bool CliHandler::isAvailable(ChatCommand const& cmd) const
@@ -2152,9 +2153,9 @@ bool ChatHandler::GetPlayerGroupAndGUIDByName(const char* cname, Player* &plr, G
                 return false;
             }
 
-            plr = sObjectMgr.GetPlayer(name.c_str());
+            plr = sObjectMgr->GetPlayer(name.c_str());
             if (offline)
-                guid = sObjectMgr.GetPlayerGUIDByName(name.c_str());
+                guid = sObjectMgr->GetPlayerGUIDByName(name.c_str());
         }
     }
 
@@ -2181,10 +2182,10 @@ bool ChatHandler::GetPlayerGroupAndGUIDByName(const char* cname, Player* &plr, G
 
 LocaleConstant CliHandler::GetSessionDbcLocale() const
 {
-    return sWorld.GetDefaultDbcLocale();
+    return sWorld->GetDefaultDbcLocale();
 }
 
 int CliHandler::GetSessionDbLocaleIndex() const
 {
-    return sObjectMgr.GetDBCLocaleIndex();
+    return sObjectMgr->GetDBCLocaleIndex();
 }

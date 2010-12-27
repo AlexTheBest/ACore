@@ -84,11 +84,8 @@ class instance_icecrown_citadel : public InstanceMapScript
                     teamInInstance = player->GetTeam();
             }
 
-            void OnCreatureCreate(Creature* creature, bool add)
+            void OnCreatureCreate(Creature* creature)
             {
-                if (!add)
-                    return;
-
                 if (!teamInInstance)
                 {
                     Map::PlayerList const &players = instance->GetPlayers();
@@ -178,7 +175,7 @@ class instance_icecrown_citadel : public InstanceMapScript
                 }
             }
 
-            void OnGameObjectCreate(GameObject* go, bool add)
+            void OnGameObjectCreate(GameObject* go)
             {
                 switch (go->GetEntry())
                 {
@@ -199,7 +196,7 @@ class instance_icecrown_citadel : public InstanceMapScript
                     case GO_SINDRAGOSA_ENTRANCE_DOOR:
                     case GO_SINDRAGOSA_SHORTCUT_ENTRANCE_DOOR:
                     case GO_SINDRAGOSA_SHORTCUT_EXIT_DOOR:
-                        AddDoor(go, add);
+                        AddDoor(go, true);
                         break;
                     case GO_LADY_DEATHWHISPER_ELEVATOR:
                         ladyDeathwisperElevator = go->GetGUID();
@@ -252,6 +249,34 @@ class instance_icecrown_citadel : public InstanceMapScript
                         break;
                     case GO_DRINK_ME:
                         putricideTable = go->GetGUID();
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            void OnGameObjectRemove(GameObject* go)
+            {
+                switch (go->GetEntry())
+                {
+                    case GO_DOODAD_ICECROWN_ICEWALL02:
+                    case GO_ICEWALL:
+                    case GO_LORD_MARROWGAR_S_ENTRANCE:
+                    case GO_ORATORY_OF_THE_DAMNED_ENTRANCE:
+                    case GO_ORANGE_PLAGUE_MONSTER_ENTRANCE:
+                    case GO_GREEN_PLAGUE_MONSTER_ENTRANCE:
+                    case GO_SCIENTIST_ENTRANCE:
+                    case GO_CRIMSON_HALL_DOOR:
+                    case GO_BLOOD_ELF_COUNCIL_DOOR:
+                    case GO_BLOOD_ELF_COUNCIL_DOOR_RIGHT:
+                    case GO_DOODAD_ICECROWN_BLOODPRINCE_DOOR_01:
+                    case GO_DOODAD_ICECROWN_GRATE_01:
+                    case GO_GREEN_DRAGON_BOSS_ENTRANCE:
+                    case GO_GREEN_DRAGON_BOSS_EXIT:
+                    case GO_SINDRAGOSA_ENTRANCE_DOOR:
+                    case GO_SINDRAGOSA_SHORTCUT_ENTRANCE_DOOR:
+                    case GO_SINDRAGOSA_SHORTCUT_EXIT_DOOR:
+                        AddDoor(go, false);
                         break;
                     default:
                         break;
@@ -475,7 +500,6 @@ class instance_icecrown_citadel : public InstanceMapScript
             }
 
         private:
-            uint32 teamInInstance;
             uint64 ladyDeathwisperElevator;
             uint64 deathbringerSaurfang;
             uint64 saurfangDoor;
@@ -492,6 +516,7 @@ class instance_icecrown_citadel : public InstanceMapScript
             uint64 bloodCouncil[3];
             uint64 bloodCouncilController;
             uint64 bloodQueenLanaThel;
+            uint32 teamInInstance;
             bool isBonedEligible;
             bool isOozeDanceEligible;
             bool isNauseaEligible;

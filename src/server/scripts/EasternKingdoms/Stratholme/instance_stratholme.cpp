@@ -124,7 +124,7 @@ public:
                 return true;
             }
 
-            sLog.outDebug("TSCR: Instance Stratholme: Cannot open slaugther square yet.");
+            sLog->outDebug("TSCR: Instance Stratholme: Cannot open slaugther square yet.");
             return false;
         }
 
@@ -134,76 +134,76 @@ public:
             if (!goGuid)
                 return;
 
-            if (GameObject* pGo = instance->GetGameObject(goGuid))
+            if (GameObject* go = instance->GetGameObject(goGuid))
             {
                 if (withRestoreTime)
-                    pGo->UseDoorOrButton(10);
+                    go->UseDoorOrButton(10);
                 else
-                    pGo->SetGoState((GOState)newState);
+                    go->SetGoState((GOState)newState);
             }
         }
 
-        void OnCreatureCreate(Creature* pCreature, bool /*add*/)
+        void OnCreatureCreate(Creature* creature)
         {
-            switch(pCreature->GetEntry())
+            switch(creature->GetEntry())
             {
-            case C_BARON:           baronGUID = pCreature->GetGUID(); break;
-            case C_YSIDA_TRIGGER:   ysidaTriggerGUID = pCreature->GetGUID(); break;
-            case C_CRYSTAL:         crystalsGUID.insert(pCreature->GetGUID()); break;
+            case C_BARON:           baronGUID = creature->GetGUID(); break;
+            case C_YSIDA_TRIGGER:   ysidaTriggerGUID = creature->GetGUID(); break;
+            case C_CRYSTAL:         crystalsGUID.insert(creature->GetGUID()); break;
             case C_ABOM_BILE:
-            case C_ABOM_VENOM:      abomnationGUID.insert(pCreature->GetGUID()); break;
+            case C_ABOM_VENOM:      abomnationGUID.insert(creature->GetGUID()); break;
             }
         }
 
-        void OnGameObjectCreate(GameObject* pGo, bool /*add*/)
+        void OnGameObjectCreate(GameObject* go)
         {
-            switch(pGo->GetEntry())
+            switch(go->GetEntry())
             {
             case GO_SERVICE_ENTRANCE:
-                serviceEntranceGUID = pGo->GetGUID();
+                serviceEntranceGUID = go->GetGUID();
                 break;
             case GO_GAUNTLET_GATE1:
                 //weird, but unless flag is set, client will not respond as expected. DB bug?
-                pGo->SetFlag(GAMEOBJECT_FLAGS,GO_FLAG_LOCKED);
-                gauntletGate1GUID = pGo->GetGUID();
+                go->SetFlag(GAMEOBJECT_FLAGS,GO_FLAG_LOCKED);
+                gauntletGate1GUID = go->GetGUID();
                 break;
             case GO_ZIGGURAT1:
-                ziggurat1GUID = pGo->GetGUID();
+                ziggurat1GUID = go->GetGUID();
                 if (GetData(TYPE_BARONESS) == IN_PROGRESS)
-                    HandleGameObject(0, true, pGo);
+                    HandleGameObject(0, true, go);
                 break;
             case GO_ZIGGURAT2:
-                ziggurat2GUID = pGo->GetGUID();
+                ziggurat2GUID = go->GetGUID();
                 if (GetData(TYPE_NERUB) == IN_PROGRESS)
-                    HandleGameObject(0, true, pGo);
+                    HandleGameObject(0, true, go);
                 break;
             case GO_ZIGGURAT3:
-                ziggurat3GUID = pGo->GetGUID();
+                ziggurat3GUID = go->GetGUID();
                 if (GetData(TYPE_PALLID) == IN_PROGRESS)
-                    HandleGameObject(0, true, pGo);
+                    HandleGameObject(0, true, go);
                 break;
             case GO_ZIGGURAT4:
-                ziggurat4GUID = pGo->GetGUID();
+                ziggurat4GUID = go->GetGUID();
                 if (GetData(TYPE_BARON) == DONE || GetData(TYPE_RAMSTEIN) == DONE)
-                    HandleGameObject(0, true, pGo);
+                    HandleGameObject(0, true, go);
                 break;
             case GO_ZIGGURAT5:
-                ziggurat5GUID = pGo->GetGUID();
+                ziggurat5GUID = go->GetGUID();
                 if (GetData(TYPE_BARON) == DONE || GetData(TYPE_RAMSTEIN) == DONE)
-                    HandleGameObject(0, true, pGo);
+                    HandleGameObject(0, true, go);
                 break;
             case GO_PORT_GAUNTLET:
-                portGauntletGUID = pGo->GetGUID();
+                portGauntletGUID = go->GetGUID();
                 if (GetData(TYPE_BARONESS) == IN_PROGRESS && GetData(TYPE_NERUB) == IN_PROGRESS && GetData(TYPE_PALLID) == IN_PROGRESS)
-                    HandleGameObject(0, true, pGo);
+                    HandleGameObject(0, true, go);
                 break;
             case GO_PORT_SLAUGTHER:
-                portSlaugtherGUID = pGo->GetGUID();
+                portSlaugtherGUID = go->GetGUID();
                 if (GetData(TYPE_BARONESS) == IN_PROGRESS && GetData(TYPE_NERUB) == IN_PROGRESS && GetData(TYPE_PALLID) == IN_PROGRESS)
-                    HandleGameObject(0, true, pGo);
+                    HandleGameObject(0, true, go);
                 break;
             case GO_PORT_ELDERS:
-                portElderGUID = pGo->GetGUID();
+                portElderGUID = go->GetGUID();
                 break;
             }
         }
@@ -220,7 +220,7 @@ public:
                         break;
                     Encounter[0] = data;
                     BaronRun_Timer = 2700000;
-                    sLog.outDebug("TSCR: Instance Stratholme: Baron run in progress.");
+                    sLog->outDebug("TSCR: Instance Stratholme: Baron run in progress.");
                     break;
                 case FAIL:
                     //may add code to remove aura from players, but in theory the time should be up already and removed.
@@ -278,10 +278,10 @@ public:
                         //UpdateGoState(ziggurat4GUID,0,true);
                         if (Creature* pBaron = instance->GetCreature(baronGUID))
                             pBaron->SummonCreature(C_RAMSTEIN,4032.84f,-3390.24f,119.73f,4.71f,TEMPSUMMON_TIMED_OR_DEAD_DESPAWN,1800000);
-                        sLog.outDebug("TSCR: Instance Stratholme: Ramstein spawned.");
+                        sLog->outDebug("TSCR: Instance Stratholme: Ramstein spawned.");
                     }
                     else
-                        sLog.outDebug("TSCR: Instance Stratholme: %u Abomnation left to kill.",count);
+                        sLog->outDebug("TSCR: Instance Stratholme: %u Abomnation left to kill.",count);
                 }
 
                 if (data == NOT_STARTED)
@@ -290,7 +290,7 @@ public:
                 if (data == DONE)
                 {
                     SlaugtherSquare_Timer = 300000;
-                    sLog.outDebug("TSCR: Instance Stratholme: Slaugther event will continue in 5 minutes.");
+                    sLog->outDebug("TSCR: Instance Stratholme: Slaugther event will continue in 5 minutes.");
                 }
                 Encounter[4] = data;
                 break;
@@ -431,7 +431,7 @@ public:
                     if (GetData(TYPE_BARON_RUN) != DONE)
                         SetData(TYPE_BARON_RUN, FAIL);
                     BaronRun_Timer = 0;
-                    sLog.outDebug("TSCR: Instance Stratholme: Baron run event reached end. Event has state %u.",GetData(TYPE_BARON_RUN));
+                    sLog->outDebug("TSCR: Instance Stratholme: Baron run event reached end. Event has state %u.",GetData(TYPE_BARON_RUN));
                 } else BaronRun_Timer -= diff;
             }
 
@@ -446,7 +446,7 @@ public:
 
                         HandleGameObject(ziggurat4GUID, true);
                         HandleGameObject(ziggurat5GUID, true);
-                        sLog.outDebug("TSCR: Instance Stratholme: Black guard sentries spawned. Opening gates to baron.");
+                        sLog->outDebug("TSCR: Instance Stratholme: Black guard sentries spawned. Opening gates to baron.");
                     }
                     SlaugtherSquare_Timer = 0;
                 } else SlaugtherSquare_Timer -= diff;

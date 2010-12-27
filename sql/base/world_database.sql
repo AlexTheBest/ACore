@@ -559,7 +559,13 @@ INSERT INTO `command` VALUES
 ('quest remove',3,'Syntax: .quest remove #quest_id\r\n\r\nSet quest #quest_id state to not completed and not active (and remove from active quest list) for selected player.'),
 ('recall',1,'Syntax: .recall [$playername]\r\n\r\nTeleport $playername or selected player to the place where he has been before last use of a teleportation command. If no $playername is entered and no player is selected, it will teleport you.'),
 ('reload',3,'Syntax: .reload $subcommand\nType .reload to see the list of possible subcommands or .help reload $subcommand to see info on subcommands'),
+('reload access_requirement',3,'Syntax: .reload access_requirement\nReload access_requirement table.'),
+('reload achievement_criteria_data',3,'Syntax: .reload achievement_criteria_data\nReload achievement_criteria_data table.'),
+('reload achievement_reward',3,'Syntax: .reload achievement_reward\nReload achievement_reward table.'),
 ('reload all',3,'Syntax: .reload all\r\n\r\nReload all tables with reload support added and that can be _safe_ reloaded.'),
+('reload all achievement',3,'Syntax: .reload all achievement\r\n\r\nReload achievement_reward, achievement_criteria_data tables.'),
+('reload all area',3,'Syntax: .reload all area\r\n\r\nReload areatrigger_teleport, areatrigger_tavern, game_graveyard_zone tables.'),
+('reload all eventai',3,'Syntax: .reload all eventai\r\n\r\nReload creature_ai_scripts, creature_ai_summons, creature_ai_texts tables.'),
 ('reload all gossips',3,'Syntax: .reload all gossips\nReload gossip_menu, gossip_menu_option, gossip_scripts, npc_gossip, points_of_interest tables.'),
 ('reload all item',3,'Syntax: .reload all item\nReload page_text, item_enchantment_table tables.'),
 ('reload all locales',3,'Syntax: .reload all locales\r\n\r\nReload all `locales_*` tables with reload support added and that can be _safe_ reloaded.'),
@@ -571,6 +577,7 @@ INSERT INTO `command` VALUES
 ('reload areatrigger_involvedrelation',3,'Syntax: .reload areatrigger_involvedrelation\nReload areatrigger_involvedrelation table.'),
 ('reload areatrigger_tavern',3,'Syntax: .reload areatrigger_tavern\nReload areatrigger_tavern table.'),
 ('reload areatrigger_teleport',3,'Syntax: .reload areatrigger_teleport\nReload areatrigger_teleport table.'),
+('reload auctions',3,'Syntax: .reload auctions\nReload dynamic data tables from the database.'),
 ('reload autobroadcast',3,'Syntax: .reload autobroadcast\nReload autobroadcast table.'),
 ('reload command',3,'Syntax: .reload command\nReload command table.'),
 ('reload conditions', 3, 'Reload conditions table.'),
@@ -580,6 +587,8 @@ INSERT INTO `command` VALUES
 ('reload creature_loot_template',3,'Syntax: .reload creature_loot_template\nReload creature_loot_template table.'),
 ('reload creature_onkill_reputation','3','Syntax: .reload creature_onkill_reputation\r\nReload creature_onkill_reputation table.'),
 ('reload creature_questrelation',3,'Syntax: .reload creature_questrelation\nReload creature_questrelation table.'),
+('reload creature_template','3','Syntax: .reload creature_template $entry\r\nReload the specified creature''s template.'),
+('reload creature_text',3,'Syntax: .reload creature_text\r\nReload creature_text table.'),
 ('reload disables',3,'Syntax: .reload disables\r\nReload disables table.'),
 ('reload disenchant_loot_template',3,'Syntax: .reload disenchant_loot_template\nReload disenchant_loot_template table.'),
 ('reload event_scripts',3,'Syntax: .reload event_scripts\nReload event_scripts table.'),
@@ -608,6 +617,8 @@ INSERT INTO `command` VALUES
 ('reload locales_page_text',3,'Syntax: .reload locales_page_text\nReload locales_page_text table.'),
 ('reload locales_points_of_interest',3,'Syntax: .reload locales_points_of_interest\nReload locales_point_of_interest table.'),
 ('reload locales_quest',3,'Syntax: .reload locales_quest\nReload locales_quest table.'),
+('reload mail_level_reward',3,'Syntax: .reload mail_level_reward\nReload mail_level_reward table.'),
+('reload mail_loot_template',3,'Syntax: .reload mail_loot_template\nReload mail_loot_template table.'),
 ('reload milling_loot_template',3,'Syntax: .reload milling_loot_template\nReload milling_loot_template table.'),
 ('reload npc_gossip',3,'Syntax: .reload npc_gossip\nReload npc_gossip table.'),
 ('reload npc_trainer',3,'Syntax: .reload npc_trainer\nReload npc_trainer table.'),
@@ -617,7 +628,6 @@ INSERT INTO `command` VALUES
 ('reload points_of_interest',3,'Syntax: .reload points_of_interest\nReload points_of_interest table.'),
 ('reload prospecting_loot_template',3,'Syntax: .reload prospecting_loot_template\nReload prospecting_loot_template table.'),
 ('reload quest_end_scripts',3,'Syntax: .reload quest_end_scripts\nReload quest_end_scripts table.'),
-('reload mail_loot_template',3,'Syntax: .reload mail_loot_template\nReload mail_loot_template table.'),
 ('reload quest_poi',3,'Syntax: .reload quest_poi\nReload quest_poi table.'),
 ('reload quest_start_scripts',3,'Syntax: .reload quest_start_scripts\nReload quest_start_scripts table.'),
 ('reload quest_template',3,'Syntax: .reload quest_template\nReload quest_template table.'),
@@ -627,6 +637,7 @@ INSERT INTO `command` VALUES
 ('reload skill_extra_item_template',3,'Syntax: .reload skill_extra_item_template\nReload skill_extra_item_template table.'),
 ('reload skill_fishing_base_level',3,'Syntax: .reload skill_fishing_base_level\nReload skill_fishing_base_level table.'),
 ('reload skinning_loot_template',3,'Syntax: .reload skinning_loot_template\nReload skinning_loot_template table.'),
+('reload smart_scripts',3,'Syntax: .reload smart_scripts\nReload smart_scripts table.'),
 ('reload spell_area',3,'Syntax: .reload spell_area\nReload spell_area table.'),
 ('reload spell_bonus_data',3,'Syntax: .reload spell_bonus_data\nReload spell_bonus_data table.'),
 ('reload spell_group',3,'Syntax: .reload spell_group\nReload spell_group table.'),
@@ -640,10 +651,8 @@ INSERT INTO `command` VALUES
 ('reload spell_scripts',3,'Syntax: .reload spell_scripts\nReload spell_scripts table.'),
 ('reload spell_target_position',3,'Syntax: .reload spell_target_position\nReload spell_target_position table.'),
 ('reload spell_threats',3,'Syntax: .reload spell_threats\nReload spell_threats table.'),
-('reload creature_template','3','Syntax: .reload creature_template $entry\r\nReload the specified creature''s template.'),
 ('reload trinity_string',3,'Syntax: .reload trinity_string\nReload trinity_string table.'),
 ('reload waypoint_scripts',3,'Syntax: .reload waypoint_scripts\nReload waypoint_scripts table.'),
-('reload creature_text',3,'Syntax: .reload creature_text\r\nReload creature_text table.'),
 ('repairitems',2,'Syntax: .repairitems\r\n\r\nRepair all selected player''s items.'),
 ('reset',3,'Syntax: .reset $subcommand\nType .reset to see the list of possible subcommands or .help reset $subcommand to see info on subcommands'),
 ('reset achievements',3,'Syntax: .reset achievements [$playername]\r\n\r\nReset achievements data for selected or named (online or offline) character. Achievements for persistance progress data like completed quests/etc re-filled at reset. Achievements for events like kills/casts/etc will lost.'),
@@ -1442,29 +1451,6 @@ LOCK TABLES `creature_involvedrelation` WRITE;
 UNLOCK TABLES;
 
 --
--- Table structure for table `creature_linked_respawn`
---
-
-DROP TABLE IF EXISTS `creature_linked_respawn`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
-CREATE TABLE `creature_linked_respawn` (
-  `guid` int(10) unsigned NOT NULL COMMENT 'dependent creature',
-  `linkedGuid` int(10) unsigned NOT NULL COMMENT 'master creature',
-  PRIMARY KEY (`guid`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Creature Respawn Link System';
-/*!40101 SET character_set_client = @saved_cs_client */;
-
---
--- Dumping data for table `creature_linked_respawn`
---
-
-LOCK TABLES `creature_linked_respawn` WRITE;
-/*!40000 ALTER TABLE `creature_linked_respawn` DISABLE KEYS */;
-/*!40000 ALTER TABLE `creature_linked_respawn` ENABLE KEYS */;
-UNLOCK TABLES;
-
---
 -- Table structure for table `creature_loot_template`
 --
 
@@ -1852,6 +1838,8 @@ CREATE TABLE `disables` (
   `sourceType` int(10) unsigned NOT NULL,
   `entry` int(10) unsigned NOT NULL,
   `flags` tinyint(3) unsigned NOT NULL default '0',
+  `params_0` varchar(255) NOT NULL default '',
+  `params_1` varchar(255) NOT NULL default '',
   `comment` varchar(255) character set utf8 NOT NULL default '',
   PRIMARY KEY  (`sourceType`,`entry`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -3130,6 +3118,30 @@ CREATE TABLE `lfg_dungeon_rewards` (
 LOCK TABLES `lfg_dungeon_rewards` WRITE;
 /*!40000 ALTER TABLE `lfg_dungeon_rewards` DISABLE KEYS */;
 /*!40000 ALTER TABLE `lfg_dungeon_rewards` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
+-- Table structure for table `linked_respawn`
+--
+
+DROP TABLE IF EXISTS `linked_respawn`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `linked_respawn` (
+  `guid` int(10) unsigned NOT NULL COMMENT 'slave entity',
+  `linkedGuid` int(10) unsigned NOT NULL COMMENT 'master entity',
+  `linkType` tinyint(3) unsigned NOT NULL DEFAULT '0' COMMENT '0: creature->creature, 1: creature->GO, 2: GO->GO, 3: GO->creature', 
+  PRIMARY KEY (`guid`, `linkType`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 ROW_FORMAT=DYNAMIC COMMENT='Respawn Link System';
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `linked_respawn`
+--
+
+LOCK TABLES `linked_respawn` WRITE;
+/*!40000 ALTER TABLE `linked_respawn` DISABLE KEYS */;
+/*!40000 ALTER TABLE `linked_respawn` ENABLE KEYS */;
 UNLOCK TABLES;
 
 --
@@ -16885,6 +16897,7 @@ INSERT INTO `spell_bonus_data` (`entry`,`direct_bonus`,`dot_bonus`,`ap_bonus`,`a
 (26573, -1, 0.04, -1, 0.04, 'Paladin - Consecration'),
 (879, 0.15, -1, 0.15, -1, 'Paladin - Exorcism'),
 (19750, 1, -1, -1, -1, 'Paladin - Flash of Light'),
+(66922, 0, 0, 0, 0, 'Paladin - Flash of Light'),
 (53595, 0, 0, 0, 0, 'Paladin - Hammer of the Righteous'),
 (24275, 0.15, -1, 0.15, -1, 'Paladin - Hammer of Wrath'),
 (62124, 0.085, -1, -1, -1, 'Paladin - Hand of Reckoning'),
@@ -17241,7 +17254,8 @@ INSERT INTO `spell_dbc` (`Id`,`Dispel`,`Mechanic`,`Attributes`,`AttributesEx`,`A
 (71098,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Quest 24451 RewSpellCast serverside spell'),
 (70878,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Creature 40160 creature_addon serverside spell'),
 (38406,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Quest 10721 RewSpellCast serverside spell'),
-(44805,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Aura used in creature_addon - serverside spell');
+(44805,  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'Aura used in creature_addon - serverside spell'),
+(3617,   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, -1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 'NPC 32958 suicide spell');
 /*!40000 ALTER TABLE `spell_dbc` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -18303,7 +18317,6 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 11185, 0x00,   3, 0x00000080, 0x00000000, 0x00000000, 0x00050000, 0x00000000,   0,   0,   0), -- Improved Blizzard (Rank 1)
 ( 11255, 0x00,   3, 0x00004000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Improved Counterspell (Rank 1)
 ( 12169, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000040,   0,   0,   0), -- Shield Block
-( 12281, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 1)
 ( 12289, 0x00,   4, 0x00000002, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Improved Hamstring (Rank 1)
 ( 12298, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000070,   0,   0,   0), -- Shield Specialization (Rank 1)
 ( 12311, 0x00,   4, 0x00000800, 0x00000001, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Gag Order (Rank 1)
@@ -18319,10 +18332,11 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 12727, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000070,   0,   0,   0), -- Shield Specialization (Rank 5)
 ( 12797, 0x00,   4, 0x00000400, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Improved Revenge (Rank 1)
 ( 12799, 0x00,   4, 0x00000400, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Improved Revenge (Rank 2)
-( 12812, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 2)
-( 12813, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 3)
-( 12814, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 4)
-( 12815, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 5)
+( 12281, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 1)
+( 12812, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 2)
+( 12813, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 3)
+( 12814, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 4)
+( 12815, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,   6), -- Sword Specialization (Rank 5)
 ( 12834, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Deep Wounds (Rank 1)
 ( 12846, 0x04,   3, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Ignite (Rank 3)
 ( 12847, 0x04,   3, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Ignite (Rank 4)
@@ -18366,8 +18380,8 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 15128, 0x04,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Mark of Flames
 ( 15277, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   6,   0,   0), -- Seal of Reckoning
 ( 15286, 0x20,   6, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,   0), -- Vampiric Embrace
-( 15337, 0x00,   6, 0x00002000, 0x00000002, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Improved Spirit Tap (Rank 1)
-( 15338, 0x00,   6, 0x00002000, 0x00000002, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Improved Spirit Tap (Rank 2)
+( 15337, 0x00,   6, 0x00802000, 0x00000002, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Improved Spirit Tap (Rank 1)
+( 15338, 0x00,   6, 0x00802000, 0x00000002, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Improved Spirit Tap (Rank 2)
 ( 15346, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   6,   0,   0), -- Seal of Reckoning
 ( 15362, 0x00,   6, 0x10001E00, 0x00010004, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Inspiration (Rank 2)
 ( 15363, 0x00,   6, 0x10001E00, 0x00010004, 0x00000000, 0x00000000, 0x00000002,   0,   0,   0), -- Inspiration (Rank 3)
@@ -19328,12 +19342,7 @@ INSERT INTO `spell_proc_event` (`entry`,`SchoolMask`,`SpellFamilyName`,`SpellFam
 ( 75474, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Charred Twilight Scale (Heroic)
 ( 75465, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Charred Twilight Scale
 ( 75457, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Sharpened Twilight Scale (Heroic)
-( 75455, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45), -- Sharpened Twilight Scale
-( 12281, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6), -- Sword Specialization (Rank 1)
-( 12812, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6), -- Sword Specialization (Rank 2)
-( 12813, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6), -- Sword Specialization (Rank 3)
-( 12814, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6), -- Sword Specialization (Rank 4)
-( 12815, 0x00,   4, 0xAA600444, 0x00400105, 0x00000000, 0x00000000, 0x00000000,   0,   0,  6); -- Sword Specialization (Rank 5)
+( 75455, 0x00,   0, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,   0,   0,  45); -- Sharpened Twilight Scale
 /*!40000 ALTER TABLE `spell_proc_event` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -26873,6 +26882,9 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 17271, 'spell_q5206_test_fetid_skull'),
 ( 19512, 'spell_q6124_6129_apply_salve'),
 ( 34665, 'spell_q10255_administer_antidote'),
+( 43874, 'spell_q11396_11399_force_shield_arcane_purple_x3'),
+( 43882, 'spell_q11396_11399_scourging_crystal_controller_dummy'),
+( 50133, 'spell_q11396_11399_scourging_crystal_controller'),
 ( 44936, 'spell_q11515_fel_siphon_dummy'),
 ( 45449, 'spell_q11587_arcane_prisoner_rescue'),
 ( 46023, 'spell_q11730_ultrasonic_screwdriver'),
@@ -26896,6 +26908,7 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 14537, 'spell_item_six_demon_bag'),
 ( 59640, 'spell_item_underbelly_elixir'),
 ( 71905, 'spell_item_shadowmourne'),
+( 67533, 'spell_item_red_rider_air_rifle'),
 -- warrior
 ( 12975, 'spell_warr_last_stand'),
 -- paladin
@@ -27776,8 +27789,8 @@ INSERT INTO `trinity_string` (`entry`,`content_default`,`content_loc1`,`content_
 (5019, '[Mountable]', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (5020, 'Phasemask: %u', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (5021, 'Armor: %u', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(5022, 'Granting ownership to first person that joins the channel \"%s\": Enabled.'),
-(5023, 'Granting ownership to first person that joins the channel \"%s\": Disabled.'),
+(5022, 'Granting ownership to first person that joins the channel \"%s\": Enabled.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(5023, 'Granting ownership to first person that joins the channel \"%s\": Disabled.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (5024, 'Entry: %u', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (5025, 'Type: %u', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (5026, 'DisplayID: %u', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
