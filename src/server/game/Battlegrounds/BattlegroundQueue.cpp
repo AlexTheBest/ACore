@@ -219,7 +219,7 @@ GroupQueueInfo * BattlegroundQueue::AddGroup(Player *leader, Group* grp, Battleg
                 // System message
                 else
                 {
-       	if(sBattlegroundMgr.isMixBg())
+       	if(sBattlegroundMgr->isMixBg())
       		 {
                     sWorld->SendWorldText(LANG_BG_QUEUE_ANNOUNCE_WORLD2, bgName, q_min_level, q_max_level,
                         qAlliance+qHorde, (MinPlayers * 2 > (qAlliance + qHorde)) ? MinPlayers * 2 - (qAlliance + qHorde) : (uint32)0);
@@ -515,7 +515,7 @@ void BattlegroundQueue::FillPlayersToBG(Battleground* bg, BattlegroundBracketId 
         ++Horde_itr;
 
     //if ofc like BG queue invitation is set in config, then we are happy
-    if (sWorld->getIntConfig(CONFIG_BATTLEGROUND_INVITATION_TYPE) == 0 || sBattlegroundMgr.isMixBg())
+    if (sWorld->getIntConfig(CONFIG_BATTLEGROUND_INVITATION_TYPE) == 0 || sBattlegroundMgr->isMixBg())
         return;
 
     /*
@@ -643,7 +643,7 @@ uint32 BGPlayerCounter = 0;
             {
                 m_SelectionPools[i].AddGroup(*(itr_team[i]), maxPlayers);
 			//Time for the worlds biggest HACK =D but hay it works
-				if(bg_template->isBattleground() && sBattlegroundMgr.isMixBg())
+				if(bg_template->isBattleground() && sBattlegroundMgr->isMixBg())
 				{
 					BGPlayerCounter =  m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount() +  m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount();
 					if (BGPlayerCounter >= minPlayers * 2)
@@ -660,7 +660,7 @@ uint32 BGPlayerCounter = 0;
     if (m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount() < m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount())
         j = BG_TEAM_HORDE;
     if (sWorld->getIntConfig(CONFIG_BATTLEGROUND_INVITATION_TYPE) != 0
-        && m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount() >= minPlayers && m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount() >= minPlayers  && !sBattlegroundMgr.isMixBg())
+        && m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount() >= minPlayers && m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount() >= minPlayers  && !sBattlegroundMgr->isMixBg())
     {
         //we will try to invite more groups to team with less players indexed by j
         ++(itr_team[j]);                                         //this will not cause a crash, because for cycle above reached break;
@@ -679,7 +679,7 @@ uint32 BGPlayerCounter = 0;
         return true;
     //return true if there are enough players in selection pools - enable to work .debug bg command correctly
 
-	if(bg_template->isBattleground() && sBattlegroundMgr.isMixBg())
+	if(bg_template->isBattleground() && sBattlegroundMgr->isMixBg())
 	{
 		int32 Ali   = m_SelectionPools[BG_TEAM_ALLIANCE].GetPlayerCount();
 		int32 Horde = m_SelectionPools[BG_TEAM_HORDE].GetPlayerCount();

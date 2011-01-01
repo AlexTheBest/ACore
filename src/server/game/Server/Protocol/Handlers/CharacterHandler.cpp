@@ -803,7 +803,7 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder * holder)
     sObjectAccessor->AddObject(pCurrChar);
     //sLog->outDebug("Player %s added to Map.",pCurrChar->GetName());
 
-    if (OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr.GetOutdoorPvPToZoneId(4197))
+    if (OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr->GetOutdoorPvPToZoneId(4197))
     {
             if (pvpWG->isWarTime())
             {

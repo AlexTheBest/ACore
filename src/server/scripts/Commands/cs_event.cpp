@@ -171,7 +171,7 @@ public:
 
 	static bool HandleEventMixBgCommand(ChatHandler* handler, const char* args)
 	{
- 	   sBattlegroundMgr.ToggleMixBg();  
+ 	   sBattlegroundMgr->ToggleMixBg();  
  	   return true;
 	}
 

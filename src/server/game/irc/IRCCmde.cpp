@@ -106,14 +106,14 @@ void IRCCmd::Account_Player(_CDATA *CD)
         return;
     }
     normalizePlayerName(_PARAMS[0]);
-    uint64 guid = sObjectMgr.GetPlayerGUIDByName(_PARAMS[0]);
+    uint64 guid = sObjectMgr->GetPlayerGUIDByName(_PARAMS[0]);
     uint32 account_id = 0;
-    account_id = sObjectMgr.GetPlayerAccountIdByGUID(guid);
+    account_id = sObjectMgr->GetPlayerAccountIdByGUID(guid);
     if (account_id)
     {
         if (account_id == GetAcctIDFromName(CD->USER) || GetLevel(CD->USER) >= sIRC._op_gm_lev)
         {
-            Player* plr = sObjectMgr.GetPlayer(guid);
+            Player* plr = sObjectMgr->GetPlayer(guid);
             if (_PARAMS[1] == "lock")
             {
                 LoginDatabase.PExecute("UPDATE `account` SET `locked` = '1' WHERE `id` = '%d'",account_id);
@@ -194,8 +194,8 @@ void IRCCmd::Ban_Player(_CDATA *CD)
     }
     if (_PARAMS[1] == "acct")
     {
-        uint64 guid = sObjectMgr.GetPlayerGUIDByName(_PARAMS[0].c_str());
-        uint32 acctid = sObjectMgr.GetPlayerAccountIdByGUID(guid);
+        uint64 guid = sObjectMgr->GetPlayerGUIDByName(_PARAMS[0].c_str());
+        uint32 acctid = sObjectMgr->GetPlayerAccountIdByGUID(guid);
         if (_PARAMS[2] == "")
             _PARAMS[2] = "No Reason";
         if (acctid)
@@ -282,8 +282,8 @@ void IRCCmd::Char_Player(_CDATA *CD)
         return;
     }
     normalizePlayerName(_PARAMS[0]);
-    uint64 guid = sObjectMgr.GetPlayerGUIDByName(_PARAMS[0]);
-    Player* plr = sObjectMgr.GetPlayer(guid);
+    uint64 guid = sObjectMgr->GetPlayerGUIDByName(_PARAMS[0]);
+    Player* plr = sObjectMgr->GetPlayer(guid);
     if (plr)
     {
         if (_PARAMS[1] == "mapcheat")
@@ -408,7 +408,7 @@ void IRCCmd::Char_Player(_CDATA *CD)
             }
             if (_PARAMS[2] == "add")
             {
-                Quest const* pQuest = sObjectMgr.GetQuestTemplate(qId);
+                Quest const* pQuest = sObjectMgr->GetQuestTemplate(qId);
                 for (uint32 id = 0; id < sItemStorage.MaxEntry; id++)
                 {
                     ItemPrototype const *pProto = sItemStorage.LookupEntry<ItemPrototype>(id);
@@ -431,125 +431,9 @@ void IRCCmd::Char_Player(_CDATA *CD)
                     Send_IRCA(CD->USER, "\0034[ERROR] : Cannot Add Quest To Player, He Either Has No Space Or He Already Has The Quest In His Quest Log.", true, "ERROR");
                 }
             }
-            if (_PARAMS[2] == "remove")
-            {
-                Quest const* pQuest = sObjectMgr.GetQuestTemplate(qId);
-                for (uint8 slot = 0; slot < MAX_QUEST_LOG_SIZE; ++slot)
-                {
-                    uint32 quest = plr->GetQuestSlotQuestId(slot);
-                    if (quest==qId)
-                    {
-                        plr->SetQuestSlot(slot,0);
-                        plr->TakeQuestSourceItem(quest, false);
-                    }
-                }
-                plr->SetQuestStatus(qId, QUEST_STATUS_NONE);
-                plr->getQuestStatusMap()[qId].m_rewarded = false;
-                Send_IRCA(ChanOrPM(CD), MakeMsg("\00313[%s] : Quest [%s] Removed.", _PARAMS[0].c_str(), QName.c_str()), true, CD->TYPE);
-            }
-            if (_PARAMS[2] == "complete")
-            {
-                Quest const* pQuest = sObjectMgr.GetQuestTemplate(qId);
-                if (plr->GetQuestStatus(qId) == QUEST_STATUS_NONE)
-                {
-                    Send_IRCA(CD->USER, "\0034[ERROR] : Player Does Not Have This Quest In Quest Log, Cannot Complete It.", true, "ERROR");
-                }
-                else
-                {
-                    for (uint8 x = 0; x < QUEST_OBJECTIVES_COUNT; ++x)
-                    {
-                        uint32 id = pQuest->ReqItemId[x];
-                        uint32 count = pQuest->ReqItemCount[x];
-                        if (!id || !count)
-                            continue;
-                        uint32 curItemCount = plr->GetItemCount(id,true);
-                        ItemPosCountVec dest;
-                        uint8 msg = plr->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, id, count-curItemCount);
-                        if (msg == EQUIP_ERR_OK)
-                        {
-                            Item* item = plr->StoreNewItem(dest, id, true);
-                            plr->SendNewItem(item,count-curItemCount,true,false);
-                        }
-                    }
-
-                    for (uint8 i = 0; i < QUEST_OBJECTIVES_COUNT; i++)
-                    {
-                        uint32 creature = pQuest->ReqCreatureOrGOId[i];
-                        uint32 creaturecount = pQuest->ReqCreatureOrGOCount[i];
-                        if (uint32 spell_id = pQuest->ReqSpell[i])
-                        {
-                            for (uint16 z = 0; z < creaturecount; ++z)
-                                plr->CastedCreatureOrGO(creature,0,spell_id);
-                        }
-                        else if (creature > 0)
-                        {
-                            if (CreatureInfo const* cInfo = sObjectMgr.GetCreatureTemplate(creature))
-                                for (uint16 z = 0; z < creaturecount; ++z)
-                                    plr->KilledMonster(cInfo,0);
-                        }
-                        else if (creature < 0)
-                        {
-                            for (uint16 z = 0; z < creaturecount; ++z)
-                                plr->CastedCreatureOrGO(creature,0,0);
-                        }
-                    }
-
-                    if (uint32 repFaction = pQuest->GetRepObjectiveFaction())
-                    {
-                        uint32 repValue = pQuest->GetRepObjectiveValue();
-                        uint32 curRep = plr->GetReputationMgr().GetReputation(repFaction);
-                        if (curRep < repValue)
-                        {
-                            FactionEntry const *factionEntry = sFactionStore.LookupEntry(repFaction);
-                            plr->GetReputationMgr().SetReputation(factionEntry,repValue);
-                        }
-                    }
-                    
-                    int32 ReqOrRewMoney = pQuest->GetRewOrReqMoney();
-                    if (ReqOrRewMoney < 0)
-                        plr->ModifyMoney(-ReqOrRewMoney);
-
-                    plr->CompleteQuest(qId);
-                    Send_IRCA(ChanOrPM(CD), MakeMsg("\00313[%s] : Quest [%s] Status Set To Complete.", _PARAMS[0].c_str(), QName.c_str()), true, CD->TYPE);
-                }
-            }
+            
         }
-        if (_PARAMS[1] == "mod")
-        {
-            /*if (_PARAMS[2] == "rep") TODO
-            {
-                uint32 factionId = atoi((char*)_PARAMS[3].c_str());
-                FactionEntry const *factionEntry = sFactionStore.LookupEntry(factionId);
-                if (!factionEntry)
-                {
-                    Send_IRCA(CD->USER, "\0034[ERROR] : No Faction With That Name Exists.", true, "ERROR");
-                }
-                else
-                {
-                    int32 amount = atol((char*)_PARAMS[4].c_str());
-                    if (amount > -39000 && amount < 43000)
-                    {
-                        plr->SetFactionReputation(factionId,amount);
-                        Send_IRCA(ChanOrPM(CD), MakeMsg("\00313[%s] : Reputation With Faction %s Set To %s.", _PARAMS[0].c_str(), _PARAMS[3].c_str(), _PARAMS[4].c_str()), true, CD->TYPE);
-                    }
-                    else
-                    {
-                        Send_IRCA(CD->USER, "\0034[ERROR] : Reputation Value Incorrect. Must Be Between -39000 and 43000.", true, "ERROR");
-                    }
-                }
-            }*/
-            if (_PARAMS[2] == "morph")
-            {
-                uint16 display_id = (uint16)atoi((char*)_PARAMS[3].c_str());
-                plr->SetDisplayId(display_id);
-                Send_IRCA(ChanOrPM(CD), MakeMsg("\00313[%s] : Has Been Morphed Into DisplayID: %s.", _PARAMS[0].c_str(), _PARAMS[3].c_str()), true, CD->TYPE);
             }
-            else
-            {
-                Send_IRCA(CD->USER, "\0034[ERROR] : Valid Parameters Are: morph <displayid>, reputation <faction><value>.", true, "ERROR");
-            }
-        }
-    }
     else
         Send_IRCA(CD->USER, "\0034[ERROR] : No Character With That Name Exists.", true, "ERROR");
 }
@@ -698,17 +582,17 @@ void IRCCmd::Info_Server(_CDATA *CD)
 {
     std::string* _PARAMS = getArray(CD->PARAMS, 1);
     char clientsNum [50];
-    sprintf(clientsNum, "%u", sWorld.GetActiveSessionCount());
+    sprintf(clientsNum, "%u", sWorld->GetActiveSessionCount());
     char maxClientsNum [50];
-    sprintf(maxClientsNum, "%u", sWorld.GetMaxActiveSessionCount());
+    sprintf(maxClientsNum, "%u", sWorld->GetMaxActiveSessionCount());
     char ircupdt [50];
-    sprintf(ircupdt, "%u", sWorld.GetUpdateTime());
-    std::string str = secsToTimeString(sWorld.GetUptime());
+    sprintf(ircupdt, "%u", sWorld->GetUpdateTime());
+    std::string str = secsToTimeString(sWorld->GetUptime());
     std::string svnrev = _FULLVERSION;
 
-    float rdm = (sConfig.GetFloatDefault("Rate.Drop.Money", 1.0f)); //needs looking into
-    float rxk = (sConfig.GetFloatDefault("Rate.XP.Kill", 1.0f));
-    float rxq = (sConfig.GetFloatDefault("Rate.XP.Quest", 1.0f));
+    float rdm = (sConfig->GetFloatDefault("Rate.Drop.Money", 1.0f)); //needs looking into
+    float rxk = (sConfig->GetFloatDefault("Rate.XP.Kill", 1.0f));
+    float rxq = (sConfig->GetFloatDefault("Rate.XP.Quest", 1.0f));
     
     Send_IRCA(ChanOrPM(CD), "\x2 Number Of Players Online:\x3\x31\x30 " + (std::string)clientsNum + "\xF |\x2 Max Since Last Restart:\x3\x31\x30 "+(std::string)maxClientsNum+"\xF |\x2 UpTime:\x3\x31\x30 "+str, true, CD->TYPE);
     Send_IRCA(ChanOrPM(CD), "\x2 Server:\x3\x31\x30 " +svnrev+ "\xF |\x2 Update Time:\x3\x31\x30 "+(std::string)ircupdt, true, CD->TYPE);
@@ -776,7 +660,7 @@ void IRCCmd::Item_Player(_CDATA *CD)
             Send_IRCA(CD->USER, "\0034[ERROR] : "+_PARAMS[0]+" Is Not Online!", true, "ERROR");
             return;
         }
-        ItemPrototype const *pProto = sObjectMgr.GetItemPrototype(itemId);
+        ItemPrototype const *pProto = sObjectMgr->GetItemPrototype(itemId);
         //Subtract
         if (count < 0)
         {
@@ -903,7 +787,7 @@ void IRCCmd::Kick_Player(_CDATA *CD)
     {
         plr->GetSession()->KickPlayer();
         Send_IRCA(ChanOrPM(CD), "\00313["+_PARAMS[0]+"] : Has Been Kicked By: "+CD->USER+". Reason: "+_PARAMS[1]+".", true, CD->TYPE);
-        if (sWorld.getBoolConfig(CONFIG_SHOW_KICK_IN_WORLD))
+        if (sWorld->getBoolConfig(CONFIG_SHOW_KICK_IN_WORLD))
             sIRC.Send_WoW_System("Player|cffff0000 "+_PARAMS[0]+"|r kicked by|cffff0000 "+CD->USER+"|r. Reason:|cffff0000"+_PARAMS[1]+"|r.");
     }
     else
@@ -942,8 +826,8 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
     if (_PARAMS[0] == "acct")
     {
         uint32 acctid = atoi(_PARAMS[1].c_str());
-        if (sAccountMgr.GetId(_PARAMS[1]))
-            acctid = sAccountMgr.GetId(_PARAMS[1]);
+        if (sAccountMgr->GetId(_PARAMS[1]))
+            acctid = sAccountMgr->GetId(_PARAMS[1]);
         if (acctid > 0)
         {
             std::string DateTime = "%a, %b %d, %Y - %h:%i%p";
@@ -1012,13 +896,13 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
     if (_PARAMS[0] == "char")
     {
         uint32 plguid = atoi(_PARAMS[1].c_str());
-        if (sObjectMgr.GetPlayerGUIDByName(_PARAMS[1].c_str()))
-            plguid = sObjectMgr.GetPlayerGUIDByName(_PARAMS[1].c_str());
+        if (sObjectMgr->GetPlayerGUIDByName(_PARAMS[1].c_str()))
+            plguid = sObjectMgr->GetPlayerGUIDByName(_PARAMS[1].c_str());
         if (plguid > 0)
         {
             QueryResult result = CharacterDatabase.PQuery("SELECT guid, account, name, race, class, online, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 35), ' ' , -1) AS level, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 238), ' ' , -1) AS guildid, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 239), ' ' , -1) AS guildrank, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 927), ' ' , -1) AS xp, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 928), ' ' , -1) AS maxxp, SUBSTRING_INDEX(SUBSTRING_INDEX(name, ' ' , 1462), ' ' , -1) AS gold, SUBSTRING_INDEX(SUBSTRING_INDEX(`name`, ' ' , 1454), ' ' , -1) AS hk, totaltime FROM characters WHERE guid =%i", plguid);
             uint32 latency = 0;
-            Player *chr = sObjectMgr.GetPlayer(plguid);
+            Player *chr = sObjectMgr->GetPlayer(plguid);
             if (chr)
             {
                 latency = chr->GetSession()->GetLatency();
@@ -1051,7 +935,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 ChrRacesEntry const* prace = sChrRacesStore.LookupEntry(praceid);
                 ChrClassesEntry const* pclass = sChrClassesStore.LookupEntry(pclassid);
 
-                if (atoi(plevel.c_str()) < sWorld.getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
+                if (atoi(plevel.c_str()) < sWorld->getIntConfig(CONFIG_MAX_PLAYER_LEVEL))
                     plevel += " (" + pxp + "/" + pmaxxp + ")";
                 unsigned int gold = money / 10000;
                 unsigned int silv = (money % 10000) / 100;
@@ -1060,20 +944,20 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 sprintf(tempgold, "\x2\x3\x30\x37%ug \x3\x31\x34%us \x3\x30\x35%uc\xF", gold, silv, cop);
                 if (ponline == "\x3\x30\x33Online")
                 {
-                    Player * plr = sObjectAccessor.FindPlayerByName(pname.c_str());
+                    Player * plr = sObjectAccessor->FindPlayerByName(pname.c_str());
                     if (plr)
                     {
                         AreaTableEntry const* area = GetAreaEntryByAreaID(plr->GetAreaId());
-                        ponline += " in " + (std::string) area->area_name[sWorld.GetDefaultDbcLocale()];
+                        ponline += " in " + (std::string) area->area_name[sWorld->GetDefaultDbcLocale()];
                         if (area->zone != 0)
                         {
                             AreaTableEntry const* zone = GetAreaEntryByAreaID(area->zone);
-                            ponline += " (" + (std::string)zone->area_name[sWorld.GetDefaultDbcLocale()] + ")";
+                            ponline += " (" + (std::string)zone->area_name[sWorld->GetDefaultDbcLocale()] + ")";
                         }
                     }
                 }
                 std::string pinfo  = "\x2 About Player:\x3\x31\x30 " +pname+ "\xF |\x2 GM Level:\x3\x31\x30 " +pgmlvl+ "\xF |\x2 AcctID:\x3\x31\x30 " +pacct+ "\xF |\x2 CharID:\x3\x31\x30 " +pguid+ " \xF |\x2 Played Time:\x2\x3\x31\x30 " +totaltim.c_str()+" \xF |\x2 Latency:\x2\x3\x31\x30 "+templatency;
-                std::string pinfo2 = "\x2 Race:\x2\x3\x31\x30 " + (std::string)prace->name[sWorld.GetDefaultDbcLocale()] + "\xF |\x2 Class:\x2\x3\x31\x30 " + (std::string)pclass->name[sWorld.GetDefaultDbcLocale()] + "\xF |\x2 Level:\x2\x3\x31\x30 " + plevel + "\xF |\x2 Money:\x2 " + tempgold + "\xF |\x2 Status:\x2 " + ponline;
+                std::string pinfo2 = "\x2 Race:\x2\x3\x31\x30 " + (std::string)prace->name[sWorld->GetDefaultDbcLocale()] + "\xF |\x2 Class:\x2\x3\x31\x30 " + (std::string)pclass->name[sWorld->GetDefaultDbcLocale()] + "\xF |\x2 Level:\x2\x3\x31\x30 " + plevel + "\xF |\x2 Money:\x2 " + tempgold + "\xF |\x2 Status:\x2 " + ponline;
                 //        pinfo3 = " :" + " \x2Honor Kills:\x2\x3\x31\x30 " + hk;
                 Send_IRCA(ChanOrPM(CD),pinfo , true, CD->TYPE);
                 Send_IRCA(ChanOrPM(CD),pinfo2 , true, CD->TYPE);
@@ -1161,7 +1045,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
             FactionEntry const *factionEntry = sFactionStore.LookupEntry(atoi(faction.c_str()));
             if (factionEntry)
             {
-                std::string name = factionEntry->name[sWorld.GetDefaultDbcLocale()];
+                std::string name = factionEntry->name[sWorld->GetDefaultDbcLocale()];
                 Send_IRCA(ChanOrPM(CD), MakeMsg("\x2 Faction:\x3\x31\x30 %s \xF|\x2 FactionID:\x3\x31\x30 %s",name.c_str(), faction.c_str()), true, CD->TYPE);
             }
             else
@@ -1178,7 +1062,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 if (factionEntry)
                 {
                     MakeLower(_PARAMS[1]);
-                    std::string name = factionEntry->name[sWorld.GetDefaultDbcLocale()];
+                    std::string name = factionEntry->name[sWorld->GetDefaultDbcLocale()];
                     MakeLower(name);
                     if (name.find(_PARAMS[1]) != std::string::npos && counter < 10)
                     {
@@ -1339,7 +1223,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
             SkillLineEntry const *skillInfo = sSkillLineStore.LookupEntry(atoi(skill.c_str()));
             if (skillInfo)
             {
-                std::string name = skillInfo->name[sWorld.GetDefaultDbcLocale()];
+                std::string name = skillInfo->name[sWorld->GetDefaultDbcLocale()];
                 Send_IRCA(ChanOrPM(CD), MakeMsg("\x2Skill:\x3\x31\x30 %s \xF|\x2 SkillID:\x3\x31\x30 %s",name.c_str(), skill.c_str()), true, CD->TYPE);
             }
             else
@@ -1356,7 +1240,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 if (skillInfo)
                 {
                     MakeLower(_PARAMS[1]);
-                    std::string name = skillInfo->name[sWorld.GetDefaultDbcLocale()];
+                    std::string name = skillInfo->name[sWorld->GetDefaultDbcLocale()];
                     MakeLower(name);
                     if (name.find(_PARAMS[1]) != std::string::npos && counter < 10)
                     {
@@ -1380,7 +1264,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
             SpellEntry const *spellInfo = sSpellStore.LookupEntry(atoi(spell.c_str()));
             if (spellInfo)
             {
-                std::string name = spellInfo->SpellName[sWorld.GetDefaultDbcLocale()];
+                std::string name = spellInfo->SpellName[sWorld->GetDefaultDbcLocale()];
                 Send_IRCA(ChanOrPM(CD), MakeMsg("\x2Spell:\x3\x31\x30 %s \xF|\x2 SpellID:\x3\x31\x30 %s",name.c_str(), spell.c_str()), true, CD->TYPE);
             }
             else
@@ -1397,7 +1281,7 @@ void IRCCmd::Lookup_Player(_CDATA *CD)
                 if (spellInfo)
                 {
                     MakeLower(_PARAMS[1]);
-                    std::string name = spellInfo->SpellName[sWorld.GetDefaultDbcLocale()];
+                    std::string name = spellInfo->SpellName[sWorld->GetDefaultDbcLocale()];
                     MakeLower(name);
                     if (name.find(_PARAMS[1]) != std::string::npos && counter < 10)
                     {
@@ -1475,8 +1359,8 @@ void IRCCmd::Money_Player(_CDATA *CD)
     }
     std::string player  = _PARAMS[0];
     normalizePlayerName(player);
-    uint64 guid = sObjectMgr.GetPlayerGUIDByName(player.c_str());
-    Player *chr = sObjectMgr.GetPlayer(guid);
+    uint64 guid = sObjectMgr->GetPlayerGUIDByName(player.c_str());
+    Player *chr = sObjectMgr->GetPlayer(guid);
 
     std::string s_money  = _PARAMS[1];
     int32 money = atoi(s_money.c_str());
@@ -1492,7 +1376,7 @@ void IRCCmd::Money_Player(_CDATA *CD)
     }
     else
     {
-        Player *chr = sObjectMgr.GetPlayer(guid);
+        Player *chr = sObjectMgr->GetPlayer(guid);
         uint32 moneyuser = 0;
         if (chr)
             moneyuser = chr->GetMoney();
@@ -1510,7 +1394,7 @@ void IRCCmd::Money_Player(_CDATA *CD)
             sprintf(s_newmoney,"%d",newmoney);
             if (addmoney < 0)
             {
-                sLog.outDetail("USER1: %i, ADD: %i, DIF: %i\\n", moneyuser, addmoney, newmoney);
+                sLog->outDetail("USER1: %i, ADD: %i, DIF: %i\\n", moneyuser, addmoney, newmoney);
                 if (newmoney <= 0)
                 {
                     Send_IRCA(ChanOrPM(CD), "\00313["+player+"] : Has Had All Money Taken By: "+CD->USER.c_str()+".", true, CD->TYPE);
@@ -1557,14 +1441,14 @@ void IRCCmd::Mute_Player(_CDATA *CD)
         return;
     }
     normalizePlayerName(_PARAMS[0]);
-    uint64 guid = sObjectMgr.GetPlayerGUIDByName(_PARAMS[0]);
+    uint64 guid = sObjectMgr->GetPlayerGUIDByName(_PARAMS[0]);
     if (guid)
     {
         if (_PARAMS[1] == "release")
         {
-            Player* plr = sObjectMgr.GetPlayer(guid);
+            Player* plr = sObjectMgr->GetPlayer(guid);
             uint32 account_id = 0;
-            account_id = sObjectMgr.GetPlayerAccountIdByGUID(guid);
+            account_id = sObjectMgr->GetPlayerAccountIdByGUID(guid);
             LoginDatabase.PExecute("UPDATE `account` SET `mutetime` = '0' WHERE `id` = '%u'", account_id);
             Send_IRCA(ChanOrPM(CD), "\00313["+_PARAMS[0]+"] : Has Been UnMuted By: "+CD->USER+"." , true, CD->TYPE);
             if (plr)
@@ -1577,10 +1461,10 @@ void IRCCmd::Mute_Player(_CDATA *CD)
         {
             if (_PARAMS[2] == "")
                 _PARAMS[2] = "No Reason Given";
-            Player* plr = sObjectMgr.GetPlayer(guid);
+            Player* plr = sObjectMgr->GetPlayer(guid);
             time_t mutetime = time(NULL) + atoi(_PARAMS[1].c_str())*60;
             uint32 account_id = 0;
-            account_id = sObjectMgr.GetPlayerAccountIdByGUID(guid);
+            account_id = sObjectMgr->GetPlayerAccountIdByGUID(guid);
             if (plr) plr->GetSession()->m_muteTime = mutetime;
             LoginDatabase.PExecute("UPDATE `account` SET `mutetime` = " UI64FMTD " WHERE `id` = '%u'",uint64(mutetime), account_id);
             Send_IRCA(ChanOrPM(CD), "\00313["+_PARAMS[0]+"] : Has Been Muted By: "+CD->USER+". For: "+_PARAMS[1]+" Minutes. Reason: "+_PARAMS[2] , true, CD->TYPE);
@@ -1630,7 +1514,7 @@ void IRCCmd::Restart_Trinity(_CDATA *CD)
     std::string* _PARAMS = getArray(CD->PARAMS, 1);
     if (_PARAMS[0] == "cancel")
     {
-        sWorld.ShutdownCancel();
+        sWorld->ShutdownCancel();
         Send_IRCA(ChanOrPM(CD), "\0034Server Restart Has Been Cancelled.", true, CD->TYPE);
     }
 
@@ -1643,7 +1527,7 @@ void IRCCmd::Restart_Trinity(_CDATA *CD)
     if (i_time > 1)
     {
         Send_IRCA(ChanOrPM(CD), "\00313["+CD->USER+"] : Has Requested Server To Restart In "+_PARAMS[0]+" Seconds!", true, CD->TYPE);
-        sWorld.ShutdownServ(i_time,SHUTDOWN_MASK_RESTART, RESTART_EXIT_CODE);
+        sWorld->ShutdownServ(i_time,SHUTDOWN_MASK_RESTART, RESTART_EXIT_CODE);
         Delay(i_time*1000);
         Send_IRCA(ChanOrPM(CD), "\0034Server Will Now Restart.. Be Back In A Flash!", true, CD->TYPE);
     }
@@ -1671,7 +1555,7 @@ void IRCCmd::Revive_Player(_CDATA *CD)
 
 void IRCCmd::Saveall_Player(_CDATA *CD)
 {
-    sObjectAccessor.SaveAllPlayers();
+    sObjectAccessor->SaveAllPlayers();
     Send_IRCA(ChanOrPM(CD), "\00313["+CD->USER+"] : Has Saved All Players!", true, CD->TYPE);
 }
 
@@ -1680,12 +1564,12 @@ void IRCCmd::Server(_CDATA *CD)
     std::string* _PARAMS = getArray(CD->PARAMS, CD->PCOUNT);
     if (_PARAMS[0] == "setmotd")
     {
-        sWorld.SetMotd(_PARAMS[1]);
+        sWorld->SetMotd(_PARAMS[1]);
         Send_IRCA(ChanOrPM(CD), "\00313["+CD->USER+"] : Has Set New Message Of The Day To: "+_PARAMS[1], true, CD->TYPE);
     }
     if (_PARAMS[0] == "flusharenapoints")
     {
-        sBattlegroundMgr.DistributeArenaPoints();
+        sBattlegroundMgr->DistributeArenaPoints();
     }
 }
 
@@ -1694,7 +1578,7 @@ void IRCCmd::Shutdown_Trinity(_CDATA *CD)
     std::string* _PARAMS = getArray(CD->PARAMS, 1);
     if (_PARAMS[0] == "cancel")
     {
-        sWorld.ShutdownCancel();
+        sWorld->ShutdownCancel();
         Send_IRCA(ChanOrPM(CD), "\0034Server Shutdown Has Been Cancelled.", true, CD->TYPE);
     }
 
@@ -1707,7 +1591,7 @@ void IRCCmd::Shutdown_Trinity(_CDATA *CD)
     if (i_time > 1)
     {
         Send_IRCA(ChanOrPM(CD), "\00313["+CD->USER+"] : Has Requested Server To Be Shut Down In "+_PARAMS[0]+" Seconds!", true, CD->TYPE);
-        sWorld.ShutdownServ(i_time, 0 , SHUTDOWN_EXIT_CODE);
+        sWorld->ShutdownServ(i_time, 0 , SHUTDOWN_EXIT_CODE);
         Delay(i_time*1000);
         Send_IRCA(ChanOrPM(CD), "\0034Server Will Now Shut Down.. Good Bye!", true, CD->TYPE);
     }
@@ -1727,7 +1611,7 @@ void IRCCmd::Spell_Player(_CDATA *CD)
     {
         if (spellInfo)
         {
-            std::string name = spellInfo->SpellName[sWorld.GetDefaultDbcLocale()];
+            std::string name = spellInfo->SpellName[sWorld->GetDefaultDbcLocale()];
             if (_PARAMS[1] == "cast")
             {
                 plr->CastSpell(plr, spell, true);
@@ -1760,7 +1644,7 @@ void IRCCmd::Sysmsg_Server(_CDATA *CD)
     {
         std::string str = _PARAMS[1];
         std::string ancmsg = MakeMsg("\00304,08\037/!\\\037\017\00304 System Message \00304,08\037/!\\\037\017 %s",_PARAMS[1].c_str());
-        sWorld.SendWorldText(6610,str.c_str());
+        sWorld->SendWorldText(6610,str.c_str());
         sIRC.Send_IRC_Channel(ircchan, ancmsg, true);
     }
     else if (_PARAMS[0] == "e")
@@ -1772,9 +1656,9 @@ void IRCCmd::Sysmsg_Server(_CDATA *CD)
         data << notstr;
         WorldPacket data2(SMSG_PLAY_SOUND,32);
         data2 << (uint32)1400;
-        sWorld.SendGlobalMessage(&data2);
-        sWorld.SendGlobalMessage(&data);
-        sWorld.SendWorldText(6611,str.c_str());
+        sWorld->SendGlobalMessage(&data2);
+        sWorld->SendGlobalMessage(&data);
+        sWorld->SendWorldText(6611,str.c_str());
         sIRC.Send_IRC_Channel(ircchan, notmsg, true);
     }
     else if (_PARAMS[0] == "n")
@@ -1783,7 +1667,7 @@ void IRCCmd::Sysmsg_Server(_CDATA *CD)
         std::string notmsg = MakeMsg("\00304,08\037/!\\\037\017\00304 Global Notify \00304,08\037/!\\\037\017 %s",_PARAMS[1].c_str());
         WorldPacket data(SMSG_NOTIFICATION, (str.size()+1));
         data << str;
-        sWorld.SendGlobalMessage(&data);
+        sWorld->SendGlobalMessage(&data);
         sIRC.Send_IRC_Channel(ircchan, notmsg, true);
     }
     else if (_PARAMS[0] == "gm")
@@ -1791,7 +1675,7 @@ void IRCCmd::Sysmsg_Server(_CDATA *CD)
         std::string str = "GM Announcement: " + _PARAMS[1];
         WorldPacket data(SMSG_NOTIFICATION, (str.size()+1));
         data << str;
-        sWorld.SendGlobalGMMessage(&data);
+        sWorld->SendGlobalGMMessage(&data);
 
     }
     else if (_PARAMS[0] == "add")
@@ -1799,7 +1683,7 @@ void IRCCmd::Sysmsg_Server(_CDATA *CD)
         WorldDatabase.PExecute("INSERT INTO irc_autoannounce (message, addedby) VALUES ('%s', '%s')", _PARAMS[1].c_str(), CD->USER.c_str());
         std::string str = _PARAMS[1];
         std::string ancmsg = MakeMsg("\00304,08\037/!\\\037\017\00304 Automatic System Message \00304,08\037/!\\\037\017 %s",_PARAMS[1].c_str());
-        sWorld.SendWorldText(6612,str.c_str());
+        sWorld->SendWorldText(6612,str.c_str());
         sIRC.Send_IRC_Channel(ircchan, ancmsg, true);
     }
     else if (_PARAMS[0] == "del")
@@ -1954,7 +1838,7 @@ void IRCCmd::Tele_Player(_CDATA *CD)
         }
         else
         {
-            if (uint64 guid = sObjectMgr.GetPlayerGUIDByName(_PARAMS[2].c_str()))
+            if (uint64 guid = sObjectMgr->GetPlayerGUIDByName(_PARAMS[2].c_str()))
             {
                 bool in_flight;
                 Player::LoadPositionFromDB(mapid, pX, pY, pZ, pO, in_flight, guid);
@@ -2070,8 +1954,8 @@ void IRCCmd::Tele_Player(_CDATA *CD)
                 }
                 else
                 {
-                    uint64 guid = sObjectMgr.GetPlayerGUIDByName(_PARAMS[0]);
-                    Player::SavePositionInDB(mapid,pX,pY,pZ,pO,sMapMgr.GetZoneId(mapid,pX,pY,pZ),guid);
+                    uint64 guid = sObjectMgr->GetPlayerGUIDByName(_PARAMS[0]);
+                    Player::SavePositionInDB(mapid,pX,pY,pZ,pO,sMapMgr->GetZoneId(mapid,pX,pY,pZ),guid);
                     sIRC.Send_IRC_Channel(ChanOrPM(CD), rMsg + " \0034*Offline Tele.* ", true, CD->TYPE);
                 }
             //}

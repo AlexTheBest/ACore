@@ -925,7 +925,7 @@ void BattlegroundMgr::SendToBattleground(Player *pl, uint32 instanceId, Battlegr
         float x, y, z, O;
 	uint32 teamchoice;
         uint32 team = pl->GetBGTeam();
-		if(!IsArenaType(bgTypeId) && sBattlegroundMgr.isMixBg())
+		if(!IsArenaType(bgTypeId) && sBattlegroundMgr->isMixBg())
 		{
 			teamchoice = urand(0, 2);
 			if(teamchoice == 1 && bg->GetPlayersCountByTeam(HORDE) >= bg->GetPlayersCountByTeam(ALLIANCE) || bg->GetPlayersCountByTeam(HORDE) > bg->GetPlayersCountByTeam(ALLIANCE)) // alliance team
@@ -1069,9 +1069,9 @@ void BattlegroundMgr::ToggleMixBg()
 {
     m_MixBg = !m_MixBg;
     if (m_MixBg)
-        sWorld.SendWorldText(LANG_MIXBG_ON);
+        sWorld->SendWorldText(LANG_MIXBG_ON);
     else
-        sWorld.SendWorldText(LANG_MIXBG_OFF);
+        sWorld->SendWorldText(LANG_MIXBG_OFF);
 }
 
 void BattlegroundMgr::ToggleArenaTesting()

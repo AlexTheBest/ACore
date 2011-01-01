@@ -942,7 +942,7 @@ void Battleground::RemovePlayerAtLeave(uint64 guid, bool Transport, bool SendPac
 
     Player *plr = sObjectMgr->GetPlayer(guid);
 
-  if(plr && sBattlegroundMgr.isMixBg())
+  if(plr && sBattlegroundMgr->isMixBg())
     {
       plr->setFactionForRace(plr->getRace());
     }
@@ -1273,7 +1273,7 @@ void Battleground::RemoveFromBGFreeSlotQueue()
 // returns the number how many players can join battleground to MaxPlayersPerTeam
 uint32 Battleground::GetFreeSlotsForTeam(uint32 Team) const
 {
-if(sBattlegroundMgr.isMixBg())
+if(sBattlegroundMgr->isMixBg())
 {
     //return free slot count to MaxPlayerPerTeam
     if (GetStatus() == STATUS_WAIT_JOIN || GetStatus() == STATUS_IN_PROGRESS)

@@ -3048,7 +3048,7 @@ DiminishingReturnsType GetDiminishingReturnsGroupType(DiminishingGroup group)
 
 bool SpellArea::IsFitToRequirements(Player const* player, uint32 newZone, uint32 newArea) const
 {
-	OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr.GetOutdoorPvPToZoneId(4197);
+	OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr->GetOutdoorPvPToZoneId(4197);
 
     if (gender != GENDER_NONE)                   // not in expected gender
         if (!player || gender != player->getGender())
@@ -3088,7 +3088,7 @@ bool SpellArea::IsFitToRequirements(Player const* player, uint32 newZone, uint32
             break;
        case 58045: // Essence of Wintergrasp - Wintergrasp
         case 57940: // Essence of Wintergrasp - Northrend
-            if (!player || player->GetTeamId() != sWorld.getWorldState(WORLDSTATE_WINTERGRASP_CONTROLING_FACTION))
+            if (!player || player->GetTeamId() != sWorld->getWorldState(WORLDSTATE_WINTERGRASP_CONTROLING_FACTION))
                 return false;
             break;
    }

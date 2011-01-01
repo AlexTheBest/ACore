@@ -48,7 +48,7 @@ void mcs_OnlinePlayers::run()
 {
     int OnlineCount = 0;
     std::string IRCOut = "";
-    HashMapHolder<Player>::MapType& m = sObjectAccessor.GetPlayers();
+    HashMapHolder<Player>::MapType& m = sObjectAccessor->GetPlayers();
     for (HashMapHolder<Player>::MapType::iterator itr = m.begin(); itr != m.end(); ++itr)
     {
         if (itr->second && itr->second->GetSession()->GetPlayer() && itr->second->GetSession()->GetPlayer()->IsInWorld())

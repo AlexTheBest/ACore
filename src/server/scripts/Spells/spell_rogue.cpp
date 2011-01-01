@@ -96,7 +96,7 @@ public:
 
                     if (!spellInfo)
                     {
-                        sLog.outError("Player::CastItemCombatSpell Enchant %i, cast unknown spell %i", pEnchant->ID, pEnchant->spellid[s]);
+                        sLog->outError("Player::CastItemCombatSpell Enchant %i, cast unknown spell %i", pEnchant->ID, pEnchant->spellid[s]);
                         continue;
                     }
 

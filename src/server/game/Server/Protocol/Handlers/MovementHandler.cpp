@@ -105,7 +105,7 @@ bool WorldSession::Anti__ReportCheat(const char* Reason,float Speed,const char* 
 {
     if(!Reason)
     {
-        sLog.outError("Anti__ReportCheat: Missing Reason parameter!");
+        sLog->outError("Anti__ReportCheat: Missing Reason parameter!");
         return false;
     }
     const char* Player=GetPlayer()->GetName();
@@ -113,7 +113,7 @@ bool WorldSession::Anti__ReportCheat(const char* Reason,float Speed,const char* 
     uint32 Map=GetPlayer()->GetMapId();
     if(!Player)
     {
-        sLog.outError("Anti__ReportCheat: Player with no name?!?");
+        sLog->outError("Anti__ReportCheat: Player with no name?!?");
         return false;
     }
 
@@ -162,19 +162,19 @@ bool WorldSession::Anti__ReportCheat(const char* Reason,float Speed,const char* 
                                    Pos.str().c_str(),GetPlayer()->getLevel());
     }
 
-    if(sWorld.GetMvAnticheatKill() && GetPlayer()->isAlive())
+    if(sWorld->GetMvAnticheatKill() && GetPlayer()->isAlive())
     {
         GetPlayer()->DealDamage(GetPlayer(), GetPlayer()->GetHealth(), NULL, DIRECT_DAMAGE, SPELL_SCHOOL_MASK_NORMAL, NULL, false);
     }
-    if(sWorld.GetMvAnticheatKick())
+    if(sWorld->GetMvAnticheatKick())
     {
         GetPlayer()->GetSession()->KickPlayer();
     }
-    if(sWorld.GetMvAnticheatBan() & 1)
+    if(sWorld->GetMvAnticheatBan() & 1)
     {
-        sWorld.BanAccount(BAN_CHARACTER,Player,sWorld.GetMvAnticheatBanTime(),"Cheat","Anticheat");
+        sWorld->BanAccount(BAN_CHARACTER,Player,sWorld->GetMvAnticheatBanTime(),"Cheat","Anticheat");
     }
-    if(sWorld.GetMvAnticheatBan() & 2)
+    if(sWorld->GetMvAnticheatBan() & 2)
     {
         QueryResult result = LoginDatabase.PQuery("SELECT last_ip FROM account WHERE id=%u", Acc);
         if(result)
@@ -184,7 +184,7 @@ bool WorldSession::Anti__ReportCheat(const char* Reason,float Speed,const char* 
             std::string LastIP = fields[0].GetString();
             if(!LastIP.empty())
             {
-                sWorld.BanAccount(BAN_IP,LastIP,sWorld.GetMvAnticheatBanTime(),"Cheat","Anticheat");
+                sWorld->BanAccount(BAN_IP,LastIP,sWorld->GetMvAnticheatBanTime(),"Cheat","Anticheat");
             }
         }
     }
@@ -196,14 +196,14 @@ bool WorldSession::Anti__CheatOccurred(uint32 CurTime,const char* Reason,float S
 {
     if(!Reason)
     {
-        sLog.outError("Anti__CheatOccurred: Missing Reason parameter!");
+        sLog->outError("Anti__CheatOccurred: Missing Reason parameter!");
         return false;
     }
     
     GetPlayer()->m_anti_lastalarmtime = CurTime;
     GetPlayer()->m_anti_alarmcount = GetPlayer()->m_anti_alarmcount + 1;
 
-    if (GetPlayer()->m_anti_alarmcount > sWorld.GetMvAnticheatAlarmCount())
+    if (GetPlayer()->m_anti_alarmcount > sWorld->GetMvAnticheatAlarmCount())
     {
         Anti__ReportCheat(Reason,Speed,Op,Val1,Val2,MvInfo);
         std::string pname = GetPlayer()->GetName();
@@ -542,14 +542,14 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
 
     // ---- anti-cheat features -->>>
     uint32 Anti_TeleTimeDiff=plMover ? time(NULL) - plMover->Anti__GetLastTeleTime() : time(NULL);
-    static const uint32 Anti_TeleTimeIgnoreDiff=sWorld.GetMvAnticheatIgnoreAfterTeleport();
-    if (plMover && (plMover->m_transport == 0) && sWorld.GetMvAnticheatEnable() &&
-        GetPlayer()->GetSession()->GetSecurity() <= sWorld.GetMvAnticheatGmLevel() &&
+    static const uint32 Anti_TeleTimeIgnoreDiff=sWorld->GetMvAnticheatIgnoreAfterTeleport();
+    if (plMover && (plMover->m_transport == 0) && sWorld->GetMvAnticheatEnable() &&
+        GetPlayer()->GetSession()->GetSecurity() <= sWorld->GetMvAnticheatGmLevel() &&
         GetPlayer()->GetMotionMaster()->GetCurrentMovementGeneratorType()!=FLIGHT_MOTION_TYPE &&
         Anti_TeleTimeDiff>Anti_TeleTimeIgnoreDiff)
     {
         const uint32 CurTime=getMSTime();
-        if(getMSTimeDiff(GetPlayer()->m_anti_lastalarmtime,CurTime) > sWorld.GetMvAnticheatAlarmPeriod())
+        if(getMSTimeDiff(GetPlayer()->m_anti_lastalarmtime,CurTime) > sWorld->GetMvAnticheatAlarmPeriod())
         {
             GetPlayer()->m_anti_alarmcount = 0;
         }
@@ -596,7 +596,7 @@ void WorldSession::HandleMovementOpcodes(WorldPacket & recv_data)
             float delta_xyt=GetPlayer()->m_anti_MovedLen/(float)(getMSTimeDiff(OldNextLenCheck-500,CurTime));
             GetPlayer()->m_anti_NextLenCheck = CurTime+500;
             GetPlayer()->m_anti_MovedLen = 0.0f;
-            static const float MaxDeltaXYT = sWorld.GetMvAnticheatMaxXYT();
+            static const float MaxDeltaXYT = sWorld->GetMvAnticheatMaxXYT();
 
 #ifdef __ANTI_DEBUG__
             SendAreaTriggerMessage("XYT: %f ; Flags: %s",delta_xyt,FlagsToStr(movementInfo.flags).c_str());

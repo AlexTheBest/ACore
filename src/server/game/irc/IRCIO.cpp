@@ -32,7 +32,7 @@
 IRCCmd Command;
 void IRCClient::Handle_IRC(std::string sData)
 {
-    sLog.outDebug(sData.c_str());
+    sLog->outDebug(sData.c_str());
     // If first 5 chars are ERROR then something is wrong
     // either link is being closed, nickserv ghost command, etc...
     if (sData.substr(0, 5) == "ERROR")
@@ -357,7 +357,7 @@ void IRCClient::Send_WoW_IRC(Player *plr, std::string Channel, std::string Msg)
 void IRCClient::Send_WoW_Player(std::string sPlayer, std::string sMsg)
 {
     normalizePlayerName(sPlayer);
-    if (Player* plr = sObjectAccessor.FindPlayerByName(sPlayer.c_str()))
+    if (Player* plr = sObjectAccessor->FindPlayerByName(sPlayer.c_str()))
         Send_WoW_Player(plr, sMsg);
 }
 
@@ -390,7 +390,7 @@ void IRCClient::Send_WoW_Channel(const char *channel, std::string chat)
             chat = chat2;
     #endif
 
-    HashMapHolder<Player>::MapType& m = sObjectAccessor.GetPlayers();
+    HashMapHolder<Player>::MapType& m = sObjectAccessor->GetPlayers();
     for (HashMapHolder<Player>::MapType::iterator itr = m.begin(); itr != m.end(); ++itr)
     {
         if (itr->second && itr->second->GetSession()->GetPlayer() && itr->second->GetSession()->GetPlayer()->IsInWorld())
@@ -419,7 +419,7 @@ void IRCClient::Send_WoW_Channel(const char *channel, std::string chat)
 
 void IRCClient::Send_WoW_System(std::string Message)
 {
-    HashMapHolder<Player>::MapType& m = sObjectAccessor.GetPlayers();
+    HashMapHolder<Player>::MapType& m = sObjectAccessor->GetPlayers();
     for (HashMapHolder<Player>::MapType::iterator itr = m.begin(); itr != m.end(); ++itr)
     {
         if (itr->second && itr->second->GetSession()->GetPlayer() && itr->second->GetSession()->GetPlayer()->IsInWorld())
@@ -459,7 +459,7 @@ void IRCClient::AutoJoinChannel(Player *plr)
     data << uint8(CHAT_INVITE_NOTICE);
     data << m_name.c_str();
 
-    HashMapHolder<Player>::MapType& m = sObjectAccessor.GetPlayers();
+    HashMapHolder<Player>::MapType& m = sObjectAccessor->GetPlayers();
     for (HashMapHolder<Player>::MapType::iterator itr = m.begin(); itr != m.end(); ++itr)
     {
         if (itr->second && itr->second->GetSession()->GetPlayer() && itr->second->GetSession()->GetPlayer()->IsInWorld())

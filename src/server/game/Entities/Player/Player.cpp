@@ -8784,10 +8784,10 @@ void Player::SendInitWorldStates(uint32 zoneid, uint32 areaid)
     data << uint32(0xF3D) << uint32(sWorld->getIntConfig(CONFIG_ARENA_SEASON_ID));
 
      // May be send timer to start Wintergrasp
-     if(sWorld.GetWintergrapsState()==4354)
-         data << uint32(0x1102) << sWorld.GetWintergrapsTimer();
+     if(sWorld->GetWintergrapsState()==4354)
+         data << uint32(0x1102) << sWorld->GetWintergrapsTimer();
      else
-         data << uint32(0xEC5) << sWorld.GetWintergrapsTimer();
+         data << uint32(0xEC5) << sWorld->GetWintergrapsTimer();
      // ---
 
     if (mapid == 530)                                       // Outland
@@ -16305,11 +16305,11 @@ bool Player::LoadFromDB(uint32 guid, SQLQueryHolder *holder)
             m_bgData.bgTypeID = currentBg->GetTypeID(true);
 
     //mixbg
-      if(m_bgData.bgTeam == 469 && sBattlegroundMgr.isMixBg()) 
+      if(m_bgData.bgTeam == 469 && sBattlegroundMgr->isMixBg()) 
     {
   	  setFactionForRace(1);
   	  SetBGTeam(ALLIANCE); //AH
-    }else if(m_bgData.bgTeam == 67 && sBattlegroundMgr.isMixBg()){
+    }else if(m_bgData.bgTeam == 67 && sBattlegroundMgr->isMixBg()){
  	   setFactionForRace(2);
 	    SetBGTeam(HORDE); //AH
     }
@@ -23205,7 +23205,7 @@ void Player::HandleFall(MovementInfo const& movementInfo)
     // calculate total z distance of the fall
     float z_diff = (m_lastFallZ >= m_anti_BeginFallZ ? m_lastFallZ : m_anti_BeginFallZ) - movementInfo.pos.GetPositionZ();
     
-    float z_diff = m_lastFallZ - movementInfo.pos.GetPositionZ();
+    //float z_diff = m_lastFallZ - movementInfo.pos.GetPositionZ(); //orginal?
     //sLog->outDebug("zDiff = %f", z_diff);
 
     //Players with low fall distance, Feather Fall or physical immunity (charges used) are ignored

@@ -402,7 +402,7 @@ bool IRCCmd::IsValid(std::string USER, std::string FROM, std::string CHAT, std::
             {
                 case E_OK:
                     sIRC.Send_IRC_Channels("Reloading Configiguration Options.");
-                    sWorld.LoadConfigSettings(true);
+                    sWorld->LoadConfigSettings(true);
                     break;
                 case E_AUTH:
                     AuthValid = false;
@@ -632,7 +632,7 @@ std::string IRCCmd::ChanOrPM(_CDATA *CD)
 Player *IRCCmd::GetPlayer(std::string WHO)
 {
     normalizePlayerName(WHO);
-    return sObjectAccessor.FindPlayerByName(WHO.c_str());
+    return sObjectAccessor->FindPlayerByName(WHO.c_str());
 }
 
 _client *IRCCmd::GetClient(std::string cname)
@@ -667,7 +667,7 @@ bool IRCCmd::AcctIsLoggedIn(std::string USER)
 
 std::string IRCCmd::AcctIsBanned(std::string ACCT)
 {
-    uint32 acctid = sAccountMgr.GetId(ACCT);
+    uint32 acctid = sAccountMgr->GetId(ACCT);
     std::string banned = "NOTBANNED";
     QueryResult result = LoginDatabase.PQuery("SELECT banreason FROM ip_banned WHERE ip=(SELECT last_ip FROM account WHERE id = '%i')", acctid);
     if (result)
@@ -698,11 +698,11 @@ int IRCCmd::GetLevel(std::string sName)
 
 int IRCCmd::AcctLevel(std::string plnme)
 {
-    uint64 guid = sObjectMgr.GetPlayerGUIDByName(plnme);
+    uint64 guid = sObjectMgr->GetPlayerGUIDByName(plnme);
     uint32 account_id = 0;
     uint32 security = 0;
-    account_id = sObjectMgr.GetPlayerAccountIdByGUID(guid);
-    security = sAccountMgr.GetSecurity(account_id);
+    account_id = sObjectMgr->GetPlayerAccountIdByGUID(guid);
+    security = sAccountMgr->GetSecurity(account_id);
     return security;
 }
 
@@ -733,7 +733,7 @@ int IRCCmd::GetAcctIDFromName(std::string sName)
         if ((*i)->Name == sName)
         {
             uint32 acct_id = 0;
-            acct_id = sAccountMgr.GetId((*i)->UName.c_str());
+            acct_id = sAccountMgr->GetId((*i)->UName.c_str());
             return acct_id;
         }
     }

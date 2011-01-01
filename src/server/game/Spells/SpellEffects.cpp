@@ -2701,7 +2701,7 @@ void Spell::SendLoot(uint64 guid, LootType loottype)
                 // goober_scripts can be triggered if the player don't have the quest
                 if (gameObjTarget->GetGOInfo()->goober.eventId)
                 {
-                    sLog.outDebug("Goober ScriptStart id %u for GO %u", gameObjTarget->GetGOInfo()->goober.eventId,gameObjTarget->GetDBTableGUIDLow());
+                    sLog->outDebug("Goober ScriptStart id %u for GO %u", gameObjTarget->GetGOInfo()->goober.eventId,gameObjTarget->GetDBTableGUIDLow());
                     player->GetMap()->ScriptsStart(sEventScripts, gameObjTarget->GetGOInfo()->goober.eventId, player, gameObjTarget);
                     gameObjTarget->EventInform(gameObjTarget->GetGOInfo()->goober.eventId);
                 }
@@ -4361,7 +4361,7 @@ void Spell::EffectSummonObjectWild(SpellEffIndex effIndex)
 void Spell::EffectScriptEffect(SpellEffIndex effIndex)
 {
     // TODO: we must implement hunter pet summon at login there (spell 6962)
-	OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr.GetOutdoorPvPToZoneId(4197);
+	OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr->GetOutdoorPvPToZoneId(4197);
 
     switch(m_spellInfo->SpellFamilyName)
     {
@@ -4372,7 +4372,7 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
 				//Teleport to Lake Wintergrasp
                 case 58622:
                 {
-                    if(OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr.GetOutdoorPvPToZoneId(4197))
+                    if(OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr->GetOutdoorPvPToZoneId(4197))
                         if(pvpWG->isWarTime())
                         {
                             if(unitTarget->ToPlayer()->GetTeam() == pvpWG->getDefenderTeam())
@@ -7048,7 +7048,7 @@ void Spell::EffectPlayerNotification(SpellEffIndex /*effIndex*/)
     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
         return;
 
-    OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr.GetOutdoorPvPToZoneId(4197);
+    OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr->GetOutdoorPvPToZoneId(4197);
 
     switch(m_spellInfo->Id)
     {

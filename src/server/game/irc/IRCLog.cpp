@@ -25,7 +25,7 @@
 
 IRCLog::IRCLog()
 {
-    std::string logsDir = sConfig.GetStringDefault("LogsDir","");
+    std::string logsDir = sConfig->GetStringDefault("LogsDir","");
     std::string ircLogName = logsDir + "/IRC_";
     std::string ircLogTimestamp = GetLogDateStr();
         ircLogName += ircLogTimestamp +".log";

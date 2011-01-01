@@ -357,8 +357,8 @@ public:
 
         void DoMeleeAttackIfReady()
     	{
-    		if (me->hasUnitState(UNIT_STAT_CASTING))
-    		    return;
+    		//if (me->hasUnitState(UNIT_STAT_CASTING))
+    		  //  return;
 
     		//Make sure our attack is ready and we aren't currently casting before checking distance
     		if (me->isAttackReady())
@@ -798,8 +798,8 @@ public:
 
             if (!UpdateVictim())
                 return;
-            if (!me->hasUnitState(UNIT_STAT_STUNNED))
-                me->SetControlled(true,UNIT_STAT_STUNNED);//disable rotate
+           // if (!me->hasUnitState(UNIT_STAT_STUNNED))
+             //   me->SetControlled(true,UNIT_STAT_STUNNED);//disable rotate
 
             if (m_Entry != 2674 && m_Entry != 2673)
             {

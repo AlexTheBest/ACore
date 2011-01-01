@@ -673,7 +673,6 @@ void AddWorldScripts()
     AddSC_npc_taxi();
     AddSC_achievement_scripts();
     AddSC_chat_log();
-    AddSC_dungeon_finder();
     AddSC_rewardscript();		//serverscripts
     AddSC_telestone();
     AddSC_televotescript();

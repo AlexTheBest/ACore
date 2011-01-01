@@ -2770,7 +2770,7 @@ void World::SendRNDBroadcastIRC()
         return;
     msg = result->Fetch()[0].GetString();
     
-    sWorld.SendWorldText(6612,msg.c_str());
+    sWorld->SendWorldText(6612,msg.c_str());
     std::string ircchan = "#";
     ircchan += sIRC._irc_chan[sIRC.anchn].c_str();
     sIRC.Send_IRC_Channel(ircchan, sIRC.MakeMsg("\00304,08\037/!\\\037\017\00304 Automatic System Message \00304,08\037/!\\\037\017 %s", "%s", msg.c_str()), true);
@@ -3022,7 +3022,7 @@ void World::ProcessQueryCallbacks()
 
 void World::SendWintergraspState()
 {
-    OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr.GetOutdoorPvPToZoneId(4197);
+    OutdoorPvPWG *pvpWG = (OutdoorPvPWG*)sOutdoorPvPMgr->GetOutdoorPvPToZoneId(4197);
     if (!pvpWG)
         return;
 
