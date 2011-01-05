@@ -25,6 +25,11 @@ void AddSC_example_gossip_codebox();
 void AddSC_example_misc();
 void AddSC_example_commandscript();
 
+//serverscripts
+void AddSC_rewardscript();
+void AddSC_telestone();
+void AddSC_televotescript();
+
 // spells
 void AddSC_deathknight_spell_scripts();
 void AddSC_druid_spell_scripts();
@@ -399,6 +404,8 @@ void AddSC_boss_drakos();                //The Nexus The Oculus
 void AddSC_boss_urom();
 void AddSC_instance_oculus();
 void AddSC_oculus();
+void AddSC_boss_malygos();
+void AddSC_instance_eye_of_eternity();
 void AddSC_boss_sartharion();            //Obsidian Sanctum
 void AddSC_instance_obsidian_sanctum();
 void AddSC_boss_bjarngrim();             //Ulduar Halls of Lightning
@@ -482,6 +489,7 @@ void AddSC_howling_fjord();
 void AddSC_icecrown();
 void AddSC_sholazar_basin();
 void AddSC_storm_peaks();
+void AddSC_wintergrasp();
 void AddSC_zuldrak();
 void AddSC_crystalsong_forest();
 
@@ -576,6 +584,7 @@ void AddSC_outdoorpvp_na();
 void AddSC_outdoorpvp_si();
 void AddSC_outdoorpvp_tf();
 void AddSC_outdoorpvp_zm();
+void AddSC_outdoorpvp_wg();
 
 // player
 void AddSC_chat_log();
@@ -664,6 +673,9 @@ void AddWorldScripts()
     AddSC_npc_taxi();
     AddSC_achievement_scripts();
     AddSC_chat_log();
+    AddSC_rewardscript();		//serverscripts
+    AddSC_telestone();
+    AddSC_televotescript();
 #endif
 }
 
@@ -1085,6 +1097,8 @@ void AddNorthrendScripts()
     AddSC_boss_urom();
     AddSC_instance_oculus();
     AddSC_oculus();
+    AddSC_boss_malygos();
+    AddSC_instance_eye_of_eternity();
     AddSC_boss_sartharion();            //Obsidian Sanctum
     AddSC_instance_obsidian_sanctum();
     AddSC_boss_bjarngrim();             //Ulduar Halls of Lightning
@@ -1168,6 +1182,7 @@ void AddNorthrendScripts()
     AddSC_icecrown();
     AddSC_sholazar_basin();
     AddSC_storm_peaks();
+     AddSC_wintergrasp();
     AddSC_zuldrak();
     AddSC_crystalsong_forest();
 #endif

@@ -1027,6 +1027,10 @@ enum TrinityStrings
     LANG_INVALID_REALMID                = 11001,
 
     // NOT RESERVED IDS                   12000-1999999999
+    LANG_BG_QUEUE_ANNOUNCE_SELF2        = 12001,
+    LANG_MIXBG_ON                       = 12002,
+    LANG_MIXBG_OFF                      = 12003,
+    LANG_BG_QUEUE_ANNOUNCE_WORLD2       = 12004,
     // `db_script_string` table index     2000000000-2000009999 (MIN_DB_SCRIPT_STRING_ID-MAX_DB_SCRIPT_STRING_ID)
     // For other tables maybe             2000010000-2147483647 (max index)
 };

@@ -46,6 +46,7 @@
 #include "Formulas.h"
 #include "Group.h"
 #include "Guild.h"
+#include "../../irc/IRCClient.h"
 #include "Pet.h"
 #include "Util.h"
 #include "Transport.h"
@@ -518,6 +519,17 @@ Player::Player (WorldSession *session): Unit(), m_achievementMgr(this), m_reputa
     m_rest_bonus=0;
     rest_type=REST_TYPE_NO;
     ////////////////////Rest System/////////////////////
+
+    //movement anticheat
+    m_anti_lastmovetime = 0;   //last movement time
+    m_anti_NextLenCheck = 0;
+    m_anti_MovedLen = 0.0f;
+    m_anti_BeginFallZ = INVALID_HEIGHT;
+    m_anti_lastalarmtime = 0;    //last time when alarm generated
+    m_anti_alarmcount = 0;       //alarm counter
+    m_anti_TeleTime = 0;
+    m_CanFly=false;
+    /////////////////////////////////
 
     m_mailsLoaded = false;
     m_mailsUpdated = false;
@@ -2165,6 +2177,16 @@ void Player::RemoveFromWorld()
             SetViewpoint(viewpoint, false);
         }
     }
+    //TODO: FIXME
+    if (sIRC.ajoin == 1)
+    {
+        QueryResult result = WorldDatabase.PQuery("SELECT `name` FROM `irc_inchan` WHERE `name` = '%s'", Unit::GetName());
+        if (!result)
+        {
+            sIRC.AutoJoinChannel(this);
+        }
+        
+    }
 }
 
 void Player::RegenerateAll()
@@ -2773,6 +2795,17 @@ void Player::GiveLevel(uint8 level)
     InitTalentForLevel();
     InitTaxiNodesForLevel();
     InitGlyphsForLevel();
+
+    if ((sIRC.BOTMASK & 64) != 0)
+    {
+        char  temp [5];
+        sprintf(temp, "%u", level);
+        std::string plevel = temp;
+        std::string pname = GetName();
+        std::string ircchan = "#";
+        ircchan += sIRC._irc_chan[sIRC.Status].c_str();
+        sIRC.Send_IRC_Channel(ircchan, "\00311["+pname+"] : Has Reached Level: "+plevel, true);
+    }
 
     UpdateAllStats();
 
@@ -16264,6 +16297,16 @@ bool Player::LoadFromDB(uint32 guid, SQLQueryHolder *holder)
 
             m_bgData.bgTypeID = currentBg->GetTypeID(true);
 
+    //mixbg
+      if(m_bgData.bgTeam == 469 && sBattlegroundMgr->isMixBg()) 
+    {
+  	  setFactionForRace(1);
+  	  SetBGTeam(ALLIANCE); //AH
+    }else if(m_bgData.bgTeam == 67 && sBattlegroundMgr->isMixBg()){
+ 	   setFactionForRace(2);
+	    SetBGTeam(HORDE); //AH
+    }
+
             //join player to battleground group
             currentBg->EventPlayerLoggedIn(this, GetGUID());
             currentBg->AddOrSetPlayerToCorrectBgGroup(this, GetGUID(), m_bgData.bgTeam);
@@ -23153,7 +23196,9 @@ uint8 Player::CanEquipUniqueItem(ItemPrototype const* itemProto, uint8 except_sl
 void Player::HandleFall(MovementInfo const& movementInfo)
 {
     // calculate total z distance of the fall
-    float z_diff = m_lastFallZ - movementInfo.pos.GetPositionZ();
+    float z_diff = (m_lastFallZ >= m_anti_BeginFallZ ? m_lastFallZ : m_anti_BeginFallZ) - movementInfo.pos.GetPositionZ();
+    
+    //float z_diff = m_lastFallZ - movementInfo.pos.GetPositionZ(); //orginal?
     //sLog->outDebug("zDiff = %f", z_diff);
 
     //Players with low fall distance, Feather Fall or physical immunity (charges used) are ignored

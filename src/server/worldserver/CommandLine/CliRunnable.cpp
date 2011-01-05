@@ -530,6 +530,15 @@ bool ChatHandler::HandleServerSetDiffTimeCommand(const char *args)
     return true;
 }
 
+//Reconnect TriniChat to IRC server via CLI command
+bool ChatHandler::HandleIRCRelogCommand(const char *args)
+{
+    SendSysMessage("TriniChat is dropping from IRC Server");
+    sIRC.ResetIRC();
+    SendSysMessage("TriniChat is reconnecting to IRC Server");
+    return true;
+}
+
 /// toggle sql driver query logging
 bool ChatHandler::HandleServerToggleQueryLogging(const char* /* args */)
 {

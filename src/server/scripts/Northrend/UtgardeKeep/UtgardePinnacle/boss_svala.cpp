@@ -194,6 +194,7 @@ public:
                             me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE | UNIT_FLAG_NOT_SELECTABLE);
                             me->SetDisplayId(DATA_SVALA_DISPLAY_ID);
                             pArthas->ToTempSummon()->UnSummon();
+                            me->ForcedDespawn();
                             uiArthasGUID = 0;
                             Phase = FINISHED;
                         }

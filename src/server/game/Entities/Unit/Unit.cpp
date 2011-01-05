@@ -3022,7 +3022,8 @@ float Unit::GetUnitCriticalChance(WeaponAttackType attackType, const Unit *pVict
     else
         crit += pVictim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_MELEE_CRIT_CHANCE);
 
-    crit += pVictim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE);
+    crit += pVictim->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE);
+    crit += pVictim->GetMaxNegativeAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE);
 
     // reduce crit chance from Rating for players
     if (attackType != RANGED_ATTACK)
@@ -4610,7 +4611,7 @@ float Unit::GetTotalAuraMultiplier(AuraType auratype) const
     return multiplier;
 }
 
-int32 Unit::GetMaxPositiveAuraModifier(AuraType auratype)
+int32 Unit::GetMaxPositiveAuraModifier(AuraType auratype) const
 {
     int32 modifier = 0;
 
@@ -8955,6 +8956,12 @@ bool Unit::HandleProcTriggerSpell(Unit *pVictim, uint32 damage, AuraEffect* trig
         case 72202:
             target = FindNearestCreature(37813, 75.0f); // NPC_DEATHBRINGER_SAURFANG = 37813
             break;
+        case 45176: // Master Poisoner Proc Trigger (SERVERSIDE)
+            if (!procSpell)
+                return false;
+
+            basepoints0 = procSpell->Id;
+            break;
         // Shadow's Fate (Shadowmourne questline)
         case 71169:
         {
@@ -10865,7 +10872,8 @@ bool Unit::isSpellCrit(Unit *pVictim, SpellEntry const *spellProto, SpellSchoolM
                     // Modify critical chance by victim SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE
                     crit_chance += pVictim->GetTotalAuraModifierByMiscMask(SPELL_AURA_MOD_ATTACKER_SPELL_CRIT_CHANCE, schoolMask);
                     // Modify critical chance by victim SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE
-                    crit_chance += pVictim->GetTotalAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE);
+                    crit_chance += pVictim->GetMaxPositiveAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE);
+                    crit_chance += pVictim->GetMaxNegativeAuraModifier(SPELL_AURA_MOD_ATTACKER_SPELL_AND_WEAPON_CRIT_CHANCE);
                     ApplyResilience(pVictim, &crit_chance, NULL, false, CR_CRIT_TAKEN_SPELL);
                 }
                 // scripted (increase crit chance ... against ... target by x%

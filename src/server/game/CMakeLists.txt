@@ -49,6 +49,7 @@ file(GLOB_RECURSE sources_Tools Tools/*.cpp Tools/*.h)
 file(GLOB_RECURSE sources_Tickets Tickets/*.cpp Tickets/*.h)
 file(GLOB_RECURSE sources_Weather Weather/*.cpp Weather/*.h)
 file(GLOB_RECURSE sources_World World/*.cpp World/*.h)
+file(GLOB_RECURSE sources_irc irc/*.cpp irc/*.h)
 
 # Create game-libary
 
@@ -98,6 +99,7 @@ set(game_STAT_SRCS
   ${sources_Tickets}
   ${sources_Weather}
   ${sources_World}
+  ${sources_irc}
 )
 
 include_directories(
@@ -189,7 +191,9 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/Tickets
   ${CMAKE_CURRENT_SOURCE_DIR}/Weather
   ${CMAKE_CURRENT_SOURCE_DIR}/World
+  ${CMAKE_CURRENT_SOURCE_DIR}/irc
   ${CMAKE_SOURCE_DIR}/src/server/scripts/PrecompiledHeaders
+  ${CMAKE_SOURCE_DIR}/src/server/scripts/OutdoorPvP
   ${ACE_INCLUDE_DIR}
   ${MYSQL_INCLUDE_DIR}
   ${OPENSSL_INCLUDE_DIR}

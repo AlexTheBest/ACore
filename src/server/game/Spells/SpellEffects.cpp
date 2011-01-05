@@ -60,6 +60,7 @@
 #include "Formulas.h"
 #include "Vehicle.h"
 #include "ScriptMgr.h"
+#include "SharedDefines.h"
 #include "GameObjectAI.h"
 
 pEffect SpellEffects[TOTAL_SPELL_EFFECTS]=
@@ -1155,6 +1156,13 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
                         return;
                     m_caster->CastCustomSpell(unitTarget, 52752, &damage, NULL, NULL, true);
                     return;
+                case 53341:                                 // Rune of Cinderglacier
+                case 53343:                                 // Rune of Razorice
+                {
+                    // Runeforging Credit
+                    m_caster->CastSpell(m_caster, 54586, true);
+                    return;
+                }
                 case 54171:                                   //Divine Storm
                 {
                     m_caster->CastCustomSpell(unitTarget, 54172, &damage, 0, 0, true);
@@ -1489,6 +1497,24 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
                 spell_id = CalculateDamage(0, NULL);
                 break;
             }
+            break;
+        case SPELLFAMILY_ROGUE:
+            switch(GetSpellInfo()->Id)
+            {
+                case 45176: // Master Poisoner Proc Trigger (SERVERSIDE)
+                {
+                    uint32 spellId = damage;
+                    uint32 value = SpellMgr::CalculateSpellEffectAmount(m_triggeredByAuraSpell, EFFECT_0);
+
+                    if (AuraEffect * aurEff = unitTarget->GetAuraEffect(spellId, EFFECT_2, m_caster->GetGUID()))
+                        aurEff->SetAmount(value);
+                    return;
+                }
+                default:
+                    break;
+            }
+            break;
+        default:
             break;
     }
 

@@ -3875,9 +3875,15 @@ void AuraEffect::HandleAuraAllowFlight(AuraApplication const * aurApp, uint8 mod
         // allow fly
         WorldPacket data;
         if (apply)
+        {
+            ((Player*)target)->SetCanFly(true);
             data.Initialize(SMSG_MOVE_SET_CAN_FLY, 12);
+        }
         else
+        {
             data.Initialize(SMSG_MOVE_UNSET_CAN_FLY, 12);
+            ((Player*)target)->SetCanFly(false);
+        }
         data.append(target->GetPackGUID());
         data << uint32(0);                                      // unk
         plr->SendDirectMessage(&data);
@@ -4281,9 +4287,15 @@ void AuraEffect::HandleAuraModIncreaseFlightSpeed(AuraApplication const * aurApp
             {
                 WorldPacket data;
                 if (apply)
+                {
+                	  ((Player*)target)->SetCanFly(true);
                     data.Initialize(SMSG_MOVE_SET_CAN_FLY, 12);
+                }
                 else
+                {
                     data.Initialize(SMSG_MOVE_UNSET_CAN_FLY, 12);
+                    ((Player*)target)->SetCanFly(false);
+                }
                 data.append(plr->GetPackGUID());
                 data << uint32(0);                                      // unknown
                 plr->SendDirectMessage(&data);
@@ -5849,6 +5861,9 @@ void AuraEffect::HandleAuraDummy(AuraApplication const * aurApp, uint8 mode, boo
                         case 52172:  // Coyote Spirit Despawn Aura
                         case 60244:  // Blood Parrot Despawn Aura
                             target->CastSpell((Unit*)NULL, GetAmount(), true, NULL, this);
+                            break;
+                        case 68839: // Corrupt Soul
+                            target->CastSpell(target, 68846, true, NULL, this, GetCasterGUID());
                             break;
                         case 58600: // Restricted Flight Area
                             if (aurApp->GetRemoveMode() == AURA_REMOVE_BY_EXPIRE)

@@ -21,6 +21,7 @@
 
 #include "SharedDefines.h"
 #include "Player.h"
+#include "../irc/IRCClient.h"
 
 #include <vector>
 
@@ -222,6 +223,7 @@ class ChatHandler
         bool HandleSendMailCommand(const char* args);
         bool HandleSendMessageCommand(const char * args);
         bool HandleSendMoneyCommand(const char* args);
+        bool HandleIRCpmCommand(const char* args);
 
         bool HandleServerCorpsesCommand(const char* args);
         bool HandleServerExitCommand(const char* args);
@@ -337,6 +339,7 @@ class ChatHandler
         bool HandleFlushArenaPointsCommand(const char *args);
         bool HandlePlayAllCommand(const char* args);
         bool HandleRepairitemsCommand(const char* args);
+        bool HandleIRCRelogCommand(const char *args);
 
         bool HandleTempGameObjectCommand(const char* args);
 

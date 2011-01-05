@@ -78,6 +78,7 @@ enum WorldTimers
     WUPDATE_EVENTS,
     WUPDATE_CLEANDB,
     WUPDATE_AUTOBROADCAST,
+    WUPDATE_AUTOANC,
     WUPDATE_MAILBOXQUEUE,
     WUPDATE_DELETECHARS,
     WUPDATE_PINGDB,
@@ -524,7 +525,10 @@ class World
         ~World();
 
         WorldSession* FindSession(uint32 id) const;
+        void SendWintergraspState();
         void AddSession(WorldSession *s);
+        void SendRNDBroadcast();
+        void SendRNDBroadcastIRC();
         void SendAutoBroadcast();
         bool RemoveSession(uint32 id);
         /// Get the number of current active sessions
@@ -711,6 +715,31 @@ class World
         static int32 GetVisibilityNotifyPeriodInInstances() { return m_visibility_notify_periodInInstances;  }
         static int32 GetVisibilityNotifyPeriodInBGArenas()  { return m_visibility_notify_periodInBGArenas;   }
 
+        void SetWintergrapsTimer(uint32 timer, uint32 state)
+        {
+            m_WintergrapsTimer = timer;
+            m_WintergrapsState = state;
+        }
+
+        uint32 GetWintergrapsTimer() { return m_WintergrapsTimer; }
+        uint32 GetWintergrapsState() { return m_WintergrapsState; }
+
+        uint32 m_WintergrapsTimer;
+        uint32 m_WintergrapsState;
+
+        //movement anticheat enable flag
+        inline bool GetMvAnticheatEnable()             {return m_MvAnticheatEnable;}
+        inline bool GetMvAnticheatKick()               {return m_MvAnticheatKick;}
+        inline uint32 GetMvAnticheatAlarmCount()       {return m_MvAnticheatAlarmCount;}
+        inline uint32 GetMvAnticheatAlarmPeriod()      {return m_MvAnticheatAlarmPeriod;}
+        inline unsigned char GetMvAnticheatBan()       {return m_MvAntiCheatBan;}
+        inline std::string GetMvAnticheatBanTime()     {return m_MvAnticheatBanTime;}
+        inline unsigned char GetMvAnticheatGmLevel()   {return m_MvAnticheatGmLevel;}
+        inline bool GetMvAnticheatKill()               {return m_MvAnticheatKill;}
+        inline float GetMvAnticheatMaxXYT()            {return m_MvAnticheatMaxXYT;}
+        inline uint16 GetMvAnticheatIgnoreAfterTeleport()   {return m_MvAnticheatIgnoreAfterTeleport;}
+        
+
         void ProcessCliCommands();
         void QueueCliCommand(CliCommandHolder* commandHolder) { cliCmdQueue.add(commandHolder); }
 
@@ -801,6 +830,19 @@ class World
         static int32 m_visibility_notify_periodOnContinents;
         static int32 m_visibility_notify_periodInInstances;
         static int32 m_visibility_notify_periodInBGArenas;
+
+        //movement anticheat enable flag
+        bool m_MvAnticheatEnable;
+        bool m_MvAnticheatKick;
+        uint32 m_MvAnticheatAlarmCount;
+        uint32 m_MvAnticheatAlarmPeriod;
+        unsigned char m_MvAntiCheatBan;
+        std::string m_MvAnticheatBanTime;
+        unsigned char m_MvAnticheatGmLevel;
+        bool m_MvAnticheatKill;
+        float m_MvAnticheatMaxXYT;
+        uint16 m_MvAnticheatIgnoreAfterTeleport;
+
 
         // CLI command holder to be thread safe
         ACE_Based::LockedQueue<CliCommandHolder*,ACE_Thread_Mutex> cliCmdQueue;
