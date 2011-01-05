@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2011 TrinityCore <http://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -880,7 +880,7 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
                     m_caster->SummonGameObject(179644, creatureTarget->GetPositionX(), creatureTarget->GetPositionY(), creatureTarget->GetPositionZ(), creatureTarget->GetOrientation(), 0, 0, 0, 0, uint32(creatureTarget->GetRespawnTime()-time(NULL)));
                     sLog->outDebug("SummonGameObject at SpellEfects.cpp EffectDummy for Spell 23019");
 
-                    creatureTarget->ForcedDespawn();
+                    creatureTarget->DespawnOrUnsummon();
 
                     return;
                 }
@@ -1045,7 +1045,7 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
                     if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
                         return;
 
-                    unitTarget->ToCreature()->ForcedDespawn();
+                    unitTarget->ToCreature()->DespawnOrUnsummon();
 
                     //cast spell Raptor Capture Credit
                     m_caster->CastSpell(m_caster, 42337, true, NULL);
@@ -1625,8 +1625,16 @@ void Spell::EffectForceCast(SpellEffIndex effIndex)
                 break;
         }
     }
-    Unit * caster = GetTriggeredSpellCaster(spellInfo, m_caster, unitTarget);
 
+    switch (triggered_spell_id)
+    {
+        case 62056: case 63985:         // Stone Grip Forcecast (10m, 25m)
+            unitTarget->CastSpell(unitTarget, spellInfo, true);     // Don't send m_originalCasterGUID param here or underlying
+            return;                                                 // AureEffect::HandleAuraControlVehicle will fail on caster == target
+    }
+
+    Unit * caster = GetTriggeredSpellCaster(spellInfo, m_caster, unitTarget);
+ 
     caster->CastSpell(unitTarget, spellInfo, true, NULL, NULL, m_originalCasterGUID);
 }
 
@@ -1646,6 +1654,7 @@ void Spell::EffectForceCastWithValue(SpellEffIndex effIndex)
         return;
     }
     int32 bp = damage;
+
     Unit * caster = GetTriggeredSpellCaster(spellInfo, m_caster, unitTarget);
 
     caster->CastCustomSpell(unitTarget, spellInfo->Id, &bp, &bp, &bp, true, NULL, NULL, m_originalCasterGUID);
@@ -3162,6 +3171,10 @@ void Spell::EffectDispel(SpellEffIndex effIndex)
         if (!aurApp)
             continue;
 
+        // don't try to remove passive auras
+        if (aura->IsPassive())
+            continue;
+
         if ((1<<aura->GetSpellProto()->Dispel) & dispelMask)
         {
             if (aura->GetSpellProto()->Dispel == DISPEL_MAGIC)
@@ -3698,7 +3711,7 @@ void Spell::EffectTameCreature(SpellEffIndex /*effIndex*/)
         return;
 
     // "kill" original creature
-    creatureTarget->ForcedDespawn();
+    creatureTarget->DespawnOrUnsummon();
 
     uint8 level = (creatureTarget->getLevel() < (m_caster->getLevel() - 5)) ? (m_caster->getLevel() - 5) : creatureTarget->getLevel();
 
@@ -5103,6 +5116,12 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
                             unitTarget->EnterVehicle(seat, 1);
                         }
                     }
+                    return;
+                }
+                case 65594: // Cancel Stone Grip
+                {
+                    uint32 spellToRemove = unitTarget->GetMap()->GetDifficulty() == RAID_DIFFICULTY_10MAN_NORMAL ? 62166 : 63981;
+                    unitTarget->RemoveAurasDueToSpell(spellToRemove);
                     return;
                 }
                 case 60123: // Lightwell

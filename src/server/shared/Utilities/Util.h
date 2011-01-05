@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2011 TrinityCore <http://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -152,6 +152,12 @@ template <class T>
 inline T ApplyPctU(T& base, uint32 pct)
 {
     return base = CalculatePctU(base, pct);
+}
+
+template <class T>
+inline T RoundToInterval(T& num, T floor, T ceil)
+{
+    return num = std::min(std::max(num, floor), ceil);
 }
 
 // UTF8 handling

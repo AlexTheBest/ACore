@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2011 TrinityCore <http://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -517,6 +517,11 @@ struct MovementInfo
     uint32 GetMovementFlags() { return flags; }
     void AddMovementFlag(uint32 flag) { flags |= flag; }
     bool HasMovementFlag(uint32 flag) const { return flags & flag; }
+
+    uint16 GetExtraMovementFlags() { return flags2; }
+    void AddExtraMovementFlag(uint16 flag) { flags2 |= flags2; }
+    bool HasExtraMovementFlag(uint16 flag) const { return flags2 & flag; }
+
     void OutDebug();
 };
 

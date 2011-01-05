@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2011 TrinityCore <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -23,7 +23,7 @@
 #include "icecrown_citadel.h"
 #include "MapManager.h"
 
-enum eScriptTexts
+enum ScriptTexts
 {
     SAY_ENTER_ZONE              = 0,
     SAY_AGGRO                   = 1,
@@ -35,7 +35,7 @@ enum eScriptTexts
     EMOTE_BONE_STORM            = 7,
 };
 
-enum eSpells
+enum Spells
 {
     // Lord Marrowgar
     SPELL_BONE_SLICE            = 69055,
@@ -46,6 +46,7 @@ enum eSpells
 
     // Bone Spike
     SPELL_IMPALED               = 69065,
+    SPELL_RIDE_VEHICLE          = 46598,
 
     // Coldflame
     SPELL_COLDFLAME_PASSIVE     = 69145,
@@ -53,7 +54,7 @@ enum eSpells
 
 static const uint32 boneSpikeSummonId[3] = {69062, 72669, 72670};
 
-enum eEvents
+enum Events
 {
     EVENT_BONE_SPIKE_GRAVEYARD  = 1,
     EVENT_COLDFLAME             = 2,
@@ -70,7 +71,7 @@ enum eEvents
     EVENT_GROUP_SPECIAL         = 1,
 };
 
-enum eMovementPoints
+enum MovementPoints
 {
     POINT_TARGET_BONESTORM_PLAYER   = 36612631,
     POINT_TARGET_COLDFLAME          = 36672631,
@@ -290,10 +291,7 @@ class npc_coldflame : public CreatureScript
                         target = creOwner->AI()->SelectTarget(SELECT_TARGET_RANDOM, 0, 40.0f, true); // or the tank if its solo
                     if (!target)
                     {
-                        if (TempSummon* summ = me->ToTempSummon())
-                            summ->UnSummon();
-                        else
-                            me->ForcedDespawn();
+                        me->DespawnOrUnsummon();
                         return;
                     }
 
@@ -354,44 +352,37 @@ class npc_bone_spike : public CreatureScript
 
         struct npc_bone_spikeAI : public Scripted_NoMovementAI
         {
-            npc_bone_spikeAI(Creature* creature) : Scripted_NoMovementAI(creature), vehicle(creature->GetVehicleKit())
+            npc_bone_spikeAI(Creature* creature) : Scripted_NoMovementAI(creature), hasTrappedUnit(false)
             {
-                ASSERT(vehicle);
-                trappedGUID = 0;
-            }
-
-            void Reset()
-            {
-                trappedGUID = 0;
+                ASSERT(creature->GetVehicleKit());
             }
 
             void JustDied(Unit* /*killer*/)
             {
-                events.Reset();
-                if (Player* trapped = ObjectAccessor::GetPlayer(*me, trappedGUID))
-                    trapped->RemoveAurasDueToSpell(SPELL_IMPALED);
-                trappedGUID = 0;
+                if (TempSummon* summ = me->ToTempSummon())
+                    if (Unit* trapped = summ->GetSummoner())
+                        trapped->RemoveAurasDueToSpell(SPELL_IMPALED);
+
+                me->DespawnOrUnsummon();
             }
 
             void KilledUnit(Unit* victim)
             {
-                if (TempSummon* summ = me->ToTempSummon())
-                    summ->UnSummon();
+                me->DespawnOrUnsummon();
                 victim->RemoveAurasDueToSpell(SPELL_IMPALED);
-                trappedGUID = 0;
             }
 
             void IsSummonedBy(Unit* summoner)
             {
-                trappedGUID = summoner->GetGUID();
-                summoner->EnterVehicle(vehicle, 0);
                 DoCast(summoner, SPELL_IMPALED);
+                summoner->CastSpell(me, SPELL_RIDE_VEHICLE, true);
                 events.ScheduleEvent(EVENT_FAIL_BONED, 8000);
+                hasTrappedUnit = true;
             }
 
             void UpdateAI(const uint32 diff)
             {
-                if (!trappedGUID)
+                if (!hasTrappedUnit)
                     return;
 
                 events.Update(diff);
@@ -402,9 +393,8 @@ class npc_bone_spike : public CreatureScript
             }
 
         private:
-            uint64 trappedGUID;
             EventMap events;
-            Vehicle* vehicle;
+            bool hasTrappedUnit;
         };
 
         CreatureAI* GetAI(Creature* creature) const

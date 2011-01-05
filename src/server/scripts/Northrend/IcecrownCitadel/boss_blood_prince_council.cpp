@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2011 TrinityCore <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -22,7 +22,7 @@
 #include "SpellAuraEffects.h"
 #include "icecrown_citadel.h"
 
-enum eTexts
+enum Texts
 {
     // Blood Queen Lana'Thel
     SAY_INTRO_1                 = 0,
@@ -55,7 +55,7 @@ enum eTexts
     SAY_VALANAR_DEATH           = 6,
 };
 
-enum eSpells
+enum Spells
 {
     SPELL_FEIGN_DEATH                   = 71598,
     SPELL_OOC_INVOCATION_VISUAL         = 70934,
@@ -110,7 +110,7 @@ enum eSpells
     SPELL_SHOCK_VORTEX_DUMMY            = 72633,
 };
 
-enum eEvents
+enum Events
 {
     EVENT_INTRO_1               = 1,
     EVENT_INTRO_2               = 2,
@@ -133,7 +133,7 @@ enum eEvents
     EVENT_CONTINUE_FALLING      = 12,
 };
 
-enum eActions
+enum Actions
 {
     ACTION_STAND_UP             = 1,
     ACTION_CAST_INVOCATION      = 2,
@@ -142,13 +142,13 @@ enum eActions
     ACTION_FLAME_BALL_CHASE     = 5,
 };
 
-enum ePoints
+enum Points
 {
     POINT_INTRO_DESPAWN         = 380040,
     POINT_KINETIC_BOMB_IMPACT   = 384540,
 };
 
-enum eDisplays
+enum Displays
 {
     DISPLAY_KINETIC_BOMB        = 31095,
 };
@@ -199,8 +199,15 @@ class boss_blood_council_controller : public CreatureScript
                 instance->SetBossState(DATA_BLOOD_PRINCE_COUNCIL, NOT_STARTED);
             }
 
-            void EnterCombat(Unit* /*who*/)
+            void EnterCombat(Unit* who)
             {
+                if (!instance->CheckRequiredBosses(DATA_BLOOD_PRINCE_COUNCIL, who->ToPlayer()))
+                {
+                    instance->DoCastSpellOnPlayers(LIGHT_S_HAMMER_TELEPORT);
+                    EnterEvadeMode();
+                    return;
+                }
+
                 instance->SetBossState(DATA_BLOOD_PRINCE_COUNCIL, IN_PROGRESS);
 
                 DoCast(me, SPELL_INVOCATION_OF_BLOOD_VALANAR);
@@ -1353,9 +1360,9 @@ class spell_taldaram_flame_ball_visual : public SpellScriptLoader
                 return false;
             }
 
-            void OnRemove(AuraEffect const* /*aurEff*/, AuraApplication const* aurApp, AuraEffectHandleModes /*mode*/)
+            void OnRemove(AuraEffect const* /*aurEff*/, AuraEffectHandleModes /*mode*/)
             {
-                Creature* target = aurApp->GetTarget()->ToCreature();
+                Creature* target = GetTarget()->ToCreature();
                 if (!target)
                     return;
 
@@ -1366,12 +1373,7 @@ class spell_taldaram_flame_ball_visual : public SpellScriptLoader
                     target->AI()->DoAction(ACTION_FLAME_BALL_CHASE);
                 }
                 else // SPELL_FLAME_SPHERE_DEATH_EFFECT
-                {
-                    if (TempSummon* summ = target->ToTempSummon())
-                        summ->UnSummon();
-                    else
-                        target->ForcedDespawn();
-                }
+                    target->DespawnOrUnsummon();
             }
 
             void Register()
@@ -1439,9 +1441,9 @@ class spell_valanar_kinetic_bomb : public SpellScriptLoader
         {
             PrepareAuraScript(spell_valanar_kinetic_bomb_AuraScript);
 
-            void HandleDummyTick(AuraEffect const* /*aurEff*/, AuraApplication const* aurApp)
+            void HandleDummyTick(AuraEffect const* /*aurEff*/)
             {
-                Unit* target = aurApp->GetTarget();
+                Unit* target = GetTarget();
                 if (target->GetTypeId() != TYPEID_UNIT)
                     return;
 
@@ -1449,7 +1451,7 @@ class spell_valanar_kinetic_bomb : public SpellScriptLoader
                 {
                     bomb->CastSpell(bomb, SPELL_KINETIC_BOMB_EXPLOSION, true);
                     bomb->RemoveAurasDueToSpell(SPELL_KINETIC_BOMB_VISUAL);
-                    target->RemoveAura(const_cast<AuraApplication*>(aurApp));
+                    target->RemoveAura(GetAura());
                     bomb->AI()->DoAction(SPELL_KINETIC_BOMB_EXPLOSION);
                 }
             }
@@ -1507,10 +1509,10 @@ class spell_blood_council_shadow_prison : public SpellScriptLoader
         {
             PrepareAuraScript(spell_blood_council_shadow_prison_AuraScript);
 
-            void HandleDummyTick(AuraEffect const* aurEff, AuraApplication const* aurApp)
+            void HandleDummyTick(AuraEffect const* aurEff)
             {
-                if (aurApp->GetTarget()->isMoving())
-                    aurApp->GetTarget()->CastSpell(aurApp->GetTarget(), SPELL_SHADOW_PRISON_DAMAGE, true, NULL, aurEff);
+                if (GetTarget()->isMoving())
+                    GetTarget()->CastSpell(GetTarget(), SPELL_SHADOW_PRISON_DAMAGE, true, NULL, aurEff);
             }
 
             void Register()

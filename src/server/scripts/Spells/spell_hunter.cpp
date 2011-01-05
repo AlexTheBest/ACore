@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2011 TrinityCore <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -357,14 +357,14 @@ public:
             return true;
         }
 
-        void HandlePeriodic(AuraEffect const * aurEff, AuraApplication const * aurApp)
+        void HandlePeriodic(AuraEffect const * aurEff)
         {
             PreventDefaultAction();
             if (aurEff->GetAmount() > 0)
                 return;
 
             uint32 spellId = SPELL_SNIPER_TRAINING_BUFF_R1 + GetId() - SPELL_SNIPER_TRAINING_R1;
-            Unit * pTarget = aurApp->GetTarget();
+            Unit * pTarget = GetTarget();
             if (!pTarget->HasAura(spellId))
             {
                 SpellEntry const * triggeredSpellInfo = sSpellStore.LookupEntry(spellId);

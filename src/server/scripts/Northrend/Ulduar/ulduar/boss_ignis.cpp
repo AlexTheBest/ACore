@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2011 TrinityCore <http://www.trinitycore.org/>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -330,7 +330,7 @@ public:
                     if (pIgnis->AI())
                         pIgnis->AI()->DoAction(ACTION_REMOVE_BUFF);
 
-                me->ForcedDespawn(1000);
+                me->DespawnOrUnsummon(1000);
             }
         }
 
@@ -443,13 +443,13 @@ class spell_ignis_slag_pot : public SpellScriptLoader
                 return true;
             }
 
-            void HandleEffectPeriodic(AuraEffect const * aurEff, AuraApplication const * aurApp)
+            void HandleEffectPeriodic(AuraEffect const * aurEff)
             {
                 Unit* aurEffCaster = aurEff->GetCaster();
                 if (!aurEffCaster)
                     return;
 
-                Unit * target = aurApp->GetTarget();
+                Unit * target = GetTarget();
                 aurEffCaster->CastSpell(target, SPELL_SLAG_POT_DAMAGE, true);
                 if (target->isAlive() && !GetDuration())
                      target->CastSpell(target, SPELL_SLAG_IMBUED, true);

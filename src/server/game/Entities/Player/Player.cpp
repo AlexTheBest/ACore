@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2011 TrinityCore <http://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -68,6 +68,7 @@
 #include "DisableMgr.h"
 #include "WeatherMgr.h"
 #include "LFGMgr.h"
+#include "CharacterDatabaseCleaner.h"
 #include <cmath>
 
 #define ZONE_UPDATE_INTERVAL (1*IN_MILLISECONDS)
@@ -578,6 +579,7 @@ Player::Player (WorldSession *session): Unit(), m_achievementMgr(this), m_reputa
     m_baseFeralAP = 0;
     m_baseManaRegen = 0;
     m_baseHealthRegen = 0;
+    m_spellPenetrationItemMod = 0;
 
     // Honor System
     m_lastHonorUpdateTime = time(NULL);
@@ -5762,9 +5764,9 @@ void Player::SetRegularAttackTime()
             ItemPrototype const *proto = tmpitem->GetProto();
             if (proto->Delay)
                 SetAttackTime(WeaponAttackType(i), proto->Delay);
-            else
-                SetAttackTime(WeaponAttackType(i), BASE_ATTACK_TIME);
         }
+        else
+            SetAttackTime(WeaponAttackType(i), BASE_ATTACK_TIME);  // If there is no weapon reset attack time to base (might have been changed from forms)
     }
 }
 
@@ -7400,10 +7402,6 @@ void Player::_ApplyItemMods(Item *item, uint8 slot,bool apply)
 
     uint8 attacktype = Player::GetAttackBySlot(slot);
 
-    // check disarm only on mod apply to allow remove item mods
-    if (!CanUseAttackType(attacktype))
-        return;
-
     if (proto->Socket[0].Color)                              //only (un)equipping of items with sockets can influence metagems, so no need to waste time with normal items
         CorrectMetaGemEnchants(slot, apply);
 
@@ -7602,7 +7600,11 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
             case ITEM_MOD_HEALTH_REGEN:
                 ApplyHealthRegenBonus(int32(val), apply);
                 break;
-            // depricated item mods
+            case ITEM_MOD_SPELL_PENETRATION:
+                ApplyModInt32Value(PLAYER_FIELD_MOD_TARGET_RESISTANCE, -val, apply);
+                m_spellPenetrationItemMod += apply ? val : -val;
+                break;
+            // deprecated item mods
             case ITEM_MOD_SPELL_HEALING_DONE:
             case ITEM_MOD_SPELL_DAMAGE_DONE:
                 break;
@@ -7611,18 +7613,14 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
 
     // Apply Spell Power from ScalingStatValue if set
     if (ssv)
-    {
         if (int32 spellbonus = ssv->getSpellBonus(proto->ScalingStatValue))
             ApplySpellPowerBonus(spellbonus, apply);
-    }
 
     // If set ScalingStatValue armor get it or use item armor
     uint32 armor = proto->Armor;
     if (ssv)
-    {
         if (uint32 ssvarmor = ssv->getArmorMod(proto->ScalingStatValue))
             armor = ssvarmor;
-    }
 
     if (armor)
     {
@@ -7682,34 +7680,12 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
         attType = OFF_ATTACK;
     }
 
-    float minDamage = proto->Damage[0].DamageMin;
-    float maxDamage = proto->Damage[0].DamageMax;
-    int32 extraDPS = 0;
-    // If set dpsMod in ScalingStatValue use it for min (70% from average), max (130% from average) damage
-    if (ssv)
-    {
-        extraDPS = ssv->getDPSMod(proto->ScalingStatValue);
-        if (extraDPS)
-        {
-            float average = extraDPS * proto->Delay / 1000.0f;
-            minDamage = 0.7f * average;
-            maxDamage = 1.3f * average;
-        }
-    }
-    if (minDamage > 0)
-    {
-        damage = apply ? minDamage : BASE_MINDAMAGE;
-        SetBaseWeaponDamage(attType, MINDAMAGE, damage);
-        //sLog->outError("applying mindam: assigning %f to weapon mindamage, now is: %f", damage, GetWeaponDamageRange(attType, MINDAMAGE));
-    }
+    if(CanUseAttackType(attType))
+        _ApplyWeaponDamage(slot, proto, ssv, apply);
 
-    if (maxDamage  > 0)
-    {
-        damage = apply ? maxDamage : BASE_MAXDAMAGE;
-        SetBaseWeaponDamage(attType, MAXDAMAGE, damage);
-    }
+    int32 extraDPS = ssv->getDPSMod(proto->ScalingStatValue);
 
-    // Apply feral bonus from ScalingStatValue if set
+   // Apply feral bonus from ScalingStatValue if set
     if (ssv)
     {
         if (int32 feral_bonus = ssv->getFeralBonus(proto->ScalingStatValue))
@@ -7723,10 +7699,53 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
             ApplyFeralAPBonus(feral_bonus, apply);
     }
 
-    if (IsInFeralForm() || !CanUseAttackType(attType))
-        return;
+ }
 
-    if (proto->Delay)
+void Player::_ApplyWeaponDamage(uint8 slot, ItemPrototype const *proto, ScalingStatValuesEntry const *ssv, bool apply) 
+{
+    WeaponAttackType attType = BASE_ATTACK;
+    float damage = 0.0f;
+
+    if (slot == EQUIPMENT_SLOT_RANGED && (
+        proto->InventoryType == INVTYPE_RANGED || proto->InventoryType == INVTYPE_THROWN ||
+        proto->InventoryType == INVTYPE_RANGEDRIGHT))
+    {
+        attType = RANGED_ATTACK;
+    }
+    else if (slot == EQUIPMENT_SLOT_OFFHAND)
+    {
+        attType = OFF_ATTACK;
+    }
+
+    float minDamage = proto->Damage[0].DamageMin;
+    float maxDamage = proto->Damage[0].DamageMax;
+    int32 extraDPS = 0;
+
+    // If set dpsMod in ScalingStatValue use it for min (70% from average), max (130% from average) damage
+    if (ssv)
+    {
+        extraDPS = ssv->getDPSMod(proto->ScalingStatValue);
+        if (extraDPS)
+        {
+            float average = extraDPS * proto->Delay / 1000.0f;
+            minDamage = 0.7f * average;
+            maxDamage = 1.3f * average;
+        }
+    }
+
+    if (minDamage > 0)
+    {
+        damage = apply ? minDamage : BASE_MINDAMAGE;
+        SetBaseWeaponDamage(attType, MINDAMAGE, damage);
+    }
+
+    if (maxDamage  > 0)
+    {
+        damage = apply ? maxDamage : BASE_MAXDAMAGE;
+        SetBaseWeaponDamage(attType, MAXDAMAGE, damage);
+    }
+
+    if (proto->Delay && !IsInFeralForm())
     {
         if (slot == EQUIPMENT_SLOT_RANGED)
             SetAttackTime(RANGED_ATTACK, apply ? proto->Delay: BASE_ATTACK_TIME);
@@ -7735,6 +7754,10 @@ void Player::_ApplyItemBonuses(ItemPrototype const *proto, uint8 slot, bool appl
         else if (slot == EQUIPMENT_SLOT_OFFHAND)
             SetAttackTime(OFF_ATTACK, apply ? proto->Delay: BASE_ATTACK_TIME);
     }
+
+    // No need to modify any physical damage for ferals as it is calculated from stats only
+    if (IsInFeralForm())
+        return;
 
     if (CanModifyStats() && (damage || proto->Delay))
         UpdateDamagePhysical(attType);
@@ -11072,7 +11095,7 @@ uint8 Player::CanEquipItem(uint8 slot, uint16 &dest, Item *pItem, bool swap, boo
                             return EQUIP_ERR_NOT_DURING_ARENA_MATCH;
                 }
 
-                if (isInCombat()&& pProto->Class == ITEM_CLASS_WEAPON && m_weaponChangeTimer != 0)
+                if (isInCombat()&& (pProto->Class == ITEM_CLASS_WEAPON || pProto->InventoryType == INVTYPE_RELIC) && m_weaponChangeTimer != 0)
                     return EQUIP_ERR_CANT_DO_RIGHT_NOW;         // maybe exist better err
 
                 if (IsNonMeleeSpellCasted(false))
@@ -11784,7 +11807,7 @@ Item* Player::EquipItem(uint16 pos, Item *pItem, bool update)
                 {
                     m_weaponChangeTimer = spellProto->StartRecoveryTime;
 
-                    CastSpell(this, cooldownSpell, false); // Needed for server side GCD
+                    AddGlobalCooldown(spellProto, NULL);    // NULL spell is safe (needed for serverside GCD
 
                     WorldPacket data(SMSG_SPELL_COOLDOWN, 8+1+4);
                     data << uint64(GetGUID());
@@ -13200,9 +13223,6 @@ void Player::ApplyEnchantment(Item *item, EnchantmentSlot slot, bool apply, bool
     if (!item || !item->IsEquipped())
         return;
 
-    if (!CanUseAttackType(Player::GetAttackBySlot(item->GetSlot())))
-        return;
-
     if (slot >= MAX_ENCHANTMENT_SLOT)
         return;
 
@@ -13502,6 +13522,7 @@ void Player::ApplyEnchantment(Item *item, EnchantmentSlot slot, bool apply, bool
                             break;
                         case ITEM_MOD_SPELL_PENETRATION:
                             ApplyModInt32Value(PLAYER_FIELD_MOD_TARGET_RESISTANCE, enchant_amount, apply);
+                            m_spellPenetrationItemMod += apply ? int32(enchant_amount) : -int32(enchant_amount);
                             sLog->outDebug("+ %u SPELL_PENETRATION", enchant_amount);
                             break;
                         case ITEM_MOD_BLOCK_VALUE:
@@ -14270,14 +14291,13 @@ bool Player::CanCompleteQuest(uint32 quest_id)
 {
     if (quest_id)
     {
-        RewardedQuestSet::iterator rewItr = m_RewardedQuests.find(quest_id);
-        if (rewItr != m_RewardedQuests.end())
-            return false;                                   // not allow re-complete quest
-
         Quest const* qInfo = sObjectMgr->GetQuestTemplate(quest_id);
-
         if (!qInfo)
             return false;
+
+        RewardedQuestSet::iterator rewItr = m_RewardedQuests.find(quest_id);
+        if (!qInfo->IsRepeatable() && rewItr != m_RewardedQuests.end())
+            return false;                                   // not allow re-complete quest
 
         // auto complete quest
         if ((qInfo->IsAutoComplete() || qInfo->GetFlags() & QUEST_FLAGS_AUTOCOMPLETE) && CanTakeQuest(qInfo, false))
@@ -15032,8 +15052,8 @@ bool Player::SatisfyQuestExclusiveGroup(Quest const* qInfo, bool msg)
             return false;
         }
 
-        // alternative quest already started or completed
-        if (m_QuestStatus.find(exclude_Id) != m_QuestStatus.end() || m_RewardedQuests.find(exclude_Id) != m_RewardedQuests.end())
+        // alternative quest already started or completed - but don't check rewarded states if both are repeatable
+        if (m_QuestStatus.find(exclude_Id) != m_QuestStatus.end() || (!(qInfo->IsRepeatable() && Nquest->IsRepeatable()) && m_RewardedQuests.find(exclude_Id) != m_RewardedQuests.end()))
         {
             if (msg)
                 SendCanTakeQuestResponse(INVALIDREASON_DONT_HAVE_REQ);
@@ -15214,8 +15234,9 @@ QuestStatus Player::GetQuestStatus(uint32 quest_id) const
         if (itr != m_QuestStatus.end())
             return itr->second.m_status;
 
-        if (m_RewardedQuests.find(quest_id) != m_RewardedQuests.end())
-            return QUEST_STATUS_COMPLETE;
+        if (Quest const* qInfo = sObjectMgr->GetQuestTemplate(quest_id))
+            if (!qInfo->IsRepeatable() && m_RewardedQuests.find(quest_id) != m_RewardedQuests.end())
+                return QUEST_STATUS_COMPLETE;
     }
     return QUEST_STATUS_NONE;
 }
@@ -17344,7 +17365,7 @@ void Player::_LoadQuestStatus(PreparedQueryResult result)
                 questStatusData.m_itemcount[3] = fields[11].GetUInt16();
 
                 // add to quest log
-                if (slot < MAX_QUEST_LOG_SIZE)
+                if (slot < MAX_QUEST_LOG_SIZE && questStatusData.m_status != QUEST_STATUS_NONE)
                 {
                     SetQuestSlot(slot, quest_id, uint32(quest_time)); // cast can't be helped
 
@@ -18378,12 +18399,14 @@ void Player::_SaveQuestStatus(SQLTransaction& trans)
     QuestStatusSaveMap::iterator saveItr;
     QuestStatusMap::iterator statusItr;
 
+    bool keepAbandoned = !(sWorld->GetCleaningFlags() & CharacterDatabaseCleaner::CLEANING_FLAG_QUESTSTATUS);
+
     for (saveItr = m_QuestStatusSave.begin(); saveItr != m_QuestStatusSave.end(); ++saveItr)
     {
         if (saveItr->second)
         {
             statusItr = m_QuestStatus.find(saveItr->first);
-            if (statusItr != m_QuestStatus.end() && statusItr->second.m_status != QUEST_STATUS_NONE)
+            if (statusItr != m_QuestStatus.end() && (keepAbandoned || statusItr->second.m_status != QUEST_STATUS_NONE))
             {
                 trans->PAppend("REPLACE INTO character_queststatus (guid,quest,status,explored,timer,mobcount1,mobcount2,mobcount3,mobcount4,itemcount1,itemcount2,itemcount3,itemcount4) "
                     "VALUES ('%u', '%u', '%u', '%u', '" UI64FMTD "', '%u', '%u', '%u', '%u', '%u', '%u', '%u', '%u')",
@@ -18400,7 +18423,7 @@ void Player::_SaveQuestStatus(SQLTransaction& trans)
     {
         if (saveItr->second)
             trans->PAppend("INSERT IGNORE INTO character_queststatus_rewarded (guid, quest) VALUES (%u, %u)", GetGUIDLow(), saveItr->first);
-        else
+        else if (!keepAbandoned)
             trans->PAppend("DELETE FROM character_queststatus_rewarded WHERE guid = %u AND quest = %u", GetGUIDLow(), saveItr->first);
     }
 

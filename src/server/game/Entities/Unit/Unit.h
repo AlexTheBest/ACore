@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2011 TrinityCore <http://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -675,7 +675,7 @@ enum MovementFlags2
     MOVEMENTFLAG2_NONE                     = 0x00000000,
     MOVEMENTFLAG2_NO_STRAFE                = 0x00000001,
     MOVEMENTFLAG2_NO_JUMPING               = 0x00000002,
-    MOVEMENTFLAG2_UNK3                     = 0x00000004,
+    MOVEMENTFLAG2_UNK3                     = 0x00000004,        // Overrides various clientside checks
     MOVEMENTFLAG2_FULL_SPEED_TURNING       = 0x00000008,
     MOVEMENTFLAG2_FULL_SPEED_PITCHING      = 0x00000010,
     MOVEMENTFLAG2_ALWAYS_ALLOW_PITCHING    = 0x00000020,
@@ -804,6 +804,60 @@ struct CleanDamage
 
     WeaponAttackType attackType;
     MeleeHitOutcome hitOutCome;
+};
+
+class DamageInfo
+{
+private:
+    Unit * const m_attacker;
+    Unit * const m_victim;
+    uint32 m_damage;
+    SpellEntry const * const m_spellInfo;
+    SpellSchoolMask const m_schoolMask;
+    DamageEffectType const m_damageType;
+    uint32 m_absorb;
+    uint32 m_resist;
+    uint32 m_block;
+public:
+    explicit DamageInfo(Unit * _attacker, Unit * _victim, uint32 _damage, SpellEntry const * _spellInfo, SpellSchoolMask _schoolMask, DamageEffectType _damageType)
+        : m_attacker(_attacker), m_victim(_victim), m_damage(_damage), m_spellInfo(_spellInfo), m_schoolMask(_schoolMask), m_damageType(_damageType)
+    {
+        m_absorb = 0;
+        m_resist = 0;
+        m_block = 0;
+    }
+    void ModifyDamage(int32 amount)
+    {
+        amount = std::min(amount, int32(GetDamage()));
+        m_damage += amount;
+    }
+    void AbsorbDamage(uint32 amount)
+    {
+        amount = std::min(amount, GetDamage());
+        m_absorb += amount;
+        m_damage -= amount;
+    }
+    void ResistDamage(uint32 amount)
+    {
+        amount = std::min(amount, GetDamage());
+        m_resist += amount;
+        m_damage -= amount;
+    }
+    void BlockDamage(uint32 amount)
+    {
+        amount = std::min(amount, GetDamage());
+        m_block += amount;
+        m_damage -= amount;
+    }
+    Unit * GetAttacker() const { return m_attacker; };
+    Unit * GetVictim() const { return m_victim; };
+    DamageEffectType GetDamageType() const { return m_damageType; };
+    SpellEntry const * GetSpellInfo() const { return m_spellInfo; };
+    SpellSchoolMask GetSchoolMask() const { return m_schoolMask; };
+    uint32 GetDamage() const { return m_damage; };
+    uint32 GetAbsorb() const { return m_absorb; };
+    uint32 GetResist() const { return m_resist; };
+    uint32 GetBlock() const { return m_block; };
 };
 
 // Struct for use in Unit::CalculateMeleeDamage
@@ -1201,6 +1255,7 @@ class Unit : public WorldObject
         inline bool HealthAbovePct(int32 pct) const { return GetHealth() * (uint64)100 > GetMaxHealth() * (uint64)pct; }
         inline float GetHealthPct() const { return GetMaxHealth() ? 100.f * GetHealth() / GetMaxHealth() : 0.0f; }
         inline uint32 CountPctFromMaxHealth(int32 pct) const { return CalculatePctN(GetMaxHealth(), pct); }
+        inline uint32 CountPctFromCurHealth(int32 pct) const { return CalculatePctN(GetHealth(), pct); }
 
         void SetHealth(uint32 val);
         void SetMaxHealth(uint32 val);
@@ -1214,9 +1269,8 @@ class Unit : public WorldObject
         uint32 GetMaxPower(Powers power) const { return GetUInt32Value(UNIT_FIELD_MAXPOWER1+power); }
         void SetPower(Powers power, uint32 val);
         void SetMaxPower(Powers power, uint32 val);
+        // returns the change in power
         int32 ModifyPower(Powers power, int32 val);
-        void ApplyPowerMod(Powers power, uint32 val, bool apply);
-        void ApplyMaxPowerMod(Powers power, uint32 val, bool apply);
 
         uint32 GetAttackTime(WeaponAttackType att) const
         {
@@ -1510,7 +1564,7 @@ class Unit : public WorldObject
         void RemoveAllMinionsByEntry(uint32 entry);
         void SetCharm(Unit* target, bool apply);
         Unit* GetNextRandomRaidMemberOrPet(float radius);
-        bool SetCharmedBy(Unit* charmer, CharmType type);
+        bool SetCharmedBy(Unit* charmer, CharmType type, AuraApplication const * aurApp = NULL);
         void RemoveCharmedBy(Unit* charmer);
         void RestoreFaction();
 
@@ -1557,7 +1611,7 @@ class Unit : public WorldObject
         void _RemoveNoStackAuraApplicationsDueToAura(Aura * aura);
         void _RemoveNoStackAurasDueToAura(Aura * aura);
         bool _IsNoStackAuraDueToAura(Aura * appliedAura, Aura * existingAura) const;
-        void _HandleAuraEffect(AuraEffect * aurEff, bool apply);
+        void _RegisterAuraEffect(AuraEffect * aurEff, bool apply);
 
         // m_ownedAuras container management
         AuraMap      & GetOwnedAuras()       { return m_ownedAuras; }
@@ -1804,6 +1858,7 @@ class Unit : public WorldObject
         uint32 GetDisplayId() { return GetUInt32Value(UNIT_FIELD_DISPLAYID); }
         void SetDisplayId(uint32 modelId);
         uint32 GetNativeDisplayId() { return GetUInt32Value(UNIT_FIELD_NATIVEDISPLAYID); }
+        void RestoreDisplayId();
         void SetNativeDisplayId(uint32 modelId) { SetUInt32Value(UNIT_FIELD_NATIVEDISPLAYID, modelId); }
         void setTransForm(uint32 spellid) { m_transform = spellid;}
         uint32 getTransForm() const { return m_transform;}
@@ -1896,6 +1951,12 @@ class Unit : public WorldObject
         uint32 GetUnitMovementFlags() const { return m_movementInfo.flags; }
         void SetUnitMovementFlags(uint32 f) { m_movementInfo.flags = f; }
 
+        void AddExtraUnitMovementFlag(uint16 f) { m_movementInfo.flags2 |= f; }
+        void RemoveExtraUnitMovementFlag(uint16 f) { m_movementInfo.flags2 &= ~f; }
+        uint16 HasExtraUnitMovementFlag(uint16 f) const { return m_movementInfo.flags2 & f; }
+        uint16 GetExtraUnitMovementFlags() const { return m_movementInfo.flags2; }
+        void SetExtraUnitMovementFlags(uint16 f) { m_movementInfo.flags2 = f; }
+
         void SetControlled(bool apply, UnitState state);
 
         void AddComboPointHolder(uint32 lowguid) { m_ComboPointHolders.insert(lowguid); }
@@ -1968,10 +2029,10 @@ class Unit : public WorldObject
         bool m_ControlledByPlayer;
 
         bool CheckPlayerCondition(Player* pPlayer);
-        void EnterVehicle(Unit *base, int8 seatId = -1) { EnterVehicle(base->GetVehicleKit(), seatId); }
-        void EnterVehicle(Vehicle *vehicle, int8 seatId = -1);
+        void EnterVehicle(Unit *base, int8 seatId = -1, AuraApplication const * aurApp = NULL) { EnterVehicle(base->GetVehicleKit(), seatId, aurApp); }
+        void EnterVehicle(Vehicle *vehicle, int8 seatId = -1, AuraApplication const * aurApp = NULL);
         void ExitVehicle();
-        void ChangeSeat(int8 seatId, bool next = true);
+        void ChangeSeat(int8 seatId, bool next = true, bool byAura = false);
 
         void BuildMovementPacket(ByteBuffer *data) const;
 

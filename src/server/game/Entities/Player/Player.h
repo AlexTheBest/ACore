@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2010 TrinityCore <http://www.trinitycore.org/>
+ * Copyright (C) 2008-2011 TrinityCore <http://www.trinitycore.org/>
  * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -1816,6 +1816,7 @@ class Player : public Unit, public GridObject<Player>
         float GetRatingCoefficient(CombatRating cr) const;
         float GetRatingBonusValue(CombatRating cr) const;
         uint32 GetBaseSpellPowerBonus() { return m_baseSpellPower; }
+        int32 GetSpellPenetrationItemMod() const { return m_spellPenetrationItemMod; }
 
         float GetExpertiseDodgeOrParryReduction(WeaponAttackType attType) const;
         void UpdateBlockPercentage();
@@ -1951,6 +1952,7 @@ class Player : public Unit, public GridObject<Player>
         bool isHonorOrXPTarget(Unit* pVictim);
 
         bool GetsRecruitAFriendBonus(bool forXP);
+        uint8 GetGrantableLevels() { return GetByteValue(PLAYER_FIELD_BYTES, 1); }
 
         ReputationMgr&       GetReputationMgr()       { return m_reputationMgr; }
         ReputationMgr const& GetReputationMgr() const { return m_reputationMgr; }
@@ -2027,6 +2029,7 @@ class Player : public Unit, public GridObject<Player>
         void _ApplyAllItemMods();
         void _ApplyAllLevelScaleItemMods(bool apply);
         void _ApplyItemBonuses(ItemPrototype const *proto,uint8 slot,bool apply, bool only_level_scale = false);
+        void _ApplyWeaponDamage(uint8 slot, ItemPrototype const *proto, ScalingStatValuesEntry const *ssv, bool apply);
         void _ApplyAmmoBonuses();
         bool EnchantmentFitsRequirements(uint32 enchantmentcondition, int8 slot);
         void ToggleMetaGemsActive(uint8 exceptslot, bool apply);
@@ -2552,6 +2555,7 @@ class Player : public Unit, public GridObject<Player>
         uint32 m_baseFeralAP;
         uint32 m_baseManaRegen;
         uint32 m_baseHealthRegen;
+        int32 m_spellPenetrationItemMod;
 
         SpellModList m_spellMods[MAX_SPELLMOD];
         //uint32 m_pad;

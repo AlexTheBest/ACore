@@ -26735,6 +26735,8 @@ LOCK TABLES `spell_script_names` WRITE;
 /*!40000 ALTER TABLE `spell_script_names` DISABLE KEYS */;
 INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 -- generic
+( 39228, 'spell_gen_absorb0_hitlimit1'),
+( 60218, 'spell_gen_absorb0_hitlimit1'),
 (  6962, 'spell_gen_pet_summoned'),
 ( 10848, 'spell_gen_shroud_of_death'),
 ( 24750, 'spell_gen_trick'),
@@ -26754,7 +26756,10 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 72752, 'spell_pvp_trinket_wotf_shared_cd'),
 ( 72757, 'spell_pvp_trinket_wotf_shared_cd'),
 ( 46221, 'spell_gen_animal_blood'),
+( 70769, 'spell_gen_divine_storm_cd_reset'),
 -- instances
+-- Black Temple
+( 41475, 'spell_boss_lady_malande_shield'),
 -- Forge of Souls
 ( 68793, 'spell_bronjahm_magic_bane'),
 ( 69050, 'spell_bronjahm_magic_bane'),
@@ -26762,6 +26767,15 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 69008, 'spell_bronjahm_soulstorm_channel'),
 ( 68870, 'spell_bronjahm_soulstorm_visual'),
 -- Pit of Saron
+( 68786, 'spell_garfrost_permafrost'),
+( 70336, 'spell_garfrost_permafrost'),
+( 69012, 'spell_krick_explosive_barrage'),
+( 69263, 'spell_ick_explosive_barrage'),
+( 44851, 'spell_exploding_orb_hasty_grow'),
+( 68987, 'spell_krick_pursuit'),
+( 69029, 'spell_krick_pursuit_confusion'),
+( 70850, 'spell_krick_pursuit_confusion'),
+( 69275, 'spell_tyrannus_mark_of_rimefang'),
 ( 69172, 'spell_tyrannus_overlord_brand'),
 -- Icecrown Citadel
 ( 69057, 'spell_marrowgar_bone_spike_graveyard'),
@@ -26874,6 +26888,11 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 71900, 'spell_blood_queen_bloodbolt'),
 ( 71901, 'spell_blood_queen_bloodbolt'),
 ( 71902, 'spell_blood_queen_bloodbolt'),
+-- Trial of Crusader
+( 66118, 'spell_gen_leeching_swarm'),
+( 67630, 'spell_gen_leeching_swarm'),
+( 68646, 'spell_gen_leeching_swarm'),
+( 68647, 'spell_gen_leeching_swarm'),
 -- Ulduar
 ( 62717, 'spell_ignis_slag_pot'),
 ( 63477, 'spell_ignis_slag_pot'),
@@ -26912,6 +26931,7 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 -- warrior
 ( 12975, 'spell_warr_last_stand'),
 -- paladin
+(-31850, 'spell_pal_ardent_defender'),
 ( 20425, 'spell_pal_judgement_of_command'),
 ( 63521, 'spell_pal_guarded_by_the_light'),
 (-20473, 'spell_pal_holy_shock'),
@@ -26929,24 +26949,40 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 55709, 'spell_hun_pet_heart_of_the_phoenix'),
 ( 54044, 'spell_hun_pet_carrion_feeder'),
 -- rogue
+(-31228, 'spell_rog_cheat_death'),
+(-31130, 'spell_rog_nerves_of_steel'),
 (  5938, 'spell_rog_shiv'),
 ( 14185, 'spell_rog_preparation'),
 (-51685, 'spell_rog_prey_on_the_weak'),
 -- priest
+(-47788, 'spell_pri_guardian_spirit'),
+( -8129, 'spell_pri_mana_burn'),
 ( 47948, 'spell_pri_pain_and_suffering_proc'),
 (-47540, 'spell_pri_penance'),
-( -8129, 'spell_pri_mana_burn'),
+(   -17, 'spell_pri_reflective_shield_trigger'),
 -- death knight
+( 50462, 'spell_dk_anti_magic_shell_raid'),
+( 48707, 'spell_dk_anti_magic_shell_self'),
+( 50461, 'spell_dk_anti_magic_zone'),
 (-49158, 'spell_dk_corpse_explosion'),
 ( 50524, 'spell_dk_runic_power_feed'),
 (-55090, 'spell_dk_scourge_strike'),
+(-49145, 'spell_dk_spell_deflection'),
+(-52284, 'spell_dk_will_of_the_necropolis'),
 -- shaman
+(-51474, 'spell_sha_astral_shift'),
 ( 39610, 'spell_sha_mana_tide_totem'),
 ( -1535, 'spell_sha_fire_nova'),
 (  6474, 'spell_sha_earthbind_totem'),
 -- mage
 (-11113, 'spell_mage_blast_wave'),
 ( 11958, 'spell_mage_cold_snap'),
+(  -543, 'spell_mage_frost_warding_trigger'),
+( -6143, 'spell_mage_frost_warding_trigger'),
+(  -543, 'spell_mage_incanters_absorbtion_absorb'),
+( -6143, 'spell_mage_incanters_absorbtion_absorb'),
+(-11426, 'spell_mage_incanters_absorbtion_absorb'),
+( -1463, 'spell_mage_incanters_absorbtion_manashield')
 ( 31687, 'spell_mage_summon_water_elemental'),
 ( 32826, 'spell_mage_polymorph_visual'),
 -- warlock
@@ -26955,9 +26991,14 @@ INSERT INTO `spell_script_names` (`spell_id`,`ScriptName`) VALUES
 ( 47422, 'spell_warl_everlasting_affliction'),
 -- druid
 ( 54846, 'spell_dru_glyph_of_starfire'),
+( 69366, 'spell_dru_moonkin_form_passive'),
+(-33851, 'spell_dru_primal_tenacity'),
+( 62606, 'spell_dru_savage_defense'),
 -- example
 ( 66244, 'spell_ex_66244'), 
-( 5581,  'spell_ex_5581');
+( 5581,  'spell_ex_5581'),
+( 47299, 'spell_ex_absorb_aura');
+
 /*!40000 ALTER TABLE `spell_script_names` ENABLE KEYS */;
 UNLOCK TABLES;
 
@@ -27918,6 +27959,9 @@ AVG_ROW_LENGTH=0;
 LOCK TABLES `vehicle_accessory` WRITE;
 /*!40000 ALTER TABLE `vehicle_accessory` DISABLE KEYS */;
 INSERT INTO `vehicle_accessory` VALUES
+(36476,36477,0,0, 'Krick and Ick'),
+(36661,36658,0,0, 'Scourgelord Tyrannus and Rimefang'),
+(36891,31260,0,0, 'Ymirjar Skycaller on Drake'),
 (36678,38309,0,1, 'Professor Putricide - trigger'),
 (36678,38308,1,1, 'Professor Putricide - trigger');
 /*!40000 ALTER TABLE `vehicle_accessory` ENABLE KEYS */;
