@@ -2721,6 +2721,18 @@ void Spell::SelectEffectTargets(uint32 i, uint32 cur)
                         maxSize = m_caster->HasAura(62970) ? 6 : 5; // Glyph of Wild Growth
                         power = POWER_HEALTH;
                     }
+                    else if (m_spellInfo->SpellFamilyFlags[2] == 0x0100) // Starfall
+                    {
+                        // Remove targets not in LoS or in stealth
+                        for (std::list<Unit*>::iterator itr = unitList.begin() ; itr != unitList.end();)
+                        {
+                            if ((*itr)->HasStealthAura() || (*itr)->HasInvisibilityAura() || !(*itr)->IsWithinLOSInMap(m_caster))
+                                itr = unitList.erase(itr);
+                            else
+                                ++itr;
+                        }
+                        break;
+                    }
                     else
                         break;
 
@@ -2789,6 +2801,30 @@ void Spell::SelectEffectTargets(uint32 i, uint32 cur)
                     case 59725: // Improved Spell Reflection - aoe aura
                         unitList.remove(m_caster);
                         break;
+                    case 72378: // Blood Nova (Deathbringer Saurfang)
+                    case 73058:
+                    {
+                        // select one random target, with preference of ranged targets
+                        uint32 targetsAtRange = 0;
+                        uint32 const minTargets = m_caster->GetMap()->GetSpawnMode() & 1 ? 10 : 4;
+                        unitList.sort(Trinity::ObjectDistanceOrderPred(m_caster, false));
+
+                        // get target count at range
+                        for (std::list<Unit*>::iterator itr = unitList.begin(); itr != unitList.end(); ++itr, ++targetsAtRange)
+                            if ((*itr)->GetDistance(m_caster) < 12.0f)
+                                break;
+
+                        // set the upper cap
+                        if (targetsAtRange < minTargets)
+                            targetsAtRange = std::min<uint32>(unitList.size()-1, minTargets);
+
+                        std::list<Unit*>::iterator itr = unitList.begin();
+                        std::advance(itr, urand(0, targetsAtRange));
+                        Unit* target = *itr;
+                        unitList.clear();
+                        unitList.push_back(target);
+                        break;
+                    }
                     case 72255: // Mark of the Fallen Champion (Deathbringer Saurfang)
                     case 72444:
                     case 72445:
@@ -5458,9 +5494,10 @@ SpellCastResult Spell::CheckCast(bool strict)
             }
             case SPELL_EFFECT_TALENT_SPEC_SELECT:
                 // can't change during already started arena/battleground
-                if (Battleground const* bg = m_caster->ToPlayer()->GetBattleground())
-                    if (bg->GetStatus() == STATUS_IN_PROGRESS)
-                        return SPELL_FAILED_NOT_IN_BATTLEGROUND;
+                if (m_caster->GetTypeId() == TYPEID_PLAYER)
+                    if (Battleground const* bg = m_caster->ToPlayer()->GetBattleground())
+                        if (bg->GetStatus() == STATUS_IN_PROGRESS)
+                            return SPELL_FAILED_NOT_IN_BATTLEGROUND;
                 break;
             default:
                 break;

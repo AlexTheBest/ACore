@@ -178,6 +178,9 @@ class boss_thekal : public CreatureScript
 
                     if (!PhaseTwo && !WasDead && !HealthAbovePct(5))
                     {
+                        me->RemoveAurasByType(SPELL_AURA_PERIODIC_DAMAGE_PERCENT);
+                        me->RemoveAurasByType(SPELL_AURA_PERIODIC_DAMAGE);
+                        me->RemoveAurasByType(SPELL_AURA_PERIODIC_LEECH);
                         me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                         me->SetStandState(UNIT_STAND_STATE_SLEEP);
                         me->AttackStop();
@@ -398,6 +401,9 @@ class mob_zealot_lorkhan : public CreatureScript
 
                 if (!HealthAbovePct(5))
                 {
+                    me->RemoveAurasByType(SPELL_AURA_PERIODIC_DAMAGE_PERCENT);
+                    me->RemoveAurasByType(SPELL_AURA_PERIODIC_DAMAGE);
+                    me->RemoveAurasByType(SPELL_AURA_PERIODIC_LEECH);
                     me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                     me->SetStandState(UNIT_STAND_STATE_SLEEP);
                     me->setFaction(35);
@@ -548,6 +554,9 @@ class mob_zealot_zath : public CreatureScript
 
                 if (!HealthAbovePct(5))
                 {
+                    me->RemoveAurasByType(SPELL_AURA_PERIODIC_DAMAGE_PERCENT);
+                    me->RemoveAurasByType(SPELL_AURA_PERIODIC_DAMAGE);
+                    me->RemoveAurasByType(SPELL_AURA_PERIODIC_LEECH);
                     me->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
                     me->SetStandState(UNIT_STAND_STATE_SLEEP);
                     me->setFaction(35);

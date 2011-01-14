@@ -18,6 +18,7 @@
 #include <ace/Activation_Queue.h>
 
 #include "DatabaseWorkerPool.h"
+#include "Transaction.h"
 #include "Util.h"
 
 #ifndef _MYSQLCONNECTION_H
@@ -60,6 +61,13 @@ struct MySQLConnectionInfo
     std::string port_or_socket;
 };
 
+struct PreparedStatementTable
+{
+    uint32 index;
+    const char* query;
+    ConnectionFlags type;
+};
+
 class MySQLConnection
 {
     template <class T> friend class DatabaseWorkerPool;
@@ -84,9 +92,12 @@ class MySQLConnection
         void BeginTransaction();
         void RollbackTransaction();
         void CommitTransaction();
+        bool ExecuteTransaction(SQLTransaction& transaction);
 
         operator bool () const { return m_Mysql != NULL; }
         void Ping() { mysql_ping(m_Mysql); }
+
+        uint32 GetLastError() { return mysql_errno(m_Mysql); }
 
     protected:
         bool LockIfReady()
@@ -104,10 +115,11 @@ class MySQLConnection
 
         MYSQL* GetHandle()  { return m_Mysql; }
         MySQLPreparedStatement* GetPreparedStatement(uint32 index);
-        void PrepareStatement(uint32 index, const char* sql, bool async = false);
+        void PrepareStatement(uint32 index, const char* sql, ConnectionFlags flags);
 
     protected:
         std::vector<MySQLPreparedStatement*> m_stmts;       //! PreparedStatements storage
+        PreparedStatementTable const * m_statementTable;    //! Static index/query pairs
         bool                  m_reconnecting;               //! Are we reconnecting?
         
     private:

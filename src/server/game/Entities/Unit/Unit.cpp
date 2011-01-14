@@ -426,11 +426,11 @@ void Unit::SendMonsterMoveTransport(Unit *vehicleOwner)
     data << GetPositionX() - vehicleOwner->GetPositionX();
     data << GetPositionY() - vehicleOwner->GetPositionY();
     data << GetPositionZ() - vehicleOwner->GetPositionZ();
-    data << uint32(100);                    // should be an increasing constant that indicates movement packet count
+    data << uint32(getMSTime());            // should be an increasing constant that indicates movement packet count
     data << uint8(SPLINETYPE_FACING_ANGLE); 
-    data << GetTransOffsetO();              // facing angle?
+    data << GetOrientation();               // facing angle?
     data << uint32(SPLINEFLAG_TRANSPORT);
-    data << uint32(0);                      // move time
+    data << uint32(GetTransTime());         // move time
     data << uint32(1);                      // amount of waypoints
     data << GetTransOffsetX();
     data << GetTransOffsetY();
@@ -1647,8 +1647,6 @@ void Unit::CalcAbsorbResist(Unit *pVictim, SpellSchoolMask schoolMask, DamageEff
             continue;
         if (!(absorbAurEff->GetMiscValue() & schoolMask))
             continue;
-
-        SpellEntry const * spellProto = absorbAurEff->GetSpellProto();
 
         // get amount which can be still absorbed by the aura
         int32 currentAbsorb = absorbAurEff->GetAmount();
@@ -5077,17 +5075,6 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                     triggered_spell_id = 34650;
                     break;
                 }
-                // Spirit Walk
-                case 58875:
-                {
-                    // Cast on owner
-                    target = GetOwner();
-                    if (!target)
-                        return false;
-
-                    triggered_spell_id = 58876;
-                    break;
-                }
                 // Mark of Malice
                 case 33493:
                 {
@@ -5599,6 +5586,7 @@ bool Unit::HandleDummyAuraProc(Unit *pVictim, uint32 damage, AuraEffect* trigger
                 case 56375:
                     target->RemoveAurasByType(SPELL_AURA_PERIODIC_DAMAGE, 0, target->GetAura(32409)); // SW:D shall not be removed.
                     target->RemoveAurasByType(SPELL_AURA_PERIODIC_DAMAGE_PERCENT);
+                    target->RemoveAurasByType(SPELL_AURA_PERIODIC_LEECH);
                     return true;
                 // Glyph of Icy Veins
                 case 56374:
@@ -10593,6 +10581,13 @@ bool Unit::isSpellCrit(Unit *pVictim, SpellEntry const *spellProto, SpellSchoolM
                 switch (spellProto->SpellFamilyName)
                 {
                     case SPELLFAMILY_DRUID:
+                        // Improved Faerie Fire
+                        if (pVictim->HasAuraState(AURA_STATE_FAERIE_FIRE))
+                            if (AuraEffect const * aurEff = GetDummyAuraEffect(SPELLFAMILY_DRUID, 109, 0))
+                                crit_chance+=aurEff->GetAmount();
+
+                        // cumulative effect - don't break
+
                         // Starfire
                         if (spellProto->SpellFamilyFlags[0] & 0x4 && spellProto->SpellIconID == 1485)
                         {
@@ -11664,6 +11659,10 @@ void Unit::Unmount()
 
     SetUInt32Value(UNIT_FIELD_MOUNTDISPLAYID, 0);
     RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_MOUNT);
+
+    WorldPacket data(SMSG_DISMOUNT, 8);
+    data.appendPackGUID(GetGUID());
+    SendMessageToSet(&data, true);
 
     // only resummon old pet if the player is already added to a map
     // this prevents adding a pet to a not created map which would otherwise cause a crash

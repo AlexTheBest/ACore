@@ -1929,6 +1929,30 @@ void AuraEffect::PeriodicDummyTick(Unit * target, Unit * caster) const
                 // 7053 Forsaken Skill: Shadow
                 return;
             }
+            case 54798: // FLAMING Arrow Triggered Effect
+            {
+                if (!target->ToCreature() || !caster->ToCreature()->IsVehicle())
+                    return;
+
+                Unit *rider = caster->GetVehicleKit()->GetPassenger(0);
+                if (!rider)
+                    return;
+
+                // set ablaze
+                if (target->HasAuraEffect(54683, EFFECT_0))
+                    return;
+                else
+                    target->CastSpell(target, 54683, true);
+
+                // Credit Frostworgs
+                if (target->ToCreature()->GetEntry() == 29358)
+                    rider->CastSpell(rider, 54896, true);
+                // Credit Frost Giants
+                else if (target->ToCreature()->GetEntry() == 29351)
+                    rider->CastSpell(rider, 54893, true);
+
+                break;
+            }
             case 62292: // Blaze (Pool of Tar)
                 // should we use custom damage?
                 target->CastSpell((Unit*)NULL, m_spellProto->EffectTriggerSpell[m_effIndex], true);
@@ -3109,6 +3133,7 @@ void AuraEffect::HandleAuraModShapeshift(AuraApplication const * aurApp, uint8 m
                         case FORM_CAT:
                         {
                             int32 basePoints = int32(std::min(oldPower, FurorChance));
+                            target->SetPower(POWER_ENERGY, 0);
                             target->CastCustomSpell(target, 17099, &basePoints, NULL, NULL, true, NULL, this);
                         }
                         break;
@@ -3309,6 +3334,8 @@ void AuraEffect::HandleAuraTransform(AuraApplication const * aurApp, uint8 mode,
                     }
                     // Murloc costume
                     case 42365: target->SetDisplayId(21723); break;
+                    // Pygmy Oil
+                    case 53806: target->SetDisplayId(22512); break;
                     default: break;
                 }
             }

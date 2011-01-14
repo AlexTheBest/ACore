@@ -1219,6 +1219,47 @@ void Spell::EffectDummy(SpellEffIndex effIndex)
                     m_caster->SendMessageToSet(&data,true);
                     return;
                 }
+                case 53808:                                 // Pygmy Oil
+                {
+                    Aura *pAura = m_caster->GetAura(53806);
+                    if (pAura)
+                        pAura->RefreshDuration();
+                    else
+                    {
+                        pAura = m_caster->GetAura(53805);
+                        if (!pAura || pAura->GetStackAmount() < 5 || !roll_chance_i(50))
+                             m_caster->CastSpell(m_caster, 53805, true);
+                        else
+                        {
+                            pAura->Remove();
+                            m_caster->CastSpell(m_caster, 53806, true);
+                        }
+                    }
+                    return;
+                }
+                case 54577:                                 // U.D.E.D.
+                {
+                    if (unitTarget->GetEntry() != 29402)
+                        return;
+
+                    m_caster->SummonGameObject(192693, unitTarget->GetPositionX(), unitTarget->GetPositionY(), unitTarget->GetPositionZ(), unitTarget->GetOrientation(), 0, 0, 0, 0, 100);
+                    for (uint8 i = 0; i < 4; ++i)
+                        m_caster->SummonGameObject(191567, float(unitTarget->GetPositionX() + irand(-7, 7)), float(unitTarget->GetPositionY() + irand(-7, 7)), unitTarget->GetPositionZ(), unitTarget->GetOrientation(), 0, 0, 0, 0, 100);
+
+                    unitTarget->Kill(unitTarget);
+                    return;
+                }
+                case 51961:                                 // Captured Chicken Cover - Quest 12702 & 12532
+                {
+                    if (m_caster->GetTypeId() != TYPEID_PLAYER
+                        || !unitTarget->HasAura(51959)
+                        || !(m_caster->ToPlayer()->GetQuestStatus(12702) == QUEST_STATUS_INCOMPLETE || m_caster->ToPlayer()->GetQuestStatus(12532) == QUEST_STATUS_INCOMPLETE))
+                        return;
+
+                    m_caster->CastSpell(m_caster, 51037, true);
+                    unitTarget->Kill(unitTarget);
+                    return;
+                }
             }
 
             break;
@@ -1609,7 +1650,7 @@ void Spell::EffectForceCast(SpellEffIndex effIndex)
 
     if (damage)
     {
-        switch(m_spellInfo->Id)
+        switch (m_spellInfo->Id)
         {
             case 52588: // Skeletal Gryphon Escape
             case 48598: // Ride Flamebringer Cue
@@ -1621,7 +1662,7 @@ void Spell::EffectForceCast(SpellEffIndex effIndex)
                 return;
             case 72378: // Blood Nova
             case 73058: // Blood Nova
-                spellInfo = sSpellMgr->GetSpellForDifficultyFromSpell(spellInfo, m_caster);
+                m_caster->CastSpell(unitTarget, 72380, true);   // additional spell cast
                 break;
         }
     }
@@ -1654,7 +1695,6 @@ void Spell::EffectForceCastWithValue(SpellEffIndex effIndex)
         return;
     }
     int32 bp = damage;
-
     Unit * caster = GetTriggeredSpellCaster(spellInfo, m_caster, unitTarget);
 
     caster->CastCustomSpell(unitTarget, spellInfo->Id, &bp, &bp, &bp, true, NULL, NULL, m_originalCasterGUID);
@@ -1940,6 +1980,24 @@ void Spell::EffectTeleportUnits(SpellEffIndex /*effIndex*/)
             {
                 unitTarget->AddAura(60444,unitTarget); //Apply Lost! Aura
                 return;
+            }
+            break;
+        case 66550: // teleports outside (Isle of Conquest)
+            if (Player* pTarget = unitTarget->ToPlayer())
+            {
+                if (pTarget->GetTeamId() == TEAM_ALLIANCE)
+                    m_targets.setDst(442.24f,-835.25f,44.30f,0.06f,628);
+                else
+                    m_targets.setDst(1120.43f,-762.11f,47.92f,2.94f,628);
+            }
+            break;
+        case 66551: // teleports inside (Isle of Conquest)
+            if (Player* pTarget = unitTarget->ToPlayer())
+            {
+                if (pTarget->GetTeamId() == TEAM_ALLIANCE)
+                    m_targets.setDst(389.57f,-832.38f,48.65f,3.00f,628);
+                else
+                    m_targets.setDst(1174.85f,-763.24f,48.72f,6.26f,628);
             }
             break;
     }
@@ -4832,7 +4890,7 @@ void Spell::EffectScriptEffect(SpellEffIndex effIndex)
                     uint32 spellID = SpellMgr::CalculateSpellEffectAmount(m_spellInfo, 0);
                     uint32 questID = SpellMgr::CalculateSpellEffectAmount(m_spellInfo, 1);
 
-                    if (unitTarget->ToPlayer()->GetQuestStatus(questID) == QUEST_STATUS_COMPLETE && !unitTarget->ToPlayer()->GetQuestRewardStatus (questID))
+                    if (unitTarget->ToPlayer()->GetQuestStatus(questID) == QUEST_STATUS_COMPLETE)
                         unitTarget->CastSpell(unitTarget, spellID, true);
 
                     return;
