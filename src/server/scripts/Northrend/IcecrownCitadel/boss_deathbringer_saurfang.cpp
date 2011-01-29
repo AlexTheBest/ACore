@@ -257,8 +257,8 @@ class boss_deathbringer_saurfang : public CreatureScript
 
             void Reset()
             {
+                _Reset();
                 me->SetReactState(REACT_DEFENSIVE);
-                events.Reset();
                 events.SetPhase(PHASE_COMBAT);
                 frenzy = false;
                 me->SetPower(POWER_ENERGY, 0);
@@ -269,8 +269,6 @@ class boss_deathbringer_saurfang : public CreatureScript
                 DoCast(me, SPELL_RUNE_OF_BLOOD_S, true);
                 me->RemoveAurasDueToSpell(SPELL_BERSERK);
                 me->RemoveAurasDueToSpell(SPELL_FRENZY);
-                summons.DespawnAll();
-                instance->SetBossState(DATA_DEATHBRINGER_SAURFANG, NOT_STARTED);
             }
 
             void EnterCombat(Unit* who)
@@ -283,6 +281,9 @@ class boss_deathbringer_saurfang : public CreatureScript
                 }
 
                 // oh just screw intro, enter combat - no exploits please
+                me->setActive(true);
+                DoZoneInCombat();
+
                 events.SetPhase(PHASE_COMBAT);
                 me->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_OOC_NOT_ATTACKABLE);
                 introDone = true;
@@ -301,11 +302,11 @@ class boss_deathbringer_saurfang : public CreatureScript
 
             void JustDied(Unit* /*killer*/)
             {
+                _JustDied();
                 DoCastAOE(SPELL_ACHIEVEMENT, true);
                 Talk(SAY_DEATH);
 
                 instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_MARK_OF_THE_FALLEN_CHAMPION);
-                instance->SetBossState(DATA_DEATHBRINGER_SAURFANG, DONE);
                 if (Creature* creature = ObjectAccessor::GetCreature(*me, instance->GetData64(DATA_SAURFANG_EVENT_NPC)))
                     creature->AI()->DoAction(ACTION_START_OUTRO);
             }
@@ -327,6 +328,7 @@ class boss_deathbringer_saurfang : public CreatureScript
 
             void JustReachedHome()
             {
+                _JustReachedHome();
                 instance->SetBossState(DATA_DEATHBRINGER_SAURFANG, FAIL);
                 instance->DoRemoveAurasDueToSpellOnPlayers(SPELL_MARK_OF_THE_FALLEN_CHAMPION);
             }
@@ -1122,6 +1124,105 @@ class spell_deathbringer_blood_nova : public SpellScriptLoader
         }
 };
 
+class spell_deathbringer_blood_nova_targeting : public SpellScriptLoader
+{
+    public:
+        spell_deathbringer_blood_nova_targeting() : SpellScriptLoader("spell_deathbringer_blood_nova_targeting") { }
+
+        class spell_deathbringer_blood_nova_targeting_SpellScript : public SpellScript
+        {
+            PrepareSpellScript(spell_deathbringer_blood_nova_targeting_SpellScript);
+
+            bool Load()
+            {
+                // initialize variable
+                target = NULL;
+                return true;
+            }
+
+            void FilterTargetsInitial(std::list<Unit*>& unitList)
+            {
+                // select one random target, with preference of ranged targets
+                uint32 targetsAtRange = 0;
+                uint32 const minTargets = GetCaster()->GetMap()->GetSpawnMode() & 1 ? 10 : 4;
+                unitList.sort(Trinity::ObjectDistanceOrderPred(GetCaster(), false));
+
+                // get target count at range
+                for (std::list<Unit*>::iterator itr = unitList.begin(); itr != unitList.end(); ++itr, ++targetsAtRange)
+                    if ((*itr)->GetDistance(GetCaster()) < 12.0f)
+                        break;
+
+                // set the upper cap
+                if (targetsAtRange < minTargets)
+                    targetsAtRange = std::min<uint32>(unitList.size()-1, minTargets);
+
+                std::list<Unit*>::iterator itr = unitList.begin();
+                std::advance(itr, urand(0, targetsAtRange));
+                target = *itr;
+                unitList.clear();
+                unitList.push_back(target);
+            }
+
+            // use the same target for first and second effect
+            void FilterTargetsSubsequent(std::list<Unit*>& unitList)
+            {
+                if (!target)
+                    return;
+
+                unitList.clear();
+                unitList.push_back(target);
+            }
+
+            void Register()
+            {
+                OnUnitTargetSelect += SpellUnitTargetFn(spell_deathbringer_blood_nova_targeting_SpellScript::FilterTargetsInitial, EFFECT_0, TARGET_UNIT_AREA_ENEMY_SRC);
+                OnUnitTargetSelect += SpellUnitTargetFn(spell_deathbringer_blood_nova_targeting_SpellScript::FilterTargetsSubsequent, EFFECT_1, TARGET_UNIT_AREA_ENEMY_SRC);
+            }
+
+            Unit* target;
+        };
+
+        SpellScript* GetSpellScript() const
+        {
+            return new spell_deathbringer_blood_nova_targeting_SpellScript();
+        }
+};
+
+class MarkOfTheFallenChampionCheck
+{
+    public:
+        bool operator() (Unit* unit)
+        {
+            return !unit->HasAura(SPELL_MARK_OF_THE_FALLEN_CHAMPION);
+        }
+};
+
+class spell_deathbringer_mark_of_the_fallen_champion : public SpellScriptLoader
+{
+    public:
+        spell_deathbringer_mark_of_the_fallen_champion() : SpellScriptLoader("spell_deathbringer_mark_of_the_fallen_champion") { }
+
+        class spell_deathbringer_mark_of_the_fallen_champion_SpellScript : public SpellScript
+        {
+            PrepareSpellScript(spell_deathbringer_mark_of_the_fallen_champion_SpellScript);
+
+            void FilterTargets(std::list<Unit*>& unitList)
+            {
+                unitList.remove_if(MarkOfTheFallenChampionCheck());
+            }
+
+            void Register()
+            {
+                OnUnitTargetSelect += SpellUnitTargetFn(spell_deathbringer_mark_of_the_fallen_champion_SpellScript::FilterTargets, EFFECT_0, TARGET_UNIT_AREA_ENEMY_SRC);
+            }
+        };
+
+        SpellScript* GetSpellScript() const
+        {
+            return new spell_deathbringer_mark_of_the_fallen_champion_SpellScript();
+        }
+};
+
 class achievement_ive_gone_and_made_a_mess : public AchievementCriteriaScript
 {
     public:
@@ -1149,5 +1250,7 @@ void AddSC_boss_deathbringer_saurfang()
     new spell_deathbringer_blood_power();
     new spell_deathbringer_rune_of_blood();
     new spell_deathbringer_blood_nova();
+    new spell_deathbringer_blood_nova_targeting();
+    new spell_deathbringer_mark_of_the_fallen_champion();
     new achievement_ive_gone_and_made_a_mess();
 }

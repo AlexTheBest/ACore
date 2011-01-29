@@ -109,9 +109,9 @@ class DatabaseWorkerPool
                 /// Now we just wait until m_queue gives the signal to the worker threads to stop
                 T* t = m_connections[IDX_ASYNC][i];
                 DatabaseWorker* worker = t->m_worker;
-                worker->wait(); // t->Close(); is called from worker thread
+                worker->wait();
                 delete worker;
-                --m_connectionCount[IDX_ASYNC];
+                t->Close();
             }
 
             sLog->outSQLDriver("Asynchronous connections on databasepool '%s' terminated. Proceeding with synchronous connections.", m_connectionInfo.database.c_str());
@@ -123,13 +123,12 @@ class DatabaseWorkerPool
                 //while (1)
                 //    if (t->LockIfReady()) -- For some reason deadlocks us
                 t->Close();
-                --m_connectionCount[IDX_SYNCH];
             }
 
             sLog->outSQLDriver("All connections on databasepool %s closed.", m_connectionInfo.database.c_str());
         }
 
-        /** 
+        /**
             Delayed one-way statement methods.
         */
 
@@ -269,7 +268,7 @@ class DatabaseWorkerPool
             return PreparedQueryResult(ret);
         }
 
-        /** 
+        /**
             Asynchronous query (with resultset) methods.
         */
 
@@ -359,7 +358,7 @@ class DatabaseWorkerPool
                 con->Unlock();      // OK, operation succesful
                 return;
             }
-            
+
             if (con->GetLastError() == 1213)
             {
                 uint8 loopBreaker = 5;  // Handle MySQL Errno 1213 without extending deadlock to the core itself

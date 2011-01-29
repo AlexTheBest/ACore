@@ -587,7 +587,7 @@ void WorldSession::HandleAddFriendOpcodeCallBack(QueryResult result, std::string
         team = Player::TeamForRace((*result)[1].GetUInt8());
         friendAcctid = (*result)[2].GetUInt32();
 
-        if (GetSecurity() >= SEC_MODERATOR || sWorld->getBoolConfig(CONFIG_ALLOW_GM_FRIEND) || sAccountMgr->GetSecurity(friendAcctid) < SEC_MODERATOR)
+        if (GetSecurity() >= SEC_MODERATOR || sWorld->getBoolConfig(CONFIG_ALLOW_GM_FRIEND) || sAccountMgr->GetSecurity(friendAcctid, realmID) < SEC_MODERATOR)
         {
             if (friendGuid)
             {
@@ -1740,4 +1740,23 @@ void WorldSession::HandleHearthAndResurrect(WorldPacket& /*recv_data*/)
     _player->BuildPlayerRepop();
     _player->ResurrectPlayer(100);
     _player->TeleportTo(_player->m_homebindMapId, _player->m_homebindX, _player->m_homebindY, _player->m_homebindZ, _player->GetOrientation());
+}
+
+void WorldSession::HandleInstanceLockResponse(WorldPacket& recvPacket)
+{
+    uint8 accept;
+    recvPacket >> accept;
+
+    if (!_player->HasPendingBind())
+    {
+        sLog->outDetail("InstanceLockResponse: Player %s (guid %u) tried to bind himself/teleport to graveyard without a pending bind!", _player->GetName(), _player->GetGUIDLow());
+        return;
+    }
+
+    if (accept)
+        _player->BindToInstance();
+    else
+        _player->RepopAtGraveyard();
+
+    _player->SetPendingBind(NULL, 0);
 }

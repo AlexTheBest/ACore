@@ -213,18 +213,27 @@ class boss_blood_council_controller : public CreatureScript
                 DoCast(me, SPELL_INVOCATION_OF_BLOOD_VALANAR);
 
                 if (Creature* keleseth = ObjectAccessor::GetCreature(*me, instance->GetData64(DATA_PRINCE_KELESETH_GUID)))
+                {
+                    instance->SendEncounterUnit(ENCOUNTER_FRAME_ADD, keleseth);
                     if (!keleseth->isInCombat())
                         DoZoneInCombat(keleseth);
+                }
 
                 if (Creature* taldaram = ObjectAccessor::GetCreature(*me, instance->GetData64(DATA_PRINCE_TALDARAM_GUID)))
+                {
+                    instance->SendEncounterUnit(ENCOUNTER_FRAME_ADD, taldaram);
                     if (!taldaram->isInCombat())
                         DoZoneInCombat(taldaram);
+                }
 
                 if (Creature* valanar = ObjectAccessor::GetCreature(*me, instance->GetData64(DATA_PRINCE_VALANAR_GUID)))
+                {
+                    instance->SendEncounterUnit(ENCOUNTER_FRAME_ADD, valanar);
                     if (!valanar->isInCombat())
                         DoZoneInCombat(valanar);
+                }
 
-                events.ScheduleEvent(EVENT_INVOCATION_OF_BLOOD, 30000);
+                events.ScheduleEvent(EVENT_INVOCATION_OF_BLOOD, 46500);
 
                 invocationOrder[0] = InvocationData(instance->GetData64(DATA_PRINCE_VALANAR_GUID), SPELL_INVOCATION_OF_BLOOD_VALANAR, EMOTE_VALANAR_INVOCATION, 71070);
                 if (urand(0, 1))
@@ -313,7 +322,7 @@ class boss_blood_council_controller : public CreatureScript
                             }
 
                             DoCast(me, invocationOrder[invocationStage].spellId);
-                            events.ScheduleEvent(EVENT_INVOCATION_OF_BLOOD, 30000);
+                            events.ScheduleEvent(EVENT_INVOCATION_OF_BLOOD, 46500);
                             break;
                         }
                         default:
@@ -408,10 +417,12 @@ class boss_prince_keleseth_icc : public CreatureScript
             void JustDied(Unit* /*killer*/)
             {
                 Talk(SAY_KELESETH_DEATH);
+                instance->SendEncounterUnit(ENCOUNTER_FRAME_REMOVE, me);
             }
 
             void JustReachedHome()
             {
+                instance->SendEncounterUnit(ENCOUNTER_FRAME_REMOVE, me);
                 me->SetHealth(spawnHealth);
                 isEmpowered = false;
             }
@@ -593,10 +604,12 @@ class boss_prince_taldaram_icc : public CreatureScript
             void JustDied(Unit* /*killer*/)
             {
                 Talk(EMOTE_TALDARAM_DEATH);
+                instance->SendEncounterUnit(ENCOUNTER_FRAME_REMOVE, me);
             }
 
             void JustReachedHome()
             {
+                instance->SendEncounterUnit(ENCOUNTER_FRAME_REMOVE, me);
                 me->SetHealth(spawnHealth);
                 isEmpowered = false;
             }
@@ -792,10 +805,12 @@ class boss_prince_valanar_icc : public CreatureScript
             void JustDied(Unit* /*killer*/)
             {
                 Talk(SAY_VALANAR_DEATH);
+                instance->SendEncounterUnit(ENCOUNTER_FRAME_REMOVE, me);
             }
 
             void JustReachedHome()
             {
+                instance->SendEncounterUnit(ENCOUNTER_FRAME_REMOVE, me);
                 me->SetHealth(me->GetMaxHealth());
                 isEmpowered = false;
             }
@@ -1059,7 +1074,7 @@ class npc_ball_of_flame : public CreatureScript
 
         struct npc_ball_of_flameAI : public ScriptedAI
         {
-            npc_ball_of_flameAI(Creature* creature) : ScriptedAI(creature)
+            npc_ball_of_flameAI(Creature* creature) : ScriptedAI(creature), instance(creature->GetInstanceScript())
             {
                 despawnTimer = 0;
             }
@@ -1102,6 +1117,15 @@ class npc_ball_of_flame : public CreatureScript
                     }
             }
 
+            void DamageDealt(Unit* /*target*/, uint32& damage, DamageEffectType damageType)
+            {
+                if (!instance || damageType != SPELL_DIRECT_DAMAGE)
+                    return;
+
+                if (damage > RAID_MODE<uint32>(23000, 25000, 23000, 25000))
+                    instance->SetData(DATA_ORB_WHISPERER_ACHIEVEMENT, uint32(false));
+            }
+
             void UpdateAI(const uint32 diff)
             {
                 if (!despawnTimer)
@@ -1117,6 +1141,7 @@ class npc_ball_of_flame : public CreatureScript
             }
 
         private:
+            InstanceScript* instance;
             uint64 chaseGUID;
             uint32 despawnTimer;
         };
