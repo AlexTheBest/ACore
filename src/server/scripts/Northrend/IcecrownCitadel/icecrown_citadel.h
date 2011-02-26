@@ -20,11 +20,15 @@
 
 #define ICCScriptName "instance_icecrown_citadel"
 
-// Shared spells used by every boss
+// Shared spells used by more than one script
 enum SharedSpells
 {
-    SPELL_BERSERK   = 26662,
-    SPELL_BERSERK2  = 47008
+    SPELL_BERSERK               = 26662,
+    SPELL_BERSERK2              = 47008,
+
+    // Residue Rendezvous
+    SPELL_ORANGE_BLIGHT_RESIDUE = 72144,
+    SPELL_GREEN_BLIGHT_RESIDUE  = 72145,
 };
 
 enum TeleporterSpells
@@ -65,6 +69,10 @@ enum DataTypes
     DATA_PRINCE_TALDARAM_GUID       = 19,
     DATA_PRINCE_VALANAR_GUID        = 20,
     DATA_BLOOD_PRINCES_CONTROL      = 21,
+    DATA_SINDRAGOSA_FROSTWYRMS      = 22,
+    DATA_SPINESTALKER               = 23,
+    DATA_RIMEFANG                   = 24,
+    DATA_COLDFLAME_JETS             = 25,
 };
 
 #define MAX_ENCOUNTER 12
@@ -74,8 +82,6 @@ enum CreaturesIds
     // At Light's Hammer
     NPC_KOR_KRON_GENERAL                        = 37189,
     NPC_ALLIANCE_COMMANDER                      = 37190,
-    NPC_KOR_KRON_LIEUTENANT                     = 38491,
-    NPC_SKYBREAKER_LIEUTENANT                   = 38492,
     NPC_TORTUNOK                                = 37992,    // Druid Armor H
     NPC_ALANA_MOONSTRIKE                        = 37999,    // Druid Armor A
     NPC_GERARDO_THE_SUAVE                       = 37993,    // Hunter Armor H
@@ -90,6 +96,14 @@ enum CreaturesIds
     NPC_NIBY_THE_ALMIGHTY                       = 38182,    // Warlock Armor N
     NPC_GARROSH_HELLSCREAM                      = 39372,
     NPC_KING_VARIAN_WRYNN                       = 39371,
+
+    // Weekly questgivers
+    NPC_INFILTRATOR_MINCHAR                     = 38471,
+    NPC_KOR_KRON_LIEUTENANT                     = 38491,
+    NPC_SKYBREAKER_LIEUTENANT                   = 38492,
+    NPC_ALCHEMIST_ADRIANNA                      = 38501,
+    NPC_ALRIN_THE_AGILE                         = 38551,
+    NPC_VALITHRIA_DREAMWALKER_QUEST             = 38589,
 
     // Lord Marrowgar
     NPC_LORD_MARROWGAR                          = 36612,
@@ -115,6 +129,7 @@ enum CreaturesIds
     NPC_SE_HIGH_OVERLORD_SAURFANG               = 37187,
     NPC_SE_KOR_KRON_REAVER                      = 37920,
     NPC_SE_SKYBREAKER_MARINE                    = 37830,
+    NPC_FROST_FREEZE_TRAP                       = 37744,
 
     // Festergut
     NPC_FESTERGUT                               = 36626,
@@ -134,6 +149,8 @@ enum CreaturesIds
     NPC_VOLATILE_OOZE                           = 37697,
     NPC_CHOKING_GAS_BOMB                        = 38159,
     NPC_TEAR_GAS_TARGET_STALKER                 = 38317,
+    NPC_MUTATED_ABOMINATION_10                  = 37672,
+    NPC_MUTATED_ABOMINATION_25                  = 38285,
 
     // Blood Prince Council
     NPC_PRINCE_KELESETH                         = 37972,
@@ -150,6 +167,16 @@ enum CreaturesIds
 
     // Blood-Queen Lana'thel
     NPC_BLOOD_QUEEN_LANA_THEL                   = 37955,
+
+    // Sindragosa
+    NPC_SINDRAGOSA                              = 36853,
+    NPC_SPINESTALKER                            = 37534,
+    NPC_RIMEFANG                                = 37533,
+    NPC_FROSTWARDEN_HANDLER                     = 37531,
+    NPC_FROSTWING_WHELP                         = 37532,
+    NPC_ICY_BLAST                               = 38223,
+    NPC_FROST_BOMB                              = 37186,
+    NPC_ICE_TOMB                                = 36980,
 };
 
 enum GameObjectsIds
@@ -181,6 +208,7 @@ enum GameObjectsIds
     GO_DOODAD_ICECROWN_GREENTUBES02         = 201618,
     GO_SCIENTIST_ENTRANCE                   = 201372,
     GO_DRINK_ME                             = 201584,
+    GO_PLAGUE_SIGIL                         = 202182,
 
     // Blood Prince Council
     GO_CRIMSON_HALL_DOOR                    = 201376,
@@ -190,6 +218,7 @@ enum GameObjectsIds
     // Blood-Queen Lana'thel
     GO_DOODAD_ICECROWN_BLOODPRINCE_DOOR_01  = 201746,
     GO_DOODAD_ICECROWN_GRATE_01             = 201755,
+    GO_BLOODWING_SIGIL                      = 202183,
 
     // Valithria Dreamwalker
     GO_GREEN_DRAGON_BOSS_ENTRANCE           = 201375,
@@ -199,6 +228,9 @@ enum GameObjectsIds
     GO_SINDRAGOSA_ENTRANCE_DOOR             = 201373,
     GO_SINDRAGOSA_SHORTCUT_ENTRANCE_DOOR    = 201369,
     GO_SINDRAGOSA_SHORTCUT_EXIT_DOOR        = 201379,
+    GO_ICE_WALL                             = 202396,
+    GO_ICE_BLOCK                            = 201722,
+    GO_SIGIL_OF_THE_FROSTWING               = 202181,
 };
 
 enum AchievementCriteriaIds
@@ -238,6 +270,9 @@ enum AchievementCriteriaIds
 
 enum SharedActions
 {
+    // Coldflame Traps
+    ACTION_STOP_TRAPS           = -377440,
+
     // Festergut
     ACTION_FESTERGUT_COMBAT     = -366260,
     ACTION_FESTERGUT_GAS        = -366261,
@@ -247,7 +282,14 @@ enum SharedActions
     ACTION_ROTFACE_COMBAT       = -366270,
     ACTION_ROTFACE_OOZE         = -366271,
     ACTION_ROTFACE_DEATH        = -366272,
-    ACTION_CHANGE_PHASE         = -366780
+    ACTION_CHANGE_PHASE         = -366780,
+
+    // Sindragosa
+    ACTION_START_FROSTWYRM      = -368530,
+    ACTION_TRIGGER_ASPHYXIATION = -368531,
 };
+
+// Declaration
+extern Position const SindragosaSpawnPos;
 
 #endif // DEF_ICECROWN_CITADEL_H

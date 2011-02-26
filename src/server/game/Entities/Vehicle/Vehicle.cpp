@@ -124,12 +124,12 @@ void Vehicle::InstallAllAccessories(uint32 entry)
         return;
 
     for (VehicleAccessoryList::const_iterator itr = mVehicleList->begin(); itr != mVehicleList->end(); ++itr)
-        InstallAccessory(itr->uiAccessory, itr->uiSeat, itr->bMinion);
+        InstallAccessory(itr->uiAccessory, itr->uiSeat, itr->bMinion, itr->uiSummonType, itr->uiSummonTime);
 }
 
 void Vehicle::Uninstall()
 {
-    sLog->outDebug("Vehicle::Uninstall %u", me->GetEntry());
+    sLog->outDebug(LOG_FILTER_VEHICLES, "Vehicle::Uninstall %u", me->GetEntry());
     for (SeatMap::iterator itr = m_Seats.begin(); itr != m_Seats.end(); ++itr)
         if (Unit *passenger = ObjectAccessor::GetUnit(*GetBase(), itr->second.passenger))
             if (passenger->HasUnitTypeMask(UNIT_MASK_ACCESSORY))
@@ -143,7 +143,7 @@ void Vehicle::Uninstall()
 
 void Vehicle::Die()
 {
-    sLog->outDebug("Vehicle::Die %u", me->GetEntry());
+    sLog->outDebug(LOG_FILTER_VEHICLES, "Vehicle::Die %u", me->GetEntry());
     for (SeatMap::iterator itr = m_Seats.begin(); itr != m_Seats.end(); ++itr)
         if (Unit *passenger = ObjectAccessor::GetUnit(*GetBase(), itr->second.passenger))
             if (passenger->HasUnitTypeMask(UNIT_MASK_ACCESSORY))
@@ -157,7 +157,7 @@ void Vehicle::Die()
 
 void Vehicle::Reset()
 {
-    sLog->outDebug("Vehicle::Reset");
+    sLog->outDebug(LOG_FILTER_VEHICLES, "Vehicle::Reset");
     if (me->GetTypeId() == TYPEID_PLAYER)
     {
         if (m_usableSeatNum)
@@ -176,7 +176,7 @@ void Vehicle::Reset()
 
 void Vehicle::RemoveAllPassengers()
 {
-    sLog->outDebug("Vehicle::RemoveAllPassengers");
+    sLog->outDebug(LOG_FILTER_VEHICLES, "Vehicle::RemoveAllPassengers");
     for (SeatMap::iterator itr = m_Seats.begin(); itr != m_Seats.end(); ++itr)
         if (Unit *passenger = ObjectAccessor::GetUnit(*GetBase(), itr->second.passenger))
         {
@@ -220,13 +220,13 @@ Unit *Vehicle::GetPassenger(int8 seatId) const
     return ObjectAccessor::GetUnit(*GetBase(), seat->second.passenger);
 }
 
-int8 Vehicle::GetNextEmptySeat(int8 seatId, bool next, bool byAura) const
+int8 Vehicle::GetNextEmptySeat(int8 seatId, bool next) const
 {
     SeatMap::const_iterator seat = m_Seats.find(seatId);
     if (seat == m_Seats.end())
         return -1;
 
-    while (seat->second.passenger || (!byAura && !seat->second.seatInfo->CanEnterOrExit()) || (byAura && !seat->second.seatInfo->IsUsableByAura()))
+    while (seat->second.passenger || (!seat->second.seatInfo->CanEnterOrExit() && !seat->second.seatInfo->IsUsableByOverride()))
     {
         if (next)
         {
@@ -248,7 +248,7 @@ int8 Vehicle::GetNextEmptySeat(int8 seatId, bool next, bool byAura) const
     return seat->first;
 }
 
-void Vehicle::InstallAccessory(uint32 entry, int8 seatId, bool minion)
+void Vehicle::InstallAccessory(uint32 entry, int8 seatId, bool minion, uint8 type, uint32 summonTime)
 {
     if (Unit *passenger = GetPassenger(seatId))
     {
@@ -256,14 +256,26 @@ void Vehicle::InstallAccessory(uint32 entry, int8 seatId, bool minion)
         if (passenger->GetEntry() == entry)
         {
             ASSERT(passenger->GetTypeId() == TYPEID_UNIT);
-            if (me->GetTypeId() == TYPEID_UNIT && me->ToCreature()->IsInEvadeMode() && passenger->ToCreature()->IsAIEnabled)
-                passenger->ToCreature()->AI()->EnterEvadeMode();
-            return;
+            if (me->GetTypeId() == TYPEID_UNIT)
+            {
+                if (me->ToCreature()->IsInEvadeMode() && passenger->ToCreature()->IsAIEnabled)
+                {
+                    passenger->ToCreature()->AI()->EnterEvadeMode();
+                    return;
+                }
+                else if (passenger->ToTempSummon()->GetSummonType() == TEMPSUMMON_MANUAL_DESPAWN)
+                {
+                    passenger->ExitVehicle();
+                    passenger->ToTempSummon()->DespawnOrUnsummon();
+                    ASSERT(!GetPassenger(seatId))
+                }
+            }
         }
-        passenger->ExitVehicle(); // this should not happen
+        else
+            passenger->ExitVehicle(); // this should not happen
     }
 
-    if (Creature *accessory = me->SummonCreature(entry, *me, TEMPSUMMON_CORPSE_TIMED_DESPAWN, 30000))
+    if (Creature *accessory = me->SummonCreature(entry, *me, TempSummonType(type), summonTime))
     {
         if (minion)
             accessory->AddUnitTypeMask(UNIT_MASK_ACCESSORY);
@@ -277,7 +289,7 @@ void Vehicle::InstallAccessory(uint32 entry, int8 seatId, bool minion)
     }
 }
 
-bool Vehicle::AddPassenger(Unit *unit, int8 seatId, bool byAura)
+bool Vehicle::AddPassenger(Unit *unit, int8 seatId)
 {
     if (unit->GetVehicle() != this)
         return false;
@@ -286,7 +298,7 @@ bool Vehicle::AddPassenger(Unit *unit, int8 seatId, bool byAura)
     if (seatId < 0) // no specific seat requirement
     {
         for (seat = m_Seats.begin(); seat != m_Seats.end(); ++seat)
-            if (!seat->second.passenger && ((!byAura && seat->second.seatInfo->CanEnterOrExit()) || (byAura && seat->second.seatInfo->IsUsableByAura())))
+            if (!seat->second.passenger && (seat->second.seatInfo->CanEnterOrExit() || seat->second.seatInfo->IsUsableByOverride()))
                 break;
 
         if (seat == m_Seats.end()) // no available seat
@@ -309,7 +321,7 @@ bool Vehicle::AddPassenger(Unit *unit, int8 seatId, bool byAura)
         ASSERT(!seat->second.passenger);
     }
 
-    sLog->outDebug("Unit %s enter vehicle entry %u id %u dbguid %u seat %d", unit->GetName(), me->GetEntry(), m_vehicleInfo->m_ID, me->GetGUIDLow(), (int32)seat->first);
+    sLog->outDebug(LOG_FILTER_VEHICLES, "Unit %s enter vehicle entry %u id %u dbguid %u seat %d", unit->GetName(), me->GetEntry(), m_vehicleInfo->m_ID, me->GetGUIDLow(), (int32)seat->first);
 
     seat->second.passenger = unit->GetGUID();
     if (seat->second.seatInfo->CanEnterOrExit())
@@ -328,7 +340,7 @@ bool Vehicle::AddPassenger(Unit *unit, int8 seatId, bool byAura)
     if (seat->second.seatInfo->m_flags && !(seat->second.seatInfo->m_flags & VEHICLE_SEAT_FLAG_UNK11))
         unit->AddUnitState(UNIT_STAT_ONVEHICLE);
 
-    unit->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT | MOVEMENTFLAG_ROOT);
+    unit->AddUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
     VehicleSeatEntry const *veSeat = seat->second.seatInfo;
     unit->m_movementInfo.t_pos.m_positionX = veSeat->m_attachmentOffsetX;
     unit->m_movementInfo.t_pos.m_positionY = veSeat->m_attachmentOffsetY;
@@ -352,14 +364,16 @@ bool Vehicle::AddPassenger(Unit *unit, int8 seatId, bool byAura)
                 averageItemLevel = scalingInfo->baseItemLevel;
             averageItemLevel -= scalingInfo->baseItemLevel;
 
+            float currentHealthPct = float(me->GetHealth() / me->GetMaxHealth());
             m_bonusHP = uint32(me->GetMaxHealth() * (averageItemLevel * scalingInfo->scalingFactor));
             me->SetMaxHealth(me->GetMaxHealth() + m_bonusHP);
-            me->SetHealth(me->GetHealth() + m_bonusHP);
+            me->SetHealth(uint32((me->GetHealth() + m_bonusHP) * currentHealthPct));
         }
     }
 
     if (me->IsInWorld())
     {
+        // In some cases we send SMSG_SPLINE_MOVE_ROOT here (for creatures)
         unit->SendMonsterMoveTransport(me);
 
         if (me->GetTypeId() == TYPEID_UNIT)
@@ -371,8 +385,6 @@ bool Vehicle::AddPassenger(Unit *unit, int8 seatId, bool byAura)
             RelocatePassengers(me->GetPositionX(), me->GetPositionY(), me->GetPositionZ(), me->GetOrientation());
         }
     }
-    unit->DestroyForNearbyPlayers();
-    unit->UpdateObjectVisibility(false);
 
     if (GetBase()->GetTypeId() == TYPEID_UNIT)
         sScriptMgr->OnAddPassenger(this, unit, seatId);
@@ -388,7 +400,7 @@ void Vehicle::RemovePassenger(Unit *unit)
     SeatMap::iterator seat = GetSeatIteratorForPassenger(unit);
     ASSERT(seat != m_Seats.end());
 
-    sLog->outDebug("Unit %s exit vehicle entry %u id %u dbguid %u seat %d", unit->GetName(), me->GetEntry(), m_vehicleInfo->m_ID, me->GetGUIDLow(), (int32)seat->first);
+    sLog->outDebug(LOG_FILTER_VEHICLES, "Unit %s exit vehicle entry %u id %u dbguid %u seat %d", unit->GetName(), me->GetEntry(), m_vehicleInfo->m_ID, me->GetGUIDLow(), (int32)seat->first);
 
     seat->second.passenger = 0;
     if (seat->second.seatInfo->CanEnterOrExit())
@@ -417,6 +429,14 @@ void Vehicle::RemovePassenger(Unit *unit)
             me->SetMaxHealth(me->GetMaxHealth() - m_bonusHP);
             m_bonusHP = 0;
         }
+    }
+
+    if (me->IsInWorld())
+    {
+        unit->RemoveUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT);
+        unit->m_movementInfo.t_pos.Relocate(0, 0, 0, 0);
+        unit->m_movementInfo.t_time = 0;
+        unit->m_movementInfo.t_seat = 0;
     }
 
     if (me->GetTypeId() == TYPEID_UNIT && me->ToCreature()->IsAIEnabled)
@@ -454,7 +474,7 @@ void Vehicle::RelocatePassengers(float x, float y, float z, float ang)
 
 void Vehicle::Dismiss()
 {
-    sLog->outDebug("Vehicle::Dismiss %u", me->GetEntry());
+    sLog->outDebug(LOG_FILTER_VEHICLES, "Vehicle::Dismiss %u", me->GetEntry());
     Uninstall();
     me->SendObjectDeSpawnAnim(me->GetGUID());
     me->CombatStop();
@@ -477,7 +497,7 @@ uint16 Vehicle::GetExtraMovementFlagsForBase() const
     if (vehicleFlags & VEHICLE_FLAG_FULLSPEEDPITCHING)
         movementMask |= MOVEMENTFLAG2_FULL_SPEED_PITCHING;
 
-    sLog->outDebug("Vehicle::GetExtraMovementFlagsForBase() returned %u", movementMask);
+    sLog->outDebug(LOG_FILTER_VEHICLES, "Vehicle::GetExtraMovementFlagsForBase() returned %u", movementMask);
     return movementMask;
 }
 

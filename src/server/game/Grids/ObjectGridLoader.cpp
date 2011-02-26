@@ -230,7 +230,7 @@ void ObjectGridLoader::LoadN(void)
             loader.Load(i_grid(x, y), *this);
         }
     }
-    sLog->outDebug("%u GameObjects, %u Creatures, and %u Corpses/Bones loaded for grid %u on map %u", i_gameObjects, i_creatures, i_corpses,i_grid.GetGridId(), i_map->GetId());
+    sLog->outDebug(LOG_FILTER_MAPS, "%u GameObjects, %u Creatures, and %u Corpses/Bones loaded for grid %u on map %u", i_gameObjects, i_creatures, i_corpses,i_grid.GetGridId(), i_map->GetId());
 }
 
 void ObjectGridUnloader::MoveToRespawnN()
@@ -280,13 +280,13 @@ ObjectGridStoper::Visit(CreatureMapType &m)
     // stop any fights at grid de-activation and remove dynobjects created at cast by creatures
     for (CreatureMapType::iterator iter=m.begin(); iter != m.end(); ++iter)
     {
+        iter->getSource()->RemoveAllDynObjects();
         if (iter->getSource()->isInCombat())
         {
             iter->getSource()->CombatStop();
             iter->getSource()->DeleteThreatList();
-            iter->getSource()->AI()->EnterEvadeMode();  // Calls RemoveAllAuras
+            iter->getSource()->AI()->EnterEvadeMode();
         }
-        iter->getSource()->RemoveAllDynObjects();       // Calls RemoveFromWorld, needs to be after RemoveAllAuras or we invalidate the Owner pointer of the aura
     }
 }
 

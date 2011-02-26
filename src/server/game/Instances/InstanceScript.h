@@ -21,13 +21,14 @@
 
 #include "ZoneScript.h"
 #include "World.h"
+#include "ObjectMgr.h"
 //#include "GameObject.h"
 //#include "Map.h"
 
-#define OUT_SAVE_INST_DATA             sLog->outDebug("TSCR: Saving Instance Data for Instance %s (Map %d, Instance Id %d)", instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
-#define OUT_SAVE_INST_DATA_COMPLETE    sLog->outDebug("TSCR: Saving Instance Data for Instance %s (Map %d, Instance Id %d) completed.", instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
-#define OUT_LOAD_INST_DATA(a)          sLog->outDebug("TSCR: Loading Instance Data for Instance %s (Map %d, Instance Id %d). Input is '%s'", instance->GetMapName(), instance->GetId(), instance->GetInstanceId(), a)
-#define OUT_LOAD_INST_DATA_COMPLETE    sLog->outDebug("TSCR: Instance Data Load for Instance %s (Map %d, Instance Id: %d) is complete.",instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
+#define OUT_SAVE_INST_DATA             sLog->outDebug(LOG_FILTER_TSCR, "TSCR: Saving Instance Data for Instance %s (Map %d, Instance Id %d)", instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
+#define OUT_SAVE_INST_DATA_COMPLETE    sLog->outDebug(LOG_FILTER_TSCR, "TSCR: Saving Instance Data for Instance %s (Map %d, Instance Id %d) completed.", instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
+#define OUT_LOAD_INST_DATA(a)          sLog->outDebug(LOG_FILTER_TSCR, "TSCR: Loading Instance Data for Instance %s (Map %d, Instance Id %d). Input is '%s'", instance->GetMapName(), instance->GetId(), instance->GetInstanceId(), a)
+#define OUT_LOAD_INST_DATA_COMPLETE    sLog->outDebug(LOG_FILTER_TSCR, "TSCR: Instance Data Load for Instance %s (Map %d, Instance Id: %d) is complete.",instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
 #define OUT_LOAD_INST_DATA_FAIL        sLog->outError("TSCR: Unable to load Instance Data for Instance %s (Map %d, Instance Id: %d).",instance->GetMapName(), instance->GetId(), instance->GetInstanceId())
 
 class Map;
@@ -124,7 +125,8 @@ class InstanceScript : public ZoneScript
 {
     public:
 
-        explicit InstanceScript(Map *map) : instance(map) {}
+        explicit InstanceScript(Map* map) : instance(map), completedEncounters(0) {}
+
         virtual ~InstanceScript() {}
 
         Map *instance;
@@ -196,9 +198,14 @@ class InstanceScript : public ZoneScript
         // Checks boss requirements (one boss required to kill other)
         virtual bool CheckRequiredBosses(uint32 /*bossId*/, Player const* /*player*/ = NULL) const { return true; }
 
+        // Checks encounter state at kill/spellcast
+        void UpdateEncounterState(EncounterCreditType type, uint32 creditEntry, Unit* source);
+
+        // Used only during loading
+        void SetCompletedEncountersMask(uint32 newMask) { completedEncounters = newMask; }
+
         // Returns completed encounters mask for packets
-        // NOTE: MUST USE ENCOUNTER IDS FROM DungeonEncounter.dbc 4th column
-        virtual uint32 GetCompletedEncounterMask() const { return 0; }
+        uint32 GetCompletedEncounterMask() const { return completedEncounters; }
 
         void SendEncounterUnit(uint32 type, Unit* unit = NULL, uint8 param1 = 0, uint8 param2 = 0);
 
@@ -219,6 +226,7 @@ class InstanceScript : public ZoneScript
         std::vector<BossInfo> bosses;
         DoorInfoMap doors;
         MinionInfoMap minions;
+        uint32 completedEncounters; // completed encounter mask, bit indexes are DungeonEncounter.dbc boss numbers, used for packets
 };
 #endif
 

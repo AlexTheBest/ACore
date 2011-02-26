@@ -285,7 +285,7 @@ ObjectMgr::~ObjectMgr()
             delete[] playerInfo[race][class_].levelInfo;
 
     // free group and guild objects
-    for (GroupSet::iterator itr = mGroupSet.begin(); itr != mGroupSet.end(); ++itr)
+    for (GroupMap::iterator itr = mGroupMap.begin(); itr != mGroupMap.end(); ++itr)
         delete *itr;
 
     for (GuildMap::iterator itr = mGuildMap.begin(); itr != mGuildMap.end(); ++itr)
@@ -303,10 +303,9 @@ ObjectMgr::~ObjectMgr()
 
 Group * ObjectMgr::GetGroupByGUID(uint32 guid) const
 {
-    for (GroupSet::const_iterator itr = mGroupSet.begin(); itr != mGroupSet.end(); ++itr)
-        if ((*itr)->GetLowGUID() == guid)
-            return *itr;
-
+    // Make sure given index exists in collection
+    if (guid < uint32(mGroupMap.size()))
+        return mGroupMap[guid];
     return NULL;
 }
 
@@ -853,6 +852,12 @@ void ObjectMgr::CheckCreatureTemplate(CreatureInfo const* cInfo)
     {
         sLog->outErrorDb("Table `creature_template` lists creature (Entry: %u) with expansion %u. Ignored and set to 0.", cInfo->Entry, cInfo->expansion);
         const_cast<CreatureInfo*>(cInfo)->expansion = 0;
+    }
+
+    if (uint32 badFlags = (cInfo->flags_extra & ~CREATURE_FLAG_EXTRA_DB_ALLOWED))
+    {
+        sLog->outErrorDb("Table `creature_template` lists creature (Entry: %u) with disallowed `flags_extra` %u, removing incorrect flag.", cInfo->Entry, badFlags);
+        const_cast<CreatureInfo*>(cInfo)->flags_extra &= CREATURE_FLAG_EXTRA_DB_ALLOWED;
     }
 
     const_cast<CreatureInfo*>(cInfo)->dmg_multiplier *= Creature::_GetDamageMod(cInfo->rank);
@@ -1676,7 +1681,7 @@ uint32 ObjectMgr::AddGOData(uint32 entry, uint32 mapId, float x, float y, float 
         map->Add(go);
     }
 
-    sLog->outDebug("AddGOData: dbguid %u entry %u map %u x %f y %f z %f o %f", guid, entry, mapId, x, y, z, o);
+    sLog->outDebug(LOG_FILTER_MAPS, "AddGOData: dbguid %u entry %u map %u x %f y %f z %f o %f", guid, entry, mapId, x, y, z, o);
 
     return guid;
 }
@@ -2730,7 +2735,7 @@ void ObjectMgr::LoadVehicleAccessories()
 
     uint32 count = 0;
 
-    QueryResult result = WorldDatabase.Query("SELECT `entry`,`accessory_entry`,`seat_id`,`minion` FROM `vehicle_accessory`");
+    QueryResult result = WorldDatabase.Query("SELECT `entry`,`accessory_entry`,`seat_id`,`minion`,`summontype`,`summontimer` FROM `vehicle_accessory`");
 
     if (!result)
     {
@@ -2748,6 +2753,8 @@ void ObjectMgr::LoadVehicleAccessories()
         uint32 uiAccessory   = fields[1].GetUInt32();
         int8   uiSeat        = int8(fields[2].GetInt16());
         bool   bMinion       = fields[3].GetBool();
+        uint8  uiSummonType  = fields[4].GetUInt8();
+        uint32 uiSummonTimer = fields[5].GetUInt32();
 
         if (!sCreatureStorage.LookupEntry<CreatureInfo>(uiEntry))
         {
@@ -2761,10 +2768,11 @@ void ObjectMgr::LoadVehicleAccessories()
             continue;
         }
 
-        m_VehicleAccessoryMap[uiEntry].push_back(VehicleAccessory(uiAccessory, uiSeat, bMinion));
+        m_VehicleAccessoryMap[uiEntry].push_back(VehicleAccessory(uiAccessory, uiSeat, bMinion, uiSummonType, uiSummonTimer));
 
         ++count;
-    } while (result->NextRow());
+    }
+    while (result->NextRow());
 
     sLog->outString(">> Loaded %u Vehicle Accessories in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
     sLog->outString();
@@ -3635,7 +3643,7 @@ void ObjectMgr::LoadGuilds()
         uint32 oldMSTime = getMSTime();
 
         // Delete orphaned guild rank entries before loading the valid ones
-        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_CLEAN_GUILD_RANKS);
+        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_NONEXISTENT_GUILD_RANKS);
         CharacterDatabase.Execute(stmt);
 
         stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_GUILD_RANKS);
@@ -3672,7 +3680,7 @@ void ObjectMgr::LoadGuilds()
         uint32 oldMSTime = getMSTime();
 
         // Delete orphaned guild member entries before loading the valid ones
-        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_CLEAN_GUILD_MEMBERS);
+        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_NONEXISTENT_GUILD_MEMBERS);
         CharacterDatabase.Execute(stmt);
 
         stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_GUILD_MEMBERS);
@@ -3709,7 +3717,7 @@ void ObjectMgr::LoadGuilds()
         uint32 oldMSTime = getMSTime();
 
         // Delete orphaned guild bank right entries before loading the valid ones
-        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_CLEAN_GUILD_BANK_RIGHTS);
+        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_NONEXISTENT_GUILD_BANK_RIGHTS);
         CharacterDatabase.Execute(stmt);
 
         stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_GUILD_BANK_RIGHTS);
@@ -3821,7 +3829,7 @@ void ObjectMgr::LoadGuilds()
         uint32 oldMSTime = getMSTime();
 
         // Delete orphaned guild bank tab entries before loading the valid ones
-        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_CLEAN_GUILD_BANK_TABS);
+        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_NONEXISTENT_GUILD_BANK_TABS);
         CharacterDatabase.Execute(stmt);
 
         stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_GUILD_BANK_TABS);
@@ -3858,7 +3866,7 @@ void ObjectMgr::LoadGuilds()
         uint32 oldMSTime = getMSTime();
 
         // Delete orphan guild bank items
-        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_CLEAN_GUILD_BANK_ITEMS);
+        PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_DEL_NONEXISTENT_GUILD_BANK_ITEMS);
         CharacterDatabase.Execute(stmt);
 
         stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_GUILD_BANK_ITEMS);
@@ -3964,14 +3972,14 @@ void ObjectMgr::LoadGroups()
         uint32 oldMSTime = getMSTime();
 
         // Delete all groups whose leader does not exist
-        CharacterDatabase.Execute(CharacterDatabase.GetPreparedStatement(CHAR_DEL_LEADERLESS_GROUPS));
+        CharacterDatabase.DirectExecute(CharacterDatabase.GetPreparedStatement(CHAR_DEL_LEADERLESS_GROUPS));
         // Delete all groups with less than 2 members
-        CharacterDatabase.Execute(CharacterDatabase.GetPreparedStatement(CHAR_DEL_TINY_GROUPS));
+        CharacterDatabase.DirectExecute(CharacterDatabase.GetPreparedStatement(CHAR_DEL_TINY_GROUPS));
 
         //                                                        0           1           2             3          4      5      6      7      8     9
         QueryResult result = CharacterDatabase.PQuery("SELECT leaderGuid, lootMethod, looterGuid, lootThreshold, icon1, icon2, icon3, icon4, icon5, icon6"
         //                                                10     11     12         13              14        15
-                                                      ",icon7, icon8, groupType, difficulty, raiddifficulty, guid FROM groups");
+                                                      ",icon7, icon8, groupType, difficulty, raiddifficulty, guid FROM groups ORDER BY guid ASC");
         if (!result)
         {
             sLog->outString(">> Loaded 0 group definitions. DB table `groups` is empty!");
@@ -3984,9 +3992,17 @@ void ObjectMgr::LoadGroups()
         do
         {
             Field *fields = result->Fetch();
+
+            uint32 guid = fields[15].GetUInt32();
+
+            // Groups are pulled in ascending order from db and m_hiGroupGuid is initialized with 1,
+            // so if the group slot is used increment until we find the first free one for a potential new group
+            if (sObjectMgr->GetNextGroupGuid() == guid)
+                sObjectMgr->SetNextGroupGuid(guid + 1);
+
             ++count;
             Group *group = new Group;
-            group->LoadGroupFromDB(fields[15].GetUInt32(), result, false);
+            group->LoadGroupFromDB(guid, result, false);
             // group load will never be false (we have run consistency sql's before loading)
             AddGroup(group);
         }
@@ -5553,6 +5569,86 @@ void ObjectMgr::LoadInstanceTemplate()
     sLog->outString();
 }
 
+void ObjectMgr::LoadInstanceEncounters()
+{
+    uint32 oldMSTime = getMSTime();
+
+    QueryResult result = WorldDatabase.Query("SELECT entry, creditType, creditEntry, lastEncounterDungeon FROM instance_encounters");
+    if (!result)
+    {
+        sLog->outErrorDb(">> Loaded 0 instance encounters, table is empty!");
+        sLog->outString();
+        return;
+    }
+
+    uint32 count = 0;
+    std::map<uint32, DungeonEncounterEntry const*> dungeonLastBosses;
+    do
+    {
+        Field* fields = result->Fetch();
+        uint32 entry = fields[0].GetUInt32();
+        uint8 creditType = fields[1].GetUInt8();
+        uint32 creditEntry = fields[2].GetUInt32();
+        uint32 lastEncounterDungeon = fields[3].GetUInt32();
+        DungeonEncounterEntry const* dungeonEncounter = sDungeonEncounterStore.LookupEntry(entry);
+        if (!dungeonEncounter)
+        {
+            sLog->outErrorDb("Table `instance_encounters` has an invalid encounter id %u, skipped!", entry);
+            continue;
+        }
+
+        if (lastEncounterDungeon && !sLFGDungeonStore.LookupEntry(lastEncounterDungeon))
+        {
+            sLog->outErrorDb("Table `instance_encounters` has an encounter %u (%s) marked as final for invalid dungeon id %u, skipped!", entry, dungeonEncounter->encounterName[0], lastEncounterDungeon);
+            continue;
+        }
+
+        std::map<uint32, DungeonEncounterEntry const*>::const_iterator itr = dungeonLastBosses.find(lastEncounterDungeon);
+        if (lastEncounterDungeon)
+        {
+            if (itr != dungeonLastBosses.end())
+            {
+                sLog->outErrorDb("Table `instance_encounters` specified encounter %u (%s) as last encounter but %u (%s) is already marked as one, skipped!", entry, dungeonEncounter->encounterName[0], itr->second->id, itr->second->encounterName[0]);
+                continue;
+            }
+
+            dungeonLastBosses[lastEncounterDungeon] = dungeonEncounter;
+        }
+
+        switch (creditType)
+        {
+            case ENCOUNTER_CREDIT_KILL_CREATURE:
+            {
+                CreatureInfo const* creatureInfo = GetCreatureInfo(creditEntry);
+                if (!creatureInfo)
+                {
+                    sLog->outErrorDb("Table `instance_encounters` has an invalid creature (entry %u) linked to the encounter %u (%s), skipped!", creditEntry, entry, dungeonEncounter->encounterName[0]);
+                    continue;
+                }
+                const_cast<CreatureInfo*>(creatureInfo)->flags_extra |= CREATURE_FLAG_EXTRA_DUNGEON_BOSS;
+                break;
+            }
+            case ENCOUNTER_CREDIT_CAST_SPELL:
+                if (!sSpellStore.LookupEntry(creditEntry))
+                {
+                    sLog->outErrorDb("Table `instance_encounters` has an invalid spell (entry %u) linked to the encounter %u (%s), skipped!", creditEntry, entry, dungeonEncounter->encounterName[0]);
+                    continue;
+                }
+                break;
+            default:
+                sLog->outErrorDb("Table `instance_encounters` has an invalid credit type (%u) for encounter %u (%s), skipped!", creditType, entry, dungeonEncounter->encounterName[0]);
+                continue;
+        }
+
+        DungeonEncounterList& encounters = mDungeonEncounters[MAKE_PAIR32(dungeonEncounter->mapId, dungeonEncounter->difficulty)];
+        encounters.push_back(new DungeonEncounter(dungeonEncounter, EncounterCreditType(creditType), creditEntry, lastEncounterDungeon));
+        ++count;
+    } while (result->NextRow());
+
+    sLog->outString(">> Loaded %u instance encounters in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
+    sLog->outString();
+}
+
 GossipText const *ObjectMgr::GetGossipText(uint32 Text_ID) const
 {
     GossipTextMap::const_iterator itr = mGossipText.find(Text_ID);
@@ -5671,7 +5767,7 @@ void ObjectMgr::ReturnOrDeleteOldMails(bool serverUp)
     time_t curTime = time(NULL);
     tm* lt = localtime(&curTime);
     uint64 basetime(curTime);
-    sLog->outDebug("Returning mails current time: hour: %d, minute: %d, second: %d ", lt->tm_hour, lt->tm_min, lt->tm_sec);
+    sLog->outDetail("Returning mails current time: hour: %d, minute: %d, second: %d ", lt->tm_hour, lt->tm_min, lt->tm_sec);
 
     // Delete all old mails without item and without body immediately, if starting server
     if (!serverUp)
@@ -6554,9 +6650,10 @@ void ObjectMgr::SetHighestGuids()
     if (result)
         m_guildId = (*result)[0].GetUInt32()+1;
 
+    // The next free guid is determined during group loading, here we just preallocate the group holder
     result = CharacterDatabase.Query("SELECT MAX(guid) FROM groups");
     if (result)
-        m_hiGroupGuid = (*result)[0].GetUInt32()+1;
+        mGroupMap.resize((*result)[0].GetUInt32()+1);
 }
 
 uint32 ObjectMgr::GenerateArenaTeamId()
@@ -6670,12 +6767,26 @@ uint32 ObjectMgr::GenerateLowGuid(HighGuid guidhigh)
             }
             return m_hiDoGuid++;
         case HIGHGUID_GROUP:
-            if (m_hiGroupGuid >= 0xFFFFFFFE)
+        {
+            uint32 newGuid = m_hiGroupGuid;
+
+            for (uint32 i = ++m_hiGroupGuid; i < 0xFFFFFFFF; ++i)
+            {
+                if (!GetGroupByGUID(i))
+                {
+                    m_hiGroupGuid = i;
+                    break;
+                }
+            }
+
+            // If newGuid doesn't differ from m_hiGroupGuid after the loop there is no free guid available
+            if (newGuid == m_hiGroupGuid)
             {
                 sLog->outError("Group guid overflow!! Can't continue, shutting down server. ");
                 World::StopNow(ERROR_EXIT_CODE);
             }
-            return m_hiGroupGuid++;
+            return newGuid;
+        }
         case HIGHGUID_MO_TRANSPORT:
             if (m_hiMoTransGuid >= 0xFFFFFFFE)
             {
@@ -7770,7 +7881,7 @@ void ObjectMgr::LoadQuestRelationsHelper(QuestRelations& map, std::string table,
 
         if (mQuestTemplates.find(quest) == mQuestTemplates.end())
         {
-            sLog->outErrorDb("Table `%s: Quest %u listed for entry %u does not exist.", table.c_str(), quest, id);
+            sLog->outErrorDb("Table `%s`: Quest %u listed for entry %u does not exist.", table.c_str(), quest, id);
             continue;
         }
 
@@ -8701,53 +8812,6 @@ void ObjectMgr::LoadVendors()
     sLog->outString();
 }
 
-void ObjectMgr::LoadNpcTextId()
-{
-    uint32 oldMSTime = getMSTime();
-
-    m_mCacheNpcTextIdMap.clear();
-
-    QueryResult result = WorldDatabase.Query("SELECT npc_guid, textid FROM npc_gossip");
-
-    if (!result)
-    {
-        sLog->outErrorDb(">> Loaded 0 NpcTextId. DB table `npc_gossip` is empty!");
-        sLog->outString();
-        return;
-    }
-
-    uint32 count = 0;
-    uint32 guid, textid;
-
-    do
-    {
-
-        Field* fields = result->Fetch();
-
-        guid   = fields[0].GetUInt32();
-        textid = fields[1].GetUInt32();
-
-        if (!GetCreatureData(guid))
-        {
-            sLog->outErrorDb("Table `npc_gossip` have not existed creature (GUID: %u) entry, ignore. ",guid);
-            continue;
-        }
-        if (!GetGossipText(textid))
-        {
-            sLog->outErrorDb("Table `npc_gossip` for creature (GUID: %u) have wrong Textid (%u), ignore. ", guid, textid);
-            continue;
-        }
-
-        m_mCacheNpcTextIdMap[guid] = textid ;
-        ++count;
-
-    }
-    while (result->NextRow());
-
-    sLog->outString(">> Loaded %d NpcTextId in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
-    sLog->outString();
-}
-
 void ObjectMgr::LoadGossipMenu()
 {
     uint32 oldMSTime = getMSTime();
@@ -9381,4 +9445,19 @@ void ObjectMgr::LoadFactionChangeReputations()
 
     sLog->outString(">> Loaded %u faction change reputation pairs in %u ms", count, GetMSTimeDiffToNow(oldMSTime));
     sLog->outString();
+}
+
+void ObjectMgr::AddGroup(Group* group)
+{
+    uint32 groupGuid = group->GetLowGUID();
+    // Allocate space if necessary.
+    if (groupGuid >= uint32(mGroupMap.size()))
+        mGroupMap.resize(groupGuid + 1);
+
+    mGroupMap[groupGuid] = group;
+}
+
+void ObjectMgr::RemoveGroup(Group* group)
+{
+    mGroupMap[group->GetLowGUID()] = NULL;
 }

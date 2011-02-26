@@ -444,7 +444,13 @@ enum SMART_ACTION
     SMART_ACTION_CALL_RANDOM_RANGE_TIMED_ACTIONLIST = 88,     // script9 id min, max
     SMART_ACTION_RANDOM_MOVE                        = 89,     // maxDist
 
-    SMART_ACTION_END                                = 90,
+    SMART_ACTION_SET_UNIT_FIELD_BYTES_1             = 90,     // bytes, target
+
+    SMART_ACTION_REMOVE_UNIT_FIELD_BYTES_1          = 91,     // bytes, target
+
+    SMART_ACTION_INTERRUPT_SPELL                    = 92,
+
+    SMART_ACTION_END                                = 93,
 };
 
 struct SmartAction
@@ -787,6 +793,16 @@ struct SmartAction
 
         struct
         {
+            uint32 byte1;
+        } setunitByte;
+
+        struct
+        {
+            uint32 byte1;
+        } delunitByte;
+
+        struct
+        {
             uint32 seat;
         } enterVehicle;
 
@@ -807,6 +823,12 @@ struct SmartAction
             uint32 entry6;
         } randTimedActionList;
 
+        struct
+        {
+            bool withDelayed;
+            uint32 spell_id;
+            bool withInstant;
+        } interruptSpellCasting;
         struct
         {
             uint32 param1;
@@ -1181,7 +1203,7 @@ class SmartAIMgr
             else
             {
                 if(entry > 0)//first search is for guid (negative), do not drop error if not found
-                    sLog->outDebug("SmartAIMgr::GetScript: Could not load Script for Entry %d ScriptType %u.", entry, uint32(type));
+                    sLog->outDebug(LOG_FILTER_DATABASE_AI, "SmartAIMgr::GetScript: Could not load Script for Entry %d ScriptType %u.", entry, uint32(type));
                 return temp;
             }
         }
@@ -1293,9 +1315,18 @@ class SmartAIMgr
             }
             return true;
         }*/
-        inline bool IsEmoteValid(SmartScriptHolder e, uint32 entry)
+        inline bool IsTextEmoteValid(SmartScriptHolder e, uint32 entry)
         {
             if (!sEmotesTextStore.LookupEntry(entry))
+            {
+                sLog->outErrorDb("SmartAIMgr: Entry %d SourceType %u Event %u Action %u uses non-existent Text Emote entry %u, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType(), entry);
+                return false;
+            }
+            return true;
+        }
+        inline bool IsEmoteValid(SmartScriptHolder e, uint32 entry)
+        {
+            if (!sEmotesStore.LookupEntry(entry))
             {
                 sLog->outErrorDb("SmartAIMgr: Entry %d SourceType %u Event %u Action %u uses non-existent Emote entry %u, skipped.", e.entryOrGuid, e.GetScriptType(), e.event_id, e.GetActionType(), entry);
                 return false;

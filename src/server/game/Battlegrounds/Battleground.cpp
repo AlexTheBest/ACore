@@ -768,7 +768,7 @@ void Battleground::EndBattleground(uint32 winner)
                 winner_matchmaker_rating = GetArenaMatchmakerRating(winner);
                 winner_change = winner_arena_team->WonAgainst(loser_matchmaker_rating);
                 loser_change = loser_arena_team->LostAgainst(winner_matchmaker_rating);
-                sLog->outDebug("--- Winner rating: %u, Loser rating: %u, Winner MMR: %u, Loser MMR: %u, Winner change: %u, Losser change: %u ---", winner_team_rating, loser_team_rating,
+                sLog->outArena("--- Winner rating: %u, Loser rating: %u, Winner MMR: %u, Loser MMR: %u, Winner change: %u, Loser change: %u ---", winner_team_rating, loser_team_rating,
                     winner_matchmaker_rating, loser_matchmaker_rating, winner_change, loser_change);
                 SetArenaTeamRatingChangeForTeam(winner, winner_change);
                 SetArenaTeamRatingChangeForTeam(GetOtherTeam(winner), loser_change);
@@ -1039,7 +1039,6 @@ void Battleground::RemovePlayerAtLeave(uint64 guid, bool Transport, bool SendPac
             if (!group->RemoveMember(guid))                // group was disbanded
             {
                 SetBgRaid(team, NULL);
-                delete group;
             }
         }
         DecreaseInvitedCount(team);
@@ -1193,52 +1192,57 @@ void Battleground::AddPlayer(Player *plr)
 
     // setup BG group membership
     PlayerAddedToBGCheckIfBGIsRunning(plr);
-    AddOrSetPlayerToCorrectBgGroup(plr, guid, team);
+    AddOrSetPlayerToCorrectBgGroup(plr, team);
 
     // Log
     sLog->outDetail("BATTLEGROUND: Player %s joined the battle.", plr->GetName());
 }
 
 /* this method adds player to his team's bg group, or sets his correct group if player is already in bg group */
-void Battleground::AddOrSetPlayerToCorrectBgGroup(Player *plr, uint64 plr_guid, uint32 team)
+void Battleground::AddOrSetPlayerToCorrectBgGroup(Player *player, uint32 team)
 {
+    uint64 playerGuid = player->GetGUID();
     Group* group = GetBgRaid(team);
     if (!group)                                      // first player joined
     {
         group = new Group;
         SetBgRaid(team, group);
-        group->Create(plr_guid, plr->GetName());
+        group->Create(player);
+        sObjectMgr->AddGroup(group);
     }
     else                                            // raid already exist
     {
-        if (group->IsMember(plr_guid))
+        if (group->IsMember(playerGuid))
         {
-            uint8 subgroup = group->GetMemberGroup(plr_guid);
-            plr->SetBattlegroundRaid(group, subgroup);
+            uint8 subgroup = group->GetMemberGroup(playerGuid);
+            player->SetBattlegroundRaid(group, subgroup);
         }
         else
         {
-            group->AddMember(plr_guid, plr->GetName());
-            if (Group* originalGroup = plr->GetOriginalGroup())
-                if (originalGroup->IsLeader(plr_guid))
-                    group->ChangeLeader(plr_guid);
+            group->AddMember(player);
+            if (Group* originalGroup = player->GetOriginalGroup())
+                if (originalGroup->IsLeader(playerGuid))
+                {
+                    group->ChangeLeader(playerGuid);
+                    group->SendUpdate();
+                }
         }
     }
 }
 
 // This method should be called when player logs into running battleground
-void Battleground::EventPlayerLoggedIn(Player* player, uint64 plr_guid)
+void Battleground::EventPlayerLoggedIn(Player* player)
 {
     // player is correct pointer
     for (std::deque<uint64>::iterator itr = m_OfflineQueue.begin(); itr != m_OfflineQueue.end(); ++itr)
     {
-        if (*itr == plr_guid)
+        if (*itr == player->GetGUID())
         {
             m_OfflineQueue.erase(itr);
             break;
         }
     }
-    m_Players[plr_guid].OfflineRemoveTime = 0;
+    m_Players[player->GetGUID()].OfflineRemoveTime = 0;
     PlayerAddedToBGCheckIfBGIsRunning(player);
     // if battleground is starting, then add preparation aura
     // we don't have to do that, because preparation aura isn't removed when player logs out

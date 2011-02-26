@@ -557,7 +557,27 @@ struct LanguageDesc
 };
 
 extern LanguageDesc lang_description[LANGUAGES_COUNT];
- LanguageDesc const* GetLanguageDescByID(uint32 lang);
+LanguageDesc const* GetLanguageDescByID(uint32 lang);
+
+enum EncounterCreditType
+{
+    ENCOUNTER_CREDIT_KILL_CREATURE  = 0,
+    ENCOUNTER_CREDIT_CAST_SPELL     = 1,
+};
+
+struct DungeonEncounter
+{
+    DungeonEncounter(DungeonEncounterEntry const* _dbcEntry, EncounterCreditType _creditType, uint32 _creditEntry, uint32 _lastEncounterDungeon)
+        : dbcEntry(_dbcEntry), creditType(_creditType), creditEntry(_creditEntry), lastEncounterDungeon(_lastEncounterDungeon) { }
+
+    DungeonEncounterEntry const* dbcEntry;
+    EncounterCreditType creditType;
+    uint32 creditEntry;
+    uint32 lastEncounterDungeon;
+};
+
+typedef std::list<DungeonEncounter const*> DungeonEncounterList;
+typedef UNORDERED_MAP<uint32,DungeonEncounterList> DungeonEncounterMap;
 
 class PlayerDumpReader;
 
@@ -571,7 +591,7 @@ class ObjectMgr
     public:
         typedef UNORDERED_MAP<uint32, Item*> ItemMap;
 
-        typedef std::set<Group *> GroupSet;
+        typedef std::vector<Group *> GroupMap;
 
         typedef std::vector <Guild *> GuildMap;
 
@@ -606,8 +626,10 @@ class ObjectMgr
         void AddGameobjectInfo(GameObjectInfo *goinfo);
 
         Group * GetGroupByGUID(uint32 guid) const;
-        void AddGroup(Group* group) { mGroupSet.insert(group); }
-        void RemoveGroup(Group* group) { mGroupSet.erase(group); }
+        void AddGroup(Group* group);
+        void RemoveGroup(Group* group);
+        uint32 GetNextGroupGuid() { return m_hiGroupGuid; };
+        void SetNextGroupGuid(uint32 nextGuid) { m_hiGroupGuid = nextGuid; };
 
         Guild* GetGuildByLeader(uint64 const&guid) const;
         Guild* GetGuildById(uint32 guildId) const;
@@ -796,6 +818,14 @@ class ObjectMgr
             return NULL;
         }
 
+        DungeonEncounterList const* GetDungeonEncounterList(uint32 mapId, Difficulty difficulty)
+        {
+            UNORDERED_MAP<uint32, DungeonEncounterList>::const_iterator itr = mDungeonEncounters.find(MAKE_PAIR32(mapId, difficulty));
+            if (itr != mDungeonEncounters.end())
+                return &itr->second;
+            return NULL;
+        }
+
         void LoadGuilds();
         void LoadArenaTeams();
         void LoadGroups();
@@ -884,6 +914,7 @@ class ObjectMgr
         void LoadGossipMenuItemsLocales();
         void LoadPointOfInterestLocales();
         void LoadInstanceTemplate();
+        void LoadInstanceEncounters();
         void LoadMailLevelRewards();
         void LoadVehicleAccessories();
         void LoadVehicleScaling();
@@ -917,8 +948,6 @@ class ObjectMgr
         void LoadNPCSpellClickSpells();
 
         void LoadGameTele();
-
-        void LoadNpcTextId();
 
         void LoadGossipMenu();
         void LoadGossipMenuItems();
@@ -1242,7 +1271,7 @@ class ObjectMgr
         typedef std::set<uint32> TavernAreaTriggerSet;
         typedef std::set<uint32> GameObjectForQuestSet;
 
-        GroupSet            mGroupSet;
+        GroupMap            mGroupMap;
         GuildMap            mGuildMap;
         ArenaTeamMap        mArenaTeamMap;
 
@@ -1253,6 +1282,7 @@ class ObjectMgr
         AreaTriggerMap      mAreaTriggers;
         AreaTriggerScriptMap  mAreaTriggerScripts;
         AccessRequirementMap  mAccessRequirements;
+        DungeonEncounterMap mDungeonEncounters;
 
         RepRewardRateMap    m_RepRewardRateMap;
         RepOnKillMap        mRepOnKill;

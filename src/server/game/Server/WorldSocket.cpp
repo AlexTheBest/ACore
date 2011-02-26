@@ -61,7 +61,7 @@ struct ServerPktHeader
         uint8 headerIndex=0;
         if (isLargePacket())
         {
-            sLog->outDebug("initializing large server to client packet. Size: %u, cmd: %u", size, cmd);
+            sLog->outDebug(LOG_FILTER_NETWORKIO, "initializing large server to client packet. Size: %u, cmd: %u", size, cmd);
             header[headerIndex++] = 0x80|(0xFF &(size>>16));
         }
         header[headerIndex++] = 0xFF &(size>>8);
@@ -494,8 +494,12 @@ int WorldSocket::handle_input_header (void)
 
     if ((header.size < 4) || (header.size > 10240) || (header.cmd  > 10240))
     {
-        sLog->outError ("WorldSocket::handle_input_header: client sent malformed packet size = %d , cmd = %d",
-                       header.size, header.cmd);
+        Player *_player = m_Session ? m_Session->GetPlayer() : NULL;
+        sLog->outError ("WorldSocket::handle_input_header(): client (account: %u, char [GUID: %u, name: %s]) sent malformed packet (size: %d , cmd: %d)",
+            m_Session ? m_Session->GetAccountId() : 0,
+            _player ? _player->GetGUIDLow() : 0,
+            _player ? _player->GetName() : "<none>", 
+            header.size, header.cmd);
 
         errno = EINVAL;
         return -1;
@@ -751,7 +755,7 @@ int WorldSocket::ProcessIncoming (WorldPacket* new_pct)
                 opcode, GetRemoteAddress().c_str(), m_Session?m_Session->GetAccountId():-1);
         if (sLog->IsOutDebug())
         {
-            sLog->outDebug("Dumping error causing packet:");
+            sLog->outDebug(LOG_FILTER_NETWORKIO, "Dumping error causing packet:");
             new_pct->hexlike();
         }
 
@@ -930,7 +934,7 @@ int WorldSocket::HandleAuthSession (WorldPacket& recvPacket)
 
     // Check locked state for server
     AccountTypes allowedAccountType = sWorld->GetPlayerSecurityLimit();
-    sLog->outDebug("Allowed Level: %u Player Level %u", allowedAccountType, AccountTypes(security));
+    sLog->outDebug(LOG_FILTER_NETWORKIO, "Allowed Level: %u Player Level %u", allowedAccountType, AccountTypes(security));
     if (allowedAccountType > SEC_PLAYER && AccountTypes(security) < allowedAccountType)
     {
         WorldPacket Packet (SMSG_AUTH_RESPONSE, 1);
@@ -1030,9 +1034,12 @@ int WorldSocket::HandlePing (WorldPacket& recvPacket)
 
                 if (m_Session && m_Session->GetSecurity() == SEC_PLAYER)
                 {
-                    sLog->outError  ("WorldSocket::HandlePing: Player kicked for "
-                                    "over-speed pings address = %s",
-                                    GetRemoteAddress().c_str());
+                    Player* _player = m_Session->GetPlayer();
+                    sLog->outError("WorldSocket::HandlePing: Player (account: %u, GUID: %u, name: %s) kicked for over-speed pings (address: %s)",
+                        m_Session->GetAccountId(),
+                        _player ? _player->GetGUIDLow() : 0,
+                        _player ? _player->GetName() : "<none>",
+                        GetRemoteAddress().c_str());
 
                     return -1;
                 }

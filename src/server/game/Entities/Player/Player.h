@@ -1655,6 +1655,8 @@ class Player : public Unit, public GridObject<Player>
         void RemoveSpellCategoryCooldown(uint32 cat, bool update = false);
         void SendClearCooldown(uint32 spell_id, Unit* target);
 
+        GlobalCooldownMgr& GetGlobalCooldownMgr() { return m_GlobalCooldownMgr; }
+
         void RemoveCategoryCooldown(uint32 cat);
         void RemoveArenaSpellCooldowns(bool removeActivePetCooldowns = false);
         void RemoveAllSpellCooldown();
@@ -1942,7 +1944,6 @@ class Player : public Unit, public GridObject<Player>
         static uint32 TeamForRace(uint8 race);
         uint32 GetTeam() const { return m_team; }
         TeamId GetTeamId() const { return m_team == ALLIANCE ? TEAM_ALLIANCE : TEAM_HORDE; }
-        static uint32 getFactionForRace(uint8 race);
         void setFactionForRace(uint8 race);
 
         void InitDisplayIds();
@@ -2296,7 +2297,6 @@ class Player : public Unit, public GridObject<Player>
 
         void SendCinematicStart(uint32 CinematicSequenceId);
         void SendMovieStart(uint32 MovieId);
-        void SendClearFocus(Unit* target);
 
         /*********************************************************/
         /***                 INSTANCE SYSTEM                   ***/
@@ -2321,7 +2321,7 @@ class Player : public Unit, public GridObject<Player>
         bool HasPendingBind() const { return _pendingBind != NULL; }
         void SendRaidInfo();
         void SendSavedInstances();
-        static void ConvertInstancesToGroup(Player *player, Group *group = NULL, uint64 player_guid = 0);
+        static void ConvertInstancesToGroup(Player *player, Group *group, bool switchLeader);
         bool Satisfy(AccessRequirement const* ar, uint32 target_map, bool report = false);
         bool CheckInstanceLoginValid();
         bool CheckInstanceCount(uint32 instanceId) const
@@ -2561,6 +2561,8 @@ class Player : public Unit, public GridObject<Player>
         PlayerSpellMap m_spells;
         PlayerTalentMap *m_talents[MAX_TALENT_SPECS];
         uint32 m_lastPotionId;                              // last used health/mana potion in combat, that block next potion use
+
+        GlobalCooldownMgr m_GlobalCooldownMgr;
 
         uint8 m_activeSpec;
         uint8 m_specsCount;

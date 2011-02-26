@@ -24,14 +24,19 @@
 #include "Creature.h"
 #include "CreatureAI.h"
 #include "Log.h"
+#include "LFGMgr.h"
 
 void InstanceScript::SaveToDB()
 {
     std::string data = GetSaveData();
     if (data.empty())
         return;
-    CharacterDatabase.escape_string(data);
-    CharacterDatabase.PExecute("UPDATE instance SET data = '%s' WHERE id = '%d'", data.c_str(), instance->GetInstanceId());
+
+    PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_UPDATE_INSTANCE_DATA);
+    stmt->setUInt32(0, GetCompletedEncounterMask());
+    stmt->setString(1, data);
+    stmt->setUInt32(2, instance->GetInstanceId());
+    CharacterDatabase.Execute(stmt);
 }
 
 void InstanceScript::HandleGameObject(uint64 GUID, bool open, GameObject *go)
@@ -41,7 +46,7 @@ void InstanceScript::HandleGameObject(uint64 GUID, bool open, GameObject *go)
     if (go)
         go->SetGoState(open ? GO_STATE_ACTIVE : GO_STATE_READY);
     else
-        sLog->outDebug("TSCR: InstanceScript: HandleGameObject failed");
+        sLog->outDebug(LOG_FILTER_TSCR, "TSCR: InstanceScript: HandleGameObject failed");
 }
 
 bool InstanceScript::IsEncounterInProgress() const
@@ -62,7 +67,7 @@ void InstanceScript::LoadMinionData(const MinionData *data)
 
         ++data;
     }
-    sLog->outDebug("InstanceScript::LoadMinionData: " UI64FMTD " minions loaded.", uint64(minions.size()));
+    sLog->outDebug(LOG_FILTER_TSCR, "InstanceScript::LoadMinionData: " UI64FMTD " minions loaded.", uint64(minions.size()));
 }
 
 void InstanceScript::LoadDoorData(const DoorData *data)
@@ -74,7 +79,7 @@ void InstanceScript::LoadDoorData(const DoorData *data)
 
         ++data;
     }
-    sLog->outDebug("InstanceScript::LoadDoorData: " UI64FMTD " doors loaded.", uint64(doors.size()));
+    sLog->outDebug(LOG_FILTER_TSCR, "InstanceScript::LoadDoorData: " UI64FMTD " doors loaded.", uint64(doors.size()));
 }
 
 void InstanceScript::UpdateMinionState(Creature *minion, EncounterState state)
@@ -294,7 +299,7 @@ void InstanceScript::DoUpdateWorldState(uint32 uiStateId, uint32 uiStateData)
                 pPlayer->SendUpdateWorldState(uiStateId, uiStateData);
     }
     else
-        sLog->outDebug("TSCR: DoUpdateWorldState attempt send data but no players in map.");
+        sLog->outDebug(LOG_FILTER_TSCR, "TSCR: DoUpdateWorldState attempt send data but no players in map.");
 }
 
 // Send Notify to all players in instance
@@ -426,4 +431,30 @@ void InstanceScript::SendEncounterUnit(uint32 type, Unit* unit /*= NULL*/, uint8
     }
 
     instance->SendToPlayers(&data);
+}
+
+void InstanceScript::UpdateEncounterState(EncounterCreditType type, uint32 creditEntry, Unit* source)
+{
+    DungeonEncounterList const* encounters = sObjectMgr->GetDungeonEncounterList(instance->GetId(), instance->GetDifficulty());
+    if (!encounters)
+        return;
+
+    for (DungeonEncounterList::const_iterator itr = encounters->begin(); itr != encounters->end(); ++itr)
+    {
+        if ((*itr)->creditType == type && (*itr)->creditEntry == creditEntry)
+        {
+            completedEncounters |= 1 << (*itr)->dbcEntry->encounterIndex;
+            sLog->outDebug(LOG_FILTER_TSCR, "Instance %s (instanceId %u) completed encounter %s", instance->GetMapName(), instance->GetInstanceId(), (*itr)->dbcEntry->encounterName[0]);
+            if (uint32 dungeonId = (*itr)->lastEncounterDungeon)
+            {
+                Map::PlayerList const& players = instance->GetPlayers();
+                if (!players.isEmpty())
+                    for (Map::PlayerList::const_iterator i = players.begin(); i != players.end(); ++i)
+                        if (Player* player = i->getSource())
+                            if (!source || player->IsAtGroupRewardDistance(source))
+                                sLFGMgr->RewardDungeonDoneFor(dungeonId, player);
+            }
+            return;
+        }
+    }
 }

@@ -237,8 +237,9 @@ public:
             case 5:
                 if (pInstance)
                 {
+                    pInstance->UpdateEncounterState(ENCOUNTER_CREDIT_KILL_CREATURE, NPC_GRIMSTONE, me);
                     pInstance->SetData(TYPE_RING_OF_LAW,DONE);
-                    sLog->outDebug("TSCR: npc_grimstone: event reached end and set complete.");
+                    sLog->outDebug(LOG_FILTER_TSCR, "TSCR: npc_grimstone: event reached end and set complete.");
                 }
                 break;
             }

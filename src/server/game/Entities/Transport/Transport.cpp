@@ -176,6 +176,7 @@ void MapManager::LoadTransportNPCs()
 Transport::Transport(uint32 period, uint32 script) : GameObject(), m_period(period), ScriptId(script)
 {
     m_updateFlag = (UPDATEFLAG_TRANSPORT | UPDATEFLAG_HIGHGUID | UPDATEFLAG_HAS_POSITION | UPDATEFLAG_ROTATION);
+    currenttguid = 0;
 }
 
 Transport::~Transport()
@@ -575,11 +576,10 @@ void Transport::Update(uint32 p_diff)
 
         m_nextNodeTime = m_curr->first;
 
-        if (m_curr == m_WayPoints.begin() && (sLog->getLogFilter() & LOG_FILTER_TRANSPORT_MOVES) == 0)
-            sLog->outDetail(" ************ BEGIN ************** %s", m_name.c_str());
+        if (m_curr == m_WayPoints.begin())
+            sLog->outDebug(LOG_FILTER_TRANSPORTS," ************ BEGIN ************** %s", m_name.c_str());
 
-        if ((sLog->getLogFilter() & LOG_FILTER_TRANSPORT_MOVES) == 0)
-            sLog->outDetail("%s moved to %d %f %f %f %d", m_name.c_str(), m_curr->second.id, m_curr->second.x, m_curr->second.y, m_curr->second.z, m_curr->second.mapid);
+        sLog->outDebug(LOG_FILTER_TRANSPORTS, "%s moved to %d %f %f %f %d", m_name.c_str(), m_curr->second.id, m_curr->second.x, m_curr->second.y, m_curr->second.z, m_curr->second.mapid);
     }
 
     sScriptMgr->OnTransportUpdate(this, p_diff);
@@ -622,7 +622,7 @@ void Transport::DoEventIfAny(WayPointMap::value_type const& node, bool departure
 {
     if (uint32 eventid = departure ? node.second.departureEventID : node.second.arrivalEventID)
     {
-        sLog->outDebug("Taxi %s event %u of node %u of %s path", departure ? "departure" : "arrival", eventid, node.first, GetName());
+        sLog->outDebug(LOG_FILTER_MAPSCRIPTS, "Taxi %s event %u of node %u of %s path", departure ? "departure" : "arrival", eventid, node.first, GetName());
         GetMap()->ScriptsStart(sEventScripts, eventid, this, this);
         EventInform(eventid);
     }

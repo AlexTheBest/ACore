@@ -189,12 +189,11 @@ void WorldSession::QueuePacket(WorldPacket *new_packet)
 }
 
 /// Logging helper for unexpected opcodes
-void WorldSession::LogUnexpectedOpcode(WorldPacket *packet, const char *reason)
+void WorldSession::LogUnexpectedOpcode(WorldPacket *packet, const char* status, const char *reason)
 {
-    sLog->outError("SESSION: received unexpected opcode %s (0x%.4X) %s",
-        LookupOpcodeName(packet->GetOpcode()),
-        packet->GetOpcode(),
-        reason);
+    sLog->outError("SESSION (account: %u, guidlow: %u, char: %s): received unexpected opcode %s (0x%.4X, status: %s) %s",
+        GetAccountId(), m_GUIDLow, _player ? _player->GetName() : "<none>", 
+        LookupOpcodeName(packet->GetOpcode()), packet->GetOpcode(), status, reason);
 }
 
 /// Logging helper for unexpected opcodes
@@ -238,7 +237,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                         {
                             // skip STATUS_LOGGEDIN opcode unexpected errors if player logout sometime ago - this can be network lag delayed packets
                             if (!m_playerRecentlyLogout)
-                                LogUnexpectedOpcode(packet, "the player has not logged in yet");
+                                LogUnexpectedOpcode(packet, "STATUS_LOGGEDIN", "the player has not logged in yet");
                         }
                         else if (_player->IsInWorld())
                         {
@@ -251,7 +250,8 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                         break;
                     case STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT:
                         if (!_player && !m_playerRecentlyLogout)
-                            LogUnexpectedOpcode(packet, "the player has not logged in yet and not recently logout");
+                            LogUnexpectedOpcode(packet, "STATUS_LOGGEDIN_OR_RECENTLY_LOGGOUT",
+                                "the player has not logged in yet and not recently logout");
                         else
                         {
                             // not expected _player or must checked in packet hanlder
@@ -263,9 +263,9 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                         break;
                     case STATUS_TRANSFER:
                         if (!_player)
-                            LogUnexpectedOpcode(packet, "the player has not logged in yet");
+                            LogUnexpectedOpcode(packet, "STATUS_TRANSFER", "the player has not logged in yet");
                         else if (_player->IsInWorld())
-                            LogUnexpectedOpcode(packet, "the player is still in world");
+                            LogUnexpectedOpcode(packet, "STATUS_TRANSFER", "the player is still in world");
                         else
                         {
                             sScriptMgr->OnPacketReceive(m_Socket, WorldPacket(*packet));
@@ -278,7 +278,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                         // prevent cheating with skip queue wait
                         if (m_inQueue)
                         {
-                            LogUnexpectedOpcode(packet, "the player not pass queue yet");
+                            LogUnexpectedOpcode(packet, "STATUS_AUTHED", "the player not pass queue yet");
                             break;
                         }
 
@@ -293,10 +293,14 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                             LogUnprocessedTail(packet);
                         break;
                     case STATUS_NEVER:
-                        sLog->outError("SESSION: received not allowed opcode %s (0x%.4X)", LookupOpcodeName(packet->GetOpcode()), packet->GetOpcode());
+                        sLog->outError("SESSION (account: %u, guidlow: %u, char: %s): received not allowed opcode %s (0x%.4X)",
+                            GetAccountId(), m_GUIDLow, _player ? _player->GetName() : "<none>",
+                            LookupOpcodeName(packet->GetOpcode()), packet->GetOpcode());
                         break;
                     case STATUS_UNHANDLED:
-                        sLog->outDebug("SESSION: received not handled opcode %s (0x%.4X)", LookupOpcodeName(packet->GetOpcode()), packet->GetOpcode());
+                        sLog->outDebug(LOG_FILTER_NETWORKIO, "SESSION (account: %u, guidlow: %u, char: %s): received not handled opcode %s (0x%.4X)",
+                            GetAccountId(), m_GUIDLow, _player ? _player->GetName() : "<none>",
+                            LookupOpcodeName(packet->GetOpcode()), packet->GetOpcode());
                         break;
                 }
             }
@@ -306,7 +310,7 @@ bool WorldSession::Update(uint32 diff, PacketFilter& updater)
                         packet->GetOpcode(), GetRemoteAddress().c_str(), GetAccountId());
                 if (sLog->IsOutDebug())
                 {
-                    sLog->outDebug("Dumping error causing packet:");
+                    sLog->outDebug(LOG_FILTER_NETWORKIO, "Dumping error causing packet:");
                     packet->hexlike();
                 }
             }
@@ -496,7 +500,7 @@ void WorldSession::LogoutPlayer(bool Save)
         ///- Since each account can only have one online character at any given time, ensure all characters for active account are marked as offline
         //No SQL injection as AccountId is uint32
         CharacterDatabase.PExecute("UPDATE characters SET online = 0 WHERE account = '%u'", GetAccountId());
-        sLog->outDebug("SESSION: Sent SMSG_LOGOUT_COMPLETE Message");
+        sLog->outDebug(LOG_FILTER_NETWORKIO, "SESSION: Sent SMSG_LOGOUT_COMPLETE Message");
     }
 
     m_playerLogout = false;
@@ -592,7 +596,7 @@ void WorldSession::SendAuthWaitQue(uint32 position)
 
 void WorldSession::LoadGlobalAccountData()
 {
-    PreparedStatement *stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_ACCOUNT_DATA);
+    PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_ACCOUNT_DATA);
     stmt->setUInt32(0, GetAccountId());
     LoadAccountData(CharacterDatabase.Query(stmt), GLOBAL_CACHE_MASK);
 }
@@ -628,17 +632,14 @@ void WorldSession::LoadAccountData(PreparedQueryResult result, uint32 mask)
     while (result->NextRow());
 }
 
-void WorldSession::SetAccountData(AccountDataType type, time_t time_, std::string data)
+void WorldSession::SetAccountData(AccountDataType type, time_t tm, std::string data)
 {
+    uint32 id = 0;
+    uint32 index = 0;
     if ((1 << type) & GLOBAL_CACHE_MASK)
     {
-        uint32 acc = GetAccountId();
-
-        SQLTransaction trans = CharacterDatabase.BeginTransaction();
-        trans->PAppend("DELETE FROM account_data WHERE account='%u' AND type='%u'", acc, type);
-        CharacterDatabase.escape_string(data);
-        trans->PAppend("INSERT INTO account_data VALUES ('%u','%u','%u','%s')", acc, type, (uint32)time_, data.c_str());
-        CharacterDatabase.CommitTransaction(trans);
+        id = GetAccountId();
+        index = CHAR_SET_ACCOUNT_DATA;
     }
     else
     {
@@ -646,14 +647,18 @@ void WorldSession::SetAccountData(AccountDataType type, time_t time_, std::strin
         if (!m_GUIDLow)
             return;
 
-        SQLTransaction trans = CharacterDatabase.BeginTransaction();
-        trans->PAppend("DELETE FROM character_account_data WHERE guid='%u' AND type='%u'", m_GUIDLow, type);
-        CharacterDatabase.escape_string(data);
-        trans->PAppend("INSERT INTO character_account_data VALUES ('%u','%u','%u','%s')", m_GUIDLow, type, (uint32)time_, data.c_str());
-        CharacterDatabase.CommitTransaction(trans);
+        id = m_GUIDLow;
+        index = CHAR_SET_PLAYER_ACCOUNT_DATA;
     }
 
-    m_accountData[type].Time = time_;
+    PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(index);
+    stmt->setUInt32(0, id);
+    stmt->setUInt8 (1, type);
+    stmt->setUInt32(2, uint32(tm));
+    stmt->setString(3, data);
+    CharacterDatabase.Execute(stmt);
+
+    m_accountData[type].Time = tm;
     m_accountData[type].Data = data;
 }
 
@@ -671,30 +676,21 @@ void WorldSession::SendAccountDataTimes(uint32 mask)
 
 void WorldSession::LoadTutorialsData()
 {
-    for (int aX = 0; aX < MAX_CHARACTER_TUTORIAL_VALUES; ++aX)
-        m_Tutorials[ aX ] = 0;
+    memset(m_Tutorials, 0, sizeof(uint32) * MAX_ACCOUNT_TUTORIAL_VALUES);
 
-    // is there a good reason why this isn't a prepared statement?
-    QueryResult result = CharacterDatabase.PQuery("SELECT tut0, tut1, tut2, tut3, tut4, tut5, tut6, tut7 FROM character_tutorial WHERE account = '%u'", GetAccountId());
+    PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_TUTORIALS);
+    stmt->setUInt32(0, GetAccountId());
+    if (PreparedQueryResult result = CharacterDatabase.Query(stmt))
+        for (uint8 i = 0; i < MAX_ACCOUNT_TUTORIAL_VALUES; ++i)
+            m_Tutorials[i] = (*result)[i].GetUInt32();
 
-    if (result)
-    {
-        do
-        {
-            Field *fields = result->Fetch();
-
-            for (int iI = 0; iI < MAX_CHARACTER_TUTORIAL_VALUES; ++iI)
-                m_Tutorials[iI] = fields[iI].GetUInt32();
-        }
-        while (result->NextRow());
-    }
     m_TutorialsChanged = false;
 }
 
 void WorldSession::SendTutorialsData()
 {
-    WorldPacket data(SMSG_TUTORIAL_FLAGS, 4 * MAX_CHARACTER_TUTORIAL_VALUES);
-    for (uint32 i = 0; i < MAX_CHARACTER_TUTORIAL_VALUES; ++i)
+    WorldPacket data(SMSG_TUTORIAL_FLAGS, 4 * MAX_ACCOUNT_TUTORIAL_VALUES);
+    for (uint8 i = 0; i < MAX_ACCOUNT_TUTORIAL_VALUES; ++i)
         data << m_Tutorials[i];
     SendPacket(&data);
 }
@@ -704,19 +700,15 @@ void WorldSession::SaveTutorialsData(SQLTransaction &trans)
     if (!m_TutorialsChanged)
         return;
 
-    // should these be prepared as well?
-
-    uint32 Rows = 0;
-    // it's better than rebuilding indexes multiple times
-    QueryResult result = CharacterDatabase.PQuery("SELECT count(*) AS r FROM character_tutorial WHERE account = '%u'", GetAccountId());
-    if (result)
-        Rows = result->Fetch()[0].GetUInt32();
-
-    if (Rows)
-        trans->PAppend("UPDATE character_tutorial SET tut0='%u', tut1='%u', tut2='%u', tut3='%u', tut4='%u', tut5='%u', tut6='%u', tut7='%u' WHERE account = '%u'",
-            m_Tutorials[0], m_Tutorials[1], m_Tutorials[2], m_Tutorials[3], m_Tutorials[4], m_Tutorials[5], m_Tutorials[6], m_Tutorials[7], GetAccountId());
-    else
-        trans->PAppend("INSERT INTO character_tutorial (account, tut0, tut1, tut2, tut3, tut4, tut5, tut6, tut7) VALUES ('%u', '%u', '%u', '%u', '%u', '%u', '%u', '%u', '%u')", GetAccountId(), m_Tutorials[0], m_Tutorials[1], m_Tutorials[2], m_Tutorials[3], m_Tutorials[4], m_Tutorials[5], m_Tutorials[6], m_Tutorials[7]);
+    PreparedStatement* stmt = CharacterDatabase.GetPreparedStatement(CHAR_GET_HAS_TUTORIALS);
+    stmt->setUInt32(0, GetAccountId());
+    bool hasTutorials = (CharacterDatabase.Query(stmt) != NULL);
+    // Modify data in DB
+    stmt = CharacterDatabase.GetPreparedStatement(hasTutorials ? CHAR_SET_TUTORIALS : CHAR_ADD_TUTORIALS);
+    for (uint8 i = 0; i < MAX_ACCOUNT_TUTORIAL_VALUES; ++i)
+        stmt->setUInt32(i, m_Tutorials[i]);
+    stmt->setUInt32(MAX_ACCOUNT_TUTORIAL_VALUES, GetAccountId());
+    trans->Append(stmt);
 
     m_TutorialsChanged = false;
 }
@@ -779,7 +771,7 @@ void WorldSession::WriteMovementInfo(WorldPacket *data, MovementInfo *mi)
        *data << mi->t_seat;
     }
 
-    if (mi->HasMovementFlag(MovementFlags(MOVEMENTFLAG_SWIMMING | MOVEMENTFLAG_FLYING)) && mi->HasExtraMovementFlag(MOVEMENTFLAG2_ALWAYS_ALLOW_PITCHING))
+    if (mi->HasMovementFlag(MovementFlags(MOVEMENTFLAG_SWIMMING | MOVEMENTFLAG_FLYING)) || mi->HasExtraMovementFlag(MOVEMENTFLAG2_ALWAYS_ALLOW_PITCHING))
         *data << mi->pitch;
 
     *data << mi->fallTime;
@@ -868,10 +860,10 @@ void WorldSession::ReadAddonsInfo(WorldPacket &data)
 
         uint32 currentTime;
         addonInfo >> currentTime;
-        sLog->outDebug("ADDON: CurrentTime: %u", currentTime);
+        sLog->outDebug(LOG_FILTER_NETWORKIO, "ADDON: CurrentTime: %u", currentTime);
 
         if (addonInfo.rpos() != addonInfo.size())
-            sLog->outDebug("packet under-read!");
+            sLog->outDebug(LOG_FILTER_NETWORKIO, "packet under-read!");
     }
     else
         sLog->outError("Addon packet uncompress error!");

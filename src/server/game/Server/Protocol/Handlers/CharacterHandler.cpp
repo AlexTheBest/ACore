@@ -166,7 +166,7 @@ bool LoginQueryHolder::Initialize()
     stmt->setUInt32(0, lowGuid);
     res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOADTALENTS, stmt);
 
-    stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_PLAYER_ACCOUNTDATA);
+    stmt = CharacterDatabase.GetPreparedStatement(CHAR_LOAD_PLAYER_ACCOUNT_DATA);
     stmt->setUInt32(0, lowGuid);
     res &= SetPreparedQuery(PLAYER_LOGIN_QUERY_LOADACCOUNTDATA, stmt);
 
@@ -295,13 +295,20 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket & recv_data)
     }
 
     ChrClassesEntry const* classEntry = sChrClassesStore.LookupEntry(class_);
-    ChrRacesEntry const* raceEntry = sChrRacesStore.LookupEntry(race_);
-
-    if (!classEntry || !raceEntry)
+    if (!classEntry)
     {
         data << (uint8)CHAR_CREATE_FAILED;
         SendPacket(&data);
-        sLog->outError("Class: %u or Race %u not found in DBC (Wrong DBC files?) or Cheater?", class_, race_);
+        sLog->outError("Class (%u) not found in DBC while creating new char for account (ID: %u): wrong DBC files or cheater?", class_, GetAccountId());
+        return;
+    }
+
+    ChrRacesEntry const* raceEntry = sChrRacesStore.LookupEntry(race_);
+    if (!raceEntry)
+    {
+        data << (uint8)CHAR_CREATE_FAILED;
+        SendPacket(&data);
+        sLog->outError("Race (%u) not found in DBC while creating new char for account (ID: %u): wrong DBC files or cheater?", race_, GetAccountId());
         return;
     }
 
@@ -536,7 +543,7 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket & recv_data)
     {
         uint8 unk;
         recv_data >> unk;
-        sLog->outDebug("Character creation %s (account %u) has unhandled tail data: [%u]", name.c_str(), GetAccountId(), unk);
+        sLog->outDebug(LOG_FILTER_NETWORKIO, "Character creation %s (account %u) has unhandled tail data: [%u]", name.c_str(), GetAccountId(), unk);
     }
 
     Player * pNewChar = new Player(this);
@@ -940,33 +947,29 @@ void WorldSession::HandleMeetingStoneInfo(WorldPacket & /*recv_data*/)
 
 void WorldSession::HandleTutorialFlag(WorldPacket & recv_data)
 {
-    uint32 iFlag;
-    recv_data >> iFlag;
+    uint32 data;
+    recv_data >> data;
 
-    uint32 wInt = (iFlag / 32);
-    if (wInt >= 8)
-    {
-        //sLog->outError("CHEATER? Account:[%d] Guid[%u] tried to send wrong CMSG_TUTORIAL_FLAG", GetAccountId(),GetGUID());
+    uint8 index = uint8(data / 32);
+    if (index >= MAX_ACCOUNT_TUTORIAL_VALUES)
         return;
-    }
-    uint32 rInt = (iFlag % 32);
 
-    uint32 tutflag = GetTutorialInt(wInt);
-    tutflag |= (1 << rInt);
-    SetTutorialInt(wInt, tutflag);
+    uint32 value = (data % 32);
 
-    //sLog->outDebug("Received Tutorial Flag Set {%u}.", iFlag);
+    uint32 flag = GetTutorialInt(index);
+    flag |= (1 << value);
+    SetTutorialInt(index, flag);
 }
 
 void WorldSession::HandleTutorialClear(WorldPacket & /*recv_data*/)
 {
-    for (int i = 0; i < MAX_CHARACTER_TUTORIAL_VALUES; ++i)
+    for (uint8 i = 0; i < MAX_ACCOUNT_TUTORIAL_VALUES; ++i)
         SetTutorialInt(i, 0xFFFFFFFF);
 }
 
 void WorldSession::HandleTutorialReset(WorldPacket & /*recv_data*/)
 {
-    for (int i = 0; i < MAX_CHARACTER_TUTORIAL_VALUES; ++i)
+    for (uint8 i = 0; i < MAX_ACCOUNT_TUTORIAL_VALUES; ++i)
         SetTutorialInt(i, 0x00000000);
 }
 
@@ -1164,7 +1167,7 @@ void WorldSession::HandleSetPlayerDeclinedNames(WorldPacket& recv_data)
 
 void WorldSession::HandleAlterAppearance(WorldPacket & recv_data)
 {
-    sLog->outDebug("CMSG_ALTER_APPEARANCE");
+    sLog->outDebug(LOG_FILTER_NETWORKIO, "CMSG_ALTER_APPEARANCE");
 
     uint32 Hair, Color, FacialHair, SkinColor;
     recv_data >> Hair >> Color >> FacialHair >> SkinColor;
@@ -1224,7 +1227,7 @@ void WorldSession::HandleRemoveGlyph(WorldPacket & recv_data)
 
     if (slot >= MAX_GLYPH_SLOT_INDEX)
     {
-        sLog->outDebug("Client sent wrong glyph slot number in opcode CMSG_REMOVE_GLYPH %u", slot);
+        sLog->outDebug(LOG_FILTER_NETWORKIO, "Client sent wrong glyph slot number in opcode CMSG_REMOVE_GLYPH %u", slot);
         return;
     }
 
@@ -1335,7 +1338,7 @@ void WorldSession::HandleCharCustomize(WorldPacket& recv_data)
 
 void WorldSession::HandleEquipmentSetSave(WorldPacket &recv_data)
 {
-    sLog->outDebug("CMSG_EQUIPMENT_SET_SAVE");
+    sLog->outDebug(LOG_FILTER_NETWORKIO, "CMSG_EQUIPMENT_SET_SAVE");
 
     uint64 setGuid;
     recv_data.readPackGUID(setGuid);
@@ -1379,7 +1382,7 @@ void WorldSession::HandleEquipmentSetSave(WorldPacket &recv_data)
 
 void WorldSession::HandleEquipmentSetDelete(WorldPacket &recv_data)
 {
-    sLog->outDebug("CMSG_EQUIPMENT_SET_DELETE");
+    sLog->outDebug(LOG_FILTER_NETWORKIO, "CMSG_EQUIPMENT_SET_DELETE");
 
     uint64 setGuid;
     recv_data.readPackGUID(setGuid);
@@ -1389,7 +1392,7 @@ void WorldSession::HandleEquipmentSetDelete(WorldPacket &recv_data)
 
 void WorldSession::HandleEquipmentSetUse(WorldPacket &recv_data)
 {
-    sLog->outDebug("CMSG_EQUIPMENT_SET_USE");
+    sLog->outDebug(LOG_FILTER_NETWORKIO, "CMSG_EQUIPMENT_SET_USE");
     recv_data.hexlike();
 
     for (uint32 i = 0; i < EQUIPMENT_SLOT_END; ++i)
@@ -1400,7 +1403,7 @@ void WorldSession::HandleEquipmentSetUse(WorldPacket &recv_data)
         uint8 srcbag, srcslot;
         recv_data >> srcbag >> srcslot;
 
-        sLog->outDebug("Item " UI64FMTD ": srcbag %u, srcslot %u", itemGuid, srcbag, srcslot);
+        sLog->outDebug(LOG_FILTER_PLAYER_ITEMS, "Item " UI64FMTD ": srcbag %u, srcslot %u", itemGuid, srcbag, srcslot);
 
         Item *item = _player->GetItemByGuid(itemGuid);
 
@@ -1754,7 +1757,7 @@ void WorldSession::HandleCharFactionOrRaceChange(WorldPacket& recv_data)
     CharacterDatabase.CommitTransaction(trans);
 
     std::string IP_str = GetRemoteAddress();
-    sLog->outDebug("Account: %d (IP: %s), Character guid: %u Change Race/Faction to: %s", GetAccountId(), IP_str.c_str(), lowGuid, newname.c_str());
+    sLog->outDebug(LOG_FILTER_UNITS, "Account: %d (IP: %s), Character guid: %u Change Race/Faction to: %s", GetAccountId(), IP_str.c_str(), lowGuid, newname.c_str());
 
     WorldPacket data(SMSG_CHAR_FACTION_CHANGE, 1 + 8 + (newname.size() + 1) + 1 + 1 + 1 + 1 + 1 + 1 + 1);
     data << uint8(RESPONSE_SUCCESS);
